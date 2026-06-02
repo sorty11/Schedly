@@ -57,14 +57,37 @@ class DashboardPage extends StatelessWidget {
     }
   }
 
+  String _getCurrentDay() {
+    final now = DateTime.now();
+
+    switch (now.weekday) {
+      case 1:
+        return 'Monday';
+      case 2:
+        return 'Tuesday';
+      case 3:
+        return 'Wednesday';
+      case 4:
+        return 'Thursday';
+      case 5:
+        return 'Friday';
+      case 6:
+        return 'Saturday';
+      default:
+        return 'Sunday';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final currentDay = _getCurrentDay();
+
     final divisionData =
         TimetableData.timetable[division] ??
             <String, List<Map<String, String>>>{};
 
     final todayLectures =
-        divisionData['Monday'] ??
+        divisionData[currentDay] ??
             <Map<String, String>>[];
 
     return Scaffold(
@@ -139,11 +162,20 @@ class DashboardPage extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            const Text(
-              "Today's Timetable",
-              style: TextStyle(
+            Text(
+              "Today is $currentDay",
+              style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            const Text(
+              "Today's Lectures",
+              style: TextStyle(
+                fontSize: 18,
               ),
             ),
 
@@ -151,9 +183,23 @@ class DashboardPage extends StatelessWidget {
 
             Expanded(
               child: todayLectures.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No lectures scheduled',
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment:
+                            MainAxisAlignment.center,
+                        children: const [
+                          Icon(
+                            Icons.celebration,
+                            size: 70,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'No lectures scheduled today',
+                            style: TextStyle(
+                              fontSize: 18,
+                            ),
+                          ),
+                        ],
                       ),
                     )
                   : ListView.builder(
