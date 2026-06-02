@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dashboard_page.dart';
+import 'home_page.dart';
 
 class DivisionSelectionPage extends StatelessWidget {
   const DivisionSelectionPage({super.key});
@@ -17,7 +17,7 @@ class DivisionSelectionPage extends StatelessWidget {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => DashboardPage(
+        builder: (_) => HomePage(
           division: division,
         ),
       ),

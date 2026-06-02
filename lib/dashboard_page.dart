@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'division_selection_page.dart';
+import 'weekly_timetable_page.dart';
 import 'timetable_data.dart';
 
 class DashboardPage extends StatelessWidget {
@@ -26,10 +27,45 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
+  IconData _getIcon(String subject) {
+    switch (subject.toLowerCase()) {
+      case 'mathematics':
+        return Icons.calculate;
+
+      case 'programming':
+      case 'oop':
+      case 'java':
+        return Icons.computer;
+
+      case 'beee':
+        return Icons.electrical_services;
+
+      case 'physics':
+        return Icons.science;
+
+      case 'chemistry':
+        return Icons.biotech;
+
+      case 'dbms':
+        return Icons.storage;
+
+      case 'lade':
+        return Icons.menu_book;
+
+      default:
+        return Icons.book;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final timetable =
-        TimetableData.timetable[division] ?? [];
+    final divisionData =
+        TimetableData.timetable[division] ??
+            <String, List<Map<String, String>>>{};
+
+    final todayLectures =
+        divisionData['Monday'] ??
+            <Map<String, String>>[];
 
     return Scaffold(
       appBar: AppBar(
@@ -63,7 +99,7 @@ class DashboardPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'SVKM\'s NMIMS',
+                      "SVKM's NMIMS",
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -82,6 +118,25 @@ class DashboardPage extends StatelessWidget {
               ),
             ),
 
+            const SizedBox(height: 16),
+
+            ElevatedButton.icon(
+              icon: const Icon(Icons.calendar_month),
+              label: const Text(
+                'View Weekly Timetable',
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => WeeklyTimetablePage(
+                      division: division,
+                    ),
+                  ),
+                );
+              },
+            ),
+
             const SizedBox(height: 24),
 
             const Text(
@@ -95,24 +150,35 @@ class DashboardPage extends StatelessWidget {
             const SizedBox(height: 12),
 
             Expanded(
-              child: ListView.builder(
-                itemCount: timetable.length,
-                itemBuilder: (context, index) {
-                  final lecture = timetable[index];
+              child: todayLectures.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No lectures scheduled',
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: todayLectures.length,
+                      itemBuilder: (context, index) {
+                        final lecture =
+                            todayLectures[index];
 
-                  return Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.book),
-                      title: Text(
-                        lecture['subject']!,
-                      ),
-                      subtitle: Text(
-                        lecture['time']!,
-                      ),
+                        return Card(
+                          child: ListTile(
+                            leading: Icon(
+                              _getIcon(
+                                lecture['subject'] ?? '',
+                              ),
+                            ),
+                            title: Text(
+                              lecture['subject'] ?? '',
+                            ),
+                            subtitle: Text(
+                              lecture['time'] ?? '',
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
           ],
         ),

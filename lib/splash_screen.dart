@@ -1,5 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'division_selection_page.dart';
+import 'main.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,16 +14,17 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
 
-    Future.delayed(const Duration(seconds: 2), () {
-      print("NAVIGATION STARTING");
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => DivisionSelectionPage(),
-        ),
-      );
-    });
+    Timer(
+      const Duration(seconds: 2),
+      () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const StartupRouter(),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -30,9 +32,9 @@ class _SplashScreenState extends State<SplashScreen> {
     return const Scaffold(
       body: Center(
         child: Text(
-          'Schedly',
+          "Schedly",
           style: TextStyle(
-            fontSize: 40,
+            fontSize: 34,
             fontWeight: FontWeight.bold,
           ),
         ),
