@@ -4,8 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'division_selection_page.dart';
 import 'weekly_timetable_page.dart';
 import 'timetable_data.dart';
+import 'edit_lecture_page.dart';
 
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends StatefulWidget {
   final String division;
 
   const DashboardPage({
@@ -13,8 +14,39 @@ class DashboardPage extends StatelessWidget {
     required this.division,
   });
 
-  Future<void> _changeDivision(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
+  @override
+  State<DashboardPage> createState() =>
+      _DashboardPageState();
+}
+
+class _DashboardPageState
+    extends State<DashboardPage> {
+  late List<Map<String, String>> todayLectures;
+  late String currentDay;
+
+  @override
+  void initState() {
+    super.initState();
+
+    currentDay = _getCurrentDay();
+
+    final divisionData =
+        TimetableData.timetable[widget.division] ??
+            <String, List<Map<String, String>>>{};
+
+    todayLectures =
+        List<Map<String, String>>.from(
+      divisionData[currentDay] ??
+          <Map<String, String>>[],
+    );
+  }
+
+  Future<void> _changeDivision(
+    BuildContext context,
+  ) async {
+    final prefs =
+        await SharedPreferences.getInstance();
+
     await prefs.remove('selected_division');
 
     if (!context.mounted) return;
@@ -22,45 +54,14 @@ class DashboardPage extends StatelessWidget {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => const DivisionSelectionPage(),
+        builder: (context) =>
+            const DivisionSelectionPage(),
       ),
     );
   }
 
-  IconData _getIcon(String subject) {
-    switch (subject.toLowerCase()) {
-      case 'mathematics':
-        return Icons.calculate;
-
-      case 'programming':
-      case 'oop':
-      case 'java':
-        return Icons.computer;
-
-      case 'beee':
-        return Icons.electrical_services;
-
-      case 'physics':
-        return Icons.science;
-
-      case 'chemistry':
-        return Icons.biotech;
-
-      case 'dbms':
-        return Icons.storage;
-
-      case 'lade':
-        return Icons.menu_book;
-
-      default:
-        return Icons.book;
-    }
-  }
-
   String _getCurrentDay() {
-    final now = DateTime.now();
-
-    switch (now.weekday) {
+    switch (DateTime.now().weekday) {
       case 1:
         return 'Monday';
       case 2:
@@ -78,17 +79,58 @@ class DashboardPage extends StatelessWidget {
     }
   }
 
+  IconData _getIcon(String subject) {
+    switch (subject.toLowerCase()) {
+      case 'mathematics':
+        return Icons.calculate;
+      case 'programming':
+      case 'oop':
+      case 'java':
+        return Icons.computer;
+      case 'beee':
+        return Icons.electrical_services;
+      case 'physics':
+        return Icons.science;
+      case 'chemistry':
+        return Icons.biotech;
+      case 'dbms':
+        return Icons.storage;
+      case 'lade':
+        return Icons.menu_book;
+      default:
+        return Icons.book;
+    }
+  }
+
+  Future<void> _editLecture(
+    int index,
+  ) async {
+    final updatedLecture =
+        await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditLecturePage(
+          lecture: todayLectures[index],
+        ),
+      ),
+    );
+
+    if (updatedLecture != null) {
+      setState(() {
+        todayLectures[index] =
+            Map<String, String>.from(
+          updatedLecture,
+        );
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final currentDay = _getCurrentDay();
-
-    final divisionData =
-        TimetableData.timetable[division] ??
-            <String, List<Map<String, String>>>{};
-
-    final todayLectures =
-        divisionData[currentDay] ??
-            <Map<String, String>>[];
+    final nextLecture =
+        todayLectures.isNotEmpty
+            ? todayLectures.first
+            : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -97,43 +139,45 @@ class DashboardPage extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            tooltip: 'Change Division',
-            onPressed: () => _changeDivision(context),
+            onPressed: () =>
+                _changeDivision(context),
           ),
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding:
+            const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment:
+              CrossAxisAlignment.stretch,
           children: [
             Card(
-              elevation: 6,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding:
+                    const EdgeInsets.all(20),
                 child: Column(
                   children: [
                     Image.asset(
                       'assets/nmims_logo.png',
                       height: 90,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(
+                        height: 10),
                     const Text(
                       "SVKM's NMIMS",
                       style: TextStyle(
                         fontSize: 22,
-                        fontWeight: FontWeight.bold,
+                        fontWeight:
+                            FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(
+                        height: 6),
                     Text(
-                      division,
-                      style: const TextStyle(
+                      widget.division,
+                      style:
+                          const TextStyle(
                         fontSize: 18,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -141,10 +185,12 @@ class DashboardPage extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
             ElevatedButton.icon(
-              icon: const Icon(Icons.calendar_month),
+              icon: const Icon(
+                Icons.calendar_month,
+              ),
               label: const Text(
                 'View Weekly Timetable',
               ),
@@ -152,74 +198,147 @@ class DashboardPage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => WeeklyTimetablePage(
-                      division: division,
+                    builder: (_) =>
+                        WeeklyTimetablePage(
+                      division:
+                          widget.division,
                     ),
                   ),
                 );
               },
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+
+            if (nextLecture != null)
+              Card(
+                color:
+                    Colors.red.shade50,
+                child: Padding(
+                  padding:
+                      const EdgeInsets
+                          .all(16),
+                  child: Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment
+                            .start,
+                    children: [
+                      const Text(
+                        'NEXT LECTURE',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontWeight:
+                              FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(
+                          height: 8),
+                      Text(
+                        nextLecture[
+                                'subject'] ??
+                            '',
+                        style:
+                            const TextStyle(
+                          fontSize: 22,
+                          fontWeight:
+                              FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        nextLecture[
+                                'time'] ??
+                            '',
+                      ),
+                      Text(
+                        'Room: ${nextLecture['room'] ?? ''}',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            const SizedBox(height: 16),
 
             Text(
               "Today is $currentDay",
-              style: const TextStyle(
+              style:
+                  const TextStyle(
                 fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            const Text(
-              "Today's Lectures",
-              style: TextStyle(
-                fontSize: 18,
+                fontWeight:
+                    FontWeight.bold,
               ),
             ),
 
             const SizedBox(height: 12),
 
             Expanded(
-              child: todayLectures.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment:
-                            MainAxisAlignment.center,
-                        children: const [
-                          Icon(
-                            Icons.celebration,
-                            size: 70,
-                          ),
-                          SizedBox(height: 16),
-                          Text(
-                            'No lectures scheduled today',
-                            style: TextStyle(
-                              fontSize: 18,
-                            ),
-                          ),
-                        ],
+              child: todayLectures
+                      .isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No lectures scheduled today',
                       ),
                     )
                   : ListView.builder(
-                      itemCount: todayLectures.length,
-                      itemBuilder: (context, index) {
+                      itemCount:
+                          todayLectures
+                              .length,
+                      itemBuilder:
+                          (context,
+                              index) {
                         final lecture =
-                            todayLectures[index];
+                            todayLectures[
+                                index];
+
+                        final isCancelled =
+                            lecture[
+                                    'cancelled'] ==
+                                'true';
 
                         return Card(
-                          child: ListTile(
-                            leading: Icon(
-                              _getIcon(
-                                lecture['subject'] ?? '',
-                              ),
+                          color: isCancelled
+                              ? Colors.red
+                                  .shade100
+                              : null,
+                          child:
+                              ListTile(
+                            onLongPress:
+                                () =>
+                                    _editLecture(
+                                        index),
+                            leading:
+                                Icon(
+                              isCancelled
+                                  ? Icons
+                                      .cancel
+                                  : _getIcon(
+                                      lecture['subject'] ??
+                                          '',
+                                    ),
                             ),
-                            title: Text(
-                              lecture['subject'] ?? '',
+                            title:
+                                Text(
+                              lecture['subject'] ??
+                                  '',
                             ),
-                            subtitle: Text(
-                              lecture['time'] ?? '',
+                            subtitle:
+                                Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment
+                                      .start,
+                              children: [
+                                Text(
+                                  lecture['time'] ??
+                                      '',
+                                ),
+                                Text(
+                                  'Room: ${lecture['room'] ?? ''}',
+                                ),
+                                if (isCancelled)
+                                  const Text(
+                                    '❌ CANCELLED',
+                                  ),
+                              ],
                             ),
                           ),
                         );
