@@ -1,4 +1,6 @@
 import 'timetable_data.dart';
+import 'system_update_manager.dart';
+import 'services/firestore_service.dart';
 
 class TimetableManager {
   static const List<String> allSlots = [
@@ -11,13 +13,13 @@ class TimetableManager {
     '4:00 PM - 5:00 PM',
   ];
 
-  static void addLecture({
+  static Future<void> addLecture({
     required String division,
     required String day,
     required String subject,
     required String time,
     required String room,
-  }) {
+  }) async {
     final dayLectures =
         TimetableData.timetable[division]?[day];
 
@@ -31,6 +33,27 @@ class TimetableManager {
       'room': room,
       'cancelled': 'false',
     });
+
+    try {
+      await FirestoreService.addLecture(
+        division: division,
+        day: day,
+        subject: subject,
+        time: time,
+        room: room,
+      );
+
+      print('FIRESTORE SUCCESS');
+    } catch (e) {
+      print('FIRESTORE ERROR: $e');
+    }
+
+    SystemUpdateManager.addUpdate(
+      title: 'Lecture Added',
+      description:
+          '$subject added on $day at $time',
+      type: 'add',
+    );
   }
 
   static List<String> getAvailableSlots({

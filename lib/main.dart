@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+
 import 'division_selection_page.dart';
 import 'home_page.dart';
 import 'splash_screen.dart';
 import 'app_settings.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(
+    options:
+        DefaultFirebaseOptions.currentPlatform,
+  );
 
   await AppSettings.loadRole();
   await AppSettings.loadSRDetails();
@@ -53,7 +61,9 @@ class _StartupRouterState
         await SharedPreferences.getInstance();
 
     final division =
-        prefs.getString('selected_division');
+        prefs.getString(
+      'selected_division',
+    );
 
     if (!mounted) return;
 
@@ -69,10 +79,9 @@ class _StartupRouterState
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) =>
-              HomePage(
-                division: division,
-              ),
+          builder: (_) => HomePage(
+            division: division,
+          ),
         ),
       );
     }

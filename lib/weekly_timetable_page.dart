@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'timetable_data.dart';
 import 'edit_lecture_page.dart';
 import 'app_settings.dart';
 import 'user_roles.dart';
 
-class WeeklyTimetablePage
-    extends StatefulWidget {
+class WeeklyTimetablePage extends StatefulWidget {
   final String division;
 
   const WeeklyTimetablePage({
@@ -15,18 +14,16 @@ class WeeklyTimetablePage
   });
 
   @override
-  State<WeeklyTimetablePage>
-      createState() =>
-          _WeeklyTimetablePageState();
+  State<WeeklyTimetablePage> createState() =>
+      _WeeklyTimetablePageState();
 }
 
 class _WeeklyTimetablePageState
-    extends State<
-        WeeklyTimetablePage> {
+    extends State<WeeklyTimetablePage> {
   String selectedDay = 'Monday';
 
   bool _canEditLecture(
-    Map<String, String> lecture,
+    Map<String, dynamic> lecture,
   ) {
     if (AppSettings.currentRole ==
         UserRole.cr) {
@@ -43,56 +40,63 @@ class _WeeklyTimetablePageState
   }
 
   Future<void> _editLecture(
-    int index,
-    List<Map<String, String>>
-        lectures,
+    String docId,
+    Map<String, dynamic> lecture,
   ) async {
-    final updatedLecture =
+    final result =
         await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            EditLecturePage(
-          lecture: lectures[index],
+        builder: (_) => EditLecturePage(
+          lecture: {
+            'id': docId,
+            'subject':
+                lecture['subject'] ?? '',
+            'time':
+                lecture['time'] ?? '',
+            'room':
+                lecture['room'] ?? '',
+            'cancelled':
+                lecture['cancelled'] == true
+                    ? 'true'
+                    : 'false',
+          },
         ),
       ),
     );
 
-    if (updatedLecture != null) {
-      setState(() {
-        lectures[index] =
-            Map<String, String>.from(
-          updatedLecture,
-        );
-      });
+    if (result == null) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Lecture Updated',
-          ),
+    final updated =
+        result as Map<String, dynamic>;
+
+    await FirebaseFirestore.instance
+        .collection('timetables')
+        .doc(widget.division)
+        .collection(selectedDay)
+        .doc(docId)
+        .update({
+      'subject': updated['subject'],
+      'time': updated['time'],
+      'room': updated['room'],
+      'cancelled':
+          updated['cancelled'] == 'true',
+    });
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context)
+        .showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Lecture updated',
         ),
-      );
-    }
+      ),
+    );
   }
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
-    final divisionData =
-        TimetableData.timetable[
-                widget.division] ??
-            <String,
-                List<
-                    Map<String,
-                        String>>>{};
-
-    final lectures =
-        divisionData[selectedDay] ??
-            <Map<String, String>>[];
-
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -116,17 +120,16 @@ class _WeeklyTimetablePageState
               ].map((day) {
                 return Padding(
                   padding:
-                      const EdgeInsets
-                          .all(8),
+                      const EdgeInsets.all(
+                    8,
+                  ),
                   child: ChoiceChip(
                     label: Text(day),
                     selected:
-                        selectedDay ==
-                            day,
+                        selectedDay == day,
                     onSelected: (_) {
                       setState(() {
-                        selectedDay =
-                            day;
+                        selectedDay = day;
                       });
                     },
                   ),
@@ -136,88 +139,129 @@ class _WeeklyTimetablePageState
           ),
 
           Expanded(
-            child: lectures.isEmpty
-                ? const Center(
+            child: StreamBuilder<
+                QuerySnapshot>(
+              stream: FirebaseFirestore
+                  .instance
+                  .collection(
+                    'timetables',
+                  )
+                  .doc(
+                    widget.division,
+                  )
+                  .collection(
+                    selectedDay,
+                  )
+                  .snapshots(),
+              builder:
+                  (context, snapshot) {
+                if (snapshot
+                        .connectionState ==
+                    ConnectionState
+                        .waiting) {
+                  return const Center(
+                    child:
+                        CircularProgressIndicator(),
+                  );
+                }
+
+                if (!snapshot
+                        .hasData ||
+                    snapshot!
+                        .data!
+                        .docs
+                        .isEmpty) {
+                  return const Center(
                     child: Text(
                       'No lectures scheduled',
                     ),
-                  )
-                : ListView.builder(
-                    itemCount:
-                        lectures.length,
-                    itemBuilder:
-                        (
-                      context,
-                      index,
-                    ) {
-                      final lecture =
-                          lectures[
-                              index];
+                  );
+                }
 
-                      final isCancelled =
-                          lecture[
-                                  'cancelled'] ==
-                              'true';
+                final docs =
+                    snapshot.data!.docs;
 
-                      return Card(
-                        color: isCancelled
-                            ? Colors.red
-                                .shade100
-                            : null,
-                        child:
-                            ListTile(
-                          onLongPress:
-                              _canEditLecture(
-                                      lecture)
-                                  ? () =>
-                                      _editLecture(
-                                        index,
-                                        lectures,
-                                      )
-                                  : null,
-                          leading:
-                              Icon(
-                            isCancelled
-                                ? Icons
-                                    .cancel
-                                : Icons
-                                    .book,
-                          ),
-                          title: Text(
-                            lecture['subject'] ??
-                                '',
-                          ),
-                          subtitle:
-                              Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment
-                                    .start,
-                            children: [
-                              Text(
-                                lecture['time'] ??
-                                    '',
-                              ),
-                              Text(
-                                'Room: ${lecture['room'] ?? ''}',
-                              ),
-                              if (isCancelled)
-                                const Text(
-                                  '❌ CANCELLED',
-                                  style:
-                                      TextStyle(
-                                    color: Colors
-                                        .red,
-                                    fontWeight:
-                                        FontWeight
-                                            .bold,
-                                  ),
-                                ),
-                            ],
-                          ),
+                return ListView.builder(
+                  itemCount:
+                      docs.length,
+                  itemBuilder:
+                      (
+                    context,
+                    index,
+                  ) {
+                    final doc = docs[index];
+
+                    final lecture =
+                        doc.data()
+                            as Map<
+                                String,
+                                dynamic>;
+
+                    final isCancelled =
+                        lecture[
+                                'cancelled'] ==
+                            true;
+
+                    return Card(
+                      color: isCancelled
+                          ? Colors
+                              .red
+                              .shade100
+                          : null,
+                      child: ListTile(
+                        onLongPress:
+                            _canEditLecture(
+                                    lecture)
+                                ? () =>
+                                    _editLecture(
+                                      doc.id,
+                                      lecture,
+                                    )
+                                : null,
+                        leading: Icon(
+                          isCancelled
+                              ? Icons
+                                  .cancel
+                              : Icons.book,
                         ),
-                      );
-                    },
-                  ),
+                        title: Text(
+                          lecture[
+                                  'subject'] ??
+                              '',
+                        ),
+                        subtitle:
+                            Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment
+                                  .start,
+                          children: [
+                            Text(
+                              lecture[
+                                      'time'] ??
+                                  '',
+                            ),
+                            Text(
+                              'Room: ${lecture['room'] ?? ''}',
+                            ),
+                            if (isCancelled)
+                              const Text(
+                                '❌ CANCELLED',
+                                style:
+                                    TextStyle(
+                                  color:
+                                      Colors.red,
+                                  fontWeight:
+                                      FontWeight.bold,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),

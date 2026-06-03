@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'timetable_manager.dart';
+import 'subject_data.dart';
 
 class AddLecturePage extends StatefulWidget {
   const AddLecturePage({super.key});
@@ -13,9 +14,6 @@ class AddLecturePage extends StatefulWidget {
 
 class _AddLecturePageState
     extends State<AddLecturePage> {
-  final subjectController =
-      TextEditingController();
-
   final roomController =
       TextEditingController();
 
@@ -25,7 +23,11 @@ class _AddLecturePageState
 
   String? division;
 
+  String? selectedSubject;
+
   List<String> availableSlots = [];
+
+  List<String> subjects = [];
 
   final List<String> days = [
     'Monday',
@@ -53,6 +55,16 @@ class _AddLecturePageState
 
     if (division == null) return;
 
+    subjects =
+        SubjectData.divisionSubjects[
+                division!] ??
+            [];
+
+    if (subjects.isNotEmpty) {
+      selectedSubject =
+          subjects.first;
+    }
+
     _refreshSlots();
   }
 
@@ -77,13 +89,12 @@ class _AddLecturePageState
 
   @override
   void dispose() {
-    subjectController.dispose();
     roomController.dispose();
     super.dispose();
   }
 
   void _saveLecture() {
-    if (subjectController.text.isEmpty ||
+    if (selectedSubject == null ||
         roomController.text.isEmpty ||
         selectedSlot == null) {
       return;
@@ -93,8 +104,7 @@ class _AddLecturePageState
       context,
       {
         'day': selectedDay,
-        'subject':
-            subjectController.text,
+        'subject': selectedSubject!,
         'time': selectedSlot!,
         'room':
             roomController.text,
@@ -104,11 +114,14 @@ class _AddLecturePageState
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Scaffold(
       appBar: AppBar(
-        title:
-            const Text('Add Lecture'),
+        title: const Text(
+          'Add Lecture',
+        ),
       ),
       body: SingleChildScrollView(
         padding:
@@ -137,20 +150,39 @@ class _AddLecturePageState
               },
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(
+              height: 16,
+            ),
 
-            TextField(
-              controller:
-                  subjectController,
+            DropdownButtonFormField<String>(
+              value: selectedSubject,
               decoration:
                   const InputDecoration(
                 labelText: 'Subject',
                 border:
                     OutlineInputBorder(),
               ),
+              items:
+                  subjects.map(
+                (subject) {
+                  return DropdownMenuItem(
+                    value: subject,
+                    child:
+                        Text(subject),
+                  );
+                },
+              ).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedSubject =
+                      value;
+                });
+              },
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(
+              height: 16,
+            ),
 
             DropdownButtonFormField<String>(
               value: selectedSlot,
@@ -178,7 +210,9 @@ class _AddLecturePageState
               },
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(
+              height: 16,
+            ),
 
             TextField(
               controller:
@@ -191,7 +225,9 @@ class _AddLecturePageState
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(
+              height: 24,
+            ),
 
             SizedBox(
               width:

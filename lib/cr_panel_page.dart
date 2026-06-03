@@ -58,7 +58,7 @@ class _CRPanelPageState
 
     if (division == null) return;
 
-    TimetableManager.addLecture(
+    await TimetableManager.addLecture(
       division: division,
       day: lecture['day'],
       subject: lecture['subject'],

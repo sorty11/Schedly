@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'dashboard_page.dart';
 import 'weekly_timetable_page.dart';
+import 'updates_page.dart';
 import 'profile_page.dart';
-import 'announcements_page.dart';
+import 'system_update_manager.dart';
 
 class HomePage extends StatefulWidget {
   final String division;
@@ -24,6 +25,9 @@ class _HomePageState
 
   @override
   Widget build(BuildContext context) {
+    final unreadCount =
+        SystemUpdateManager.unreadCount;
+
     final pages = [
       DashboardPage(
         division: widget.division,
@@ -33,7 +37,7 @@ class _HomePageState
         division: widget.division,
       ),
 
-      const AnnouncementsPage(),
+      const UpdatesPage(),
 
       ProfilePage(
         division: widget.division,
@@ -48,6 +52,11 @@ class _HomePageState
         currentIndex: currentIndex,
 
         onTap: (index) {
+          if (index == 2) {
+            SystemUpdateManager
+                .markAllRead();
+          }
+
           setState(() {
             currentIndex = index;
           });
@@ -56,13 +65,13 @@ class _HomePageState
         type:
             BottomNavigationBarType.fixed,
 
-        items: const [
-          BottomNavigationBarItem(
+        items: [
+          const BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: "Home",
           ),
 
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(
               Icons.calendar_month,
             ),
@@ -70,13 +79,15 @@ class _HomePageState
           ),
 
           BottomNavigationBarItem(
-            icon: Icon(
+            icon: const Icon(
               Icons.notifications,
             ),
-            label: "Updates",
+            label: unreadCount > 0
+                ? "Updates ($unreadCount)"
+                : "Updates",
           ),
 
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: "Profile",
           ),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import 'timetable_data.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DeleteLecturePage extends StatefulWidget {
   const DeleteLecturePage({super.key});
@@ -45,19 +44,9 @@ class _DeleteLecturePageState
   }
 
   Future<void> _deleteLecture(
-    int index,
+    String docId,
+    String subject,
   ) async {
-    if (division == null) return;
-
-    final lectures =
-        TimetableData
-            .timetable[division!]?[selectedDay];
-
-    if (lectures == null) return;
-
-    final subject =
-        lectures[index]['subject'] ?? '';
-
     final shouldDelete =
         await showDialog<bool>(
               context: context,
@@ -103,9 +92,17 @@ class _DeleteLecturePageState
             ) ??
             false;
 
-    if (!shouldDelete) return;
+    if (!shouldDelete ||
+        division == null) {
+      return;
+    }
 
-    lectures.removeAt(index);
+    await FirebaseFirestore.instance
+        .collection('timetables')
+        .doc(division)
+        .collection(selectedDay)
+        .doc(docId)
+        .delete();
 
     if (!mounted) return;
 
@@ -117,19 +114,18 @@ class _DeleteLecturePageState
         ),
       ),
     );
-
-    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final lectures =
-        division == null
-            ? []
-            : TimetableData
-                    .timetable[division!]
-                ?[selectedDay] ??
-                [];
+    if (division == null) {
+      return const Scaffold(
+        body: Center(
+          child:
+              CircularProgressIndicator(),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -170,46 +166,86 @@ class _DeleteLecturePageState
             ),
 
             Expanded(
-              child: lectures.isEmpty
-                  ? const Center(
+              child: StreamBuilder<
+                  QuerySnapshot>(
+                stream: FirebaseFirestore
+                    .instance
+                    .collection(
+                      'timetables',
+                    )
+                    .doc(division)
+                    .collection(
+                      selectedDay,
+                    )
+                    .snapshots(),
+                builder:
+                    (context, snapshot) {
+                  if (!snapshot
+                          .hasData ||
+                      snapshot!
+                          .data!
+                          .docs
+                          .isEmpty) {
+                    return const Center(
                       child: Text(
                         'No lectures found',
                       ),
-                    )
-                  : ListView.builder(
-                      itemCount:
-                          lectures.length,
-                      itemBuilder:
-                          (context, index) {
-                        final lecture =
-                            lectures[index];
+                    );
+                  }
 
-                        return Card(
-                          child: ListTile(
-                            title: Text(
-                              lecture['subject'] ??
+                  final docs =
+                      snapshot.data!.docs;
+
+                  return ListView.builder(
+                    itemCount:
+                        docs.length,
+                    itemBuilder:
+                        (
+                      context,
+                      index,
+                    ) {
+                      final doc =
+                          docs[index];
+
+                      final lecture =
+                          doc.data()
+                              as Map<
+                                  String,
+                                  dynamic>;
+
+                      return Card(
+                        child: ListTile(
+                          title: Text(
+                            lecture[
+                                    'subject'] ??
+                                '',
+                          ),
+                          subtitle: Text(
+                            '${lecture['time']} • ${lecture['room']}',
+                          ),
+                          trailing:
+                              IconButton(
+                            icon:
+                                const Icon(
+                              Icons.delete,
+                              color:
+                                  Colors.red,
+                            ),
+                            onPressed:
+                                () =>
+                                    _deleteLecture(
+                              doc.id,
+                              lecture[
+                                      'subject'] ??
                                   '',
                             ),
-                            subtitle: Text(
-                              '${lecture['time']} • ${lecture['room']}',
-                            ),
-                            trailing:
-                                IconButton(
-                              icon: const Icon(
-                                Icons.delete,
-                                color:
-                                    Colors.red,
-                              ),
-                              onPressed:
-                                  () =>
-                                      _deleteLecture(
-                                index,
-                              ),
-                            ),
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ],
         ),

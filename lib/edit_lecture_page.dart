@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'app_settings.dart';
+import 'user_roles.dart';
+
 class EditLecturePage extends StatefulWidget {
   final Map<String, String> lecture;
 
@@ -21,24 +24,32 @@ class _EditLecturePageState
 
   bool cancelled = false;
 
+  bool get isSR =>
+      AppSettings.currentRole ==
+      UserRole.sr;
+
   @override
   void initState() {
     super.initState();
 
-    subjectController = TextEditingController(
+    subjectController =
+        TextEditingController(
       text: widget.lecture['subject'],
     );
 
-    timeController = TextEditingController(
+    timeController =
+        TextEditingController(
       text: widget.lecture['time'],
     );
 
-    roomController = TextEditingController(
+    roomController =
+        TextEditingController(
       text: widget.lecture['room'],
     );
 
     cancelled =
-        widget.lecture['cancelled'] == 'true';
+        widget.lecture['cancelled'] ==
+            'true';
   }
 
   @override
@@ -53,47 +64,74 @@ class _EditLecturePageState
     Navigator.pop(
       context,
       {
-        'id': widget.lecture['id'] ?? '',
-        'subject': subjectController.text,
-        'time': timeController.text,
-        'room': roomController.text,
-        'cancelled': cancelled.toString(),
+        'id':
+            widget.lecture['id'] ?? '',
+        'subject':
+            subjectController.text,
+        'time':
+            timeController.text,
+        'room':
+            roomController.text,
+        'cancelled':
+            cancelled.toString(),
       },
     );
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Edit Lecture'),
+        title: const Text(
+          'Edit Lecture',
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
+      body: SingleChildScrollView(
+        padding:
+            const EdgeInsets.all(16),
         child: Column(
           children: [
             TextField(
-              controller: subjectController,
-              decoration: const InputDecoration(
-                labelText: 'Subject',
+              controller:
+                  subjectController,
+              enabled: !isSR,
+              decoration:
+                  InputDecoration(
+                labelText:
+                    'Subject',
+                border:
+                    const OutlineInputBorder(),
+                helperText: isSR
+                    ? 'Only CR can change subject'
+                    : null,
               ),
             ),
 
             const SizedBox(height: 16),
 
             TextField(
-              controller: timeController,
-              decoration: const InputDecoration(
+              controller:
+                  timeController,
+              decoration:
+                  const InputDecoration(
                 labelText: 'Time',
+                border:
+                    OutlineInputBorder(),
               ),
             ),
 
             const SizedBox(height: 16),
 
             TextField(
-              controller: roomController,
-              decoration: const InputDecoration(
+              controller:
+                  roomController,
+              decoration:
+                  const InputDecoration(
                 labelText: 'Room',
+                border:
+                    OutlineInputBorder(),
               ),
             ),
 
@@ -114,10 +152,17 @@ class _EditLecturePageState
             const SizedBox(height: 24),
 
             SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _saveLecture,
-                child: const Text('Save'),
+              width:
+                  double.infinity,
+              child: ElevatedButton.icon(
+                onPressed:
+                    _saveLecture,
+                icon: const Icon(
+                  Icons.save,
+                ),
+                label: const Text(
+                  'Save Changes',
+                ),
               ),
             ),
           ],

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "981132399209",
+    "project_id": "schedly-e625d",
+    "storage_bucket": "schedly-e625d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:981132399209:android:2c797317ec09ae7f6e88f8",
+        "android_client_info": {
+          "package_name": "com.example.schedly"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTDHdp4zNYZO_iXQA5TMg48vBhIjYbcYk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
