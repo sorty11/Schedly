@@ -4,8 +4,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'division_selection_page.dart';
 import 'home_page.dart';
 import 'splash_screen.dart';
+import 'app_settings.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await AppSettings.loadRole();
+  await AppSettings.loadSRDetails();
+
   runApp(const SchedlyApp());
 }
 
@@ -30,10 +36,12 @@ class StartupRouter extends StatefulWidget {
   const StartupRouter({super.key});
 
   @override
-  State<StartupRouter> createState() => _StartupRouterState();
+  State<StartupRouter> createState() =>
+      _StartupRouterState();
 }
 
-class _StartupRouterState extends State<StartupRouter> {
+class _StartupRouterState
+    extends State<StartupRouter> {
   @override
   void initState() {
     super.initState();
@@ -41,8 +49,11 @@ class _StartupRouterState extends State<StartupRouter> {
   }
 
   Future<void> _checkDivision() async {
-    final prefs = await SharedPreferences.getInstance();
-    final division = prefs.getString('selected_division');
+    final prefs =
+        await SharedPreferences.getInstance();
+
+    final division =
+        prefs.getString('selected_division');
 
     if (!mounted) return;
 
@@ -50,16 +61,18 @@ class _StartupRouterState extends State<StartupRouter> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => const DivisionSelectionPage(),
+          builder: (_) =>
+              const DivisionSelectionPage(),
         ),
       );
     } else {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => HomePage(
-            division: division,
-          ),
+          builder: (_) =>
+              HomePage(
+                division: division,
+              ),
         ),
       );
     }
@@ -69,7 +82,8 @@ class _StartupRouterState extends State<StartupRouter> {
   Widget build(BuildContext context) {
     return const Scaffold(
       body: Center(
-        child: CircularProgressIndicator(),
+        child:
+            CircularProgressIndicator(),
       ),
     );
   }

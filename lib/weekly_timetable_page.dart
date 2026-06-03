@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
-import 'timetable_data.dart';
 
-class WeeklyTimetablePage extends StatefulWidget {
+import 'timetable_data.dart';
+import 'edit_lecture_page.dart';
+import 'app_settings.dart';
+import 'user_roles.dart';
+
+class WeeklyTimetablePage
+    extends StatefulWidget {
   final String division;
 
   const WeeklyTimetablePage({
@@ -10,34 +15,97 @@ class WeeklyTimetablePage extends StatefulWidget {
   });
 
   @override
-  State<WeeklyTimetablePage> createState() =>
-      _WeeklyTimetablePageState();
+  State<WeeklyTimetablePage>
+      createState() =>
+          _WeeklyTimetablePageState();
 }
 
 class _WeeklyTimetablePageState
-    extends State<WeeklyTimetablePage> {
+    extends State<
+        WeeklyTimetablePage> {
   String selectedDay = 'Monday';
 
-  @override
-  Widget build(BuildContext context) {
-    final Map<String, List<Map<String, String>>> divisionData =
-        TimetableData.timetable[widget.division] ??
-            <String, List<Map<String, String>>>{};
+  bool _canEditLecture(
+    Map<String, String> lecture,
+  ) {
+    if (AppSettings.currentRole ==
+        UserRole.cr) {
+      return true;
+    }
 
-    final List<Map<String, String>> lectures =
+    if (AppSettings.currentRole ==
+        UserRole.sr) {
+      return lecture['subject'] ==
+          AppSettings.srSubject;
+    }
+
+    return false;
+  }
+
+  Future<void> _editLecture(
+    int index,
+    List<Map<String, String>>
+        lectures,
+  ) async {
+    final updatedLecture =
+        await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            EditLecturePage(
+          lecture: lectures[index],
+        ),
+      ),
+    );
+
+    if (updatedLecture != null) {
+      setState(() {
+        lectures[index] =
+            Map<String, String>.from(
+          updatedLecture,
+        );
+      });
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Lecture Updated',
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(
+    BuildContext context,
+  ) {
+    final divisionData =
+        TimetableData.timetable[
+                widget.division] ??
+            <String,
+                List<
+                    Map<String,
+                        String>>>{};
+
+    final lectures =
         divisionData[selectedDay] ??
             <Map<String, String>>[];
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Weekly Timetable'),
+        title: const Text(
+          'Weekly Timetable',
+        ),
       ),
       body: Column(
         children: [
           SizedBox(
             height: 70,
             child: ListView(
-              scrollDirection: Axis.horizontal,
+              scrollDirection:
+                  Axis.horizontal,
               children: [
                 'Monday',
                 'Tuesday',
@@ -47,13 +115,18 @@ class _WeeklyTimetablePageState
                 'Saturday',
               ].map((day) {
                 return Padding(
-                  padding: const EdgeInsets.all(8),
+                  padding:
+                      const EdgeInsets
+                          .all(8),
                   child: ChoiceChip(
                     label: Text(day),
-                    selected: selectedDay == day,
+                    selected:
+                        selectedDay ==
+                            day,
                     onSelected: (_) {
                       setState(() {
-                        selectedDay = day;
+                        selectedDay =
+                            day;
                       });
                     },
                   ),
@@ -61,24 +134,85 @@ class _WeeklyTimetablePageState
               }).toList(),
             ),
           ),
+
           Expanded(
             child: lectures.isEmpty
                 ? const Center(
-                    child: Text('No lectures scheduled'),
+                    child: Text(
+                      'No lectures scheduled',
+                    ),
                   )
                 : ListView.builder(
-                    itemCount: lectures.length,
-                    itemBuilder: (context, index) {
-                      final lecture = lectures[index];
+                    itemCount:
+                        lectures.length,
+                    itemBuilder:
+                        (
+                      context,
+                      index,
+                    ) {
+                      final lecture =
+                          lectures[
+                              index];
+
+                      final isCancelled =
+                          lecture[
+                                  'cancelled'] ==
+                              'true';
 
                       return Card(
-                        child: ListTile(
-                          leading: const Icon(Icons.book),
-                          title: Text(
-                            lecture['subject'] ?? '',
+                        color: isCancelled
+                            ? Colors.red
+                                .shade100
+                            : null,
+                        child:
+                            ListTile(
+                          onLongPress:
+                              _canEditLecture(
+                                      lecture)
+                                  ? () =>
+                                      _editLecture(
+                                        index,
+                                        lectures,
+                                      )
+                                  : null,
+                          leading:
+                              Icon(
+                            isCancelled
+                                ? Icons
+                                    .cancel
+                                : Icons
+                                    .book,
                           ),
-                          subtitle: Text(
-                            lecture['time'] ?? '',
+                          title: Text(
+                            lecture['subject'] ??
+                                '',
+                          ),
+                          subtitle:
+                              Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment
+                                    .start,
+                            children: [
+                              Text(
+                                lecture['time'] ??
+                                    '',
+                              ),
+                              Text(
+                                'Room: ${lecture['room'] ?? ''}',
+                              ),
+                              if (isCancelled)
+                                const Text(
+                                  '❌ CANCELLED',
+                                  style:
+                                      TextStyle(
+                                    color: Colors
+                                        .red,
+                                    fontWeight:
+                                        FontWeight
+                                            .bold,
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       );

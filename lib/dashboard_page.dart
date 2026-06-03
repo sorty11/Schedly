@@ -5,6 +5,10 @@ import 'division_selection_page.dart';
 import 'weekly_timetable_page.dart';
 import 'timetable_data.dart';
 import 'edit_lecture_page.dart';
+import 'app_settings.dart';
+import 'cr_login_page.dart';
+import 'user_roles.dart';
+import 'cr_panel_page.dart';
 
 class DashboardPage extends StatefulWidget {
   final String division;
@@ -21,7 +25,9 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState
     extends State<DashboardPage> {
-  late List<Map<String, String>> todayLectures;
+  late List<Map<String, String>>
+      todayLectures;
+
   late String currentDay;
 
   @override
@@ -31,8 +37,12 @@ class _DashboardPageState
     currentDay = _getCurrentDay();
 
     final divisionData =
-        TimetableData.timetable[widget.division] ??
-            <String, List<Map<String, String>>>{};
+        TimetableData.timetable[
+                widget.division] ??
+            <String,
+                List<
+                    Map<String,
+                        String>>>{};
 
     todayLectures =
         List<Map<String, String>>.from(
@@ -47,7 +57,9 @@ class _DashboardPageState
     final prefs =
         await SharedPreferences.getInstance();
 
-    await prefs.remove('selected_division');
+    await prefs.remove(
+      'selected_division',
+    );
 
     if (!context.mounted) return;
 
@@ -79,27 +91,55 @@ class _DashboardPageState
     }
   }
 
-  IconData _getIcon(String subject) {
-    switch (subject.toLowerCase()) {
+  IconData _getIcon(
+    String subject,
+  ) {
+    switch (
+        subject.toLowerCase()) {
       case 'mathematics':
         return Icons.calculate;
+
       case 'programming':
       case 'oop':
       case 'java':
         return Icons.computer;
+
       case 'beee':
-        return Icons.electrical_services;
+        return Icons
+            .electrical_services;
+
       case 'physics':
         return Icons.science;
+
       case 'chemistry':
         return Icons.biotech;
+
       case 'dbms':
         return Icons.storage;
+
       case 'lade':
         return Icons.menu_book;
+
       default:
         return Icons.book;
     }
+  }
+
+  bool _canEditLecture(
+    Map<String, String> lecture,
+  ) {
+    if (AppSettings.currentRole ==
+        UserRole.cr) {
+      return true;
+    }
+
+    if (AppSettings.currentRole ==
+        UserRole.sr) {
+      return lecture['subject'] ==
+          AppSettings.srSubject;
+    }
+
+    return false;
   }
 
   Future<void> _editLecture(
@@ -109,8 +149,10 @@ class _DashboardPageState
         await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => EditLecturePage(
-          lecture: todayLectures[index],
+        builder: (_) =>
+            EditLecturePage(
+          lecture:
+              todayLectures[index],
         ),
       ),
     );
@@ -126,7 +168,9 @@ class _DashboardPageState
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     final nextLecture =
         todayLectures.isNotEmpty
             ? todayLectures.first
@@ -134,13 +178,56 @@ class _DashboardPageState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Schedly'),
+        title: const Text(
+          'Schedly',
+        ),
         centerTitle: true,
         actions: [
+          GestureDetector(
+            onTap:
+                AppSettings.currentRole ==
+                        UserRole.cr
+                    ? () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const CRPanelPage(),
+                          ),
+                        ).then((_) {
+                          setState(() {});
+                        });
+                      }
+                    : null,
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(
+                horizontal: 8,
+              ),
+              child: Text(
+                AppSettings.currentRole ==
+                        UserRole.cr
+                    ? '👑 CR'
+                    : AppSettings.currentRole ==
+                            UserRole.sr
+                        ? '📚 SR'
+                        : 'Student',
+                style:
+                    const TextStyle(
+                  fontWeight:
+                      FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(
+              Icons.logout,
+            ),
             onPressed: () =>
-                _changeDivision(context),
+                _changeDivision(
+              context,
+            ),
           ),
         ],
       ),
@@ -149,30 +236,49 @@ class _DashboardPageState
             const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment:
-              CrossAxisAlignment.stretch,
+              CrossAxisAlignment
+                  .stretch,
           children: [
             Card(
               child: Padding(
                 padding:
-                    const EdgeInsets.all(20),
+                    const EdgeInsets.all(
+                  20,
+                ),
                 child: Column(
                   children: [
-                    Image.asset(
-                      'assets/nmims_logo.png',
-                      height: 90,
+                    GestureDetector(
+                      onDoubleTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const CRLoginPage(),
+                          ),
+                        ).then((_) {
+                          setState(() {});
+                        });
+                      },
+                      child: Image.asset(
+                        'assets/nmims_logo.png',
+                        height: 90,
+                      ),
                     ),
                     const SizedBox(
-                        height: 10),
+                      height: 10,
+                    ),
                     const Text(
                       "SVKM's NMIMS",
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight:
-                            FontWeight.bold,
+                            FontWeight
+                                .bold,
                       ),
                     ),
                     const SizedBox(
-                        height: 6),
+                      height: 6,
+                    ),
                     Text(
                       widget.division,
                       style:
@@ -185,7 +291,9 @@ class _DashboardPageState
               ),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(
+              height: 12,
+            ),
 
             ElevatedButton.icon(
               icon: const Icon(
@@ -208,7 +316,9 @@ class _DashboardPageState
               },
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(
+              height: 16,
+            ),
 
             if (nextLecture != null)
               Card(
@@ -225,14 +335,18 @@ class _DashboardPageState
                     children: [
                       const Text(
                         'NEXT LECTURE',
-                        style: TextStyle(
-                          color: Colors.red,
+                        style:
+                            TextStyle(
+                          color:
+                              Colors.red,
                           fontWeight:
-                              FontWeight.bold,
+                              FontWeight
+                                  .bold,
                         ),
                       ),
                       const SizedBox(
-                          height: 8),
+                        height: 8,
+                      ),
                       Text(
                         nextLecture[
                                 'subject'] ??
@@ -241,7 +355,8 @@ class _DashboardPageState
                             const TextStyle(
                           fontSize: 22,
                           fontWeight:
-                              FontWeight.bold,
+                              FontWeight
+                                  .bold,
                         ),
                       ),
                       Text(
@@ -257,7 +372,9 @@ class _DashboardPageState
                 ),
               ),
 
-            const SizedBox(height: 16),
+            const SizedBox(
+              height: 16,
+            ),
 
             Text(
               "Today is $currentDay",
@@ -269,81 +386,90 @@ class _DashboardPageState
               ),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(
+              height: 12,
+            ),
 
             Expanded(
-              child: todayLectures
-                      .isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No lectures scheduled today',
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount:
-                          todayLectures
-                              .length,
-                      itemBuilder:
-                          (context,
-                              index) {
-                        final lecture =
-                            todayLectures[
-                                index];
+              child:
+                  todayLectures
+                          .isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No lectures scheduled today',
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount:
+                              todayLectures
+                                  .length,
+                          itemBuilder:
+                              (
+                            context,
+                            index,
+                          ) {
+                            final lecture =
+                                todayLectures[
+                                    index];
 
-                        final isCancelled =
-                            lecture[
-                                    'cancelled'] ==
-                                'true';
+                            final isCancelled =
+                                lecture['cancelled'] ==
+                                    'true';
 
-                        return Card(
-                          color: isCancelled
-                              ? Colors.red
-                                  .shade100
-                              : null,
-                          child:
-                              ListTile(
-                            onLongPress:
-                                () =>
-                                    _editLecture(
-                                        index),
-                            leading:
-                                Icon(
-                              isCancelled
-                                  ? Icons
-                                      .cancel
-                                  : _getIcon(
-                                      lecture['subject'] ??
-                                          '',
-                                    ),
-                            ),
-                            title:
-                                Text(
-                              lecture['subject'] ??
-                                  '',
-                            ),
-                            subtitle:
-                                Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment
-                                      .start,
-                              children: [
-                                Text(
-                                  lecture['time'] ??
+                            return Card(
+                              color: isCancelled
+                                  ? Colors
+                                      .red
+                                      .shade100
+                                  : null,
+                              child:
+                                  ListTile(
+                                onLongPress:
+                                    _canEditLecture(
+                                            lecture)
+                                        ? () =>
+                                            _editLecture(
+                                              index,
+                                            )
+                                        : null,
+                                leading:
+                                    Icon(
+                                  isCancelled
+                                      ? Icons
+                                          .cancel
+                                      : _getIcon(
+                                          lecture['subject'] ??
+                                              '',
+                                        ),
+                                ),
+                                title:
+                                    Text(
+                                  lecture['subject'] ??
                                       '',
                                 ),
-                                Text(
-                                  'Room: ${lecture['room'] ?? ''}',
+                                subtitle:
+                                    Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment
+                                          .start,
+                                  children: [
+                                    Text(
+                                      lecture['time'] ??
+                                          '',
+                                    ),
+                                    Text(
+                                      'Room: ${lecture['room'] ?? ''}',
+                                    ),
+                                    if (isCancelled)
+                                      const Text(
+                                        '❌ CANCELLED',
+                                      ),
+                                  ],
                                 ),
-                                if (isCancelled)
-                                  const Text(
-                                    '❌ CANCELLED',
-                                  ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                              ),
+                            );
+                          },
+                        ),
             ),
           ],
         ),
