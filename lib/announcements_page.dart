@@ -1,7 +1,6 @@
-
 import 'package:flutter/material.dart';
-
-import 'announcement_manager.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AnnouncementsPage
     extends StatefulWidget {
@@ -35,71 +34,125 @@ class _AnnouncementsPageState
 
   @override
   Widget build(BuildContext context) {
-    final announcements =
-        AnnouncementManager
-            .announcements;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
           'Announcements',
         ),
       ),
-      body: announcements.isEmpty
-          ? const Center(
+      body: StreamBuilder<
+          QuerySnapshot>(
+        stream: Stream.fromFuture(
+          SharedPreferences.getInstance(),
+        ).asyncExpand(
+          (prefs) {
+            final division =
+                prefs.getString(
+              'selected_division',
+            );
+
+            return FirebaseFirestore.instance
+                .collection(
+                  'announcements',
+                )
+                .where(
+                  'division',
+                  isEqualTo: division,
+                )
+                .orderBy(
+                  'createdAt',
+                  descending: true,
+                )
+                .snapshots();
+          },
+        ),
+        builder: (
+          context,
+          snapshot,
+        ) {
+          if (snapshot.hasError) {
+            return const Center(
+              child: Text(
+                'Error loading announcements',
+              ),
+            );
+          }
+
+          if (!snapshot.hasData) {
+            return const Center(
+              child:
+                  CircularProgressIndicator(),
+            );
+          }
+
+          final docs =
+              snapshot.data!.docs;
+
+          if (docs.isEmpty) {
+            return const Center(
               child: Text(
                 'No announcements yet',
               ),
-            )
-          : ListView.builder(
-              itemCount:
-                  announcements.length,
-              itemBuilder:
-                  (context, index) {
-                final item =
-                    announcements[
-                        index];
+            );
+          }
 
-                return Card(
-                  margin:
-                      const EdgeInsets.all(
-                    8,
+          return ListView.builder(
+            itemCount: docs.length,
+            itemBuilder:
+                (context, index) {
+              final data =
+                  docs[index].data()
+                      as Map<
+                        String,
+                        dynamic
+                      >;
+
+              return Card(
+                margin:
+                    const EdgeInsets.all(
+                  8,
+                ),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor:
+                        _priorityColor(
+                      data['priority'] ??
+                          'Normal',
+                    ),
                   ),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor:
-                          _priorityColor(
-                        item.priority,
+                  title: Text(
+                    data['title'] ?? '',
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment
+                            .start,
+                    children: [
+                      Text(
+                        data['message'] ??
+                            '',
                       ),
-                    ),
-                    title:
-                        Text(item.title),
-                    subtitle: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment
-                              .start,
-                      children: [
-                        Text(
-                          item.message,
+                      const SizedBox(
+                        height: 4,
+                      ),
+                      Text(
+                        data['priority'] ??
+                            'Normal',
+                        style:
+                            const TextStyle(
+                          fontWeight:
+                              FontWeight
+                                  .bold,
                         ),
-                        const SizedBox(
-                          height: 4,
-                        ),
-                        Text(
-                          item.priority,
-                          style:
-                              const TextStyle(
-                            fontWeight:
-                                FontWeight
-                                    .bold,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

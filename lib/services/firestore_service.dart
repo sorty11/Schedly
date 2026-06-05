@@ -11,6 +11,23 @@ class FirestoreService {
     required String time,
     required String room,
   }) async {
+    final existing =
+        await db
+            .collection('timetables')
+            .doc(division)
+            .collection(day)
+            .where(
+              'time',
+              isEqualTo: time,
+            )
+            .get();
+
+    if (existing.docs.isNotEmpty) {
+      throw Exception(
+        'This time slot is already occupied.',
+      );
+    }
+
     await db
         .collection('timetables')
         .doc(division)
@@ -23,5 +40,55 @@ class FirestoreService {
       'createdAt':
           FieldValue.serverTimestamp(),
     });
+  }
+
+  static Future<List<String>>
+      getSubjects(
+    String division,
+  ) async {
+    try {
+      final doc =
+          await db
+              .collection('divisions')
+              .doc(division)
+              .get();
+
+      if (!doc.exists) {
+        return [];
+      }
+
+      final data = doc.data();
+
+      if (data == null ||
+          data['subjects'] == null) {
+        return [];
+      }
+
+      return List<String>.from(
+        data['subjects'],
+      );
+    } catch (e) {
+      print(
+        'GET SUBJECTS ERROR: $e',
+      );
+      return [];
+    }
+  }
+
+  static Future<void> saveSubjects({
+    required String division,
+    required List<String> subjects,
+  }) async {
+    await db
+        .collection('divisions')
+        .doc(division)
+        .set(
+      {
+        'subjects': subjects,
+      },
+      SetOptions(
+        merge: true,
+      ),
+    );
   }
 }

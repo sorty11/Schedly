@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-
-import 'system_update_manager.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class UpdatesPage extends StatefulWidget {
   const UpdatesPage({super.key});
@@ -12,11 +12,13 @@ class UpdatesPage extends StatefulWidget {
 
 class _UpdatesPageState
     extends State<UpdatesPage> {
-  @override
-  void initState() {
-    super.initState();
+  Future<String?> _getDivision() async {
+    final prefs =
+        await SharedPreferences.getInstance();
 
-    SystemUpdateManager.markAllRead();
+    return prefs.getString(
+      'selected_division',
+    );
   }
 
   Color _getColor(String type) {
@@ -27,11 +29,17 @@ class _UpdatesPageState
       case 'add':
         return Colors.green;
 
-      case 'edit':
+      case 'room_change':
+        return Colors.blue;
+
+      case 'time_change':
         return Colors.orange;
 
+      case 'announcement':
+        return Colors.purple;
+
       default:
-        return Colors.blue;
+        return Colors.grey;
     }
   }
 
@@ -43,8 +51,14 @@ class _UpdatesPageState
       case 'add':
         return Icons.add_circle;
 
-      case 'edit':
-        return Icons.edit;
+      case 'room_change':
+        return Icons.meeting_room;
+
+      case 'time_change':
+        return Icons.access_time;
+
+      case 'announcement':
+        return Icons.campaign;
 
       default:
         return Icons.notifications;
@@ -53,66 +67,145 @@ class _UpdatesPageState
 
   @override
   Widget build(BuildContext context) {
-    final updates =
-        SystemUpdateManager.updates;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
           'Updates',
         ),
       ),
-      body: updates.isEmpty
-          ? const Center(
-              child: Text(
-                'No updates yet',
-              ),
-            )
-          : ListView.builder(
-              itemCount: updates.length,
-              itemBuilder:
-                  (context, index) {
-                final update =
-                    updates[index];
+      body: FutureBuilder<String?>(
+        future: _getDivision(),
+        builder: (
+          context,
+          divisionSnapshot,
+        ) {
+          if (!divisionSnapshot.hasData) {
+            return const Center(
+              child:
+                  CircularProgressIndicator(),
+            );
+          }
 
-                return Card(
-                  margin:
-                      const EdgeInsets.all(
-                    8,
-                  ),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor:
-                          _getColor(
-                        update.type,
-                      ),
-                      child: Icon(
-                        _getIcon(
-                          update.type,
-                        ),
-                        color:
-                            Colors.white,
-                      ),
-                    ),
-                    title: Text(
-                      update.title,
-                    ),
-                    subtitle: Text(
-                      update.description,
-                    ),
-                    trailing:
-                        update.isRead
-                            ? null
-                            : const Icon(
-                                Icons.fiber_manual_record,
-                                color:
-                                    Colors.red,
-                                size: 12,
-                              ),
+          final division =
+              divisionSnapshot.data;
+
+          if (division == null) {
+            return const Center(
+              child: Text(
+                'No division selected',
+              ),
+            );
+          }
+
+          return StreamBuilder<
+              QuerySnapshot>(
+            stream:
+                FirebaseFirestore.instance
+                    .collection(
+                      'notifications',
+                    )
+                    .where(
+                      'division',
+                      isEqualTo:
+                          division,
+                    )
+                    .orderBy(
+                      'createdAt',
+                      descending: true,
+                    )
+                    .snapshots(),
+            builder: (
+              context,
+              snapshot,
+            ) {
+              if (snapshot
+                      .connectionState ==
+                  ConnectionState
+                      .waiting) {
+                return const Center(
+                  child:
+                      CircularProgressIndicator(),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text(
+                    'Error: ${snapshot.error}',
                   ),
                 );
-              },
-            ),
+              }
+
+              if (!snapshot.hasData ||
+                  snapshot
+                      .data!
+                      .docs
+                      .isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No updates yet',
+                  ),
+                );
+              }
+
+              final docs =
+                  snapshot.data!.docs;
+
+              return ListView.builder(
+                itemCount:
+                    docs.length,
+                itemBuilder:
+                    (
+                      context,
+                      index,
+                    ) {
+                  final data =
+                      docs[index]
+                          .data()
+                          as Map<
+                              String,
+                              dynamic>;
+
+                  final type =
+                      data['type'] ??
+                          '';
+
+                  return Card(
+                    margin:
+                        const EdgeInsets.all(
+                      8,
+                    ),
+                    child: ListTile(
+                      leading:
+                          CircleAvatar(
+                        backgroundColor:
+                            _getColor(
+                          type,
+                        ),
+                        child: Icon(
+                          _getIcon(
+                            type,
+                          ),
+                          color: Colors
+                              .white,
+                        ),
+                      ),
+                      title: Text(
+                        data['title'] ??
+                            '',
+                      ),
+                      subtitle: Text(
+                        data['message'] ??
+                            '',
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

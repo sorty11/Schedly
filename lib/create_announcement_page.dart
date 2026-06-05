@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-
-import 'announcement_manager.dart';
-import 'models/announcement.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'services/app_notification_service.dart';
+import 'services/announcement_service.dart';
 
 class CreateAnnouncementPage
     extends StatefulWidget {
@@ -16,8 +16,7 @@ class CreateAnnouncementPage
 }
 
 class _CreateAnnouncementPageState
-    extends State<
-        CreateAnnouncementPage> {
+    extends State<CreateAnnouncementPage> {
   final titleController =
       TextEditingController();
 
@@ -33,31 +32,49 @@ class _CreateAnnouncementPageState
     super.dispose();
   }
 
-  void _publish() {
-    if (titleController.text.isEmpty ||
-        messageController.text.isEmpty) {
-      return;
-    }
+  Future<void> _publish() async {
+    try {
+      if (titleController.text.isEmpty ||
+          messageController.text.isEmpty) {
+        return;
+      }
 
-    AnnouncementManager
-        .announcements
-        .insert(
-      0,
-      Announcement(
-        id: DateTime.now()
-            .millisecondsSinceEpoch
-            .toString(),
-        title:
-            titleController.text,
-        message:
-            messageController.text,
+      final prefs = await SharedPreferences.getInstance();
+
+      final division = prefs.getString('selected_division');
+
+      if (division == null) {
+        return;
+      }
+
+      await AnnouncementService.createAnnouncement(
+        title: titleController.text,
+        message: messageController.text,
         priority: priority,
-        createdAt:
-            DateTime.now(),
-      ),
-    );
+        division: division,
+      );
+       print('CREATING ANNOUNCEMENT NOTIFICATION');
+      await AppNotificationService.createNotification(
+        title: 'New Announcement',
+        message: messageController.text,
+        division: division,
+        type: 'announcement',
+      );print('ANNOUNCEMENT NOTIFICATION CREATED');
 
-    Navigator.pop(context);
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Announcement published for $division',
+          ),
+        ),
+      );
+
+      Navigator.pop(context);
+    } catch (e) {
+      print('ANNOUNCEMENT ERROR: $e');
+    }
   }
 
   @override

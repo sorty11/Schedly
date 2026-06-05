@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dashboard_page.dart';
 import 'weekly_timetable_page.dart';
 import 'updates_page.dart';
 import 'profile_page.dart';
-import 'system_update_manager.dart';
 
 class HomePage extends StatefulWidget {
   final String division;
@@ -22,12 +23,105 @@ class HomePage extends StatefulWidget {
 class _HomePageState
     extends State<HomePage> {
   int currentIndex = 0;
+  int unreadCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _loadUnreadCount();
+
+    FirebaseFirestore.instance
+        .collection('notifications')
+        .where(
+          'division',
+          isEqualTo: widget.division,
+        )
+        .snapshots()
+        .listen((_) {
+      _loadUnreadCount();
+    });
+  }
+
+  Future<void> _loadUnreadCount() async {
+    try {
+      final prefs =
+          await SharedPreferences.getInstance();
+
+      final lastSeenMillis =
+          prefs.getInt(
+                'last_seen_notifications',
+              ) ??
+              0;
+
+      final snapshot =
+          await FirebaseFirestore.instance
+              .collection(
+                'notifications',
+              )
+              .where(
+                'division',
+                isEqualTo:
+                    widget.division,
+              )
+              .get();
+
+      int count = 0;
+
+      for (final doc
+          in snapshot.docs) {
+        final data = doc.data();
+
+        final timestamp =
+            data['createdAt'];
+
+        if (timestamp != null) {
+          final createdAt =
+              (timestamp
+                      as Timestamp)
+                  .millisecondsSinceEpoch;
+
+          if (createdAt >
+              lastSeenMillis) {
+            count++;
+          }
+        }
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        unreadCount = count;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        unreadCount = 0;
+      });
+    }
+  }
+
+  Future<void>
+      _markNotificationsRead() async {
+    final prefs =
+        await SharedPreferences.getInstance();
+
+    await prefs.setInt(
+      'last_seen_notifications',
+      DateTime.now()
+          .millisecondsSinceEpoch,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      unreadCount = 0;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final unreadCount =
-        SystemUpdateManager.unreadCount;
-
     final pages = [
       DashboardPage(
         division: widget.division,
@@ -49,50 +143,56 @@ class _HomePageState
 
       bottomNavigationBar:
           BottomNavigationBar(
-        currentIndex: currentIndex,
+        currentIndex:
+            currentIndex,
 
-        onTap: (index) {
+        onTap: (index) async {
           if (index == 2) {
-            SystemUpdateManager
-                .markAllRead();
+            await _markNotificationsRead();
           }
 
           setState(() {
-            currentIndex = index;
+            currentIndex =
+                index;
           });
         },
 
         type:
-            BottomNavigationBarType.fixed,
+            BottomNavigationBarType
+                .fixed,
 
         items: [
           const BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: "Home",
+            icon:
+                Icon(Icons.home),
+            label: 'Home',
           ),
 
           const BottomNavigationBarItem(
             icon: Icon(
               Icons.calendar_month,
             ),
-            label: "Timetable",
+            label: 'Timetable',
           ),
 
           BottomNavigationBarItem(
             icon: const Icon(
               Icons.notifications,
             ),
-            label: unreadCount > 0
-                ? "Updates ($unreadCount)"
-                : "Updates",
+            label:
+                unreadCount > 0
+                    ? 'Updates ($unreadCount)'
+                    : 'Updates',
           ),
 
           const BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: "Profile",
+            icon:
+                Icon(Icons.person),
+            label: 'Profile',
           ),
         ],
       ),
     );
   }
 }
+

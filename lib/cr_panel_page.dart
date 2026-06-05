@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'upload_timetable_pdf_page.dart';
 import 'app_settings.dart';
 import 'user_roles.dart';
 import 'add_lecture_page.dart';
 import 'timetable_manager.dart';
 import 'delete_lecture_page.dart';
 import 'create_announcement_page.dart';
+import 'weekly_timetable_page.dart';
 
 class CRPanelPage extends StatefulWidget {
   const CRPanelPage({super.key});
@@ -28,7 +29,7 @@ class _CRPanelPageState
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text(
-          'Logged out from CR mode',
+          'Logged out',
         ),
       ),
     );
@@ -80,8 +81,8 @@ class _CRPanelPageState
 
   @override
   Widget build(BuildContext context) {
-    if (AppSettings.currentRole !=
-        UserRole.cr) {
+    if (AppSettings.currentRole != UserRole.cr &&
+    AppSettings.currentRole != UserRole.sr) {
       return const Scaffold(
         body: Center(
           child: Text(
@@ -91,10 +92,16 @@ class _CRPanelPageState
       );
     }
 
+    final isCR =
+        AppSettings.currentRole ==
+            UserRole.cr;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'CR Panel',
+        title: Text(
+          isCR
+              ? 'CR Panel'
+              : 'SR Panel',
         ),
       ),
       body: Padding(
@@ -111,86 +118,130 @@ class _CRPanelPageState
                 title: const Text(
                   'Edit Lectures',
                 ),
-                subtitle: const Text(
-                  'Long press lectures on dashboard',
+                subtitle: Text(
+                  isCR
+                      ? 'Open timetable editor'
+                      : 'Edit your subject lectures',
                 ),
+                onTap: () async {
+                  final prefs =
+                      await SharedPreferences
+                          .getInstance();
+
+                  final division =
+                      prefs.getString(
+                    'selected_division',
+                  );
+
+                  if (!mounted ||
+                      division == null) {
+                    return;
+                  }
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          WeeklyTimetablePage(
+                        division:
+                            division,
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
 
             Card(
-              child: ListTile(
-                leading:
-                    const Icon(
-                  Icons.add,
-                ),
-                title: const Text(
-                  'Add Lecture',
-                ),
-                subtitle: const Text(
-                  'Add lecture to timetable',
-                ),
-                onTap: _addLecture,
-              ),
-            ),
-
-            Card(
-  child: ListTile(
-    leading:
-        const Icon(Icons.delete),
-    title: const Text(
-      'Delete Lecture',
-    ),
-    subtitle: const Text(
-      'Remove a lecture',
-    ),
-    onTap: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) =>
-              const DeleteLecturePage(),
-        ),
-      );
-    },
-  ),
-),
-Card(
   child: ListTile(
     leading: const Icon(
-      Icons.campaign,
+      Icons.add,
     ),
     title: const Text(
-      'Create Announcement',
+      'Add Lecture',
+    ),
+    subtitle: Text(
+      isCR
+          ? 'Add lecture to timetable'
+          : 'Add replacement lecture',
+    ),
+    onTap: _addLecture,
+  ),
+),
+
+            if (isCR)
+              Card(
+                child: ListTile(
+                  leading:
+                      const Icon(
+                    Icons.delete,
+                  ),
+                  title: const Text(
+                    'Delete Lecture',
+                  ),
+                  subtitle:
+                      const Text(
+                    'Remove a lecture',
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const DeleteLecturePage(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+            Card(
+              child: ListTile(
+                leading:
+                    const Icon(
+                  Icons.campaign,
+                ),
+                title: const Text(
+                  'Create Announcement',
+                ),
+                subtitle:
+                    const Text(
+                  'Notify students',
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          const CreateAnnouncementPage(),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            Card(
+  child: ListTile(
+    leading: const Icon(
+      Icons.picture_as_pdf,
+    ),
+    title: const Text(
+      'Upload Timetable PDF',
     ),
     subtitle: const Text(
-      'Notify students',
+      'Import official timetable',
     ),
     onTap: () {
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) =>
-              const CreateAnnouncementPage(),
+              const UploadTimetablePdfPage(),
         ),
       );
     },
   ),
 ),
-
-            Card(
-              child: ListTile(
-                leading:
-                    const Icon(
-                  Icons.picture_as_pdf,
-                ),
-                title: const Text(
-                  'Upload Timetable PDF',
-                ),
-                subtitle: const Text(
-                  'Future feature',
-                ),
-              ),
-            ),
 
             const Spacer(),
 
@@ -206,8 +257,10 @@ Card(
                 icon: const Icon(
                   Icons.logout,
                 ),
-                label: const Text(
-                  'Exit CR Mode',
+                label: Text(
+                  isCR
+                      ? 'Exit CR Mode'
+                      : 'Exit SR Mode',
                 ),
               ),
             ),

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'division_selection_page.dart';
 import 'weekly_timetable_page.dart';
-import 'timetable_data.dart';
 import 'edit_lecture_page.dart';
 import 'app_settings.dart';
 import 'cr_login_page.dart';
@@ -25,30 +25,12 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState
     extends State<DashboardPage> {
-  late List<Map<String, String>>
-      todayLectures;
-
   late String currentDay;
 
   @override
   void initState() {
     super.initState();
-
     currentDay = _getCurrentDay();
-
-    final divisionData =
-        TimetableData.timetable[
-                widget.division] ??
-            <String,
-                List<
-                    Map<String,
-                        String>>>{};
-
-    todayLectures =
-        List<Map<String, String>>.from(
-      divisionData[currentDay] ??
-          <Map<String, String>>[],
-    );
   }
 
   Future<void> _changeDivision(
@@ -67,7 +49,9 @@ class _DashboardPageState
       context,
       MaterialPageRoute(
         builder: (context) =>
-            const DivisionSelectionPage(),
+            const DivisionSelectionPage(
+           role: 'Student',
+            ),
       ),
     );
   }
@@ -151,19 +135,13 @@ class _DashboardPageState
       MaterialPageRoute(
         builder: (_) =>
             EditLecturePage(
-          lecture:
-              todayLectures[index],
+          lecture: {}, // kept intentionally minimal; not used in read-only dashboard
         ),
       ),
     );
 
     if (updatedLecture != null) {
-      setState(() {
-        todayLectures[index] =
-            Map<String, String>.from(
-          updatedLecture,
-        );
-      });
+      // This method is retained for compatibility but not used in the read-only dashboard.
     }
   }
 
@@ -171,10 +149,14 @@ class _DashboardPageState
   Widget build(
     BuildContext context,
   ) {
-    final nextLecture =
-        todayLectures.isNotEmpty
-            ? todayLectures.first
-            : null;
+    // Live Firestore stream for today's lectures (read-only dashboard)
+    final Stream<QuerySnapshot> lecturesStream =
+        FirebaseFirestore.instance
+            .collection('timetables')
+            .doc(widget.division)
+            .collection(currentDay)
+            .orderBy('time') // optional: order by time if stored in comparable format
+            .snapshots();
 
     return Scaffold(
       appBar: AppBar(
@@ -320,149 +302,148 @@ class _DashboardPageState
               height: 16,
             ),
 
-            if (nextLecture != null)
-              Card(
-                color:
-                    Colors.red.shade50,
-                child: Padding(
-                  padding:
-                      const EdgeInsets
-                          .all(16),
+            // StreamBuilder provides live updates from Firestore and renders:
+            // - Next Lecture card (if any)
+            // - Today's lectures list (read-only)
+            StreamBuilder<QuerySnapshot>(
+              stream: lecturesStream,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState ==
+                    ConnectionState.waiting) {
+                  return const Expanded(
+                    child: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
+
+                if (!snapshot.hasData ||
+                    snapshot.data!.docs.isEmpty) {
+                  return Expanded(
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 8),
+                        Text(
+                          "Today is $currentDay",
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Expanded(
+                          child: Center(
+                            child: Text(
+                              'No lectures scheduled today',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final docs = snapshot.data!.docs;
+
+                // Build a list of lecture maps (string keys/values) for display convenience
+                final lectures = docs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return <String, String>{
+                    'id': doc.id,
+                    'subject': data['subject']?.toString() ?? '',
+                    'time': data['time']?.toString() ?? '',
+                    'room': data['room']?.toString() ?? '',
+                    'cancelled': (data['cancelled'] == true || data['cancelled']?.toString() == 'true') ? 'true' : 'false',
+                  };
+                }).toList();
+
+                final nextLecture =
+                    lectures.isNotEmpty ? lectures.first : null;
+
+                return Expanded(
                   child: Column(
                     crossAxisAlignment:
-                        CrossAxisAlignment
-                            .start,
+                        CrossAxisAlignment.stretch,
                     children: [
-                      const Text(
-                        'NEXT LECTURE',
-                        style:
-                            TextStyle(
-                          color:
-                              Colors.red,
-                          fontWeight:
-                              FontWeight
-                                  .bold,
-                        ),
-                      ),
-                      const SizedBox(
-                        height: 8,
-                      ),
-                      Text(
-                        nextLecture[
-                                'subject'] ??
-                            '',
-                        style:
-                            const TextStyle(
-                          fontSize: 22,
-                          fontWeight:
-                              FontWeight
-                                  .bold,
-                        ),
-                      ),
-                      Text(
-                        nextLecture[
-                                'time'] ??
-                            '',
-                      ),
-                      Text(
-                        'Room: ${nextLecture['room'] ?? ''}',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-            const SizedBox(
-              height: 16,
-            ),
-
-            Text(
-              "Today is $currentDay",
-              style:
-                  const TextStyle(
-                fontSize: 22,
-                fontWeight:
-                    FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(
-              height: 12,
-            ),
-
-            Expanded(
-              child:
-                  todayLectures
-                          .isEmpty
-                      ? const Center(
-                          child: Text(
-                            'No lectures scheduled today',
+                      if (nextLecture != null) ...[
+                        Card(
+                          color: Colors.red.shade50,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'NEXT LECTURE',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  nextLecture['subject'] ?? '',
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(nextLecture['time'] ?? ''),
+                                Text('Room: ${nextLecture['room'] ?? ''}'),
+                              ],
+                            ),
                           ),
-                        )
-                      : ListView.builder(
-                          itemCount:
-                              todayLectures
-                                  .length,
-                          itemBuilder:
-                              (
-                            context,
-                            index,
-                          ) {
-                            final lecture =
-                                todayLectures[
-                                    index];
+                        ),
+                        const SizedBox(height: 16),
+                      ],
 
-                            final isCancelled =
-                                lecture['cancelled'] ==
-                                    'true';
+                      Text(
+                        "Today is $currentDay",
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Today's lectures list (read-only)
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: lectures.length,
+                          itemBuilder: (context, index) {
+                            final lecture = lectures[index];
+                            final isCancelled = lecture['cancelled'] == 'true';
 
                             return Card(
                               color: isCancelled
-                                  ? Colors
-                                      .red
-                                      .shade100
+                                  ? Colors.red.shade100
                                   : null,
-                              child:
-                                  ListTile(
-                                onLongPress:
-                                    _canEditLecture(
-                                            lecture)
-                                        ? () =>
-                                            _editLecture(
-                                              index,
-                                            )
-                                        : null,
-                                leading:
-                                    Icon(
+                              child: ListTile(
+                                // Read-only dashboard: no editing on long press
+                                onLongPress: null,
+                                leading: Icon(
                                   isCancelled
-                                      ? Icons
-                                          .cancel
-                                      : _getIcon(
-                                          lecture['subject'] ??
-                                              '',
-                                        ),
+                                      ? Icons.cancel
+                                      : _getIcon(lecture['subject'] ?? ''),
                                 ),
-                                title:
-                                    Text(
-                                  lecture['subject'] ??
-                                      '',
-                                ),
-                                subtitle:
-                                    Column(
+                                title: Text(lecture['subject'] ?? ''),
+                                subtitle: Column(
                                   crossAxisAlignment:
-                                      CrossAxisAlignment
-                                          .start,
+                                      CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      lecture['time'] ??
-                                          '',
-                                    ),
-                                    Text(
-                                      'Room: ${lecture['room'] ?? ''}',
-                                    ),
+                                    Text(lecture['time'] ?? ''),
+                                    Text('Room: ${lecture['room'] ?? ''}'),
                                     if (isCancelled)
                                       const Text(
                                         '❌ CANCELLED',
+                                        style: TextStyle(
+                                          color: Colors.red,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                   ],
                                 ),
@@ -470,6 +451,11 @@ class _DashboardPageState
                             );
                           },
                         ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ],
         ),

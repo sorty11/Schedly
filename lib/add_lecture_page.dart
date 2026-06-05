@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'timetable_manager.dart';
-import 'subject_data.dart';
+import 'services/firestore_service.dart';
 
 class AddLecturePage extends StatefulWidget {
   const AddLecturePage({super.key});
@@ -28,6 +28,10 @@ class _AddLecturePageState
   List<String> availableSlots = [];
 
   List<String> subjects = [];
+
+  bool loadingSlots = true;
+
+  bool loadingSubjects = true;
 
   final List<String> days = [
     'Monday',
@@ -56,23 +60,33 @@ class _AddLecturePageState
     if (division == null) return;
 
     subjects =
-        SubjectData.divisionSubjects[
-                division!] ??
-            [];
+        await FirestoreService
+            .getSubjects(
+      division!,
+    );
 
     if (subjects.isNotEmpty) {
       selectedSubject =
           subjects.first;
     }
 
-    _refreshSlots();
+    setState(() {
+      loadingSubjects = false;
+    });
+
+    await _refreshSlots();
   }
 
-  void _refreshSlots() {
+  Future<void> _refreshSlots() async {
     if (division == null) return;
 
+    setState(() {
+      loadingSlots = true;
+    });
+
     availableSlots =
-        TimetableManager.getAvailableSlots(
+        await TimetableManager
+            .getAvailableSlots(
       division: division!,
       day: selectedDay,
     );
@@ -84,7 +98,9 @@ class _AddLecturePageState
       selectedSlot = null;
     }
 
-    setState(() {});
+    setState(() {
+      loadingSlots = false;
+    });
   }
 
   @override
@@ -95,8 +111,16 @@ class _AddLecturePageState
 
   void _saveLecture() {
     if (selectedSubject == null ||
-        roomController.text.isEmpty ||
-        selectedSlot == null) {
+        selectedSlot == null ||
+        roomController.text.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Fill all fields',
+          ),
+        ),
+      );
       return;
     }
 
@@ -106,8 +130,7 @@ class _AddLecturePageState
         'day': selectedDay,
         'subject': selectedSubject!,
         'time': selectedSlot!,
-        'room':
-            roomController.text,
+        'room': roomController.text,
         'cancelled': 'false',
       },
     );
@@ -136,17 +159,21 @@ class _AddLecturePageState
                 border:
                     OutlineInputBorder(),
               ),
-              items: days.map((day) {
-                return DropdownMenuItem(
-                  value: day,
-                  child: Text(day),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  selectedDay = value;
-                  _refreshSlots();
-                }
+              items: days
+                  .map(
+                    (day) =>
+                        DropdownMenuItem(
+                      value: day,
+                      child: Text(day),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) async {
+                if (value == null) return;
+
+                selectedDay = value;
+
+                await _refreshSlots();
               },
             ),
 
@@ -154,61 +181,77 @@ class _AddLecturePageState
               height: 16,
             ),
 
-            DropdownButtonFormField<String>(
-              value: selectedSubject,
-              decoration:
-                  const InputDecoration(
-                labelText: 'Subject',
-                border:
-                    OutlineInputBorder(),
-              ),
-              items:
-                  subjects.map(
-                (subject) {
-                  return DropdownMenuItem(
-                    value: subject,
-                    child:
-                        Text(subject),
-                  );
+            if (loadingSubjects)
+              const Center(
+                child:
+                    CircularProgressIndicator(),
+              )
+            else
+              DropdownButtonFormField<String>(
+                value: selectedSubject,
+                decoration:
+                    const InputDecoration(
+                  labelText: 'Subject',
+                  border:
+                      OutlineInputBorder(),
+                ),
+                items:
+                    subjects.map(
+                  (subject) {
+                    return DropdownMenuItem(
+                      value: subject,
+                      child:
+                          Text(subject),
+                    );
+                  },
+                ).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedSubject =
+                        value;
+                  });
                 },
-              ).toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedSubject =
-                      value;
-                });
-              },
-            ),
+              ),
 
             const SizedBox(
               height: 16,
             ),
 
-            DropdownButtonFormField<String>(
-              value: selectedSlot,
-              decoration:
-                  const InputDecoration(
-                labelText:
-                    'Available Slot',
-                border:
-                    OutlineInputBorder(),
+            if (loadingSlots)
+              const Center(
+                child:
+                    CircularProgressIndicator(),
+              )
+            else
+              DropdownButtonFormField<String>(
+                value: selectedSlot,
+                decoration:
+                    const InputDecoration(
+                  labelText:
+                      'Available Slot',
+                  border:
+                      OutlineInputBorder(),
+                ),
+                items:
+                    availableSlots.map(
+                  (slot) {
+                    return DropdownMenuItem(
+                      value: slot,
+                      child:
+                          Text(slot),
+                    );
+                  },
+                ).toList(),
+                onChanged:
+                    availableSlots.isEmpty
+                        ? null
+                        : (value) {
+                            setState(() {
+                              selectedSlot =
+                                  value;
+                            });
+                          },
               ),
-              items:
-                  availableSlots.map(
-                (slot) {
-                  return DropdownMenuItem(
-                    value: slot,
-                    child: Text(slot),
-                  );
-                },
-              ).toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedSlot =
-                      value;
-                });
-              },
-            ),
 
             const SizedBox(
               height: 16,
@@ -229,12 +272,30 @@ class _AddLecturePageState
               height: 24,
             ),
 
+            if (availableSlots.isEmpty &&
+                !loadingSlots)
+              const Padding(
+                padding:
+                    EdgeInsets.only(
+                  bottom: 16,
+                ),
+                child: Text(
+                  'No free slots available for this day',
+                  style: TextStyle(
+                    color: Colors.red,
+                  ),
+                ),
+              ),
+
             SizedBox(
               width:
                   double.infinity,
               child: ElevatedButton(
                 onPressed:
-                    _saveLecture,
+                    availableSlots
+                            .isEmpty
+                        ? null
+                        : _saveLecture,
                 child: const Text(
                   'Save Lecture',
                 ),

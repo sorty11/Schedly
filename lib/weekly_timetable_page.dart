@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'edit_lecture_page.dart';
 import 'app_settings.dart';
 import 'user_roles.dart';
+import 'services/app_notification_service.dart';
+import 'add_lecture_page.dart';
 
 class WeeklyTimetablePage extends StatefulWidget {
   final String division;
@@ -70,6 +72,18 @@ class _WeeklyTimetablePageState
     final updated =
         result as Map<String, dynamic>;
 
+    final oldSubject =
+        lecture['subject'] ?? '';
+
+    final oldTime =
+        lecture['time'] ?? '';
+
+    final oldRoom =
+        lecture['room'] ?? '';
+
+    final oldCancelled =
+        lecture['cancelled'] == true;
+
     await FirebaseFirestore.instance
         .collection('timetables')
         .doc(widget.division)
@@ -82,6 +96,51 @@ class _WeeklyTimetablePageState
       'cancelled':
           updated['cancelled'] == 'true',
     });
+
+    if (updated['cancelled'] == 'true' &&
+        !oldCancelled) {
+      await AppNotificationService
+          .createNotification(
+        title: 'Lecture Cancelled',
+        message:
+            '${updated['subject']} at ${updated['time']} has been cancelled',
+        division: widget.division,
+        type: 'cancel',
+      );
+    }
+
+    if (updated['room'] != oldRoom) {
+      await AppNotificationService
+          .createNotification(
+        title: 'Room Changed',
+        message:
+            '${updated['subject']} moved from $oldRoom to ${updated['room']}',
+        division: widget.division,
+        type: 'room_change',
+      );
+    }
+
+    if (updated['time'] != oldTime) {
+      await AppNotificationService
+          .createNotification(
+        title: 'Lecture Rescheduled',
+        message:
+            '${updated['subject']} moved from $oldTime to ${updated['time']}',
+        division: widget.division,
+        type: 'time_change',
+      );
+    }
+
+    if (updated['subject'] != oldSubject) {
+      await AppNotificationService
+          .createNotification(
+        title: 'Lecture Updated',
+        message:
+            '$oldSubject changed to ${updated['subject']}',
+        division: widget.division,
+        type: 'edit',
+      );
+    }
 
     if (!mounted) return;
 
@@ -204,9 +263,7 @@ class _WeeklyTimetablePageState
 
                     return Card(
                       color: isCancelled
-                          ? Colors
-                              .red
-                              .shade100
+                          ? Colors.red.shade100
                           : null,
                       child: ListTile(
                         onLongPress:
@@ -220,8 +277,7 @@ class _WeeklyTimetablePageState
                                 : null,
                         leading: Icon(
                           isCancelled
-                              ? Icons
-                                  .cancel
+                              ? Icons.cancel
                               : Icons.book,
                         ),
                         title: Text(
@@ -256,6 +312,24 @@ class _WeeklyTimetablePageState
                               ),
                           ],
                         ),
+                        trailing: isCancelled &&
+                                AppSettings.currentRole ==
+                                    UserRole.cr
+                            ? IconButton(
+                                icon: const Icon(
+                                  Icons.swap_horiz,
+                                ),
+                                onPressed: () async {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const AddLecturePage(),
+                                    ),
+                                  );
+                                },
+                              )
+                            : null,
                       ),
                     );
                   },
