@@ -8,7 +8,7 @@ import 'app_settings.dart';
 import 'user_roles.dart';
 import 'services/app_notification_service.dart';
 import 'theme/theme.dart';
-import 'widgets/animations/animated_button.dart';
+
 import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/staggered_list_item.dart';
 import 'services/permission_service.dart';

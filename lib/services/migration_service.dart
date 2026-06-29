@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/timetable_entry.dart';
-import '../models/event_category.dart';
+
+
 import 'pdf_timetable_import_service.dart';
-import '../timetable_manager.dart';
+
 
 class MigrationService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;

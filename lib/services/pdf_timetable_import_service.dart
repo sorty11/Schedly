@@ -35,7 +35,7 @@ class PdfTimetableImportService {
     final lines = extractor.extractTextLines(startPageIndex: 0, endPageIndex: 0);
     final words = <TextWord>[];
     for (final line in lines) {
-      if (line.wordCollection != null) words.addAll(line.wordCollection!);
+      words.addAll(line.wordCollection);
     }
     document.dispose();
 

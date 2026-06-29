@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/tutorial_controller.dart';
 import 'cc_character.dart';
 import '../../theme/theme.dart';
-import '../models/tutorial_step.dart';
+
 
 class TutorialTooltip extends StatelessWidget {
   final Rect targetBounds;

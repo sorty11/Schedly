@@ -6,7 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'services/local_notification_service.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 
 import 'home_page.dart';
 import 'splash_screen.dart';

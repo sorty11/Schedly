@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/timetable_entry.dart';
 import '../models/event_category.dart';
@@ -123,7 +124,7 @@ class ConductSyncService {
         currentDate = currentDate.add(const Duration(days: 1));
       }
     } catch (e) {
-      // print('Error in ConductSyncService: $e');
+      debugPrint('Error in ConductSyncService: $e');
     }
   }
 }

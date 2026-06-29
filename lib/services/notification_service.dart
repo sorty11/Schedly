@@ -9,8 +9,7 @@ class NotificationService {
     try {
       await messaging.requestPermission();
 
-      final token = await messaging.getToken();
-      debugPrint('FCM TOKEN: $token');
+      await messaging.getToken();
     } catch (e) {
       // FCM is unavailable on this device/emulator (e.g. no Google Play Services).
       // This is non-fatal — the in-app notification feed still works without FCM.

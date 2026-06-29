@@ -75,24 +75,7 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
     );
   }
 
-  Widget _buildChip(String label, Color baseColor) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
-      decoration: BoxDecoration(
-        color: baseColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppRadius.full),
-        border: Border.all(color: baseColor.withValues(alpha: 0.2)),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.inter(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: baseColor,
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildCheckItem(String text) {
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;

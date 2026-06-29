@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'timetable_manager.dart';
-import 'services/firestore_service.dart';
+
 import 'theme/theme.dart';
 import 'widgets/animations/animated_button.dart';
 

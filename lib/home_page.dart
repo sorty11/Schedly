@@ -109,10 +109,6 @@ class _HomePageState extends State<HomePage>
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final sem = Theme.of(context).extension<AppSemanticColors>()!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     final pages = [
       DashboardPage(division: widget.division),
       WeeklyTimetablePage(division: widget.division),
@@ -170,7 +166,6 @@ class _SchedlyNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 

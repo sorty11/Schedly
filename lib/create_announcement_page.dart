@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/app_notification_service.dart';
 import 'services/announcement_service.dart';
-import 'theme/theme.dart';
+
 import 'widgets/animations/animated_button.dart';
 
 class CreateAnnouncementPage extends StatefulWidget {
@@ -54,14 +54,12 @@ class _CreateAnnouncementPageState
         priority: priority,
         sectionId: sectionId,
       );
-       // print('CREATING ANNOUNCEMENT NOTIFICATION');
       await AppNotificationService.createNotification(
         title: 'New Announcement',
         message: messageController.text,
         division: sectionId,
         type: 'announcement',
-      );// print('ANNOUNCEMENT NOTIFICATION CREATED');
-
+      );
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -74,7 +72,7 @@ class _CreateAnnouncementPageState
 
       Navigator.pop(context);
     } catch (e) {
-      // print('ANNOUNCEMENT ERROR: $e');
+      debugPrint('ANNOUNCEMENT ERROR: $e');
     }
   }
   InputDecoration _modernDecoration(String label, IconData icon) {

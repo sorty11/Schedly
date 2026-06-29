@@ -16,7 +16,7 @@ import 'student_roster_page.dart';
 import 'theme/theme.dart';
 import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/staggered_list_item.dart';
-import 'widgets/animations/animated_button.dart';
+
 import 'onboarding/widgets/tutorial_target.dart';
 
 class CRPanelPage extends StatefulWidget {
@@ -71,7 +71,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
       ),
     );
 
-    if (!context.mounted) return;
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -336,7 +336,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
               onTap: () async {
                 final prefs = await SharedPreferences.getInstance();
                 final division = prefs.getString('selected_division');
-                if (!mounted || division == null) return;
+                if (!context.mounted || division == null) return;
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -409,7 +409,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
                 onTap: () async {
                   final prefs = await SharedPreferences.getInstance();
                   final division = prefs.getString('selected_division');
-                  if (!mounted || division == null) return;
+                  if (!context.mounted || division == null) return;
                   Navigator.push(
                     context,
                     MaterialPageRoute(

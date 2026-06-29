@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'nmims_structure.dart';
 import 'cr_setup_wizard.dart';
-import 'role_verification_page.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app_settings.dart';
 import 'user_roles.dart';

@@ -6,7 +6,7 @@ import 'nmims_structure.dart';
 import 'app_settings.dart';
 import 'user_roles.dart';
 import 'upload_timetable_pdf_page.dart';
-import 'home_page.dart';
+
 import 'widgets/animations/animated_button.dart';
 
 class CRSetupWizard extends StatefulWidget {

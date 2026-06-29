@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import 'login_page.dart';
 import 'edit_lecture_page.dart';
 import 'app_settings.dart';
 import 'user_roles.dart';
@@ -13,7 +11,6 @@ import 'theme/theme.dart';
 import 'widgets/animations/staggered_list_item.dart';
 import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/floating_empty_state.dart';
-import 'widgets/animations/animated_icon_button.dart';
 import 'widgets/animations/animated_button.dart';
 import 'widgets/animations/live_lecture_card.dart';
 import 'models/timetable_entry.dart';
@@ -63,39 +60,6 @@ class _DashboardPageState extends State<DashboardPage> {
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
     ];
     return '$currentDay, ${months[now.month - 1]} ${now.day}';
-  }
-
-  IconData _getSubjectIcon(String subject) {
-    switch (subject.toLowerCase()) {
-      case 'mathematics': return Icons.calculate_rounded;
-      case 'programming':
-      case 'oop':
-      case 'java': return Icons.computer_rounded;
-      case 'beee': return Icons.electrical_services_rounded;
-      case 'physics': return Icons.science_rounded;
-      case 'chemistry': return Icons.biotech_rounded;
-      case 'dbms': return Icons.storage_rounded;
-      case 'lade': return Icons.menu_book_rounded;
-      case 'ctps': return Icons.lightbulb_rounded;
-      case 'lunch break':
-      case 'lunch': return Icons.restaurant_rounded;
-      default: return Icons.book_rounded;
-    }
-  }
-
-  Color _subjectColor(String subject, BuildContext context) {
-    if (subject.toLowerCase().contains('lunch')) {
-      return Colors.amber;
-    }
-    final colors = [
-      Theme.of(context).colorScheme.primary,
-      Theme.of(context).colorScheme.secondary,
-      Theme.of(context).extension<AppSemanticColors>()!.accent,
-      Theme.of(context).extension<AppSemanticColors>()!.conducted,
-      Theme.of(context).extension<AppSemanticColors>()!.rescheduled,
-    ];
-    final index = subject.hashCode.abs() % colors.length;
-    return colors[index];
   }
 
   bool _canEditLecture(TimetableEntry entry) {
@@ -228,8 +192,6 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final sem = Theme.of(context).extension<AppSemanticColors>()!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final firstName = (AppSettings.studentName ?? 'Student').split(' ').first;
 
     final Stream<QuerySnapshot> lecturesStream = FirebaseFirestore.instance
@@ -264,7 +226,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
             List<TimetableEntry>? currentGroup;
             List<TimetableEntry>? nextGroup;
-            int nextIndex = -1;
             
             final now = DateTime.now();
             final nowMins = now.hour * 60 + now.minute;
@@ -280,10 +241,8 @@ class _DashboardPageState extends State<DashboardPage> {
                 currentGroup = group;
               } else if (nowMins < start && currentGroup == null && nextGroup == null) {
                 nextGroup = group;
-                nextIndex = i;
               } else if (nowMins < start && currentGroup != null && nextGroup == null) {
                 nextGroup = group;
-                nextIndex = i;
               }
             }
 
@@ -383,14 +342,14 @@ class _DashboardPageState extends State<DashboardPage> {
                       child: StaggeredListItem(
                         index: 2,
                         child: LiveLectureCard(
-                          subject: currentGroup!.length == 1 
-                               ? currentGroup!.first.subject 
-                               : currentGroup!.map((e) => e.subject).toSet().join(' / '),
-                          time: TimetableManager.formatTime(currentGroup!.first.startTime, currentGroup!.first.endTime),
-                          room: currentGroup!.length == 1 
-                               ? (currentGroup!.first.room ?? 'TBA') 
-                               : currentGroup!.map((e) => e.room ?? 'TBA').toSet().join(' / '),
-                          onTap: currentGroup!.length == 1 && _canEditLecture(currentGroup!.first)
+                          subject: currentGroup.length == 1 
+                               ? currentGroup.first.subject 
+                               : currentGroup.map((e) => e.subject).toSet().join(' / '),
+                          time: TimetableManager.formatTime(currentGroup.first.startTime, currentGroup.first.endTime),
+                          room: currentGroup.length == 1 
+                               ? (currentGroup.first.room ?? 'TBA') 
+                               : currentGroup.map((e) => e.room ?? 'TBA').toSet().join(' / '),
+                          onTap: currentGroup.length == 1 && _canEditLecture(currentGroup.first)
                               ? () => _editLecture(currentGroup!.first)
                               : null,
                         ),
@@ -486,8 +445,8 @@ class _DashboardPageState extends State<DashboardPage> {
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
                           final entries = groupedLectures[index];
-                          final isCurrent = currentGroup != null && entries.first.startTime == currentGroup!.first.startTime;
-                          final isNext = nextGroup != null && entries.first.startTime == nextGroup!.first.startTime;
+                          final isCurrent = currentGroup != null && entries.first.startTime == currentGroup.first.startTime;
+                          final isNext = nextGroup != null && entries.first.startTime == nextGroup.first.startTime;
                           final isLast = index == groupedLectures.length - 1;
 
                           return StaggeredListItem(
