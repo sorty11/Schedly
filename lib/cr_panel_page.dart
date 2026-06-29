@@ -5,13 +5,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'upload_timetable_pdf_page.dart';
 import 'app_settings.dart';
 import 'user_roles.dart';
-import 'add_lecture_page.dart';
+import 'widgets/timetable_studio_sheet.dart';
 import 'timetable_manager.dart';
 import 'models/timetable_entry.dart';
 import 'models/event_category.dart';
 import 'delete_lecture_page.dart';
 import 'create_announcement_page.dart';
-import 'weekly_timetable_page.dart';
+import 'draft_studio_page.dart';
 import 'student_roster_page.dart';
 import 'theme/theme.dart';
 import 'widgets/animations/animated_card.dart';
@@ -46,43 +46,15 @@ class _CRPanelPageState extends State<CRPanelPage> {
   }
 
   Future<void> _addLecture() async {
-    final lecture = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const AddLecturePage()),
-    );
-    if (lecture == null) return;
-
     final prefs = await SharedPreferences.getInstance();
     final division = prefs.getString('selected_division');
     if (division == null) return;
 
-    await TimetableManager.addLecture(
-      division: division,
-      day: lecture['day'],
-      entry: TimetableEntry(
-        id: '${lecture['subject']}_${DateTime.now().millisecondsSinceEpoch}',
-        subject: lecture['subject'],
-        batch: lecture['batch'] ?? 'Whole Class',
-        startTime: TimetableManager.parseTime(lecture['time'].split('-')[0].trim()),
-        endTime: TimetableManager.parseTime(lecture['time'].split('-')[1].trim()),
-        room: lecture['room'],
-        category: EventCategory.academic,
-        durationMinutes: 60,
-      ),
-    );
-
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${lecture['subject']} added to ${lecture['day']}',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w500),
-        ),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
-      ),
+    await TimetableStudioSheet.show(
+      context,
+      division: division,
+      initialDay: 'Monday', // Provide a default day, user can change it
     );
   }
 
@@ -340,7 +312,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => WeeklyTimetablePage(division: division),
+                    builder: (_) => DraftStudioPage(division: division),
                   ),
                 );
               },

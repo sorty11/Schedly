@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'edit_lecture_page.dart';
+import 'widgets/timetable_studio_sheet.dart';
 import 'app_settings.dart';
 import 'user_roles.dart';
 import 'cr_panel_page.dart';
@@ -72,120 +72,11 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _editLecture(TimetableEntry entry) async {
-    final result = await Navigator.push(
+    await TimetableStudioSheet.show(
       context,
-      MaterialPageRoute(
-        builder: (_) => EditLecturePage(
-          division: widget.division,
-          lecture: {
-            'id': entry.id,
-            'subject': entry.subject,
-            'time': TimetableManager.formatTime(entry.startTime, entry.endTime),
-            'room': entry.room ?? '',
-            'cancelled': (!entry.isActive).toString(),
-          },
-        ),
-      ),
-    );
-
-    if (result == null) return;
-
-    final action = result['action'];
-    if (action == 'split') {
-      final lec1 = result['lecture1'] as Map<String, dynamic>;
-      final lec2 = result['lecture2'] as Map<String, dynamic>;
-
-      final parts1 = lec1['time'].toString().split('-');
-      final start1 = TimetableManager.parseTime(parts1[0]);
-      final end1 = parts1.length > 1 ? TimetableManager.parseTime(parts1[1]) : start1 + 60;
-
-      final parts2 = lec2['time'].toString().split('-');
-      final start2 = TimetableManager.parseTime(parts2[0]);
-      final end2 = parts2.length > 1 ? TimetableManager.parseTime(parts2[1]) : start2 + 60;
-
-      await FirebaseFirestore.instance
-          .collection('timetables')
-          .doc(widget.division)
-          .collection(currentDay)
-          .doc(entry.id)
-          .update({
-        'subject': lec1['subject'],
-        'startTime': start1,
-        'endTime': end1,
-        'room': lec1['room'],
-        'isActive': lec1['cancelled'] != 'true',
-        'durationMinutes': end1 - start1,
-      });
-
-      await FirebaseFirestore.instance
-          .collection('timetables')
-          .doc(widget.division)
-          .collection(currentDay)
-          .add({
-        'subject': lec2['subject'],
-        'startTime': start2,
-        'endTime': end2,
-        'room': lec2['room'],
-        'isActive': lec2['cancelled'] != 'true',
-        'batch': entry.batch,
-        'category': entry.category.name.toLowerCase(),
-        'durationMinutes': end2 - start2,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lecture split successfully!')),
-      );
-      return;
-    }
-
-    final updated = result as Map<String, dynamic>;
-    final parts = updated['time'].toString().split('-');
-    final start = TimetableManager.parseTime(parts[0]);
-    final end = parts.length > 1 ? TimetableManager.parseTime(parts[1]) : start + 60;
-    
-    final oldSubject = entry.subject;
-    final oldTimeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
-    final oldRoom = entry.room ?? '';
-    final oldCancelled = !entry.isActive;
-    final newCancelled = updated['cancelled'] == 'true';
-
-    await FirebaseFirestore.instance
-        .collection('timetables')
-        .doc(widget.division)
-        .collection(currentDay)
-        .doc(entry.id)
-        .update({
-      'subject': updated['subject'],
-      'startTime': start,
-      'endTime': end,
-      'room': updated['room'],
-      'isActive': !newCancelled,
-      'durationMinutes': end - start,
-    });
-
-    String type = 'update';
-    String message = '';
-
-    if (newCancelled && !oldCancelled) {
-      type = 'cancel';
-      message = '$oldSubject on $currentDay has been cancelled.';
-    } else if (updated['room'] != oldRoom) {
-      type = 'room_change';
-      message = '$oldSubject room changed to ${updated['room']} on $currentDay.';
-    } else if (updated['time'] != oldTimeStr) {
-      type = 'time_change';
-      message = '$oldSubject time changed to ${updated['time']} on $currentDay.';
-    } else {
-      return;
-    }
-
-    await AppNotificationService.createNotification(
-      title: 'Timetable Update',
-      message: message,
       division: widget.division,
-      type: type,
+      initialDay: currentDay,
+      existingEntry: entry,
     );
   }
 

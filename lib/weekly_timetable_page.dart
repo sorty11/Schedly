@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'edit_lecture_page.dart';
+import 'widgets/timetable_studio_sheet.dart';
 import 'app_settings.dart';
 import 'user_roles.dart';
 import 'services/app_notification_service.dart';
@@ -72,136 +72,12 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
   }
 
   Future<void> _editLecture(TimetableEntry entry) async {
-    final result = await Navigator.push(
+    await TimetableStudioSheet.show(
       context,
-      MaterialPageRoute(
-        builder: (_) => EditLecturePage(
-          division: widget.division,
-          lecture: {
-            'id': entry.id,
-            'subject': entry.subject,
-            'batch': entry.batch,
-            'time': TimetableManager.formatTime(entry.startTime, entry.endTime),
-            'room': entry.room ?? '',
-            'cancelled': (!entry.isActive).toString(),
-          },
-        ),
-      ),
+      division: widget.division,
+      initialDay: selectedDay,
+      existingEntry: entry,
     );
-
-    if (result == null) return;
-
-    final action = result['action'];
-    if (action == 'split') {
-      final lec1 = result['lecture1'] as Map<String, dynamic>;
-      final lec2 = result['lecture2'] as Map<String, dynamic>;
-      
-      final parts1 = lec1['time'].toString().split('-');
-      final start1 = TimetableManager.parseTime(parts1[0]);
-      final end1 = parts1.length > 1 ? TimetableManager.parseTime(parts1[1]) : start1 + 60;
-
-      final parts2 = lec2['time'].toString().split('-');
-      final start2 = TimetableManager.parseTime(parts2[0]);
-      final end2 = parts2.length > 1 ? TimetableManager.parseTime(parts2[1]) : start2 + 60;
-
-      await FirebaseFirestore.instance
-          .collection('timetables')
-          .doc(widget.division)
-          .collection(selectedDay)
-          .doc(entry.id)
-          .update({
-        'subject': lec1['subject'],
-        'startTime': start1,
-        'endTime': end1,
-        'room': lec1['room'],
-        'isActive': lec1['cancelled'] != 'true',
-        'durationMinutes': end1 - start1,
-      });
-
-      await FirebaseFirestore.instance
-          .collection('timetables')
-          .doc(widget.division)
-          .collection(selectedDay)
-          .add({
-        'subject': lec2['subject'],
-        'startTime': start2,
-        'endTime': end2,
-        'room': lec2['room'],
-        'isActive': lec2['cancelled'] != 'true',
-        'batch': entry.batch,
-        'category': entry.category.name.toLowerCase(),
-        'durationMinutes': end2 - start2,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lecture split successfully!')),
-      );
-      return;
-    }
-
-    final updated = result as Map<String, dynamic>;
-    final parts = updated['time'].toString().split('-');
-    final start = TimetableManager.parseTime(parts[0]);
-    final end = parts.length > 1 ? TimetableManager.parseTime(parts[1]) : start + 60;
-    
-    final oldSubject = entry.subject;
-    final oldTimeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
-    final oldRoom = entry.room ?? '';
-    final oldCancelled = !entry.isActive;
-    final newCancelled = updated['cancelled'] == 'true';
-
-    await FirebaseFirestore.instance
-        .collection('timetables')
-        .doc(widget.division)
-        .collection(selectedDay)
-        .doc(entry.id)
-        .update({
-      'subject': updated['subject'],
-      'startTime': start,
-      'endTime': end,
-      'room': updated['room'],
-      'isActive': !newCancelled,
-      'durationMinutes': end - start,
-    });
-
-    if (newCancelled && !oldCancelled) {
-      await AppNotificationService.createNotification(
-        title: 'Lecture Cancelled',
-        message: '${updated['subject']} at ${updated['time']} has been cancelled',
-        division: widget.division,
-        type: 'cancel',
-      );
-    }
-    if (updated['room'] != oldRoom) {
-      await AppNotificationService.createNotification(
-        title: 'Room Changed',
-        message: '${updated['subject']} moved from $oldRoom to ${updated['room']}',
-        division: widget.division,
-        type: 'room_change',
-      );
-    }
-    if (updated['time'] != oldTimeStr) {
-      await AppNotificationService.createNotification(
-        title: 'Lecture Rescheduled',
-        message: '${updated['subject']} moved from $oldTimeStr to ${updated['time']}',
-        division: widget.division,
-        type: 'time_change',
-      );
-    }
-    if (updated['subject'] != oldSubject) {
-      await AppNotificationService.createNotification(
-        title: 'Lecture Updated',
-        message: '$oldSubject changed to ${updated['subject']}',
-        division: widget.division,
-        type: 'edit',
-      );
-    }
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Lecture updated')));
   }
 
   IconData _subjectIcon(String subject) {
