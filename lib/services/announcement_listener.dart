@@ -1,70 +1,63 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'local_notification_service.dart';
 
 class AnnouncementListener {
-  static String? lastId;
+  static bool _isFirstAnnouncementSnapshot = true;
+  static bool _isFirstNotificationSnapshot = true;
 
-  static Future<void> start() async {
-    final prefs =
-        await SharedPreferences.getInstance();
-
-    final division =
-        prefs.getString(
-      'selected_division',
-    );
-
-    if (division == null) return;
-
+  /// Call this from HomePage.initState() where [division] is always known.
+  static void start(String division) {
+    // Listen to Announcements
     FirebaseFirestore.instance
         .collection('announcements')
-        .where(
-          'division',
-          isEqualTo: division,
-        )
+        .where('division', isEqualTo: division)
         .snapshots()
         .listen((snapshot) {
-      if (snapshot.docs.isEmpty) {
-        return;
+      if (_isFirstAnnouncementSnapshot) {
+        _isFirstAnnouncementSnapshot = false;
+        return; // Ignore existing documents on startup
       }
 
-      snapshot.docChanges.forEach((
-        change,
-      ) {
-        if (change.type !=
-            DocumentChangeType.added) {
-          return;
+      if (snapshot.docs.isEmpty) return;
+
+      for (final change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          final data = change.doc.data();
+          if (data == null) continue;
+
+          LocalNotificationService.showNotification(
+            title: data['title'] ?? 'Announcement',
+            body: data['message'] ?? '',
+          );
         }
+      }
+    });
 
-        final doc = change.doc;
+    // Listen to Timetable Notifications
+    FirebaseFirestore.instance
+        .collection('notifications')
+        .where('division', isEqualTo: division)
+        .snapshots()
+        .listen((snapshot) {
+      if (_isFirstNotificationSnapshot) {
+        _isFirstNotificationSnapshot = false;
+        return; // Ignore existing documents on startup
+      }
 
-        if (lastId == null) {
-          lastId = doc.id;
-          return;
+      if (snapshot.docs.isEmpty) return;
+
+      for (final change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          final data = change.doc.data();
+          if (data == null) continue;
+
+          LocalNotificationService.showNotification(
+            title: data['title'] ?? 'Timetable Update',
+            body: data['message'] ?? '',
+          );
         }
-
-        if (doc.id == lastId) {
-          return;
-        }
-
-        lastId = doc.id;
-
-        final data =
-            doc.data();
-
-        if (data == null) return;
-
-        LocalNotificationService
-            .showNotification(
-          title:
-              data['title'] ??
-                  'Announcement',
-          body:
-              data['message'] ??
-                  '',
-        );
-      });
+      }
     });
   }
 }

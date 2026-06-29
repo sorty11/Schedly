@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Universal Authentication Requirement
+    // All read and write operations require a valid Firebase Auth UID.
+    // Anonymous authentication guarantees that request.auth.uid is present
+    // without requiring user friction.
+    
+    match /{document=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid != null;
+    }
+  }
+}

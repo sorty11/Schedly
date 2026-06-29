@@ -7,15 +7,16 @@ class AppNotificationService {
   static Future<void> createNotification({
     required String title,
     required String message,
-    required String division,
+    required String division, // Actually sectionId, keeping name for compatibility
     required String type,
   }) async {
     await db
+        .collection('sections')
+        .doc(division)
         .collection('notifications')
         .add({
       'title': title,
       'message': message,
-      'division': division,
       'type': type,
       'createdAt':
           FieldValue.serverTimestamp(),

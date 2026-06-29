@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 class NotificationService {
@@ -5,13 +6,15 @@ class NotificationService {
       FirebaseMessaging.instance;
 
   static Future<void> initialize() async {
-    await messaging.requestPermission();
+    try {
+      await messaging.requestPermission();
 
-    String? token =
-        await messaging.getToken();
-
-    print(
-      'FCM TOKEN: $token',
-    );
+      final token = await messaging.getToken();
+      debugPrint('FCM TOKEN: $token');
+    } catch (e) {
+      // FCM is unavailable on this device/emulator (e.g. no Google Play Services).
+      // This is non-fatal — the in-app notification feed still works without FCM.
+      debugPrint('FCM init skipped: $e');
+    }
   }
-}
+}

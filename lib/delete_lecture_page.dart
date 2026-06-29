@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'services/app_notification_service.dart';
+import 'theme/theme.dart';
+import 'widgets/animations/animated_button.dart';
+import 'widgets/animations/animated_list_tile.dart';
+import 'widgets/animations/animated_icon_button.dart';
 
 class DeleteLecturePage extends StatefulWidget {
   const DeleteLecturePage({super.key});
@@ -59,29 +64,32 @@ class _DeleteLecturePageState
                     'Are you sure you want to delete "$subject"?',
                   ),
                   actions: [
-                    TextButton(
+                    AnimatedButton(
                       onPressed: () {
                         Navigator.pop(
                           context,
                           false,
                         );
                       },
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: Theme.of(context).colorScheme.primary,
+                      height: 40,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: const Text(
                         'Cancel',
                       ),
                     ),
-                    ElevatedButton(
-                      style:
-                          ElevatedButton.styleFrom(
-                        backgroundColor:
-                            Colors.red,
-                      ),
+                    AnimatedButton(
+                      backgroundColor: Theme.of(context).extension<AppSemanticColors>()!.cancelled,
+                      foregroundColor: Colors.white,
                       onPressed: () {
                         Navigator.pop(
                           context,
                           true,
                         );
                       },
+                      height: 40,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: const Text(
                         'Delete',
                       ),
@@ -103,6 +111,14 @@ class _DeleteLecturePageState
         .collection(selectedDay)
         .doc(docId)
         .delete();
+
+    // Notify all students in this division that the lecture was removed
+    await AppNotificationService.createNotification(
+      title: 'Lecture Cancelled',
+      message: '$subject has been removed from $selectedDay.',
+      division: division!,
+      type: 'cancel',
+    );
 
     if (!mounted) return;
 
@@ -139,7 +155,7 @@ class _DeleteLecturePageState
         child: Column(
           children: [
             DropdownButtonFormField<String>(
-              value: selectedDay,
+              initialValue: selectedDay,
               decoration:
                   const InputDecoration(
                 labelText: 'Day',
@@ -180,12 +196,8 @@ class _DeleteLecturePageState
                     .snapshots(),
                 builder:
                     (context, snapshot) {
-                  if (!snapshot
-                          .hasData ||
-                      snapshot!
-                          .data!
-                          .docs
-                          .isEmpty) {
+                  if (!snapshot.hasData ||
+                      snapshot.data!.docs.isEmpty) {
                     return const Center(
                       child: Text(
                         'No lectures found',
@@ -213,33 +225,16 @@ class _DeleteLecturePageState
                                   String,
                                   dynamic>;
 
-                      return Card(
-                        child: ListTile(
-                          title: Text(
-                            lecture[
-                                    'subject'] ??
-                                '',
+                      return AnimatedListTile(
+                        backgroundColor: Theme.of(context).colorScheme.surface,
+                        title: Text(lecture['subject'] ?? ''),
+                        subtitle: Text('${lecture['time']} • ${lecture['room']}'),
+                        trailing: AnimatedIconButton(
+                          icon: Icon(
+                            Icons.delete,
+                            color: Theme.of(context).extension<AppSemanticColors>()!.cancelled,
                           ),
-                          subtitle: Text(
-                            '${lecture['time']} • ${lecture['room']}',
-                          ),
-                          trailing:
-                              IconButton(
-                            icon:
-                                const Icon(
-                              Icons.delete,
-                              color:
-                                  Colors.red,
-                            ),
-                            onPressed:
-                                () =>
-                                    _deleteLecture(
-                              doc.id,
-                              lecture[
-                                      'subject'] ??
-                                  '',
-                            ),
-                          ),
+                          onPressed: () => _deleteLecture(doc.id, lecture['subject'] ?? ''),
                         ),
                       );
                     },

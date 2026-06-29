@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/app_notification_service.dart';
 import 'services/announcement_service.dart';
+import 'theme/theme.dart';
+import 'widgets/animations/animated_button.dart';
 
-class CreateAnnouncementPage
-    extends StatefulWidget {
+class CreateAnnouncementPage extends StatefulWidget {
   const CreateAnnouncementPage({
     super.key,
   });
@@ -41,9 +42,9 @@ class _CreateAnnouncementPageState
 
       final prefs = await SharedPreferences.getInstance();
 
-      final division = prefs.getString('selected_division');
+      final sectionId = prefs.getString('section_id') ?? prefs.getString('selected_division');
 
-      if (division == null) {
+      if (sectionId == null) {
         return;
       }
 
@@ -51,119 +52,132 @@ class _CreateAnnouncementPageState
         title: titleController.text,
         message: messageController.text,
         priority: priority,
-        division: division,
+        sectionId: sectionId,
       );
-       print('CREATING ANNOUNCEMENT NOTIFICATION');
+       // print('CREATING ANNOUNCEMENT NOTIFICATION');
       await AppNotificationService.createNotification(
         title: 'New Announcement',
         message: messageController.text,
-        division: division,
+        division: sectionId,
         type: 'announcement',
-      );print('ANNOUNCEMENT NOTIFICATION CREATED');
+      );// print('ANNOUNCEMENT NOTIFICATION CREATED');
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Announcement published for $division',
+            'Announcement published for $sectionId',
           ),
         ),
       );
 
       Navigator.pop(context);
     } catch (e) {
-      print('ANNOUNCEMENT ERROR: $e');
+      // print('ANNOUNCEMENT ERROR: $e');
     }
+  }
+  InputDecoration _modernDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
+      filled: true,
+      fillColor: Theme.of(context).colorScheme.surface,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+      ),
+      labelStyle: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
+      floatingLabelStyle: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Create Announcement',
-        ),
+        title: const Text('Create Announcement'),
+        scrolledUnderElevation: 0,
       ),
-      body: Padding(
-        padding:
-            const EdgeInsets.all(16),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextField(
-              controller:
-                  titleController,
-              decoration:
-                  const InputDecoration(
-                labelText:
-                    'Title',
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+                border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.05), width: 1.5),
+              ),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: titleController,
+                    style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
+                    decoration: _modernDecoration('Title', Icons.title_rounded),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: messageController,
+                    maxLines: 4,
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    decoration: _modernDecoration('Message', Icons.message_rounded).copyWith(
+                      alignLabelWithHint: true,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  DropdownButtonFormField<String>(
+                    initialValue: priority,
+                    decoration: _modernDecoration('Priority', Icons.priority_high_rounded),
+                    icon: Icon(Icons.expand_more_rounded, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
+                    items: ['Low', 'Normal', 'High'].map((p) {
+                      return DropdownMenuItem(
+                        value: p,
+                        child: Text(p, style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          priority = value;
+                        });
+                      }
+                    },
+                  ),
+                ],
               ),
             ),
-
-            const SizedBox(
-              height: 16,
-            ),
-
-            TextField(
-              controller:
-                  messageController,
-              maxLines: 4,
-              decoration:
-                  const InputDecoration(
-                labelText:
-                    'Message',
-              ),
-            ),
-
-            const SizedBox(
-              height: 16,
-            ),
-
-            DropdownButtonFormField<
-                String>(
-              value: priority,
-              items: const [
-                DropdownMenuItem(
-                  value: 'Low',
-                  child: Text(
-                    'Low',
-                  ),
-                ),
-                DropdownMenuItem(
-                  value: 'Normal',
-                  child: Text(
-                    'Normal',
-                  ),
-                ),
-                DropdownMenuItem(
-                  value: 'High',
-                  child: Text(
-                    'High',
-                  ),
-                ),
-              ],
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    priority =
-                        value;
-                  });
-                }
-              },
-            ),
-
-            const SizedBox(
-              height: 24,
-            ),
-
+            const SizedBox(height: 32),
             SizedBox(
-              width:
-                  double.infinity,
-              child: ElevatedButton(
-                onPressed:
-                    _publish,
-                child: const Text(
-                  'Publish',
+              height: 56,
+              child: AnimatedButton(
+                onPressed: _publish,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Colors.white,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.send_rounded),
+                    const SizedBox(width: 8),
+                    const Text('Publish Announcement', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  ],
                 ),
               ),
             ),

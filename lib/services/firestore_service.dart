@@ -49,7 +49,7 @@ class FirestoreService {
     try {
       final doc =
           await db
-              .collection('divisions')
+              .collection('sections')
               .doc(division)
               .get();
 
@@ -68,9 +68,6 @@ class FirestoreService {
         data['subjects'],
       );
     } catch (e) {
-      print(
-        'GET SUBJECTS ERROR: $e',
-      );
       return [];
     }
   }
@@ -80,7 +77,7 @@ class FirestoreService {
     required List<String> subjects,
   }) async {
     await db
-        .collection('divisions')
+        .collection('sections')
         .doc(division)
         .set(
       {
