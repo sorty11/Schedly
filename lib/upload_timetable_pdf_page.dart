@@ -109,7 +109,7 @@ class _UploadTimetablePdfPageState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Upload Timetable'),
+        title: const Text('Upload Timetable (BETA)'),
         scrolledUnderElevation: 0,
       ),
       body: Padding(
@@ -118,7 +118,7 @@ class _UploadTimetablePdfPageState
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Import PDF',
+              'Import PDF (BETA)',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,

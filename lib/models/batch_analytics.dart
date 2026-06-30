@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'event_category.dart';
+import 'subject_metadata.dart';
 
 class BatchAnalytics {
   final String id; // usually '{subject}_{component}_{batch}'
@@ -72,13 +73,16 @@ class BatchAnalytics {
 class SubjectAnalytics {
   final String subject;
   final List<BatchAnalytics> batches;
+  final SubjectMetadata? metadata;
 
-  SubjectAnalytics({required this.subject, required this.batches});
+  SubjectAnalytics({required this.subject, required this.batches, this.metadata});
 
   int get totalCompleted => batches.fold(0, (acc, b) => acc + b.completedLectures);
   int get totalPending => batches.fold(0, (acc, b) => acc + b.pendingLectures);
   int get totalCancelled => batches.fold(0, (acc, b) => acc + b.cancelledLectures);
-  int get totalTarget => batches.fold(0, (acc, b) => acc + b.activeTarget);
+  
+  // Use metadata totalHours if available, else sum up batch targets
+  int get totalTarget => metadata?.totalHours ?? batches.fold(0, (acc, b) => acc + b.activeTarget);
 
   double get completionPercentage {
     if (totalTarget == 0) return 0;

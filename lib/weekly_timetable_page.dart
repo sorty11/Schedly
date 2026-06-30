@@ -16,6 +16,11 @@ import 'widgets/animations/floating_empty_state.dart';
 import 'models/timetable_entry.dart';
 import 'models/event_category.dart';
 import 'timetable_manager.dart';
+import 'system_update_manager.dart';
+import 'services/announcement_service.dart';
+import 'services/local_notification_service.dart';
+import 'services/history_service.dart';
+import 'services/timetable_event_service.dart';
 
 class WeeklyTimetablePage extends StatefulWidget {
   final String division;
@@ -72,11 +77,136 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
   }
 
   Future<void> _editLecture(TimetableEntry entry) async {
-    await TimetableStudioSheet.show(
-      context,
-      division: widget.division,
-      initialDay: selectedDay,
-      existingEntry: entry,
+    final isCR = AppSettings.currentRole == UserRole.cr;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_rounded),
+              title: const Text('Edit Lecture'),
+              onTap: () {
+                Navigator.pop(ctx);
+                TimetableStudioSheet.show(
+                  context,
+                  division: widget.division,
+                  initialDay: selectedDay,
+                  existingEntry: entry,
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.find_replace_rounded),
+              title: const Text('Replace Lecture'),
+              onTap: () {
+                Navigator.pop(ctx);
+                // "Replace" does the same as "Edit" since it allows changing all fields without deleting
+                TimetableStudioSheet.show(
+                  context,
+                  division: widget.division,
+                  initialDay: selectedDay,
+                  existingEntry: entry,
+                );
+              },
+            ),
+            if (entry.isActive)
+              ListTile(
+                leading: const Icon(Icons.cancel_outlined, color: Colors.orange),
+                title: const Text('Cancel Lecture', style: TextStyle(color: Colors.orange)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await FirebaseFirestore.instance
+                      .collection('timetables')
+                      .doc(widget.division)
+                      .collection(selectedDay)
+                      .doc(entry.id)
+                      .update({'status': 'cancelled', 'isActive': false});
+                  
+                  final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
+                  
+                  await HistoryService.logOperation(
+                    division: widget.division,
+                    operation: 'Lecture Cancelled',
+                    details: '${entry.displaySubject} on $selectedDay at $timeStr',
+                    role: AppSettings.currentRole.name,
+                  );
+
+                  await TimetableEventService.handleModification(
+                    division: widget.division,
+                    day: selectedDay,
+                    oldEntry: entry,
+                    isCancel: true,
+                  );
+                },
+              )
+            else
+              ListTile(
+                leading: const Icon(Icons.check_circle_outline, color: Colors.green),
+                title: const Text('Restore Lecture', style: TextStyle(color: Colors.green)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await FirebaseFirestore.instance
+                      .collection('timetables')
+                      .doc(widget.division)
+                      .collection(selectedDay)
+                      .doc(entry.id)
+                      .update({'status': 'active', 'isActive': true});
+                  
+                  final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
+                  await HistoryService.logOperation(
+                    division: widget.division,
+                    operation: 'Lecture Restored',
+                    details: '${entry.displaySubject} on $selectedDay at $timeStr',
+                    role: AppSettings.currentRole.name,
+                  );
+
+                  await TimetableEventService.handleModification(
+                    division: widget.division,
+                    day: selectedDay,
+                    oldEntry: entry,
+                    isRestore: true,
+                  );
+                },
+              ),
+            if (isCR)
+              ListTile(
+                leading: const Icon(Icons.delete_rounded, color: Colors.red),
+                title: const Text('Delete Lecture', style: TextStyle(color: Colors.red)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await FirebaseFirestore.instance
+                      .collection('timetables')
+                      .doc(widget.division)
+                      .collection(selectedDay)
+                      .doc(entry.id)
+                      .delete();
+                  
+                  final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
+                  await HistoryService.logOperation(
+                    division: widget.division,
+                    operation: 'Lecture Deleted',
+                    details: '${entry.displaySubject} on $selectedDay at $timeStr',
+                    role: AppSettings.currentRole.name,
+                  );
+
+                  await TimetableEventService.handleModification(
+                    division: widget.division,
+                    day: selectedDay,
+                    oldEntry: entry,
+                    isDelete: true,
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
     );
   }
 

@@ -13,6 +13,8 @@ import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/floating_empty_state.dart';
 import 'onboarding/services/onboarding_service.dart';
 import 'onboarding/widgets/tutorial_target.dart';
+import 'models/subject_metadata.dart';
+import 'services/subject_metadata_service.dart';
 
 class AnalyticsPage extends StatefulWidget {
   final String division;
@@ -24,33 +26,48 @@ class AnalyticsPage extends StatefulWidget {
 }
 
 class _AnalyticsPageState extends State<AnalyticsPage> {
-  late Future<List<String>> _uniqueSubjectsFuture;
+  late Future<Map<String, dynamic>> _initDataFuture;
 
   @override
   void initState() {
     super.initState();
-    _uniqueSubjectsFuture = _initAndLoadSubjects();
+    _initDataFuture = _initAndLoadData();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       OnboardingService.instance.checkAnalyticsContext(context);
     });
   }
 
-  Future<List<String>> _initAndLoadSubjects() async {
+  Future<Map<String, dynamic>> _initAndLoadData() async {
     await AnalyticsService.initializeSubjectAnalytics(widget.division);
-    return TimetableManager.getUniqueSubjects(division: widget.division);
+    final subjects = await TimetableManager.getUniqueSubjects(division: widget.division);
+    
+    // Attempt to load metadata
+    List<SubjectMetadata> metadataList = [];
+    try {
+      metadataList = await SubjectMetadataService.getMetadata(widget.division);
+    } catch (_) {}
+    
+    final metadataMap = {for (var m in metadataList) m.subjectName: m};
+    
+    return {
+      'uniqueSubjects': subjects,
+      'metadataMap': metadataMap,
+    };
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: FutureBuilder<List<String>>(
-          future: _uniqueSubjectsFuture,
-          builder: (context, subjectSnapshot) {
-            if (subjectSnapshot.connectionState == ConnectionState.waiting) {
+        child: FutureBuilder<Map<String, dynamic>>(
+          future: _initDataFuture,
+          builder: (context, snapshotData) {
+            if (snapshotData.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
-            final uniqueSubjects = subjectSnapshot.data ?? [];
+            final data = snapshotData.data ?? {};
+            final uniqueSubjects = (data['uniqueSubjects'] as List<String>?) ?? [];
+            final metadataMap = (data['metadataMap'] as Map<String, SubjectMetadata>?) ?? {};
 
             return StreamBuilder<List<BatchAnalytics>>(
               stream: AnalyticsService.streamAnalytics(widget.division),
@@ -75,13 +92,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   analytics.add(SubjectAnalytics(
                     subject: sub,
                     batches: aggregatedMap[sub] ?? [],
+                    metadata: metadataMap[sub],
                   ));
                 }
 
                 // If no unique subjects found from timetable, fallback to the existing ones
                 if (uniqueSubjects.isEmpty) {
                   analytics = aggregatedMap.entries
-                      .map((e) => SubjectAnalytics(subject: e.key, batches: e.value))
+                      .map((e) => SubjectAnalytics(subject: e.key, batches: e.value, metadata: metadataMap[e.key]))
                       .toList();
                 }
 
@@ -579,54 +597,72 @@ class _SubjectProgressCard extends StatelessWidget {
                         ),
                         const SizedBox(height: AppSpacing.xs),
                         Text(
-                          '${subject.totalCompleted} of ${subject.totalTarget} lectures',
+                          '${subject.totalCompleted} / ${subject.totalTarget} Hours',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(
-                        width: 56,
-                        height: 56,
-                        child: TweenAnimationBuilder<double>(
-                          tween: Tween(
-                            begin: 0,
-                            end: subject.completionPercentage,
+                  if (subject.metadata == null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: sem.warning.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: sem.warning.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.info_outline_rounded, size: 14, color: sem.warning),
+                          const SizedBox(width: 6),
+                          Text('Setup Required', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: sem.warning)),
+                        ],
+                      ),
+                    )
+                  else
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 56,
+                          height: 56,
+                          child: TweenAnimationBuilder<double>(
+                            tween: Tween(
+                              begin: 0,
+                              end: subject.completionPercentage,
+                            ),
+                            duration: const Duration(milliseconds: 1200),
+                            curve: AppCurves.standard,
+                            builder: (_, value, _) {
+                              return CircularProgressIndicator(
+                                value: value,
+                                strokeWidth: 5,
+                                backgroundColor: isDark
+                                    ? sem.borderSubtle
+                                    : const Color(0xFFEEEEF8),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  healthColor,
+                                ),
+                                strokeCap: StrokeCap.round,
+                              );
+                            },
                           ),
-                          duration: const Duration(milliseconds: 1200),
-                          curve: AppCurves.standard,
-                          builder: (_, value, _) {
-                            return CircularProgressIndicator(
-                              value: value,
-                              strokeWidth: 5,
-                              backgroundColor: isDark
-                                  ? sem.borderSubtle
-                                  : const Color(0xFFEEEEF8),
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                healthColor,
-                              ),
-                              strokeCap: StrokeCap.round,
-                            );
-                          },
                         ),
-                      ),
-                      CountingText(
-                        value: subject.completionPercentage * 100,
-                        suffix: '%',
-                        isPercentage: true,
-                        style: GoogleFonts.outfit(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: healthColor,
-                          height: 1,
+                        CountingText(
+                          value: subject.completionPercentage * 100,
+                          suffix: '%',
+                          isPercentage: true,
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: healthColor,
+                            height: 1,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                 ],
               ),
 

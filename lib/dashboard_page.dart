@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'widgets/beta_badge.dart';
 
 import 'widgets/timetable_studio_sheet.dart';
 import 'app_settings.dart';
@@ -16,6 +19,13 @@ import 'widgets/animations/live_lecture_card.dart';
 import 'models/timetable_entry.dart';
 import 'models/event_category.dart';
 import 'timetable_manager.dart';
+import 'manual_timetable_studio.dart';
+import 'upload_timetable_pdf_page.dart';
+import 'system_update_manager.dart';
+import 'services/announcement_service.dart';
+import 'services/local_notification_service.dart';
+import 'services/history_service.dart';
+import 'services/timetable_event_service.dart';
 
 class DashboardPage extends StatefulWidget {
   final String division;
@@ -31,11 +41,134 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   late String currentDay;
+  bool _hasDraft = false;
+
+  bool _isLoadingTimetableCheck = true;
+  bool _hasTimetable = true;
 
   @override
   void initState() {
     super.initState();
     currentDay = _getCurrentDay();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkCROnboarding());
+  }
+
+  Future<void> _checkCROnboarding() async {
+    if (AppSettings.currentRole != UserRole.cr) {
+      if (mounted) setState(() => _isLoadingTimetableCheck = false);
+      return;
+    }
+    if (!mounted) return;
+
+    try {
+      final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+      bool hasAny = false;
+      for (final day in days) {
+        final snap = await FirebaseFirestore.instance
+            .collection('timetables')
+            .doc(widget.division)
+            .collection(day)
+            .limit(1)
+            .get();
+        if (snap.docs.isNotEmpty) { hasAny = true; break; }
+      }
+      
+      if (mounted) {
+        if (!hasAny) {
+          final prefs = await SharedPreferences.getInstance();
+          if (prefs.getString('studio_draft_${widget.division}') != null) {
+            _hasDraft = true;
+          }
+          _hasTimetable = false;
+        }
+        _isLoadingTimetableCheck = false;
+        setState(() {});
+      }
+    } catch (_) {
+      if (mounted) {
+        _isLoadingTimetableCheck = false;
+        setState(() {});
+      }
+    }
+  }
+
+  Widget _buildNoTimetableCard(ThemeData theme, AppSemanticColors sem) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: theme.brightness == Brightness.dark ? sem.surfaceElevated : theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: sem.borderSubtle, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'No Timetable Found',
+            style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Create your class timetable manually or import a PDF.',
+            style: GoogleFonts.inter(fontSize: 14, color: sem.onSurfaceMuted, height: 1.5),
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => ManualTimetableStudio(division: widget.division),
+              ));
+            },
+            icon: const Icon(Icons.edit_calendar_rounded, size: 18),
+            label: Text('Create Timetable', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700)),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => const UploadTimetablePdfPage(),
+              ));
+            },
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              side: BorderSide(color: sem.borderSubtle, width: 1.5),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.picture_as_pdf_rounded, size: 18, color: sem.onSurfaceMuted),
+                const SizedBox(width: 8),
+                Text('Import PDF', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface)),
+                const SizedBox(width: 8),
+                const BetaBadge(),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: TextButton(
+              onPressed: () => setState(() => _hasTimetable = true), // Dismiss the card by faking timetable presence
+              child: Text('Skip for now',
+                  style: GoogleFonts.inter(
+                      fontSize: 13, color: sem.onSurfaceMuted, fontWeight: FontWeight.w500)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   String _getCurrentDay() {
@@ -72,17 +205,142 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _editLecture(TimetableEntry entry) async {
-    await TimetableStudioSheet.show(
-      context,
-      division: widget.division,
-      initialDay: currentDay,
-      existingEntry: entry,
+    final isCR = AppSettings.currentRole == UserRole.cr;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_rounded),
+              title: const Text('Edit Lecture'),
+              onTap: () {
+                Navigator.pop(ctx);
+                TimetableStudioSheet.show(
+                  context,
+                  division: widget.division,
+                  initialDay: currentDay,
+                  existingEntry: entry,
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.find_replace_rounded),
+              title: const Text('Replace Lecture'),
+              onTap: () {
+                Navigator.pop(ctx);
+                TimetableStudioSheet.show(
+                  context,
+                  division: widget.division,
+                  initialDay: currentDay,
+                  existingEntry: entry,
+                );
+              },
+            ),
+            if (entry.isActive)
+              ListTile(
+                leading: const Icon(Icons.cancel_outlined, color: Colors.orange),
+                title: const Text('Cancel Lecture', style: TextStyle(color: Colors.orange)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await FirebaseFirestore.instance
+                      .collection('timetables')
+                      .doc(widget.division)
+                      .collection(currentDay)
+                      .doc(entry.id)
+                      .update({'status': 'cancelled', 'isActive': false});
+                  
+                  final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
+                  
+                  await HistoryService.logOperation(
+                    division: widget.division,
+                    operation: 'Lecture Cancelled',
+                    details: '${entry.displaySubject} on $currentDay at $timeStr',
+                    role: AppSettings.currentRole.name,
+                  );
+
+                  await TimetableEventService.handleModification(
+                    division: widget.division,
+                    day: currentDay,
+                    oldEntry: entry,
+                    isCancel: true,
+                  );
+                },
+              )
+            else
+              ListTile(
+                leading: const Icon(Icons.check_circle_outline, color: Colors.green),
+                title: const Text('Restore Lecture', style: TextStyle(color: Colors.green)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await FirebaseFirestore.instance
+                      .collection('timetables')
+                      .doc(widget.division)
+                      .collection(currentDay)
+                      .doc(entry.id)
+                      .update({'status': 'active', 'isActive': true});
+                  
+                  final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
+                  await HistoryService.logOperation(
+                    division: widget.division,
+                    operation: 'Lecture Restored',
+                    details: '${entry.displaySubject} on $currentDay at $timeStr',
+                    role: AppSettings.currentRole.name,
+                  );
+
+                  await TimetableEventService.handleModification(
+                    division: widget.division,
+                    day: currentDay,
+                    oldEntry: entry,
+                    isRestore: true,
+                  );
+                },
+              ),
+            if (isCR)
+              ListTile(
+                leading: const Icon(Icons.delete_rounded, color: Colors.red),
+                title: const Text('Delete Lecture', style: TextStyle(color: Colors.red)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await FirebaseFirestore.instance
+                      .collection('timetables')
+                      .doc(widget.division)
+                      .collection(currentDay)
+                      .doc(entry.id)
+                      .delete();
+                  
+                  final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
+                  await HistoryService.logOperation(
+                    division: widget.division,
+                    operation: 'Lecture Deleted',
+                    details: '${entry.displaySubject} on $currentDay at $timeStr',
+                    role: AppSettings.currentRole.name,
+                  );
+
+                  await TimetableEventService.handleModification(
+                    division: widget.division,
+                    day: currentDay,
+                    oldEntry: entry,
+                    isDelete: true,
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final firstName = (AppSettings.studentName ?? 'Student').split(' ').first;
 
     final Stream<QuerySnapshot> lecturesStream = FirebaseFirestore.instance
@@ -102,7 +360,9 @@ class _DashboardPageState extends State<DashboardPage> {
             }
 
             final docs = snapshot.data?.docs ?? [];
-            final rawLectures = docs.map((doc) => TimetableEntry.fromFirestore(doc)).toList();
+            final rawLectures = docs
+                .map((doc) => TimetableEntry.fromFirestore(doc))
+                .toList();
 
             final Map<int, List<TimetableEntry>> grouped = {};
             for (final e in rawLectures) {
@@ -123,7 +383,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
             for (int i = 0; i < groupedLectures.length; i++) {
               final group = groupedLectures[i];
-              if (!group.any((e) => e.isActive)) continue;
               
               final start = group.first.startTime;
               final end = group.map((e) => e.endTime).reduce((a, b) => a > b ? a : b);
@@ -224,6 +483,60 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                 ),
 
+                if (!_hasTimetable && !_hasDraft && AppSettings.currentRole == UserRole.cr && !_isLoadingTimetableCheck)
+                  SliverToBoxAdapter(
+                    child: _buildNoTimetableCard(Theme.of(context), sem),
+                  ),
+
+                if (_hasDraft)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.sm),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.edit_calendar_rounded, color: Theme.of(context).colorScheme.primary),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Draft Saved', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700)),
+                                  Text('Continue building your timetable.', style: GoogleFonts.inter(fontSize: 13)),
+                                ],
+                              ),
+                            ),
+                            FilledButton(
+                              onPressed: () {
+                                Navigator.push(context, MaterialPageRoute(
+                                  builder: (_) => ManualTimetableStudio(division: widget.division),
+                                )).then((_) => _checkCROnboarding());
+                              },
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: Text('Resume', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
                 if (currentGroup != null)
                   SliverToBoxAdapter(
                     child: Padding(
@@ -320,6 +633,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
                 if (groupedLectures.isEmpty)
                   SliverFillRemaining(
+                    hasScrollBody: false,
                     child: FloatingEmptyState(
                       icon: Icons.event_available_rounded,
                       title: 'No classes today',
@@ -556,7 +870,25 @@ class _TimelineLectureItem extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            if (isCurrent && idx == 0) ...[
+                            if (isCancelled && idx == 0) ...[
+                              const SizedBox(width: AppSpacing.sm),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: sem.cancelled.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(AppRadius.full),
+                                ),
+                                child: Text(
+                                  'CANCELLED',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.8,
+                                    color: sem.cancelled,
+                                  ),
+                                ),
+                              ),
+                            ] else if (isCurrent && idx == 0) ...[
                               const SizedBox(width: AppSpacing.sm),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
@@ -574,8 +906,7 @@ class _TimelineLectureItem extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                            ],
-                            if (isNext && !isCurrent && idx == 0) ...[
+                            ] else if (isNext && !isCurrent && idx == 0) ...[
                               const SizedBox(width: AppSpacing.sm),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),

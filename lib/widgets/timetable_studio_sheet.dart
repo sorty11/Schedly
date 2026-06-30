@@ -7,6 +7,9 @@ import '../theme/theme.dart';
 import '../models/timetable_entry.dart';
 import '../models/event_category.dart';
 import '../timetable_manager.dart';
+import '../app_settings.dart';
+import '../user_roles.dart';
+import '../services/history_service.dart';
 
 class TimetableStudioSheet extends StatefulWidget {
   final String division;
@@ -55,6 +58,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
 
   final TextEditingController _subjectController = TextEditingController();
   final TextEditingController _roomController = TextEditingController();
+  FocusNode? _subjectFocusNode;
 
   static String? _lastSubject;
   static String? _lastBatch;
@@ -176,29 +180,16 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
     final room = _roomController.text.trim();
 
     if (subject.isEmpty) {
-      _showError('Subject cannot be empty');
+      _subjectFocusNode?.requestFocus();
+      _showErrorDialog('Missing Information', 'Subject cannot be empty.');
       return;
     }
     if (_endTime <= _startTime) {
-      _showError('End time must be after start time');
+      _showErrorDialog('Invalid Time', 'End time must be after start time.');
       return;
     }
     
-    if (widget.existingEntry == null) {
-      final overlap = await FirebaseFirestore.instance
-          .collection('timetables')
-          .doc(widget.division)
-          .collection(_selectedDay)
-          .where('startTime', isEqualTo: _startTime)
-          .where('batch', isEqualTo: _batch)
-          .where('isActive', isEqualTo: true)
-          .get();
-
-      if (overlap.docs.isNotEmpty) {
-        _showError('Overlap Warning: $_batch already has a lecture at this exact time.');
-        return;
-      }
-    }
+    // Validation is now handled inside TimetableManager.addLecture
 
     setState(() => _isLoading = true);
 
@@ -215,7 +206,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
         endTime: _endTime,
         durationMinutes: _endTime - _startTime,
         room: room.isEmpty ? null : room,
-        isActive: true,
+        status: 'active',
       );
 
       if (widget.existingEntry != null && widget.initialDay != _selectedDay) {
@@ -231,6 +222,15 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
         division: widget.division,
         day: _selectedDay,
         entry: entry,
+        oldEntry: widget.existingEntry,
+      );
+
+      final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
+      await HistoryService.logOperation(
+        division: widget.division,
+        operation: widget.existingEntry != null ? 'Lecture Replaced' : 'Lecture Added',
+        details: '${entry.displaySubject} on $_selectedDay at $timeStr',
+        role: AppSettings.currentRole.name,
       );
 
       _lastSubject = subject;
@@ -257,19 +257,29 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
       } else {
         Navigator.pop(context);
       }
+    } on ValidationException catch (e) {
+      _showErrorDialog(e.title, e.message);
     } catch (e) {
-      _showError(e.toString());
+      _showErrorDialog('Error', e.toString().replaceAll('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+  void _showErrorDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 32),
+        title: Text(title, textAlign: TextAlign.center),
         content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
       ),
     );
   }
@@ -347,6 +357,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                     controller.text = _subjectController.text;
                   }
                   controller.addListener(() => _subjectController.text = controller.text);
+                  _subjectFocusNode = focusNode;
                   return TextFormField(
                     controller: controller,
                     focusNode: focusNode,
@@ -375,7 +386,8 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                         fillColor: colorScheme.surface,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
                       ),
-                      items: _batchOptions.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+                      isExpanded: true,
+                      items: _batchOptions.map((b) => DropdownMenuItem(value: b, child: Text(b, overflow: TextOverflow.ellipsis))).toList(),
                       onChanged: (val) => setState(() => _batch = val!),
                     ),
                   ),
@@ -485,7 +497,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
 
               Row(
                 children: [
-                  if (widget.existingEntry != null)
+                  if (widget.existingEntry != null && AppSettings.currentRole == UserRole.cr)
                     Expanded(
                       flex: 1,
                       child: OutlinedButton(
@@ -507,7 +519,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                         child: const Icon(Icons.delete_rounded),
                       ),
                     ),
-                  if (widget.existingEntry != null) const SizedBox(width: AppSpacing.md),
+                  if (widget.existingEntry != null && AppSettings.currentRole == UserRole.cr) const SizedBox(width: AppSpacing.md),
                   if (widget.existingEntry == null)
                     Expanded(
                       flex: 1,

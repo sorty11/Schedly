@@ -310,7 +310,7 @@ class PdfTimetableImportService {
          endTime: endMins,
          durationMinutes: duration,
          room: room,
-         isActive: true,
+         status: 'active',
        ));
     }
     return entries;

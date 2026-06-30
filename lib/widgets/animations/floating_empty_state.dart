@@ -56,12 +56,14 @@ class _FloatingEmptyStateState extends State<FloatingEmptyState>
     final colorScheme = theme.colorScheme;
 
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.x3l),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.x3l),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
             // Floating icon container
             StaggeredListItem(
               index: 0,
@@ -166,6 +168,6 @@ class _FloatingEmptyStateState extends State<FloatingEmptyState>
           ],
         ),
       ),
-    );
+    ));
   }
 }

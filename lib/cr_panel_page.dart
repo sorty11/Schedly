@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'upload_timetable_pdf_page.dart';
 import 'app_settings.dart';
@@ -12,12 +13,15 @@ import 'models/event_category.dart';
 import 'delete_lecture_page.dart';
 import 'create_announcement_page.dart';
 import 'draft_studio_page.dart';
+import 'manual_timetable_studio.dart';
 import 'student_roster_page.dart';
 import 'theme/theme.dart';
 import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/staggered_list_item.dart';
 
 import 'onboarding/widgets/tutorial_target.dart';
+import 'services/subject_metadata_service.dart';
+import 'course_details_setup_page.dart';
 
 class CRPanelPage extends StatefulWidget {
   const CRPanelPage({super.key});
@@ -27,6 +31,29 @@ class CRPanelPage extends StatefulWidget {
 }
 
 class _CRPanelPageState extends State<CRPanelPage> {
+  bool _setupComplete = true;
+  bool _isCheckingSetup = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkSetup();
+  }
+
+  Future<void> _checkSetup() async {
+    final sectionId = AppSettings.sectionId ?? AppSettings.division;
+    if (sectionId == null) {
+      if (mounted) setState(() => _isCheckingSetup = false);
+      return;
+    }
+    try {
+      final complete = await SubjectMetadataService.isSetupComplete(sectionId);
+      if (mounted) setState(() { _setupComplete = complete; _isCheckingSetup = false; });
+    } catch (_) {
+      if (mounted) setState(() => _isCheckingSetup = false);
+    }
+  }
+
   Future<void> _logoutCR(BuildContext context) async {
     await AppSettings.resetRole();
     if (!context.mounted) return;
@@ -211,6 +238,28 @@ class _CRPanelPageState extends State<CRPanelPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (isCR && !_isCheckingSetup && !_setupComplete) ...[
+              _buildSectionLabel('Action Required', staggerIndex: 0),
+              _buildActionCard(
+                staggerIndex: 1,
+                icon: Icons.warning_amber_rounded,
+                title: 'Complete Course Details',
+                subtitle: 'Required for Analytics and Semester Progress',
+                color: semanticColors.warning,
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CourseDetailsSetupPage(
+                        division: sectionId,
+                      ),
+                    ),
+                  );
+                  _checkSetup(); // recheck when back
+                },
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
             // ── Gradient header card ────────────────────────────────────────
             StaggeredListItem(
               index: 0,
@@ -312,7 +361,8 @@ class _CRPanelPageState extends State<CRPanelPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => DraftStudioPage(division: division),
+                    builder: (_) => ManualTimetableStudio(
+                        division: division, editMode: true),
                   ),
                 );
               },
@@ -333,9 +383,9 @@ class _CRPanelPageState extends State<CRPanelPage> {
               staggerIndex: 4,
               targetId: 'import_timetable_btn',
               icon: Icons.picture_as_pdf_rounded,
-              title: 'Upload Timetable PDF',
+              title: 'Upload Timetable PDF (BETA)',
               subtitle: 'Import schedule from official PDF',
-              color: semanticColors.accent,
+              color: Colors.amber, // Highlight that it's an amber badge feature
               onTap: () {
                 Navigator.push(
                   context,
@@ -406,12 +456,21 @@ class _CRPanelPageState extends State<CRPanelPage> {
                   );
                 },
               ),
+
+              _buildActionCard(
+                staggerIndex: 10,
+                icon: Icons.delete_forever_rounded,
+                title: 'Delete Timetable',
+                subtitle: 'Permanently remove the entire published timetable',
+                color: Colors.red,
+                onTap: () => _deleteTimetable(context, sectionId),
+              ),
             ],
 
             // ── Exit role card (subtle, warning-tinted) ──────────────────────
             const SizedBox(height: AppSpacing.sm),
             StaggeredListItem(
-              index: isCR ? 10 : 5,
+              index: isCR ? 11 : 5,
               child: Container(
                 decoration: BoxDecoration(
                   color: semanticColors.surfaceElevated,
@@ -458,5 +517,67 @@ class _CRPanelPageState extends State<CRPanelPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _deleteTimetable(BuildContext context, String division) async {
+    final TextEditingController _ctrl = TextEditingController();
+    bool confirmed = await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete Timetable?', style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: Colors.red)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('This will permanently delete the published timetable and all drafts. Students will see "No Timetable".', style: GoogleFonts.inter()),
+            const SizedBox(height: 16),
+            Text('Type DELETE to confirm:', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _ctrl,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'DELETE',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              if (_ctrl.text.trim() == 'DELETE') {
+                Navigator.pop(ctx, true);
+              }
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    ) ?? false;
+
+    if (!confirmed || !context.mounted) return;
+
+    // Execute deletion
+    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    for (final day in days) {
+      final snap = await FirebaseFirestore.instance.collection('timetables').doc(division).collection(day).get();
+      for (final doc in snap.docs) {
+        await doc.reference.delete();
+      }
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('timetablePublished', false);
+    final keys = prefs.getKeys().where((k) => k.startsWith('studio_draft_'));
+    for (final k in keys) {
+      await prefs.remove(k);
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Timetable deleted permanently.')));
+      Navigator.popUntil(context, (route) => route.isFirst);
+    }
   }
 }

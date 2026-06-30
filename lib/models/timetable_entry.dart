@@ -13,7 +13,7 @@ class TimetableEntry {
   final int durationMinutes;
   final String? room;
   final String? facultyId;
-  final bool isActive;
+  final String status; // 'active', 'cancelled', 'rescheduled'
 
   TimetableEntry({
     required this.id,
@@ -26,8 +26,12 @@ class TimetableEntry {
     required this.durationMinutes,
     this.room,
     this.facultyId,
-    this.isActive = true,
+    this.status = 'active',
   });
+
+  bool get isActive => status == 'active';
+  bool get isCancelled => status == 'cancelled';
+  bool get isRescheduled => status == 'rescheduled';
 
   bool get isAcademic => category == EventCategory.academic;
 
@@ -82,7 +86,7 @@ class TimetableEntry {
       durationMinutes: parsedDuration,
       room: data['room'],
       facultyId: data['facultyId'],
-      isActive: data['isActive'] ?? true,
+      status: data['status'] ?? (data['isActive'] == false ? 'cancelled' : 'active'),
     );
   }
 
@@ -97,7 +101,8 @@ class TimetableEntry {
       'durationMinutes': durationMinutes,
       if (room != null) 'room': room,
       if (facultyId != null) 'facultyId': facultyId,
-      'isActive': isActive,
+      'status': status,
+      'isActive': status == 'active', // For backwards compatibility if queried
     };
   }
 
@@ -112,7 +117,7 @@ class TimetableEntry {
     int? durationMinutes,
     String? room,
     String? facultyId,
-    bool? isActive,
+    String? status,
   }) {
     return TimetableEntry(
       id: id ?? this.id,
@@ -125,7 +130,7 @@ class TimetableEntry {
       durationMinutes: durationMinutes ?? this.durationMinutes,
       room: room ?? this.room,
       facultyId: facultyId ?? this.facultyId,
-      isActive: isActive ?? this.isActive,
+      status: status ?? this.status,
     );
   }
 }

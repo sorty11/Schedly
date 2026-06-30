@@ -14,6 +14,7 @@ class AppSettings {
   
   static String? studentName;
   static String? studentRollNo;
+  static String? studentBatch;
   
   static String? academicYear;
   static String? branch;
@@ -65,6 +66,7 @@ class AppSettings {
     final prefs = await SharedPreferences.getInstance();
     studentName = prefs.getString('student_name');
     studentRollNo = prefs.getString('student_roll_no');
+    studentBatch = prefs.getString('student_batch');
     
     academicYear = prefs.getString('academic_year');
     branch = prefs.getString('branch');
@@ -136,6 +138,7 @@ class AppSettings {
   static Future<void> saveStudentDetails({
     required String name,
     required String rollNo,
+    String? batch,
     required String acYear,
     required String br,
     required String div,
@@ -144,6 +147,7 @@ class AppSettings {
     final prefs = await SharedPreferences.getInstance();
     studentName = name;
     studentRollNo = rollNo;
+    studentBatch = batch;
     academicYear = acYear;
     branch = br;
     division = div;
@@ -151,6 +155,11 @@ class AppSettings {
     
     await prefs.setString('student_name', name);
     await prefs.setString('student_roll_no', rollNo);
+    if (batch != null) {
+      await prefs.setString('student_batch', batch);
+    } else {
+      await prefs.remove('student_batch');
+    }
     await prefs.setString('academic_year', acYear);
     await prefs.setString('branch', br);
     await prefs.setString('division', div);
@@ -162,6 +171,10 @@ class AppSettings {
         await SharedPreferences.getInstance();
 
     await prefs.remove('user_role');
+    await prefs.remove('student_name');
+    await prefs.remove('student_roll_no');
+    await prefs.remove('student_batch');
+    await prefs.remove('academic_year');
     await prefs.remove('sr_division');
     await prefs.remove('sr_subject');
     await prefs.remove('sr_component');

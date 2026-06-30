@@ -82,7 +82,7 @@ class ConductLog {
       startTime: origData['startTime'] ?? 0,
       endTime: origData['endTime'] ?? 0,
       durationMinutes: origData['durationMinutes'] ?? 0,
-      isActive: true,
+      status: 'active',
     );
 
     return ConductLog(

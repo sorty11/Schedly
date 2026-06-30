@@ -4,6 +4,16 @@ import 'system_update_manager.dart';
 import 'services/app_notification_service.dart';
 import 'models/timetable_entry.dart';
 import 'models/event_category.dart';
+import 'system_update_manager.dart';
+import 'services/timetable_event_service.dart';
+
+class ValidationException implements Exception {
+  final String title;
+  final String message;
+  ValidationException(this.title, this.message);
+  @override
+  String toString() => message;
+}
 
 class TimetableManager {
   static const List<String> allSlots = [
@@ -20,20 +30,56 @@ class TimetableManager {
     required String division,
     required String day,
     required TimetableEntry entry,
+    TimetableEntry? oldEntry,
   }) async {
-    // We do NOT block overlapping batches anymore, because C1 and C2 can share the same time.
-    // However, if the exact same batch has the exact same time, we block it.
-    final existing = await FirebaseFirestore.instance
+    final snap = await FirebaseFirestore.instance
         .collection('timetables')
         .doc(division)
         .collection(day)
-        .where('startTime', isEqualTo: entry.startTime)
-        .where('batch', isEqualTo: entry.batch)
         .where('isActive', isEqualTo: true)
         .get();
 
-    if (existing.docs.isNotEmpty) {
-      throw Exception('This batch already has an active lecture at this time.');
+    final activeLectures = snap.docs
+        .map((d) => TimetableEntry.fromFirestore(d))
+        .where((l) => l.id != entry.id)
+        .toList();
+
+    final overlaps = activeLectures.where((l) => 
+        l.startTime < entry.endTime && l.endTime > entry.startTime
+    ).toList();
+
+    if (overlaps.isNotEmpty) {
+      if (entry.batch == 'Whole Class') {
+        final conflictList = overlaps.map((l) => '• ${l.batch} - ${l.displaySubject}').join('\n');
+        throw ValidationException(
+          'Cannot Replace Lecture',
+          'Whole Class cannot be scheduled because this period already contains:\n\n$conflictList\n\nDelete the existing batch lectures first or replace them individually.'
+        );
+      } else {
+        final wholeClassConflict = overlaps.where((l) => l.batch == 'Whole Class').toList();
+        if (wholeClassConflict.isNotEmpty) {
+           final l = wholeClassConflict.first;
+           throw ValidationException(
+             'Time Conflict',
+             'This lecture overlaps with a Whole Class lecture (${l.displaySubject}).\n\nPlease choose another period or replace the Whole Class lecture.'
+           );
+        }
+        
+        final sameBatchConflict = overlaps.where((l) => l.batch == entry.batch).toList();
+        if (sameBatchConflict.isNotEmpty) {
+           final l = sameBatchConflict.first;
+           if (l.subject == entry.subject) {
+             throw ValidationException(
+               'Duplicate Lecture',
+               'A lecture with the same subject already exists in this slot for Batch ${entry.batch}.'
+             );
+           }
+           throw ValidationException(
+             'Time Conflict',
+             'Batch ${entry.batch} already has a lecture (${l.displaySubject}) in this period.\n\nPlease choose another period.'
+           );
+        }
+      }
     }
 
     await FirebaseFirestore.instance
@@ -43,17 +89,11 @@ class TimetableManager {
         .doc(entry.id)
         .set(entry.toFirestore());
 
-    SystemUpdateManager.addUpdate(
-      title: 'Lecture Added',
-      description: '${entry.subject} added on $day for ${entry.batch}',
-      type: 'add',
-    );
-
-    await AppNotificationService.createNotification(
-      title: 'Lecture Added',
-      message: '${entry.subject} added on $day for ${entry.batch}',
+    await TimetableEventService.handleModification(
       division: division,
-      type: 'add',
+      day: day,
+      oldEntry: oldEntry,
+      newEntry: entry,
     );
   }
 
@@ -112,7 +152,6 @@ class TimetableManager {
         
     final entries = snapshot.docs
         .map((doc) => TimetableEntry.fromFirestore(doc))
-        .where((e) => e.isActive)
         .toList();
         
     entries.sort((a, b) => a.startTime.compareTo(b.startTime));
