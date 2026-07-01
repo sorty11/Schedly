@@ -6,6 +6,7 @@ import 'theme/theme.dart';
 import 'widgets/animations/animated_button.dart';
 import 'widgets/animations/animated_list_tile.dart';
 import 'widgets/animations/animated_icon_button.dart';
+import 'widgets/app_dialogs.dart';
 
 class DeleteLecturePage extends StatefulWidget {
   const DeleteLecturePage({super.key});
@@ -52,53 +53,13 @@ class _DeleteLecturePageState
     String docId,
     String subject,
   ) async {
-    final shouldDelete =
-        await showDialog<bool>(
-              context: context,
-              builder: (context) {
-                return AlertDialog(
-                  title: const Text(
-                    'Delete Lecture',
-                  ),
-                  content: Text(
-                    'Are you sure you want to delete "$subject"?',
-                  ),
-                  actions: [
-                    AnimatedButton(
-                      onPressed: () {
-                        Navigator.pop(
-                          context,
-                          false,
-                        );
-                      },
-                      backgroundColor: Colors.transparent,
-                      foregroundColor: Theme.of(context).colorScheme.primary,
-                      height: 40,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: const Text(
-                        'Cancel',
-                      ),
-                    ),
-                    AnimatedButton(
-                      backgroundColor: Theme.of(context).extension<AppSemanticColors>()!.cancelled,
-                      foregroundColor: Colors.white,
-                      onPressed: () {
-                        Navigator.pop(
-                          context,
-                          true,
-                        );
-                      },
-                      height: 40,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: const Text(
-                        'Delete',
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ) ??
-            false;
+    final shouldDelete = await AppDialogs.showConfirm(
+      context: context,
+      title: 'Delete Lecture',
+      message: 'Are you sure you want to delete "$subject"?',
+      confirmText: 'Delete',
+      isDestructive: true,
+    );
 
     if (!shouldDelete ||
         division == null) {
@@ -122,13 +83,10 @@ class _DeleteLecturePageState
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context)
-        .showSnackBar(
-      SnackBar(
-        content: Text(
-          '$subject deleted',
-        ),
-      ),
+    AppDialogs.showSnackBar(
+      context: context,
+      message: '$subject deleted',
+      isError: true, // using error style for delete action
     );
   }
 

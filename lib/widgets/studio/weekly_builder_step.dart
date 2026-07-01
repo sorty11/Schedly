@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/studio_state.dart';
 import '../../theme/theme.dart';
 import 'period_config_sheet.dart';
-import 'bottom_continue_button.dart';
+import '../app_dialogs.dart';
 
 class WeeklyBuilderStep extends StatefulWidget {
   final StudioDraftConfig draft;
@@ -129,7 +129,11 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                     });
                     _update();
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No next period available on this day.')));
+                    AppDialogs.showSnackBar(
+                      context: context,
+                      message: 'No next period available on this day.',
+                      isError: true,
+                    );
                   }
                 },
               ),

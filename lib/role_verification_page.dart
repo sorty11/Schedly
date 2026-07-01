@@ -10,6 +10,7 @@ import 'timetable_manager.dart';
 import 'theme/theme.dart';
 import 'widgets/animations/animated_button.dart';
 import 'widgets/animations/animated_card.dart';
+import 'widgets/app_dialogs.dart';
 
 class RoleVerificationPage extends StatefulWidget {
   final String division;
@@ -84,8 +85,10 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+      AppDialogs.showError(
+        context: context,
+        title: 'Verification Failed',
+        message: e.toString().replaceAll('Exception: ', ''),
       );
     }
 
@@ -151,7 +154,11 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      AppDialogs.showError(
+        context: context,
+        title: 'Failed to claim role',
+        message: e.toString().replaceAll('Exception: ', ''),
+      );
       setState(() => loading = false);
     }
   }
@@ -204,8 +211,10 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+      AppDialogs.showError(
+        context: context,
+        title: 'Failed to assign SR',
+        message: e.toString().replaceAll('Exception: ', ''),
       );
       setState(() => loading = false);
     }

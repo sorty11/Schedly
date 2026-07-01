@@ -1,10 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'system_update_manager.dart';
-import 'services/app_notification_service.dart';
 import 'models/timetable_entry.dart';
 import 'models/event_category.dart';
-import 'system_update_manager.dart';
 import 'services/timetable_event_service.dart';
 
 class ValidationException implements Exception {

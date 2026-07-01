@@ -10,6 +10,8 @@ import 'user_roles.dart';
 import 'home_page.dart';
 import 'models/section_config.dart';
 import 'widgets/animations/animated_button.dart';
+import 'widgets/animations/staggered_list_item.dart';
+import 'widgets/app_dialogs.dart';
 import 'theme/theme.dart';
 
 class CRSetupWizard extends StatefulWidget {
@@ -104,7 +106,11 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      AppDialogs.showError(
+        context: context,
+        title: 'Setup Failed',
+        message: e.toString().replaceAll('Exception: ', ''),
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }

@@ -11,6 +11,7 @@ import 'theme/theme.dart';
 import 'widgets/animations/animated_button.dart';
 import 'widgets/animations/animated_card.dart';
 import 'onboarding/widgets/tutorial_target.dart';
+import 'widgets/app_dialogs.dart';
 
 class SrConductDashboard extends StatefulWidget {
   final String division;
@@ -95,8 +96,9 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
           markedByUid: currentUid,
         );
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Marked as $statusLabel')),
+        AppDialogs.showSnackBar(
+          context: context,
+          message: 'Marked as $statusLabel',
         );
       },
       backgroundColor: color,
@@ -211,8 +213,9 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                                     actualCategory: EventCategory.academic,
                                   );
                                   if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Marked as Rescheduled to ${subj.subject} ${subj.component}')),
+                                  AppDialogs.showSnackBar(
+                                    context: context,
+                                    message: 'Marked as Rescheduled to ${subj.subject} ${subj.component}',
                                   );
                                 },
                                 backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),

@@ -11,6 +11,7 @@ import 'home_page.dart';
 import 'widgets/animations/staggered_list_item.dart';
 import 'widgets/animations/animated_button.dart';
 import 'widgets/animations/animated_icon_button.dart';
+import 'widgets/app_dialogs.dart';
 
 class CRAuthBottomSheet extends StatefulWidget {
   final String? initialYear;
@@ -107,8 +108,10 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
   Future<void> _authenticate() async {
     final pwd = _passwordController.text.trim();
     if (pwd.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a password')),
+      AppDialogs.showError(
+        context: context,
+        title: 'Missing Password',
+        message: 'Please enter a password to continue.',
       );
       return;
     }
@@ -172,8 +175,10 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+      AppDialogs.showError(
+        context: context,
+        title: 'Authentication Failed',
+        message: e.toString().replaceAll('Exception: ', ''),
       );
     } finally {
       if (mounted) {

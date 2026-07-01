@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/studio_state.dart';
 import '../../theme/theme.dart';
+import '../app_dialogs.dart';
 
 class PeriodConfigSheet extends StatefulWidget {
   final PeriodDef period;
@@ -92,7 +93,11 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
 
   void _save() {
     if (!_isSplit && _wcType == SlotType.lecture && _wcSubjectCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Subject is required')));
+      AppDialogs.showSnackBar(
+        context: context,
+        message: 'Subject is required',
+        isError: true,
+      );
       return;
     }
     

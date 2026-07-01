@@ -4,6 +4,7 @@ import 'services/app_notification_service.dart';
 import 'services/announcement_service.dart';
 
 import 'widgets/animations/animated_button.dart';
+import 'widgets/app_dialogs.dart';
 
 class CreateAnnouncementPage extends StatefulWidget {
   const CreateAnnouncementPage({
@@ -62,12 +63,9 @@ class _CreateAnnouncementPageState
       );
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Announcement published for $sectionId',
-          ),
-        ),
+      AppDialogs.showSnackBar(
+        context: context,
+        message: 'Announcement published for $sectionId',
       );
 
       Navigator.pop(context);

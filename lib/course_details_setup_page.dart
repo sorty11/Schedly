@@ -6,6 +6,7 @@ import 'models/timetable_entry.dart';
 import 'services/subject_metadata_service.dart';
 import 'theme/theme.dart';
 import 'app_settings.dart';
+import 'widgets/app_dialogs.dart';
 
 class CourseDetailsSetupPage extends StatefulWidget {
   final String division;
@@ -179,17 +180,9 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
       await SubjectMetadataService.saveMetadata(widget.division, metaList);
       
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(children: [
-            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Text('Course details saved!', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-          ]),
-          backgroundColor: Colors.green[700],
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
+      AppDialogs.showSnackBar(
+        context: context,
+        message: 'Course details saved!',
       );
       Navigator.pop(context);
     } catch (e) {

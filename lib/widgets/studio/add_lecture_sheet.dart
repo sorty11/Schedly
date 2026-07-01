@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/studio_state.dart';
 import '../../theme/theme.dart';
+import '../app_dialogs.dart';
 
 class AddLectureSheet extends StatefulWidget {
   final SlotState slot;
@@ -63,7 +64,11 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
 
   void _save() {
     if (_type == SlotType.lecture && _subjectCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Subject is required')));
+      AppDialogs.showSnackBar(
+        context: context,
+        message: 'Subject is required',
+        isError: true,
+      );
       return;
     }
     widget.onSave(_buildState());
@@ -72,7 +77,11 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
 
   void _saveAndNext() {
     if (_type == SlotType.lecture && _subjectCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Subject is required')));
+      AppDialogs.showSnackBar(
+        context: context,
+        message: 'Subject is required',
+        isError: true,
+      );
       return;
     }
     if (widget.onSaveAndNext != null) {

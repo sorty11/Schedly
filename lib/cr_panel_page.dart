@@ -18,6 +18,7 @@ import 'student_roster_page.dart';
 import 'theme/theme.dart';
 import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/staggered_list_item.dart';
+import 'widgets/app_dialogs.dart';
 
 import 'onboarding/widgets/tutorial_target.dart';
 import 'services/subject_metadata_service.dart';
@@ -57,17 +58,9 @@ class _CRPanelPageState extends State<CRPanelPage> {
   Future<void> _logoutCR(BuildContext context) async {
     await AppSettings.resetRole();
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Exited role mode',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w500),
-        ),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
-      ),
+    AppDialogs.showSnackBar(
+      context: context,
+      message: 'Exited role mode',
     );
     Navigator.pop(context);
   }
@@ -524,20 +517,21 @@ class _CRPanelPageState extends State<CRPanelPage> {
     bool confirmed = await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
         title: Text('Delete Timetable?', style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: Colors.red)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('This will permanently delete the published timetable and all drafts. Students will see "No Timetable".', style: GoogleFonts.inter()),
+            Text('This will permanently delete the published timetable and all drafts. Students will see "No Timetable".', style: GoogleFonts.inter(fontSize: 14)),
             const SizedBox(height: 16),
-            Text('Type DELETE to confirm:', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            Text('Type DELETE to confirm:', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13)),
             const SizedBox(height: 8),
             TextField(
               controller: _ctrl,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
                 hintText: 'DELETE',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
             ),
           ],
@@ -576,7 +570,11 @@ class _CRPanelPageState extends State<CRPanelPage> {
     }
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Timetable deleted permanently.')));
+      AppDialogs.showSnackBar(
+        context: context,
+        message: 'Timetable deleted permanently.',
+        isError: true,
+      );
       Navigator.popUntil(context, (route) => route.isFirst);
     }
   }

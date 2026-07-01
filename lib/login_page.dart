@@ -11,6 +11,7 @@ import 'user_roles.dart';
 import 'theme/theme.dart';
 import 'widgets/animations/animated_button.dart';
 import 'widgets/animations/staggered_list_item.dart';
+import 'widgets/app_dialogs.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -63,10 +64,10 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedYear == null || _selectedDivision == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select Academic Year and Division'),
-        ),
+      AppDialogs.showError(
+        context: context,
+        title: 'Missing Details',
+        message: 'Please select Academic Year and Division to continue.',
       );
       return;
     }
@@ -119,8 +120,10 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+      AppDialogs.showError(
+        context: context,
+        title: 'Login Failed',
+        message: e.toString().replaceAll('Exception: ', ''),
       );
       setState(() => _loading = false);
     }

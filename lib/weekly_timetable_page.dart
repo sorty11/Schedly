@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'widgets/timetable_studio_sheet.dart';
 import 'app_settings.dart';
 import 'user_roles.dart';
-import 'services/app_notification_service.dart';
 import 'theme/theme.dart';
 
 import 'widgets/animations/animated_card.dart';
@@ -17,8 +16,6 @@ import 'models/timetable_entry.dart';
 import 'models/event_category.dart';
 import 'timetable_manager.dart';
 import 'system_update_manager.dart';
-import 'services/announcement_service.dart';
-import 'services/local_notification_service.dart';
 import 'services/history_service.dart';
 import 'services/timetable_event_service.dart';
 

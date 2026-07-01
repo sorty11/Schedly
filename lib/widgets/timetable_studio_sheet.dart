@@ -10,6 +10,7 @@ import '../timetable_manager.dart';
 import '../app_settings.dart';
 import '../user_roles.dart';
 import '../services/history_service.dart';
+import 'app_dialogs.dart';
 
 class TimetableStudioSheet extends StatefulWidget {
   final String division;
@@ -241,11 +242,9 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
 
       if (!mounted) return;
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(widget.existingEntry != null ? 'Lecture updated!' : 'Lecture added successfully!'),
-          behavior: SnackBarBehavior.floating,
-        ),
+      AppDialogs.showSnackBar(
+        context: context,
+        message: widget.existingEntry != null ? 'Lecture updated!' : 'Lecture added successfully!',
       );
 
       if (keepOpen) {

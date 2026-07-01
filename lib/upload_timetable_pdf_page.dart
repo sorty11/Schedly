@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'services/pdf_timetable_import_service.dart';
 import 'pdf_import_preview_page.dart';
 import 'models/event_category.dart';
+import 'widgets/app_dialogs.dart';
 
 class UploadTimetablePdfPage
     extends StatefulWidget {
@@ -94,13 +95,10 @@ class _UploadTimetablePdfPageState
         loading = false;
       });
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        SnackBar(
-          content: Text(
-            'Import failed: $e',
-          ),
-        ),
+      AppDialogs.showError(
+        context: context,
+        title: 'Import Failed',
+        message: e.toString(),
       );
     }
   }

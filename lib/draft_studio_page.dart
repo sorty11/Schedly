@@ -11,6 +11,7 @@ import 'timetable_manager.dart';
 import 'widgets/timetable_studio_sheet.dart';
 import 'theme/theme.dart';
 import 'widgets/animations/animated_card.dart';
+import 'widgets/app_dialogs.dart';
 
 class DraftStudioPage extends StatefulWidget {
   final String division;
@@ -47,15 +48,20 @@ class _DraftStudioPageState extends State<DraftStudioPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading config: $e')));
+      AppDialogs.showError(
+        context: context,
+        title: 'Error Loading Config',
+        message: e.toString().replaceAll('Exception: ', ''),
+      );
       setState(() => _loading = false);
     }
   }
 
   Future<void> _publishTimetable() async {
     // Phase 1 MVP: Dummy publish to show intent
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Validating & Publishing... (Coming Soon)')),
+    AppDialogs.showSnackBar(
+      context: context,
+      message: 'Validating & Publishing... (Coming Soon)',
     );
   }
 
@@ -113,8 +119,9 @@ class _DraftStudioPageState extends State<DraftStudioPage> {
             ? FloatingActionButton.extended(
                 onPressed: () {
                   // Trigger Quick Add Mode
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Quick Add Mode enabled! Tap any period to add.'))
+                  AppDialogs.showSnackBar(
+                    context: context,
+                    message: 'Quick Add Mode enabled! Tap any period to add.',
                   );
                 },
                 icon: const Icon(Icons.bolt_rounded),

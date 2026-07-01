@@ -2,7 +2,6 @@ import 'package:schedly/models/timetable_entry.dart';
 import 'package:schedly/services/app_notification_service.dart';
 import 'package:schedly/services/announcement_service.dart';
 import 'package:schedly/services/local_notification_service.dart';
-import 'package:schedly/app_settings.dart';
 import 'package:schedly/timetable_manager.dart';
 
 class TimetableEventService {

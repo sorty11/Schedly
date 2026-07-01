@@ -4,6 +4,7 @@ import 'models/timetable_entry.dart';
 import 'timetable_manager.dart';
 import 'theme/theme.dart';
 import 'widgets/animations/animated_button.dart';
+import 'widgets/app_dialogs.dart';
 
 class PdfImportPreviewPage extends StatelessWidget {
   final Map<String, List<TimetableEntry>> timetable;
@@ -24,14 +25,18 @@ class PdfImportPreviewPage extends StatelessWidget {
 
       if (!context.mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Timetable Imported Successfully')),
+      AppDialogs.showSnackBar(
+        context: context,
+        message: 'Timetable Imported Successfully',
       );
 
       Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to import: $e')),
+      if (!context.mounted) return;
+      AppDialogs.showError(
+        context: context,
+        title: 'Import Failed',
+        message: e.toString(),
       );
     }
   }

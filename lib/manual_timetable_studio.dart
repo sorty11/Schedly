@@ -9,9 +9,9 @@ import 'models/event_category.dart';
 import 'models/studio_state.dart';
 import 'models/timetable_entry.dart';
 import 'theme/theme.dart';
-import 'widgets/studio/batch_setup_step.dart';
 import 'widgets/studio/period_builder_step.dart';
 import 'widgets/studio/weekly_builder_step.dart';
+import 'widgets/app_dialogs.dart';
 import 'widgets/studio/working_days_step.dart';
 
 class ManualTimetableStudio extends StatefulWidget {
@@ -190,17 +190,9 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
       await prefs.remove('studio_draft_${widget.division}');
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(children: [
-            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Text('Timetable published! Next: Configure Subjects.', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-          ]),
-          backgroundColor: Colors.green[700],
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
+      AppDialogs.showSnackBar(
+        context: context,
+        message: 'Timetable published! Next: Configure Subjects.',
       );
       
       Navigator.pushReplacement(
@@ -214,8 +206,10 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Publish failed: $e'), backgroundColor: Colors.red),
+      AppDialogs.showError(
+        context: context,
+        title: 'Publish Failed',
+        message: e.toString(),
       );
     } finally {
       if (mounted) setState(() => _isPublishing = false);

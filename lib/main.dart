@@ -4,7 +4,6 @@ import 'services/notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'firebase_options.dart';
 import 'services/local_notification_service.dart';
 
 
