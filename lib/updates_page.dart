@@ -7,6 +7,7 @@ import 'theme/theme.dart';
 import 'widgets/animations/staggered_list_item.dart';
 import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/floating_empty_state.dart';
+import 'widgets/animations/skeleton_components.dart';
 
 class UpdatesPage extends StatefulWidget {
   const UpdatesPage({super.key});
@@ -48,7 +49,7 @@ class _UpdatesPageState extends State<UpdatesPage>
           children: [
             // ── Custom App Bar ───────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(
+              padding: EdgeInsets.fromLTRB(
                 AppSpacing.x2l,
                 AppSpacing.lg,
                 AppSpacing.x2l,
@@ -66,7 +67,7 @@ class _UpdatesPageState extends State<UpdatesPage>
 
             // ── Custom Tab Bar ───────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.symmetric(
+              padding: EdgeInsets.symmetric(
                 horizontal: AppSpacing.x2l,
                 vertical: AppSpacing.sm,
               ),
@@ -101,7 +102,7 @@ class _UpdatesPageState extends State<UpdatesPage>
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
-                  padding: const EdgeInsets.all(4),
+                  padding: EdgeInsets.all(AppSpacing.xs),
                   tabs: const [
                     Tab(text: 'Timetable Changes'),
                     Tab(text: 'Announcements'),
@@ -151,10 +152,28 @@ class _UpdatesPageState extends State<UpdatesPage>
 }
 
 // ─── Timetable Changes Tab ─────────────────────────────────────────────────────
-class _ChangesTab extends StatelessWidget {
+class _ChangesTab extends StatefulWidget {
   final String division;
 
   const _ChangesTab({required this.division});
+
+  @override
+  State<_ChangesTab> createState() => _ChangesTabState();
+}
+
+class _ChangesTabState extends State<_ChangesTab> {
+  late final Stream<QuerySnapshot> _changesStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _changesStream = FirebaseFirestore.instance
+        .collection('sections')
+        .doc(widget.division)
+        .collection('notifications')
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
 
   Color _typeColor(String type, AppSemanticColors sem) {
     switch (type) {
@@ -194,16 +213,11 @@ class _ChangesTab extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('sections')
-          .doc(division)
-          .collection('notifications')
-          .orderBy('createdAt', descending: true)
-          .snapshots(),
+      stream: _changesStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting &&
             !snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
+          return const UpdatesSkeleton();
         }
 
         final docs = snapshot.data?.docs ?? [];
@@ -223,7 +237,7 @@ class _ChangesTab extends StatelessWidget {
 
         return ListView.builder(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(
+          padding: EdgeInsets.symmetric(
             horizontal: AppSpacing.x2l,
             vertical: AppSpacing.sm,
           ),
@@ -238,7 +252,7 @@ class _ChangesTab extends StatelessWidget {
             return StaggeredListItem(
               index: index,
               child: Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                padding: EdgeInsets.only(bottom: AppSpacing.md),
                 child: AnimatedCard(
                   backgroundColor: isDark ? sem.surfaceElevated : Colors.white,
                   borderRadius: AppRadius.xl,
@@ -250,12 +264,12 @@ class _ChangesTab extends StatelessWidget {
                       ),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.xl),
+                      padding: EdgeInsets.all(AppSpacing.xl),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(AppSpacing.md),
+                            padding: EdgeInsets.all(AppSpacing.md),
                             decoration: BoxDecoration(
                               color: color.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(AppRadius.md),
@@ -270,7 +284,7 @@ class _ChangesTab extends StatelessWidget {
                                 Row(
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.symmetric(
+                                      padding: EdgeInsets.symmetric(
                                         horizontal: AppSpacing.sm,
                                         vertical: 2,
                                       ),
@@ -318,10 +332,28 @@ class _ChangesTab extends StatelessWidget {
 }
 
 // ─── Announcements Tab ─────────────────────────────────────────────────────────
-class _AnnouncementsTab extends StatelessWidget {
+class _AnnouncementsTab extends StatefulWidget {
   final String division;
 
   const _AnnouncementsTab({required this.division});
+
+  @override
+  State<_AnnouncementsTab> createState() => _AnnouncementsTabState();
+}
+
+class _AnnouncementsTabState extends State<_AnnouncementsTab> {
+  late final Stream<QuerySnapshot> _announcementsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _announcementsStream = FirebaseFirestore.instance
+        .collection('sections')
+        .doc(widget.division)
+        .collection('announcements')
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
 
   Color _priorityColor(String priority, AppSemanticColors sem) {
     switch (priority.toLowerCase()) {
@@ -345,16 +377,11 @@ class _AnnouncementsTab extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('sections')
-          .doc(division)
-          .collection('announcements')
-          .orderBy('createdAt', descending: true)
-          .snapshots(),
+      stream: _announcementsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting &&
             !snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
+          return const UpdatesSkeleton();
         }
 
         final docs = snapshot.data?.docs ?? [];
@@ -369,7 +396,7 @@ class _AnnouncementsTab extends StatelessWidget {
 
         return ListView.builder(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(
+          padding: EdgeInsets.symmetric(
             horizontal: AppSpacing.x2l,
             vertical: AppSpacing.sm,
           ),
@@ -383,7 +410,7 @@ class _AnnouncementsTab extends StatelessWidget {
             return StaggeredListItem(
               index: index,
               child: Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                padding: EdgeInsets.only(bottom: AppSpacing.md),
                 child: AnimatedCard(
                   backgroundColor: isDark ? sem.surfaceElevated : Colors.white,
                   borderRadius: AppRadius.xl,
@@ -396,14 +423,14 @@ class _AnnouncementsTab extends StatelessWidget {
                       ),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.xl),
+                      padding: EdgeInsets.all(AppSpacing.xl),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(
+                                padding: EdgeInsets.symmetric(
                                   horizontal: AppSpacing.md,
                                   vertical: AppSpacing.xs,
                                 ),

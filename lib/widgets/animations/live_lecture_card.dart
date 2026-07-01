@@ -192,7 +192,7 @@ class _LiveLectureCardState extends State<LiveLectureCard>
                     ),
 
                     Padding(
-                      padding: const EdgeInsets.all(AppSpacing.x2l),
+                      padding: EdgeInsets.all(AppSpacing.x2l),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -200,7 +200,7 @@ class _LiveLectureCardState extends State<LiveLectureCard>
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(
+                                padding: EdgeInsets.symmetric(
                                   horizontal: AppSpacing.md,
                                   vertical: AppSpacing.xs + 2,
                                 ),
@@ -340,7 +340,7 @@ class _LiveLectureCardState extends State<LiveLectureCard>
 
   Widget _buildInfoChip(IconData icon, String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(
+      padding: EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm - 2,
       ),

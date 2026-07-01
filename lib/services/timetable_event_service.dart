@@ -1,3 +1,5 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:schedly/models/timetable_entry.dart';
 import 'package:schedly/services/app_notification_service.dart';
 import 'package:schedly/services/announcement_service.dart';
@@ -118,7 +120,22 @@ class TimetableEventService {
       );
     }
 
-    // 3. Local Push Notification
+    // Trigger Render Backend Push Notification via Outbox
+    final outboxRef = FirebaseFirestore.instance.collection('notification_outbox').doc();
+    await outboxRef.set({
+      'notificationId': 'tt_${DateTime.now().millisecondsSinceEpoch}',
+      'type': type,
+      'title': title,
+      'body': message,
+      'division': division,
+      'priority': (type == 'cancel' || type == 'edit' || type == 'time_change' || type == 'room_change') ? 'high' : 'normal',
+      'processed': false,
+      'attempts': 0,
+      'nextRetryAt': FieldValue.serverTimestamp(),
+      'createdAt': FieldValue.serverTimestamp(),
+      'uid': FirebaseAuth.instance.currentUser?.uid ?? '',
+    });
+// 3. Local Push Notification
     final targetId = newEntry?.id ?? oldEntry?.id ?? '0';
     await LocalNotificationService.notifications.cancel(targetId.hashCode);
     

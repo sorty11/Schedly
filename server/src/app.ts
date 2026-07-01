@@ -43,6 +43,16 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).json({ error: 'Internal Server Error' });
 });
 
+try {
+  console.log("Node:", process.version);
+  console.log("firebase-admin:", require("firebase-admin/package.json").version);
+  console.log("@google-cloud/firestore:", require("@google-cloud/firestore/package.json").version);
+  console.log(require.resolve("@google-cloud/firestore"));
+} catch (error: any) {
+  console.error("Diagnostic error:");
+  console.error(error.stack);
+}
+
 worker.start();
 
 app.listen(AppConfig.PORT, () => {

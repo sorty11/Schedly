@@ -100,7 +100,7 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl))),
       builder: (ctx) {
         return SafeArea(
           child: Column(
@@ -180,7 +180,6 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
 
   @override
   Widget build(BuildContext context) {
-    print('DEBUG: WeeklyBuilderStep build called. _draft.batches = ${_draft.batches}');
     final cs = Theme.of(context).colorScheme;
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -194,7 +193,7 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
             children: [
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                 child: Row(
                   children: [
                     ...List.generate(_draft.selectedDays.length, (index) {
@@ -209,13 +208,13 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
-                        margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        margin: EdgeInsets.only(right: AppSpacing.sm),
+                        padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
                         decoration: BoxDecoration(
                           color: isComplete 
                               ? Colors.green.withValues(alpha: isDark ? 0.2 : 0.1)
                               : (isSelected ? cs.primary.withValues(alpha: 0.1) : Colors.transparent),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
                           border: Border.all(
                             color: isComplete 
                                 ? Colors.green 
@@ -304,7 +303,7 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
 
         // Publish Button
         Container(
-          padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).padding.bottom + 16),
+          padding: EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.lg, AppSpacing.x2l, MediaQuery.of(context).padding.bottom + 16),
           decoration: BoxDecoration(
             color: isDark ? sem.surfaceElevated : cs.surface,
             border: Border(top: BorderSide(color: sem.borderSubtle)),
@@ -321,7 +320,7 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                   style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700)),
               style: FilledButton.styleFrom(
                 minimumSize: const Size(double.infinity, 56),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
               ),
             ),
           ),
@@ -353,7 +352,7 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
     }
     
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 160),
+      padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 160),
       itemCount: _draft.periods.length,
       itemBuilder: (context, index) {
         if (skippedIndices.contains(index)) return const SizedBox.shrink();
@@ -379,14 +378,14 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
           if (periodLectures.isNotEmpty && periodLectures.first.isNonLecture) {
             final slot = periodLectures.first;
             return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: EdgeInsets.only(bottom: AppSpacing.md),
               child: InkWell(
                 onTap: () => _openPeriodConfig(day, period.id),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                     border: Border.all(color: sem.borderSubtle),
                     color: sem.surfaceElevated,
                   ),
@@ -406,12 +405,12 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
           }
 
           return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: EdgeInsets.only(bottom: AppSpacing.md),
             child: Row(
               children: [
                 Expanded(child: Divider(color: sem.borderSubtle)),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: Text('${period.name} • $timeStr', 
                       style: GoogleFonts.inter(fontSize: 12, color: sem.onSurfaceMuted, fontWeight: FontWeight.w600)),
                 ),
@@ -423,24 +422,24 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
 
         if (periodLectures.isEmpty) {
           return Container(
-            margin: const EdgeInsets.only(bottom: 12),
+            margin: EdgeInsets.only(bottom: AppSpacing.md),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(AppRadius.xl),
               border: Border.all(color: sem.borderSubtle),
               color: isDark ? sem.surfaceElevated : cs.surface,
               boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2))],
             ),
             child: InkWell(
               onTap: () => _openPeriodConfig(day, period.id),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(AppRadius.xl),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(AppSpacing.lg),
                 child: Column(
                   children: [
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                           decoration: BoxDecoration(color: cs.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
                           child: Text(period.name, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: cs.primary)),
                         ),
@@ -450,10 +449,10 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                     ),
                     const SizedBox(height: 16),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                       decoration: BoxDecoration(
                         color: cs.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -472,9 +471,9 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
         }
 
         return Container(
-          margin: const EdgeInsets.only(bottom: 12),
+          margin: EdgeInsets.only(bottom: AppSpacing.md),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppRadius.xl),
             border: Border.all(color: sem.borderSubtle),
             color: isDark ? sem.surfaceElevated : cs.surface,
             boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2))],
@@ -484,11 +483,11 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
             children: [
               // Period Header
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.sm),
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                       decoration: BoxDecoration(color: cs.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
                       child: Text(period.name, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: cs.primary)),
                     ),
@@ -511,7 +510,7 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                       onTap: () => _openPeriodConfig(day, period.id),
                       onLongPress: () => _showSlotOptions(day, period.id, slot, idx),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                         child: Row(
                           children: [
                             if (!isWholeClass)
@@ -543,8 +542,8 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                                 : Align(
                                     alignment: Alignment.centerLeft,
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(color: cs.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 6),
+                                      decoration: BoxDecoration(color: cs.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(AppRadius.xl)),
                                       child: Text('+ Add Lecture', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: cs.primary)),
                                     ),
                                   ),
@@ -567,7 +566,7 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
 
   Widget _buildChip(IconData icon, String label, AppSemanticColors sem) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
       decoration: BoxDecoration(
         color: sem.surfaceElevated,
         borderRadius: BorderRadius.circular(6),

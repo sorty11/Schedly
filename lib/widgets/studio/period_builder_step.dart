@@ -184,7 +184,7 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                padding: EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.x2l, AppSpacing.x2l, AppSpacing.lg),
                 child: Row(
                   children: [
                     Expanded(
@@ -220,7 +220,7 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
                       icon: const Icon(Icons.auto_awesome_rounded, size: 16),
                       label: const Text('Template'),
                       style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                       ),
                     ),
                   ],
@@ -232,11 +232,11 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
                 duration: const Duration(milliseconds: 200),
                 child: _errorMessage != null
                     ? Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                        padding: const EdgeInsets.all(12),
+                        margin: EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.sm),
+                        padding: EdgeInsets.all(AppSpacing.md),
                         decoration: BoxDecoration(
                           color: cs.errorContainer,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
                         child: Row(
                           children: [
@@ -256,7 +256,7 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
               // List
               Expanded(
                 child: ReorderableListView.builder(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 120),
+                  padding: EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.sm, AppSpacing.x2l, 120),
                   itemCount: _periods.length,
                   onReorder: (oldIdx, newIdx) {
                     setState(() {
@@ -279,7 +279,7 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
 
                     return Padding(
                       key: ValueKey(p.id),
-                      padding: const EdgeInsets.only(bottom: 12),
+                      padding: EdgeInsets.only(bottom: AppSpacing.md),
                       child: _PeriodCard(
                         period: p,
                         hasError: hasError,
@@ -307,7 +307,7 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
 
         // Bottom Bar with Add Buttons
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
           decoration: BoxDecoration(
             color: Theme.of(context).brightness == Brightness.dark
                 ? sem.surfaceElevated
@@ -388,16 +388,16 @@ class _PeriodCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: borderColor, width: hasError ? 2 : 1),
       ),
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(AppSpacing.md),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Drag Handle
           const Padding(
-            padding: EdgeInsets.only(top: 12, right: 8),
+            padding: EdgeInsets.only(top: AppSpacing.md, right: AppSpacing.sm),
             child: Icon(Icons.drag_indicator_rounded, color: Colors.grey),
           ),
           
@@ -409,10 +409,10 @@ class _PeriodCard extends StatelessWidget {
                   children: [
                     Container(
                       height: 32,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
                       decoration: BoxDecoration(
                         color: sem.surfaceElevated,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<PeriodKind>(
@@ -458,8 +458,8 @@ class _PeriodCard extends StatelessWidget {
                   style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
                   decoration: InputDecoration(
                     labelText: 'Period Name',
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
                     isDense: true,
                   ),
                 ),
@@ -471,12 +471,12 @@ class _PeriodCard extends StatelessWidget {
                     Expanded(
                       child: InkWell(
                         onTap: onPickStart,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                          padding: EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.md),
                           decoration: BoxDecoration(
                             border: Border.all(color: sem.borderSubtle),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -494,12 +494,12 @@ class _PeriodCard extends StatelessWidget {
                     Expanded(
                       child: InkWell(
                         onTap: onPickEnd,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                          padding: EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.md),
                           decoration: BoxDecoration(
                             border: Border.all(color: sem.borderSubtle),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -542,14 +542,14 @@ class _TemplateSelectorSheet extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 width: 48,
                 height: 5,
-                margin: const EdgeInsets.only(bottom: 16),
+                margin: EdgeInsets.only(bottom: AppSpacing.lg),
                 decoration: BoxDecoration(
                   color: sem.borderSubtle,
                   borderRadius: BorderRadius.circular(10),

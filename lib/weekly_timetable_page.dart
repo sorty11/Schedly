@@ -12,6 +12,7 @@ import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/staggered_list_item.dart';
 import 'services/permission_service.dart';
 import 'widgets/animations/floating_empty_state.dart';
+import 'widgets/animations/skeleton_components.dart';
 import 'models/timetable_entry.dart';
 import 'models/event_category.dart';
 import 'timetable_manager.dart';
@@ -80,7 +81,7 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
       ),
       builder: (ctx) => SafeArea(
         child: Column(
@@ -237,7 +238,7 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(
+              padding: EdgeInsets.fromLTRB(
                 AppSpacing.x2l,
                 AppSpacing.lg,
                 AppSpacing.x2l,
@@ -253,7 +254,7 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                   if (AppSettings.currentRole == UserRole.cr ||
                       AppSettings.currentRole == UserRole.sr)
                     Container(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                         horizontal: AppSpacing.md,
                         vertical: AppSpacing.xs + 1,
                       ),
@@ -320,7 +321,7 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                 ),
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(
+                  padding: EdgeInsets.symmetric(
                     horizontal: AppSpacing.x2l,
                     vertical: AppSpacing.md,
                   ),
@@ -343,7 +344,7 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                         child: AnimatedContainer(
                           duration: AppDuration.standard,
                           curve: AppCurves.standard,
-                          padding: const EdgeInsets.symmetric(
+                          padding: EdgeInsets.symmetric(
                             horizontal: AppSpacing.lg,
                             vertical: AppSpacing.sm,
                           ),
@@ -411,7 +412,7 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting &&
                       !snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const TimetableSkeleton();
                   }
 
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -456,7 +457,7 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                     child: ListView.builder(
                       key: ValueKey(selectedDay),
                       physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(
+                      padding: EdgeInsets.fromLTRB(
                         AppSpacing.x2l,
                         AppSpacing.lg,
                         AppSpacing.x2l,
@@ -475,7 +476,7 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                           index: index,
                           child: Padding(
                             padding:
-                                const EdgeInsets.only(bottom: AppSpacing.md),
+                                EdgeInsets.only(bottom: AppSpacing.md),
                             child: AnimatedCard(
                               borderRadius: AppRadius.xl,
                               backgroundColor: allCancelled
@@ -498,7 +499,7 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                                   ),
                                 ),
                                 child: Padding(
-                                  padding: const EdgeInsets.all(AppSpacing.xl),
+                                  padding: EdgeInsets.all(AppSpacing.xl),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.stretch,
                                     children: entries.asMap().entries.map((mapEntry) {
@@ -548,7 +549,7 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                                                     ),
                                                     if (isCancelled)
                                                       Container(
-                                                        padding: const EdgeInsets.symmetric(
+                                                        padding: EdgeInsets.symmetric(
                                                           horizontal: AppSpacing.sm,
                                                           vertical: 2,
                                                         ),
@@ -640,7 +641,7 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                                           ),
                                           if (_canEdit(entry) && entries.length > 1)
                                             Padding(
-                                              padding: const EdgeInsets.only(left: AppSpacing.sm),
+                                              padding: EdgeInsets.only(left: AppSpacing.sm),
                                               child: Icon(
                                                 Icons.more_vert_rounded,
                                                 size: 18,
@@ -655,7 +656,7 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                                           onLongPress: _canEdit(entry) ? () => _editLecture(entry) : null,
                                           child: Container(
                                             margin: EdgeInsets.only(top: idx == 0 ? 0 : AppSpacing.md),
-                                            padding: const EdgeInsets.all(AppSpacing.sm),
+                                            padding: EdgeInsets.all(AppSpacing.sm),
                                             decoration: BoxDecoration(
                                               color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02),
                                               borderRadius: BorderRadius.circular(AppRadius.md),

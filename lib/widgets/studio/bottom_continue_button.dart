@@ -23,7 +23,7 @@ class BottomContinueButton extends StatelessWidget {
 
     return Container(
       padding: EdgeInsets.fromLTRB(
-          24, 16, 24, MediaQuery.of(context).padding.bottom + 16),
+          AppSpacing.x2l, AppSpacing.lg, AppSpacing.x2l, MediaQuery.of(context).padding.bottom + 16),
       decoration: BoxDecoration(
         color: isDark ? sem.surfaceElevated : cs.surface,
         border: Border(top: BorderSide(color: sem.borderSubtle)),
@@ -42,7 +42,7 @@ class BottomContinueButton extends StatelessWidget {
           style: FilledButton.styleFrom(
             minimumSize: const Size(double.infinity, 56),
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
           ),
           child: Text(
             label,

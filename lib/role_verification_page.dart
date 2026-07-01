@@ -1,7 +1,9 @@
+import '../services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'widgets/animations/floating_empty_state.dart';
 
 import 'home_page.dart';
 import 'app_settings.dart';
@@ -62,7 +64,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
 
       if (widget.role == 'CR') {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('selected_division', widget.division);
+        await prefs.setString('selected_division', widget.division); await NotificationService.updateDivisionSubscription(widget.division);
         await AppSettings.saveRole(UserRole.cr);
 
         if (!mounted) return;
@@ -132,7 +134,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
                   title: Text(sr.toString()),
                   trailing: const Icon(Icons.swap_horiz_rounded),
                   onTap: () => Navigator.pop(context, sr.toString()),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
                   tileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 )),
               ],
@@ -191,7 +193,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
       });
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('selected_division', widget.division);
+      await prefs.setString('selected_division', widget.division); await NotificationService.updateDivisionSubscription(widget.division);
       await AppSettings.saveRole(UserRole.sr);
       await AppSettings.saveSRSection(sectionId: widget.division);
       
@@ -229,7 +231,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
       body: _passwordVerified && widget.role == 'SR'
           ? _buildSubjectPicker()
           : Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(AppSpacing.lg),
               child: _buildPasswordStep(),
             ),
     );
@@ -262,7 +264,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
             onPressed: loading ? null : _verify,
             backgroundColor: Theme.of(context).colorScheme.primary,
             foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
             child: loading
                 ? const SizedBox(
                     height: 20,
@@ -297,7 +299,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
         return CustomScrollView(
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.all(AppSpacing.x2l),
+              padding: EdgeInsets.all(AppSpacing.x2l),
               sliver: SliverToBoxAdapter(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -324,7 +326,13 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
             ),
             if (_uniqueSubjects.isEmpty)
               const SliverFillRemaining(
-                child: Center(child: Text('No academic subjects found.')),
+                child: Center(
+                  child: FloatingEmptyState(
+                    icon: Icons.menu_book_rounded,
+                    title: 'No Subjects',
+                    subtitle: 'No academic subjects found.',
+                  ),
+                ),
               )
             else
               SliverList(
@@ -341,7 +349,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
                             : 'Fully Claimed';
                     
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.sm),
+                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.sm),
                       child: AnimatedCard(
                         borderRadius: AppRadius.xl,
                         onTap: loading ? null : () => _attemptClaim(subject),
@@ -349,7 +357,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
                             ? Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
                             : Theme.of(context).colorScheme.surface,
                         child: Container(
-                          padding: const EdgeInsets.all(AppSpacing.md),
+                          padding: EdgeInsets.all(AppSpacing.md),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(AppRadius.xl),
                             border: Border.all(

@@ -7,6 +7,7 @@ import 'services/subject_metadata_service.dart';
 import 'theme/theme.dart';
 import 'app_settings.dart';
 import 'widgets/app_dialogs.dart';
+import 'widgets/animations/floating_empty_state.dart';
 
 class CourseDetailsSetupPage extends StatefulWidget {
   final String division;
@@ -129,7 +130,7 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
         icon: const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 32),
         title: Text(title, textAlign: TextAlign.center),
         content: Text(message),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -221,13 +222,17 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
       ),
       body: _subjects.isEmpty
           ? Center(
-              child: Text('No subjects found in timetable.',
-                  style: GoogleFonts.inter(color: sem.onSurfaceMuted)))
+              child: FloatingEmptyState(
+                icon: Icons.book_rounded,
+                title: 'No Subjects Found',
+                subtitle: 'We could not find any subjects in your timetable.',
+              ),
+            )
           : Column(
               children: [
                 Expanded(
                   child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                     itemCount: _subjects.length,
                     itemBuilder: (context, index) {
                       final sub = _subjects[index];
@@ -245,10 +250,10 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
     final recHours = _recommendedHours[sub] ?? 0;
     
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: AppSpacing.md),
       decoration: BoxDecoration(
         color: isDark ? sem.surfaceElevated : cs.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
         border: Border.all(color: sem.borderSubtle),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2))],
       ),
@@ -258,7 +263,7 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
           initiallyExpanded: _hoursControllers[sub]!.text.isEmpty,
           title: Text(sub, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700)),
           subtitle: Text('Recommended: $recHours Hours', style: GoogleFonts.inter(fontSize: 12, color: cs.primary, fontWeight: FontWeight.w600)),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          childrenPadding: EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
           children: [
             const SizedBox(height: 8),
             Row(
@@ -305,10 +310,10 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
             ),
             const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
               decoration: BoxDecoration(
                 color: isDark ? cs.surfaceContainerHighest.withValues(alpha: 0.3) : cs.surfaceContainerHighest.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(color: sem.borderSubtle),
               ),
               child: Row(
@@ -358,25 +363,25 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
             ? cs.surfaceContainerHighest.withValues(alpha: 0.3) 
             : cs.surface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: BorderSide(color: sem.borderSubtle),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: BorderSide(color: sem.borderSubtle),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: BorderSide(color: cs.primary, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        contentPadding: EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.lg),
       ),
     );
   }
 
   Widget _buildSummaryAndSave(AppSemanticColors sem, ColorScheme cs, bool isDark) {
     return Container(
-      padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).padding.bottom + 20),
+      padding: EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xl, AppSpacing.xl, MediaQuery.of(context).padding.bottom + 20),
       decoration: BoxDecoration(
         color: isDark ? sem.surfaceElevated : cs.surface,
         border: Border(top: BorderSide(color: sem.borderSubtle)),
@@ -413,7 +418,7 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
             );
           }),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
             child: Divider(color: sem.borderSubtle, height: 1),
           ),
           Row(

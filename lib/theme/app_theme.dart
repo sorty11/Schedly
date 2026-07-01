@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 import 'design_tokens.dart';
+import 'package:schedly/theme/theme.dart';
 
 class AppTheme {
   AppTheme._();
@@ -90,7 +91,7 @@ class AppTheme {
     return InputDecorationTheme(
       filled: true,
       fillColor: colors.surface,
-      contentPadding: const EdgeInsets.symmetric(
+      contentPadding: EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.lg,
       ),
@@ -249,7 +250,7 @@ class AppTheme {
         backgroundColor: const Color(0xFFF5F5F7),
         selectedColor: AppColors.primary.withValues(alpha: 0.12),
         labelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
-        padding: const EdgeInsets.symmetric(
+        padding: EdgeInsets.symmetric(
           horizontal: AppSpacing.md, vertical: AppSpacing.xs,
         ),
         shape: RoundedRectangleBorder(
@@ -385,7 +386,7 @@ class AppTheme {
           fontSize: 13, fontWeight: FontWeight.w600,
           color: AppColors.onSurfaceDark,
         ),
-        padding: const EdgeInsets.symmetric(
+        padding: EdgeInsets.symmetric(
           horizontal: AppSpacing.md, vertical: AppSpacing.xs,
         ),
         shape: RoundedRectangleBorder(

@@ -105,7 +105,7 @@ class AppDialogs {
             if (resolution != null) ...[
               const SizedBox(height: AppSpacing.lg),
               Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
+                padding: EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
                   color: iconColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -170,7 +170,7 @@ class AppDialogs {
         backgroundColor: bgColor,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-        margin: const EdgeInsets.all(AppSpacing.md),
+        margin: EdgeInsets.all(AppSpacing.md),
         elevation: 8,
       ),
     );

@@ -36,7 +36,7 @@ class PdfImportPreviewPage extends StatelessWidget {
       AppDialogs.showError(
         context: context,
         title: 'Import Failed',
-        message: e.toString(),
+        message: e.toString().replaceAll('Exception: ', ''),
       );
     }
   }
@@ -53,7 +53,7 @@ class PdfImportPreviewPage extends StatelessWidget {
       body: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(AppSpacing.x2l),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
               boxShadow: [
@@ -67,10 +67,10 @@ class PdfImportPreviewPage extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
                     color: Theme.of(context).extension<AppSemanticColors>()!.conducted.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   child: Icon(Icons.verified_rounded, color: Theme.of(context).extension<AppSemanticColors>()!.conducted),
                 ),
@@ -96,7 +96,7 @@ class PdfImportPreviewPage extends StatelessWidget {
           ),
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(AppSpacing.x2l),
               itemCount: days.length,
               itemBuilder: (context, index) {
                 final day = days[index];
@@ -105,17 +105,17 @@ class PdfImportPreviewPage extends StatelessWidget {
                 if (lectures.isEmpty) return const SizedBox.shrink();
 
                 return Container(
-                  margin: const EdgeInsets.only(bottom: 24),
+                  margin: EdgeInsets.only(bottom: AppSpacing.x2l),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(AppRadius.xl),
                     border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.1), width: 2),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.all(20),
+                        padding: EdgeInsets.all(AppSpacing.xl),
                         child: Text(
                           day,
                           style: TextStyle(
@@ -128,14 +128,14 @@ class PdfImportPreviewPage extends StatelessWidget {
                       Divider(height: 1, color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
                       ...lectures.map((entry) {
                         return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
                           child: Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(12),
+                                padding: EdgeInsets.all(AppSpacing.md),
                                 decoration: BoxDecoration(
                                   color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
                                 ),
                                 child: Icon(Icons.book_rounded, color: Theme.of(context).colorScheme.primary, size: 20),
                               ),
@@ -193,7 +193,7 @@ class PdfImportPreviewPage extends StatelessWidget {
         ],
       ),
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(AppSpacing.x2l),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           boxShadow: [

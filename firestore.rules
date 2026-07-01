@@ -1,14 +1,63 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Universal Authentication Requirement
-    // All read and write operations require a valid Firebase Auth UID.
-    // Anonymous authentication guarantees that request.auth.uid is present
-    // without requiring user friction.
     
+    // DEFAULT DENY
     match /{document=**} {
+      allow read, write: if false; 
+    }
+    
+    // SECTIONS (Contains passwords and config)
+    match /sections/{sectionId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid != null;
+      // Prevent users from overwriting crPassword/srPassword. Only allow timetablePublished flag.
+      allow update: if request.auth != null 
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['timetablePublished']);
+      allow create, delete: if false; 
+      
+      match /sr_assignments/{assignmentId} {
+        allow read, write: if request.auth != null;
+      }
+      match /notifications/{notificationId} {
+        allow read, write: if request.auth != null;
+      }
+    }
+    
+
+    // FUNCTION: Check if user is CR or SR
+    function isCRorSR() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['CR', 'SR'];
+    }
+
+    // OUTBOX FOR RENDER WORKER
+    match /notification_outbox/{docId} {
+      allow read: if false; // Only backend admin can read
+      allow create: if request.auth != null && isCRorSR();
+      allow update, delete: if false; // Only backend admin can update/delete
+    }
+
+    // TIMETABLES
+    match /timetables/{sectionId}/{day}/{lectureId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // ANNOUNCEMENTS
+    match /announcements/{announcementId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // HISTORY
+    match /history/{historyId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // USERS (FCM Tokens)
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      match /fcm_tokens/{tokenId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
   }
 }

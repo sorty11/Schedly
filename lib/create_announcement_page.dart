@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:schedly/theme/theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/app_notification_service.dart';
 import 'services/announcement_service.dart';
@@ -26,6 +27,7 @@ class _CreateAnnouncementPageState
       TextEditingController();
 
   String priority = 'Normal';
+  bool _isPublishing = false;
 
   @override
   void dispose() {
@@ -80,15 +82,15 @@ class _CreateAnnouncementPageState
       filled: true,
       fillColor: Theme.of(context).colorScheme.surface,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         borderSide: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         borderSide: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
       ),
       labelStyle: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
@@ -104,15 +106,15 @@ class _CreateAnnouncementPageState
         scrolledUnderElevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(AppSpacing.x2l),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(AppSpacing.x2l),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(AppRadius.xl),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.03),
@@ -164,17 +166,19 @@ class _CreateAnnouncementPageState
             SizedBox(
               height: 56,
               child: AnimatedButton(
-                onPressed: _publish,
+                onPressed: _isPublishing ? null : _publish,
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.send_rounded),
-                    const SizedBox(width: 8),
-                    const Text('Publish Announcement', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                  ],
-                ),
+                child: _isPublishing 
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.send_rounded),
+                        const SizedBox(width: 8),
+                        const Text('Publish Announcement', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
               ),
             ),
           ],

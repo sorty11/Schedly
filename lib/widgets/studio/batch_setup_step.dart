@@ -46,13 +46,11 @@ class _BatchSetupStepState extends State<BatchSetupStep> {
     super.initState();
     _option = widget.option;
     _batches = List.from(widget.batches);
-    print('DEBUG BatchSetupStep [initState]: _option=$_option, _batches=$_batches, widget.batches=${widget.batches}');
   }
 
   @override
   void didUpdateWidget(BatchSetupStep oldWidget) {
     super.didUpdateWidget(oldWidget);
-    print('DEBUG BatchSetupStep [didUpdateWidget]: widget.batches=${widget.batches}, oldWidget.batches=${oldWidget.batches}, _batches=$_batches');
     // We intentionally don't overwrite _batches with widget.batches to preserve local edits
   }
 
@@ -62,26 +60,21 @@ class _BatchSetupStepState extends State<BatchSetupStep> {
     
     if (opt == 0) {
       _batches = ['Whole Class'];
-      print('DEBUG BatchSetupStep [_selectOption]: emitted [Whole Class]');
       widget.onBatchesChanged(_batches);
     } else if (opt == 1) {
       if (_batches.length != 2 || _batches.contains('Whole Class')) {
         _batches = ['A1', 'A2'];
-        print('DEBUG BatchSetupStep [_selectOption]: emitted [A1, A2]');
         widget.onBatchesChanged(_batches);
       } else {
-        print('DEBUG BatchSetupStep [_selectOption]: skipped emitting, _batches already $_batches');
       }
     } else if (opt == 2) {
       if (_batches.length != 3 || _batches.contains('Whole Class')) {
         _batches = ['A1', 'A2', 'A3'];
-        print('DEBUG BatchSetupStep [_selectOption]: emitted [A1, A2, A3]');
         widget.onBatchesChanged(_batches);
       }
     } else if (opt == 3) {
       if (_batches.length != 4 || _batches.contains('Whole Class')) {
         _batches = ['A1', 'A2', 'A3', 'A4'];
-        print('DEBUG BatchSetupStep [_selectOption]: emitted [A1, A2, A3, A4]');
         widget.onBatchesChanged(_batches);
       }
     }
@@ -89,7 +82,6 @@ class _BatchSetupStepState extends State<BatchSetupStep> {
 
   @override
   Widget build(BuildContext context) {
-    print('DEBUG BatchSetupStep [build]: _option=$_option, _batches=$_batches, widget.batches=${widget.batches}');
     final cs = Theme.of(context).colorScheme;
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
 
@@ -124,7 +116,7 @@ class _BatchSetupStepState extends State<BatchSetupStep> {
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
+            padding: EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.x3l, AppSpacing.x2l, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -147,7 +139,7 @@ class _BatchSetupStepState extends State<BatchSetupStep> {
                   final isSelected = _option == idx;
 
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
+                    padding: EdgeInsets.only(bottom: AppSpacing.md),
                     child: GestureDetector(
                       onTap: () {
                         HapticFeedback.selectionClick();
@@ -184,7 +176,7 @@ class _BatchSetupStepState extends State<BatchSetupStep> {
                                 color: isSelected
                                     ? cs.primary.withValues(alpha: 0.12)
                                     : sem.borderSubtle.withValues(alpha: 0.5),
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(AppRadius.md),
                               ),
                               child: Icon(opt.icon,
                                   size: 22,
@@ -241,7 +233,7 @@ class _BatchSetupStepState extends State<BatchSetupStep> {
                             initialValue: currentName,
                             decoration: InputDecoration(
                               labelText: 'Batch ${i+1}',
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                               filled: true,
                               fillColor: sem.surfaceElevated,
                             ),
@@ -251,7 +243,6 @@ class _BatchSetupStepState extends State<BatchSetupStep> {
                                 newBatches[i] = val.trim().isEmpty ? 'A${i+1}' : val.trim();
                               }
                               _batches = newBatches;
-                              print('DEBUG BatchSetupStep [TextField onChanged]: $newBatches');
                               widget.onBatchesChanged(newBatches);
                             },
                           ),
@@ -298,13 +289,13 @@ class _BatchSetupStepState extends State<BatchSetupStep> {
                             builder: (ctx) {
                               final ctrl = TextEditingController();
                               return AlertDialog(
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
                                 title: Text('Add Batch', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
                                 content: TextField(
                                   controller: ctrl,
                                   decoration: InputDecoration(
                                     hintText: 'e.g. Lab A',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                                   ),
                                   autofocus: true,
                                 ),

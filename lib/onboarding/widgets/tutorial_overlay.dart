@@ -105,7 +105,7 @@ class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget> {
         child: Container(
           color: Colors.black.withValues(alpha: 0.8),
           alignment: Alignment.center,
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(AppSpacing.x2l),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

@@ -76,7 +76,7 @@ class TutorialTooltip extends StatelessWidget {
               ),
             
             Container(
-              padding: const EdgeInsets.all(AppSpacing.xl),
+              padding: EdgeInsets.all(AppSpacing.xl),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(AppRadius.xl),
@@ -125,7 +125,7 @@ class TutorialTooltip extends StatelessWidget {
                     children: [
                       // Progress Indicator
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
+                        padding: EdgeInsets.only(bottom: AppSpacing.sm),
                         child: Text(
                           _buildProgressBar(controller.currentStepIndex + 1, controller.activeTour?.steps.length ?? 1),
                           style: GoogleFonts.inter(
@@ -146,7 +146,7 @@ class TutorialTooltip extends StatelessWidget {
                             TextButton(
                               onPressed: () => controller.skipTour(),
                               style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
                               ),
                               child: Text('Skip', style: GoogleFonts.inter(fontSize: 13)),
                             ),
@@ -154,7 +154,7 @@ class TutorialTooltip extends StatelessWidget {
                               FilledButton(
                                 onPressed: () => controller.advanceStep(),
                                 style: FilledButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
                                 ),
                                 child: Text(
                                   controller.currentStepIndex == (controller.activeTour?.steps.length ?? 1) - 1 ? 'Finish' : 'Next',
@@ -163,7 +163,7 @@ class TutorialTooltip extends StatelessWidget {
                               ),
                             if (step.requireInteraction && !isCelebration)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
+                                padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                                 decoration: BoxDecoration(
                                   color: Theme.of(context).colorScheme.primaryContainer,
                                   borderRadius: BorderRadius.circular(AppRadius.full),

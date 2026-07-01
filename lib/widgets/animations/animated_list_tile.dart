@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:schedly/theme/theme.dart';
 
 class AnimatedListTile extends StatefulWidget {
   final Widget? leading;
@@ -18,7 +19,7 @@ class AnimatedListTile extends StatefulWidget {
     this.trailing,
     this.onTap,
     this.backgroundColor,
-    this.contentPadding = const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+    this.contentPadding = const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
   });
 
   @override
@@ -116,11 +117,11 @@ class _AnimatedListTileState extends State<AnimatedListTile> with TickerProvider
               child: Container(
                 decoration: BoxDecoration(
                   color: currentColor,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: Material(
                   color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   clipBehavior: Clip.antiAlias,
                   child: InkWell(
                     onTap: widget.onTap,

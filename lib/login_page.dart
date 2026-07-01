@@ -1,7 +1,9 @@
+import '../services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
 
 import 'home_page.dart';
 import 'cr_auth_bottom_sheet.dart';
@@ -102,6 +104,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_logged_in', true);
+      await prefs.setString('selected_division', sectionId); await NotificationService.updateDivisionSubscription(sectionId);
+      HapticFeedback.mediumImpact();
 
       await AppSettings.saveRole(UserRole.student);
       await AppSettings.saveStudentDetails(
@@ -148,7 +152,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 // ── Hero Header ─────────────────────────────────────────
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
+                    padding: EdgeInsets.fromLTRB(
                       AppSpacing.x2l,
                       AppSpacing.x4l,
                       AppSpacing.x2l,
@@ -223,7 +227,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 // ── Form Card ───────────────────────────────────────────
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                       horizontal: AppSpacing.x2l,
                     ),
                     child: Container(
@@ -247,7 +251,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               ],
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.x2l),
+                        padding: EdgeInsets.all(AppSpacing.x2l),
                         child: Form(
                           key: _formKey,
                           child: Column(
@@ -411,7 +415,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                                 duration: AppDuration.standard,
                                                 curve: AppCurves.standard,
                                                 padding:
-                                                    const EdgeInsets.symmetric(
+                                                    EdgeInsets.symmetric(
                                                   horizontal: AppSpacing.lg,
                                                   vertical: AppSpacing.sm + 2,
                                                 ),
@@ -481,7 +485,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                                   duration: AppDuration.standard,
                                                   curve: AppCurves.standard,
                                                   padding:
-                                                      const EdgeInsets.symmetric(
+                                                      EdgeInsets.symmetric(
                                                     horizontal: AppSpacing.lg,
                                                     vertical: AppSpacing.sm + 2,
                                                   ),
@@ -576,7 +580,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 // ── CR Portal card ─────────────────────────────────────
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
+                    padding: EdgeInsets.fromLTRB(
                       AppSpacing.x2l,
                       AppSpacing.lg,
                       AppSpacing.x2l,
@@ -599,7 +603,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                         child: MouseRegion(
                           cursor: SystemMouseCursors.click,
                           child: Container(
-                            padding: const EdgeInsets.all(AppSpacing.xl),
+                            padding: EdgeInsets.all(AppSpacing.xl),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(AppRadius.xl),
                               border: Border.all(
@@ -618,7 +622,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                             child: Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.all(AppSpacing.md),
+                                  padding: EdgeInsets.all(AppSpacing.md),
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
                                       colors: [

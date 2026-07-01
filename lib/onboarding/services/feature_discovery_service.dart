@@ -40,8 +40,8 @@ class _FeatureCard extends StatelessWidget {
       type: MaterialType.transparency,
       child: Center(
         child: Container(
-          margin: const EdgeInsets.all(AppSpacing.x3l),
-          padding: const EdgeInsets.all(AppSpacing.x3l),
+          margin: EdgeInsets.all(AppSpacing.x3l),
+          padding: EdgeInsets.all(AppSpacing.x3l),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(AppRadius.x2l),

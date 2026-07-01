@@ -86,36 +86,30 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
     _draft.ensureSlotsInitialised();
     setState(() => _isLoading = false);
     _slideController.forward();
-    print('DEBUG ManualTimetableStudio [_init]: loaded draft batches=${_draft.batches}, step=$_step');
   }
 
   void _saveDraft() {
     _draft.lastSaved = DateTime.now();
-    print('DEBUG ManualTimetableStudio [_saveDraft]: saving batches=${_draft.batches}');
     SharedPreferences.getInstance().then((prefs) {
       prefs.setString('studio_draft_${widget.division}', _draft.toJsonString());
     });
   }
 
   void _nextStep() {
-    print('DEBUG ManualTimetableStudio [_nextStep]: before increment, step=$_step, batches=${_draft.batches}');
     if (_step < 2) {
       _slideController.reset();
       setState(() => _step++);
       _slideController.forward();
       _saveDraft();
-      print('DEBUG ManualTimetableStudio [_nextStep]: after increment, step=$_step');
     }
   }
 
   void _prevStep() {
-    print('DEBUG ManualTimetableStudio [_prevStep]: before decrement, step=$_step, batches=${_draft.batches}');
     if (_step > 0) {
       _slideController.reset();
       setState(() => _step--);
       _slideController.forward();
       _saveDraft();
-      print('DEBUG ManualTimetableStudio [_prevStep]: after decrement, step=$_step');
     }
   }
 
@@ -209,7 +203,7 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
       AppDialogs.showError(
         context: context,
         title: 'Publish Failed',
-        message: e.toString(),
+        message: e.toString().replaceAll('Exception: ', ''),
       );
     } finally {
       if (mounted) setState(() => _isPublishing = false);
@@ -222,7 +216,6 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     
-    print('DEBUG ManualTimetableStudio [build]: step=$_step, draft.batches=${_draft.batches}');
 
     final colorScheme = Theme.of(context).colorScheme;
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
@@ -251,13 +244,13 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
         actions: [
           if (_step < 3)
             Padding(
-              padding: const EdgeInsets.only(right: 16),
+              padding: EdgeInsets.only(right: AppSpacing.lg),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: List.generate(3, (i) {
                   return AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.only(left: 4),
+                    margin: EdgeInsets.only(left: AppSpacing.xs),
                     width: i == _step ? 20 : 6,
                     height: 6,
                     decoration: BoxDecoration(

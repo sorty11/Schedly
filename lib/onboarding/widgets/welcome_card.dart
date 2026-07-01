@@ -47,8 +47,8 @@ class _WelcomeCardState extends State<WelcomeCard> with SingleTickerProviderStat
           child: FadeTransition(
             opacity: _controller,
             child: Container(
-              margin: const EdgeInsets.all(AppSpacing.x3l),
-              padding: const EdgeInsets.all(AppSpacing.x3l),
+              margin: EdgeInsets.all(AppSpacing.x3l),
+              padding: EdgeInsets.all(AppSpacing.x3l),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(AppRadius.x2l),
@@ -96,7 +96,7 @@ class _WelcomeCardState extends State<WelcomeCard> with SingleTickerProviderStat
                       FilledButton(
                         onPressed: widget.onStartTour,
                         style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
+                          padding: EdgeInsets.symmetric(
                             horizontal: AppSpacing.x2l,
                             vertical: AppSpacing.md,
                           ),

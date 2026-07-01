@@ -98,88 +98,92 @@ class _AnimatedButtonState extends State<AnimatedButton> with TickerProviderStat
     final fgColor = widget.foregroundColor ?? theme.colorScheme.onPrimary;
     final disabled = widget.onPressed == null || widget.isLoading;
 
-    return MouseRegion(
-      cursor: disabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
-      onEnter: (_) {
-        if (!disabled) _hoverController.forward();
-      },
-      onExit: (_) {
-        if (!disabled) _hoverController.reverse();
-      },
-      child: GestureDetector(
-        onTapDown: _handleTapDown,
-        onTapUp: _handleTapUp,
-        onTapCancel: _handleTapCancel,
-        onTap: () {
-          if (!disabled) {
-            HapticFeedback.mediumImpact();
-            widget.onPressed!();
-          }
+    return Semantics(
+      button: true,
+      enabled: !disabled,
+      child: MouseRegion(
+        cursor: disabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
+        onEnter: (_) {
+          if (!disabled) _hoverController.forward();
         },
-        child: AnimatedBuilder(
-          animation: Listenable.merge([_pressController, _hoverController]),
-          builder: (context, child) {
-            final currentScale = _pressScaleAnimation.value * _hoverScaleAnimation.value;
-            
-            final matrix = Matrix4.translationValues(0.0, _hoverTranslationY.value, 0.0)
-              ..multiply(Matrix4.diagonal3Values(currentScale, currentScale, 1.0));
+        onExit: (_) {
+          if (!disabled) _hoverController.reverse();
+        },
+        child: GestureDetector(
+          onTapDown: _handleTapDown,
+          onTapUp: _handleTapUp,
+          onTapCancel: _handleTapCancel,
+          onTap: () {
+            if (!disabled) {
+              HapticFeedback.mediumImpact();
+              widget.onPressed!();
+            }
+          },
+          child: AnimatedBuilder(
+            animation: Listenable.merge([_pressController, _hoverController]),
+            builder: (context, child) {
+              final currentScale = _pressScaleAnimation.value * _hoverScaleAnimation.value;
+              
+              final matrix = Matrix4.translationValues(0.0, _hoverTranslationY.value, 0.0)
+                ..multiply(Matrix4.diagonal3Values(currentScale, currentScale, 1.0));
 
-            // Interpolate color for hover
-            final currentColor = disabled 
-                ? theme.colorScheme.surfaceContainerHighest 
-                : Color.lerp(bgColor, Colors.white.withValues(alpha: 0.1 * bgColor.a), _hoverController.value * 0.5) ?? bgColor;
+              // Interpolate color for hover
+              final currentColor = disabled 
+                  ? theme.colorScheme.surfaceContainerHighest 
+                  : Color.lerp(bgColor, Colors.white.withValues(alpha: 0.1 * bgColor.a), _hoverController.value * 0.5) ?? bgColor;
 
-            final blurRadius = 12.0 + (_hoverController.value * 8.0);
-            final offsetY = 4.0 + (_hoverController.value * 4.0);
+              final blurRadius = 12.0 + (_hoverController.value * 8.0);
+              final offsetY = 4.0 + (_hoverController.value * 4.0);
 
-            return Transform(
-              transform: matrix,
-              alignment: Alignment.center,
-              child: Container(
-                height: widget.height,
-                width: widget.width,
-                padding: widget.padding,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(widget.borderRadius),
-                  color: currentColor,
-                  boxShadow: [
-                    if (!disabled)
-                      BoxShadow(
-                        color: bgColor.withValues(alpha: 0.25 + (_hoverController.value * 0.15)),
-                        blurRadius: blurRadius,
-                        offset: Offset(0, offsetY),
-                        spreadRadius: _pressController.value * 2,
-                      ),
-                  ],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
+              return Transform(
+                transform: matrix,
+                alignment: Alignment.center,
+                child: Container(
+                  height: widget.height,
+                  width: widget.width,
+                  padding: widget.padding,
+                  decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(widget.borderRadius),
-                    onTap: widget.onPressed,
-                    splashColor: fgColor.withValues(alpha: 0.2),
-                    highlightColor: fgColor.withValues(alpha: 0.1),
-                    child: Center(
-                      child: widget.isLoading 
-                        ? SizedBox(
-                            width: 24, 
-                            height: 24, 
-                            child: CircularProgressIndicator(color: fgColor, strokeWidth: 2.5)
-                          )
-                        : DefaultTextStyle(
-                            style: TextStyle(
-                              color: disabled ? theme.colorScheme.onSurfaceVariant : fgColor,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                    color: currentColor,
+                    boxShadow: [
+                      if (!disabled)
+                        BoxShadow(
+                          color: bgColor.withValues(alpha: 0.25 + (_hoverController.value * 0.15)),
+                          blurRadius: blurRadius,
+                          offset: Offset(0, offsetY),
+                          spreadRadius: _pressController.value * 2,
+                        ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(widget.borderRadius),
+                      onTap: widget.onPressed,
+                      splashColor: fgColor.withValues(alpha: 0.2),
+                      highlightColor: fgColor.withValues(alpha: 0.1),
+                      child: Center(
+                        child: widget.isLoading 
+                          ? SizedBox(
+                              width: 24, 
+                              height: 24, 
+                              child: CircularProgressIndicator(color: fgColor, strokeWidth: 2.5)
+                            )
+                          : DefaultTextStyle(
+                              style: TextStyle(
+                                color: disabled ? theme.colorScheme.onSurfaceVariant : fgColor,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              child: widget.child,
                             ),
-                            child: widget.child,
-                          ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );

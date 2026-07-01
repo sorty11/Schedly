@@ -70,15 +70,15 @@ Future<TimeOfDay?> showTimeWheelPicker(BuildContext context, {required TimeOfDay
             
             // Actions
             Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: EdgeInsets.all(AppSpacing.x2l),
               child: Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(ctx),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
                         side: BorderSide(color: sem.borderSubtle, width: 1.5),
                       ),
                       child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: cs.onSurface)),
@@ -89,8 +89,8 @@ Future<TimeOfDay?> showTimeWheelPicker(BuildContext context, {required TimeOfDay
                     child: FilledButton(
                       onPressed: () => Navigator.pop(ctx, selectedTime),
                       style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
                       ),
                       child: Text('Confirm', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
                     ),

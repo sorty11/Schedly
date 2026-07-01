@@ -48,7 +48,7 @@ class _WorkingDaysStepState extends State<WorkingDaysStep> {
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
+            padding: EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.x3l, AppSpacing.x2l, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -94,10 +94,10 @@ class _WorkingDaysStepState extends State<WorkingDaysStep> {
                   duration: const Duration(milliseconds: 250),
                   child: _selected.isEmpty
                       ? Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: EdgeInsets.all(AppSpacing.md),
                           decoration: BoxDecoration(
                             color: cs.errorContainer.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
                           ),
                           child: Row(
                             children: [
@@ -149,10 +149,10 @@ class _AnimatedDayChip extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: 14),
         decoration: BoxDecoration(
           color: selected ? cs.primary : sem.surfaceElevated,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(
             color: selected ? cs.primary : sem.borderSubtle,
             width: selected ? 2 : 1.5,

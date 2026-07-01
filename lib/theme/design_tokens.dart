@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:schedly/theme/theme.dart';
 
 // ─── Spacing ─────────────────────────────────────────────────────────────────
 class AppSpacing {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'services/app_notification_service.dart';
@@ -7,6 +8,7 @@ import 'widgets/animations/animated_button.dart';
 import 'widgets/animations/animated_list_tile.dart';
 import 'widgets/animations/animated_icon_button.dart';
 import 'widgets/app_dialogs.dart';
+import 'widgets/animations/floating_empty_state.dart';
 
 class DeleteLecturePage extends StatefulWidget {
   const DeleteLecturePage({super.key});
@@ -21,6 +23,8 @@ class _DeleteLecturePageState
   String selectedDay = 'Monday';
 
   String? division;
+  Stream<QuerySnapshot>? _lecturesStream;
+  bool _isDeleting = false;
 
   final List<String> days = [
     'Monday',
@@ -41,18 +45,29 @@ class _DeleteLecturePageState
     final prefs =
         await SharedPreferences.getInstance();
 
-    division =
-        prefs.getString(
-      'selected_division',
-    );
-
+    division = prefs.getString('selected_division');
+    if (division != null) {
+      _updateStream();
+    }
     setState(() {});
+  }
+
+  void _updateStream() {
+    if (division == null) return;
+    _lecturesStream = FirebaseFirestore.instance
+        .collection('timetables')
+        .doc(division)
+        .collection(selectedDay)
+        .snapshots();
   }
 
   Future<void> _deleteLecture(
     String docId,
     String subject,
   ) async {
+    if (_isDeleting) return;
+    setState(() => _isDeleting = true);
+    
     final shouldDelete = await AppDialogs.showConfirm(
       context: context,
       title: 'Delete Lecture',
@@ -61,33 +76,43 @@ class _DeleteLecturePageState
       isDestructive: true,
     );
 
-    if (!shouldDelete ||
-        division == null) {
+    if (!shouldDelete || division == null) {
+      setState(() => _isDeleting = false);
       return;
     }
 
-    await FirebaseFirestore.instance
-        .collection('timetables')
-        .doc(division)
-        .collection(selectedDay)
-        .doc(docId)
-        .delete();
+    try {
+      await FirebaseFirestore.instance
+          .collection('timetables')
+          .doc(division)
+          .collection(selectedDay)
+          .doc(docId)
+          .delete();
 
-    // Notify all students in this division that the lecture was removed
-    await AppNotificationService.createNotification(
-      title: 'Lecture Cancelled',
-      message: '$subject has been removed from $selectedDay.',
-      division: division!,
-      type: 'cancel',
-    );
+      // Notify all students in this division that the lecture was removed
+      await AppNotificationService.createNotification(
+        title: 'Lecture Cancelled',
+        message: '$subject has been removed from $selectedDay.',
+        division: division!,
+        type: 'cancel',
+      );
 
-    if (!mounted) return;
+      HapticFeedback.mediumImpact();
+      if (!mounted) return;
 
-    AppDialogs.showSnackBar(
-      context: context,
-      message: '$subject deleted',
-      isError: true, // using error style for delete action
-    );
+      AppDialogs.showSnackBar(
+        context: context,
+        message: '$subject deleted',
+        isError: true, // using error style for delete action
+      );
+    } catch (e) {
+      if (!mounted) return;
+      AppDialogs.showError(
+        context: context,
+        title: 'Delete Failed',
+        message: e.toString().replaceAll('Exception: ', ''),
+      );
+    }
   }
 
   @override
@@ -109,7 +134,7 @@ class _DeleteLecturePageState
       ),
       body: Padding(
         padding:
-            const EdgeInsets.all(16),
+            EdgeInsets.all(AppSpacing.lg),
         child: Column(
           children: [
             DropdownButtonFormField<String>(
@@ -142,23 +167,16 @@ class _DeleteLecturePageState
             Expanded(
               child: StreamBuilder<
                   QuerySnapshot>(
-                stream: FirebaseFirestore
-                    .instance
-                    .collection(
-                      'timetables',
-                    )
-                    .doc(division)
-                    .collection(
-                      selectedDay,
-                    )
-                    .snapshots(),
+                stream: _lecturesStream,
                 builder:
                     (context, snapshot) {
                   if (!snapshot.hasData ||
                       snapshot.data!.docs.isEmpty) {
                     return const Center(
-                      child: Text(
-                        'No lectures found',
+                      child: FloatingEmptyState(
+                        icon: Icons.event_busy_rounded,
+                        title: 'No Lectures',
+                        subtitle: 'No lectures scheduled for this day.',
                       ),
                     );
                   }

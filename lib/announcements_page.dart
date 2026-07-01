@@ -79,7 +79,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
 
               return ListView.builder(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(
+                padding: EdgeInsets.fromLTRB(
                   AppSpacing.x2l,
                   AppSpacing.lg,
                   AppSpacing.x2l,
@@ -94,7 +94,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                   return StaggeredListItem(
                     index: index,
                     child: Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                      padding: EdgeInsets.only(bottom: AppSpacing.md),
                       child: AnimatedCard(
                         backgroundColor:
                             isDark ? sem.surfaceElevated : Colors.white,
@@ -110,14 +110,14 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                             ),
                           ),
                           child: Padding(
-                            padding: const EdgeInsets.all(AppSpacing.xl),
+                            padding: EdgeInsets.all(AppSpacing.xl),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.symmetric(
+                                      padding: EdgeInsets.symmetric(
                                         horizontal: AppSpacing.md,
                                         vertical: AppSpacing.xs,
                                       ),

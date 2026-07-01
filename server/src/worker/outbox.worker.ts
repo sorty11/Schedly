@@ -99,7 +99,7 @@ export class OutboxWorker {
       
       const snapshot = await db.collection('notification_outbox')
         .where('processed', '==', false)
-        .where('nextRetryAt', '<=', admin.firestore.FieldValue.serverTimestamp())
+        .where('nextRetryAt', '<=', admin.firestore.Timestamp.now())
         .limit(50)
         .get();
 
@@ -128,13 +128,9 @@ export class OutboxWorker {
         await this.cleanupOldRecords();
       }
 
-    } catch (error) {
-      logger.error(JSON.stringify({
-        event: 'worker_error',
-        status: 'ERROR',
-        error: (error as Error).message,
-        timestamp: new Date().toISOString()
-      }));
+    } catch (error: any) {
+      console.error(error);
+      console.error(error.stack);
     } finally {
       this.isProcessing = false;
       this.scheduleNext(this.currentPollMs);
@@ -218,7 +214,9 @@ export class OutboxWorker {
     } catch (error: any) {
       const processingTime = Date.now() - startTime;
       const errorMessage = error.message || 'Unknown error';
-      
+      logger.error(error);
+      logger.error(error.stack);
+
       if (attemptNum >= WorkerConfig.MAX_RETRY_COUNT) {
         await doc.ref.update({
           processed: true,

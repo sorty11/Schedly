@@ -113,10 +113,13 @@ class _AnimatedCardState extends State<AnimatedCard> with TickerProviderStateMix
   Widget build(BuildContext context) {
     final bool isInteractive = widget.onTap != null || widget.onLongPress != null;
 
-    return Container(
-      margin: widget.margin,
-      child: MouseRegion(
-        cursor: isInteractive ? SystemMouseCursors.click : SystemMouseCursors.basic,
+    return Semantics(
+      button: isInteractive,
+      enabled: isInteractive,
+      child: Container(
+        margin: widget.margin,
+        child: MouseRegion(
+          cursor: isInteractive ? SystemMouseCursors.click : SystemMouseCursors.basic,
         onEnter: (_) {
           if (!isInteractive) return;
           _hoverController.forward();
@@ -197,6 +200,7 @@ class _AnimatedCardState extends State<AnimatedCard> with TickerProviderStateMix
             },
           ),
         ),
+      ),
       ),
     );
   }

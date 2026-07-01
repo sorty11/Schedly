@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -35,6 +36,7 @@ class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
   int _unreadCount = 0;
+  StreamSubscription? _notificationsSubscription;
 
   @override
   void initState() {
@@ -43,7 +45,7 @@ class _HomePageState extends State<HomePage>
     ConductSyncService.syncPendingLectures(widget.division);
     _loadUnreadCount();
 
-    FirebaseFirestore.instance
+    _notificationsSubscription = FirebaseFirestore.instance
         .collection('sections')
         .doc(widget.division)
         .collection('notifications')
@@ -105,6 +107,13 @@ class _HomePageState extends State<HomePage>
     );
     if (!mounted) return;
     setState(() => _unreadCount = 0);
+  }
+
+  @override
+  @override
+  void dispose() {
+    _notificationsSubscription?.cancel();
+    super.dispose();
   }
 
   @override

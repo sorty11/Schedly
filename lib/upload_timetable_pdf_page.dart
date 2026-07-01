@@ -130,8 +130,11 @@ class _UploadTimetablePdfPageState
             ),
             const SizedBox(height: 32),
             Expanded(
-              child: GestureDetector(
-                onTap: loading ? null : _pickPdf,
+              child: Semantics(
+                button: true,
+                label: 'Upload Timetable PDF',
+                child: GestureDetector(
+                  onTap: loading ? null : _pickPdf,
                 child: Container(
                   decoration: BoxDecoration(
                     color: loading ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
@@ -194,7 +197,8 @@ class _UploadTimetablePdfPageState
                 ),
               ),
             ),
-          ],
+          ),
+        ],
         ),
       ),
     );

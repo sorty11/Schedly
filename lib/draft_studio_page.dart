@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
 
 import 'app_settings.dart';
 import 'user_roles.dart';
@@ -12,6 +13,7 @@ import 'widgets/timetable_studio_sheet.dart';
 import 'theme/theme.dart';
 import 'widgets/animations/animated_card.dart';
 import 'widgets/app_dialogs.dart';
+import 'widgets/animations/floating_empty_state.dart';
 
 class DraftStudioPage extends StatefulWidget {
   final String division;
@@ -72,7 +74,11 @@ class _DraftStudioPageState extends State<DraftStudioPage> {
     }
 
     if (_config == null || _config!.workingDays.isEmpty) {
-      return const Scaffold(body: Center(child: Text('No working days configured.')));
+      return Scaffold(body: Center(child: FloatingEmptyState(
+        icon: Icons.calendar_today_rounded,
+        title: 'No Working Days',
+        subtitle: 'No working days have been configured for this section.',
+      )));
     }
 
     final isCR = AppSettings.currentRole == UserRole.cr;

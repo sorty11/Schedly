@@ -1,4 +1,7 @@
+import '../services/notification_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:schedly/theme/theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'nmims_structure.dart';
 import 'cr_setup_wizard.dart';
@@ -89,15 +92,15 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
       filled: true,
       fillColor: Theme.of(context).colorScheme.surface,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         borderSide: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         borderSide: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
       ),
       labelStyle: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
@@ -132,7 +135,8 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
         
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('has_logged_in', true);
-        await prefs.setString('selected_division', _sectionId!);
+        await prefs.setString('selected_division', _sectionId!); await NotificationService.updateDivisionSubscription(_sectionId!);
+        HapticFeedback.mediumImpact();
         
         await AppSettings.saveRole(UserRole.cr);
         await AppSettings.saveStudentDetails(
@@ -189,14 +193,14 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
 
   Widget _buildFeatureRow(IconData icon, String title, String subtitle) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+      padding: EdgeInsets.only(bottom: AppSpacing.lg),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 24),
           ),
@@ -220,9 +224,9 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
     return SingleChildScrollView(
       key: const ValueKey('intro'),
       padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
+        left: AppSpacing.x2l,
+        right: AppSpacing.x2l,
+        top: AppSpacing.x2l,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       child: Column(
@@ -290,9 +294,9 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
     return SingleChildScrollView(
       key: const ValueKey('auth'),
       padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
+        left: AppSpacing.x2l,
+        right: AppSpacing.x2l,
+        top: AppSpacing.x2l,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       child: Column(
@@ -319,7 +323,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
               ),
               const SizedBox(width: 16),
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
@@ -397,12 +401,12 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
             StaggeredListItem(
               index: 3,
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(AppSpacing.lg),
                 decoration: BoxDecoration(
                   color: _sectionExists 
                     ? Colors.green.withValues(alpha: 0.1) 
                     : Colors.orange.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                 ),
                 child: Row(
                   children: [
@@ -456,13 +460,13 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.x2l)),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
         child: Container(
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.85),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.x2l)),
             border: Border(
               top: BorderSide(color: Colors.white.withValues(alpha: 0.2), width: 1.5),
             ),

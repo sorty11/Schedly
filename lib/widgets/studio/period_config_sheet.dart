@@ -223,8 +223,8 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
                 child: FilledButton(
                   onPressed: _save,
                   style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
                   ),
                   child: Text('Save Period', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16)),
                 ),
@@ -260,7 +260,7 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
             style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
             decoration: InputDecoration(
               labelText: 'Subject Name',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               prefixIcon: const Icon(Icons.class_outlined),
             ),
           ),
@@ -270,7 +270,7 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
             style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
             decoration: InputDecoration(
               labelText: 'Room / Lab',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               prefixIcon: const Icon(Icons.door_front_door_outlined),
             ),
           ),
@@ -356,11 +356,11 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
 
         for (int i = 0; i < _splitCount; i++) ...[
           Container(
-            padding: const EdgeInsets.all(16),
-            margin: const EdgeInsets.only(bottom: 16),
+            padding: EdgeInsets.all(AppSpacing.lg),
+            margin: EdgeInsets.only(bottom: AppSpacing.lg),
             decoration: BoxDecoration(
               color: sem.surfaceElevated,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
               border: Border.all(color: sem.borderSubtle),
             ),
             child: Column(
@@ -369,10 +369,10 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
                       decoration: BoxDecoration(
                         color: cs.primaryContainer,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
                       ),
                       child: Text(_splitBatches[i], style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: cs.onPrimaryContainer)),
                     ),
@@ -417,7 +417,7 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
   Widget _buildTypeChip(String label, SlotType type, IconData icon, ColorScheme cs, AppSemanticColors sem) {
     final selected = _wcType == type;
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
+      padding: EdgeInsets.only(right: AppSpacing.sm),
       child: FilterChip(
         label: Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         avatar: Icon(icon, size: 16),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'widgets/animations/floating_empty_state.dart';
 
 import 'models/conduct_log.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -35,12 +36,12 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
       ),
       builder: (context) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(AppSpacing.x2l),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -102,7 +103,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
         );
       },
       backgroundColor: color,
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
       borderRadius: 16,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -128,13 +129,13 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
       ),
       builder: (context) {
         return SafeArea(
           child: Padding(
             padding: EdgeInsets.only(
-              left: 24, right: 24, top: 24, bottom: MediaQuery.of(context).viewInsets.bottom + 24
+              left: AppSpacing.x2l, right: AppSpacing.x2l, top: AppSpacing.x2l, bottom: MediaQuery.of(context).viewInsets.bottom + 24
             ),
             child: FutureBuilder<List<SrIdentity>>(
               future: TimetableManager.getUniqueSrIdentities(division: widget.division),
@@ -169,7 +170,11 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                     ),
                     const SizedBox(height: 24),
                     if (subjects.isEmpty)
-                      const Text('No subjects found.', textAlign: TextAlign.center)
+                      const FloatingEmptyState(
+                        icon: Icons.menu_book_rounded,
+                        title: 'No Subjects',
+                        subtitle: 'No subjects found.',
+                      )
                     else
                       Flexible(
                         child: ListView.builder(
@@ -178,7 +183,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                           itemBuilder: (context, index) {
                             final subj = subjects[index];
                             return Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
+                              padding: EdgeInsets.only(bottom: AppSpacing.sm),
                               child: AnimatedButton(
                                 onPressed: () async {
                                   final reqDur = await TimetableManager.getSubjectRequiredDuration(division: widget.division, subject: subj.subject);
@@ -220,7 +225,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                                 },
                                 backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                                 foregroundColor: Theme.of(context).colorScheme.primary,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
                                 child: Text('${subj.subject} ${subj.component} (${subj.batch})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                               ),
                             );
@@ -263,7 +268,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(24),
+                    padding: EdgeInsets.all(AppSpacing.x2l),
                     decoration: BoxDecoration(
                       color: Theme.of(context).extension<AppSemanticColors>()!.conducted.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
@@ -304,7 +309,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
           final sortedDates = groupedLogs.keys.toList()..sort();
 
           return ListView.builder(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(AppSpacing.x2l),
             itemCount: sortedDates.length,
             itemBuilder: (context, index) {
               final dateStr = sortedDates[index];
@@ -322,7 +327,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                     child: Text(
                       displayDate,
                       style: TextStyle(
@@ -346,24 +351,24 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
   Widget _buildLogCard(ConductLog log, {bool isFirst = false}) {
     Widget card = AnimatedCard(
       onTap: () => _showMarkingSheet(log),
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: AppSpacing.md),
       borderRadius: 20,
       backgroundColor: Theme.of(context).colorScheme.surface,
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppRadius.xl),
           border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.1), width: 1.5),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(AppSpacing.lg),
           child: Row(
             children: [
 
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
                   color: Theme.of(context).extension<AppSemanticColors>()!.pending.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                 ),
                 child: Icon(
                   Icons.pending_actions_rounded,

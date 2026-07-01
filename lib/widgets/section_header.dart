@@ -21,7 +21,7 @@ class SectionHeader extends StatelessWidget {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     return Padding(
       padding: padding ??
-          const EdgeInsets.only(
+          EdgeInsets.only(
             bottom: AppSpacing.md,
             top: AppSpacing.x2l,
           ),

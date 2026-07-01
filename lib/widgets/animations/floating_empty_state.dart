@@ -58,7 +58,7 @@ class _FloatingEmptyStateState extends State<FloatingEmptyState>
     return Center(
       child: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.x3l),
+          padding: EdgeInsets.all(AppSpacing.x3l),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -144,7 +144,7 @@ class _FloatingEmptyStateState extends State<FloatingEmptyState>
                   backgroundColor: colorScheme.primary.withValues(alpha: 0.08),
                   foregroundColor: colorScheme.primary,
                   borderRadius: AppRadius.full,
-                  padding: const EdgeInsets.symmetric(
+                  padding: EdgeInsets.symmetric(
                     horizontal: AppSpacing.x2l,
                     vertical: AppSpacing.md,
                   ),

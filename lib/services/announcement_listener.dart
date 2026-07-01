@@ -26,10 +26,7 @@ class AnnouncementListener {
           final data = change.doc.data();
           if (data == null) continue;
 
-          LocalNotificationService.showNotification(
-            title: data['title'] ?? 'Announcement',
-            body: data['message'] ?? '',
-          );
+          // Notification banner now handled by FCM foreground listener
         }
       }
     });
@@ -52,10 +49,7 @@ class AnnouncementListener {
           final data = change.doc.data();
           if (data == null) continue;
 
-          LocalNotificationService.showNotification(
-            title: data['title'] ?? 'Timetable Update',
-            body: data['message'] ?? '',
-          );
+          // Notification banner now handled by FCM foreground listener
         }
       }
     });

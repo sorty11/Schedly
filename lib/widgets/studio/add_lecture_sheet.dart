@@ -171,7 +171,7 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
                 decoration: InputDecoration(
                   labelText: 'Subject Name',
                   hintText: 'e.g. Mathematics',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                   prefixIcon: const Icon(Icons.class_outlined),
                 ),
               ),
@@ -184,7 +184,7 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
                 decoration: InputDecoration(
                   labelText: 'Room / Lab',
                   hintText: 'e.g. Room 402',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                   prefixIcon: const Icon(Icons.door_front_door_outlined),
                 ),
               ),
@@ -226,8 +226,8 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
                     icon: Icon(Icons.delete_outline_rounded, color: sem.cancelled),
                     style: IconButton.styleFrom(
                       backgroundColor: sem.cancelled.withValues(alpha: 0.1),
-                      padding: const EdgeInsets.all(16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      padding: EdgeInsets.all(AppSpacing.lg),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -236,8 +236,8 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
                   child: OutlinedButton(
                     onPressed: _save,
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
                       side: BorderSide(color: sem.borderSubtle, width: 1.5),
                     ),
                     child: Text('Save', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: cs.onSurface)),
@@ -252,8 +252,8 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
                       icon: const Icon(Icons.arrow_forward_rounded, size: 18),
                       label: Text('Save & Next', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
                       style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
                       ),
                     ),
                   ),
@@ -269,7 +269,7 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
   Widget _buildTypeChip(String label, SlotType type, IconData icon, ColorScheme cs, AppSemanticColors sem) {
     final selected = _type == type;
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
+      padding: EdgeInsets.only(right: AppSpacing.sm),
       child: FilterChip(
         label: Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: selected ? cs.onPrimaryContainer : cs.onSurface)),
         avatar: Icon(icon, size: 16, color: selected ? cs.onPrimaryContainer : sem.onSurfaceMuted),

@@ -11,6 +11,7 @@ import 'widgets/animations/counting_text.dart';
 import 'widgets/animations/staggered_list_item.dart';
 import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/floating_empty_state.dart';
+import 'widgets/animations/skeleton_components.dart';
 import 'onboarding/services/onboarding_service.dart';
 import 'onboarding/widgets/tutorial_target.dart';
 import 'models/subject_metadata.dart';
@@ -27,11 +28,13 @@ class AnalyticsPage extends StatefulWidget {
 
 class _AnalyticsPageState extends State<AnalyticsPage> {
   late Future<Map<String, dynamic>> _initDataFuture;
+  late Stream<List<BatchAnalytics>> _analyticsStream;
 
   @override
   void initState() {
     super.initState();
     _initDataFuture = _initAndLoadData();
+    _analyticsStream = AnalyticsService.streamAnalytics(widget.division);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       OnboardingService.instance.checkAnalyticsContext(context);
     });
@@ -62,20 +65,16 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         child: FutureBuilder<Map<String, dynamic>>(
           future: _initDataFuture,
           builder: (context, snapshotData) {
-            if (snapshotData.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+            final isFutureLoading = snapshotData.connectionState == ConnectionState.waiting;
             final data = snapshotData.data ?? {};
             final uniqueSubjects = (data['uniqueSubjects'] as List<String>?) ?? [];
             final metadataMap = (data['metadataMap'] as Map<String, SubjectMetadata>?) ?? {};
 
             return StreamBuilder<List<BatchAnalytics>>(
-              stream: AnalyticsService.streamAnalytics(widget.division),
+              stream: _analyticsStream,
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting &&
-                    !snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+                final isStreamLoading = snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData;
+                final isLoading = isFutureLoading || isStreamLoading;
 
                 var batchAnalytics = snapshot.data ?? [];
 
@@ -125,7 +124,28 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       ),
                     ),
 
-                    if (analytics.isEmpty)
+                    if (isLoading) ...[
+                      SliverPadding(
+                        padding: EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.sm, AppSpacing.x2l, 0),
+                        sliver: SliverToBoxAdapter(
+                          child: SkeletonShimmer(
+                            child: SkeletonBlock(height: 180, borderRadius: AppRadius.xl),
+                          ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.x2l)),
+                      SliverPadding(
+                        padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) => const SubjectCardSkeleton(),
+                            childCount: 4,
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    if (!isLoading && analytics.isEmpty)
                       SliverFillRemaining(
                         child: FloatingEmptyState(
                           icon: Icons.insights_rounded,
@@ -134,10 +154,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                         ),
                       ),
 
-                    if (analytics.isNotEmpty &&
+                    if (!isLoading && analytics.isNotEmpty &&
                         AppSettings.currentRole != UserRole.sr) ...[
                       SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(
+                        padding: EdgeInsets.fromLTRB(
                           AppSpacing.x2l,
                           AppSpacing.sm,
                           AppSpacing.x2l,
@@ -158,10 +178,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       ),
                     ],
 
-                    if (analytics.isNotEmpty &&
+                    if (!isLoading && analytics.isNotEmpty &&
                         AppSettings.currentRole != UserRole.sr) ...[
                       SliverPadding(
-                        padding: const EdgeInsets.symmetric(
+                        padding: EdgeInsets.symmetric(
                           horizontal: AppSpacing.x2l,
                         ),
                         sliver: SliverToBoxAdapter(
@@ -170,9 +190,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       ),
                     ],
 
-                    if (analytics.isNotEmpty) ...[
+                    if (!isLoading && analytics.isNotEmpty) ...[
                       SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(
+                        padding: EdgeInsets.fromLTRB(
                           AppSpacing.x2l,
                           AppSpacing.x2l,
                           AppSpacing.x2l,
@@ -193,9 +213,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       ),
                     ],
 
-                    if (analytics.isNotEmpty)
+                    if (!isLoading && analytics.isNotEmpty)
                       SliverPadding(
-                        padding: const EdgeInsets.symmetric(
+                        padding: EdgeInsets.symmetric(
                           horizontal: AppSpacing.x2l,
                         ),
                         sliver: SliverList(
@@ -204,7 +224,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                               return StaggeredListItem(
                                 index: 2 + index,
                                 child: Padding(
-                                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                                  padding: EdgeInsets.only(bottom: AppSpacing.md),
                                   child: _SubjectProgressCard(
                                     subject: analytics[index],
                                   ),
@@ -280,7 +300,7 @@ class _SemesterHealthCard extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.x2l),
+            padding: EdgeInsets.all(AppSpacing.x2l),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -319,7 +339,7 @@ class _SemesterHealthCard extends StatelessWidget {
                               const SizedBox(width: AppSpacing.sm),
                               Padding(
                                 padding:
-                                    const EdgeInsets.only(bottom: AppSpacing.sm),
+                                    EdgeInsets.only(bottom: AppSpacing.sm),
                                 child: Text(
                                   'complete',
                                   style: GoogleFonts.inter(
@@ -337,7 +357,7 @@ class _SemesterHealthCard extends StatelessWidget {
                     if (AppSettings.currentRole == UserRole.cr &&
                         totalPending > 0)
                       Container(
-                        padding: const EdgeInsets.symmetric(
+                        padding: EdgeInsets.symmetric(
                           horizontal: AppSpacing.md,
                           vertical: AppSpacing.sm - 2,
                         ),
@@ -440,7 +460,7 @@ class _StatPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
+      padding: EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm - 2,
       ),
@@ -503,8 +523,8 @@ class _AtRiskSection extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         ...atRisk.map(
           (a) => Container(
-            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-            padding: const EdgeInsets.symmetric(
+            margin: EdgeInsets.only(bottom: AppSpacing.sm),
+            padding: EdgeInsets.symmetric(
               horizontal: AppSpacing.lg,
               vertical: AppSpacing.md,
             ),
@@ -577,7 +597,7 @@ class _SubjectProgressCard extends StatelessWidget {
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
+          padding: EdgeInsets.all(AppSpacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -606,10 +626,10 @@ class _SubjectProgressCard extends StatelessWidget {
                   const SizedBox(width: AppSpacing.md),
                   if (subject.metadata == null)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 6),
                       decoration: BoxDecoration(
                         color: sem.warning.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(AppRadius.xl),
                         border: Border.all(color: sem.warning.withValues(alpha: 0.3)),
                       ),
                       child: Row(
@@ -741,7 +761,7 @@ class _SubjectProgressCard extends StatelessWidget {
                   ),
                   if (AppSettings.currentRole == UserRole.cr)
                     Container(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                         horizontal: AppSpacing.sm + 2,
                         vertical: AppSpacing.xs,
                       ),

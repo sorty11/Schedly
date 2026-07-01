@@ -58,7 +58,7 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
   Widget _sectionHeader(String title) {
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
     return Padding(
-      padding: const EdgeInsets.only(
+      padding: EdgeInsets.only(
         left: AppSpacing.xs,
         bottom: AppSpacing.md,
         top: AppSpacing.x2l,
@@ -80,7 +80,7 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
   Widget _buildCheckItem(String text) {
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -104,7 +104,7 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
   Widget _buildLegalTile(String title, IconData icon) {
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
     return AnimatedListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+      contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
       onTap: () {}, // Placeholder
       leading: Container(
         width: 40,
@@ -144,7 +144,7 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
         backgroundColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(
+        padding: EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
         ).copyWith(bottom: AppSpacing.x4l),
         child: Column(
@@ -233,11 +233,11 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
                     borderRadius: BorderRadius.circular(AppRadius.xl),
                     border: Border.all(color: semanticColors.borderSubtle),
                   ),
-                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  padding: EdgeInsets.all(AppSpacing.lg),
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.all(AppSpacing.md),
                         decoration: BoxDecoration(
                           color: colorScheme.primary.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
@@ -281,7 +281,7 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
                 borderRadius: AppRadius.xl,
                 backgroundColor: semanticColors.surfaceElevated,
                 child: Container(
-                  padding: const EdgeInsets.all(AppSpacing.x2l),
+                  padding: EdgeInsets.all(AppSpacing.x2l),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(AppRadius.xl),
                     border: Border.all(color: semanticColors.borderSubtle),
@@ -313,7 +313,7 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
                 borderRadius: AppRadius.xl,
                 backgroundColor: colorScheme.primary.withValues(alpha: 0.05),
                 child: Container(
-                  padding: const EdgeInsets.all(AppSpacing.x2l),
+                  padding: EdgeInsets.all(AppSpacing.x2l),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(AppRadius.xl),
                     border: Border.all(color: colorScheme.primary.withValues(alpha: 0.2)),

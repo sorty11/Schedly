@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:schedly/theme/theme.dart';
 
 class AnimatedFAB extends StatefulWidget {
   final VoidCallback onPressed;
@@ -145,9 +146,9 @@ class _AnimatedFABState extends State<AnimatedFAB> with TickerProviderStateMixin
               transform: matrix,
               alignment: Alignment.center,
               child: Container(
-                padding: widget.label != null ? const EdgeInsets.symmetric(horizontal: 20, vertical: 16) : const EdgeInsets.all(16),
+                padding: widget.label != null ? EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.lg) : EdgeInsets.all(AppSpacing.lg),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(AppRadius.xl),
                   color: currentColor,
                   boxShadow: [
                     BoxShadow(
@@ -161,7 +162,7 @@ class _AnimatedFABState extends State<AnimatedFAB> with TickerProviderStateMixin
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(AppRadius.xl),
                     onTap: widget.onPressed,
                     splashColor: fgColor.withValues(alpha: 0.2),
                     highlightColor: fgColor.withValues(alpha: 0.1),

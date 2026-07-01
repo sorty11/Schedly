@@ -141,7 +141,7 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.lg),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -189,7 +189,7 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
             
             // Bottom Action
             Container(
-              padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).padding.bottom + 16),
+              padding: EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.lg, AppSpacing.x2l, MediaQuery.of(context).padding.bottom + 16),
               decoration: BoxDecoration(
                 color: isDark ? sem.surfaceElevated : cs.surface,
                 border: Border(top: BorderSide(color: sem.borderSubtle)),
@@ -203,7 +203,7 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
                   onPressed: _loading ? null : _completeSetup,
                   style: FilledButton.styleFrom(
                     minimumSize: const Size(double.infinity, 56),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
                   ),
                   child: _loading 
                       ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
@@ -230,9 +230,9 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
   InputDecoration _inputDecoration(String label, AppSemanticColors sem) {
     return InputDecoration(
       labelText: label,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: sem.borderSubtle)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: sem.borderSubtle)),
+      contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
     );
   }
 

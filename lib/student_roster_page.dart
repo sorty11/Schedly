@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:schedly/theme/theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 
@@ -40,7 +41,7 @@ class StudentRosterPage extends StatelessWidget {
             children: [
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(AppSpacing.lg),
                 color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                 child: Text(
                   'Total Students: ${students.length}',

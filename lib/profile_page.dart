@@ -53,7 +53,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _sectionHeader(String label) {
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
     return Padding(
-      padding: const EdgeInsets.only(
+      padding: EdgeInsets.only(
         left: AppSpacing.xs,
         bottom: AppSpacing.sm,
         top: AppSpacing.x3l,
@@ -85,7 +85,7 @@ class _ProfilePageState extends State<ProfilePage> {
             borderRadius: BorderRadius.circular(AppRadius.xl),
             border: Border.all(color: semanticColors.borderSubtle, width: 1),
           ),
-          padding: const EdgeInsets.all(AppSpacing.sm),
+          padding: EdgeInsets.all(AppSpacing.sm),
           child: Row(
             children: [
               _appearancePill(
@@ -135,7 +135,7 @@ class _ProfilePageState extends State<ProfilePage> {
         child: AnimatedContainer(
           duration: AppDuration.standard,
           curve: AppCurves.standard,
-          padding: const EdgeInsets.symmetric(
+          padding: EdgeInsets.symmetric(
             vertical: AppSpacing.md,
             horizontal: AppSpacing.sm,
           ),
@@ -222,7 +222,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final effectiveColor = isDestructive ? semanticColors.cancelled : iconColor;
 
     Widget tile = AnimatedListTile(
-      contentPadding: const EdgeInsets.symmetric(
+      contentPadding: EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.md,
       ),
@@ -294,7 +294,7 @@ class _ProfilePageState extends State<ProfilePage> {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(
+        padding: EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
         ),
@@ -315,7 +315,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       width: 1,
                     ),
                   ),
-                  padding: const EdgeInsets.all(AppSpacing.x2l),
+                  padding: EdgeInsets.all(AppSpacing.x2l),
                   child: Column(
                     children: [
                       // Avatar gradient circle
@@ -364,7 +364,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       // Roll number chip
                       if (AppSettings.studentRollNo != null)
                         Container(
-                          padding: const EdgeInsets.symmetric(
+                          padding: EdgeInsets.symmetric(
                             horizontal: AppSpacing.md,
                             vertical: AppSpacing.xs,
                           ),
@@ -656,7 +656,7 @@ class _ProfilePageState extends State<ProfilePage> {
     required Color textColor,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(
+      padding: EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.xs,
       ),

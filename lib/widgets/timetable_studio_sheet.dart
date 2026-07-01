@@ -242,6 +242,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
 
       if (!mounted) return;
       
+      HapticFeedback.mediumImpact();
       AppDialogs.showSnackBar(
         context: context,
         message: widget.existingEntry != null ? 'Lecture updated!' : 'Lecture added successfully!',
@@ -272,7 +273,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
         icon: const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 32),
         title: Text(title, textAlign: TextAlign.center),
         content: Text(message),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -300,10 +301,10 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
-        padding: const EdgeInsets.all(AppSpacing.x2l),
+        padding: EdgeInsets.all(AppSpacing.x2l),
         decoration: BoxDecoration(
           color: isDark ? sem.surfaceElevated : colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.x2l)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.x2l)),
         ),
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -443,7 +444,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                       onTap: _selectStartTime,
                       borderRadius: BorderRadius.circular(AppRadius.lg),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.md),
+                        padding: EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.md),
                         decoration: BoxDecoration(
                           border: Border.all(color: sem.borderSubtle),
                           borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -465,7 +466,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                       onTap: _selectEndTime,
                       borderRadius: BorderRadius.circular(AppRadius.lg),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.md),
+                        padding: EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.md),
                         decoration: BoxDecoration(
                           border: Border.all(color: sem.borderSubtle),
                           borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -508,12 +509,13 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                               .collection(widget.initialDay)
                               .doc(widget.existingEntry!.id)
                               .delete();
+                          HapticFeedback.mediumImpact();
                           if (mounted) Navigator.pop(context);
                         },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: colorScheme.error,
                           side: BorderSide(color: colorScheme.error.withValues(alpha: 0.5)),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
                         ),
                         child: const Icon(Icons.delete_rounded),
                       ),
@@ -525,7 +527,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                       child: OutlinedButton(
                         onPressed: _isLoading ? null : () => _save(keepOpen: true),
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
                         ),
                         child: _isLoading 
                           ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
@@ -538,7 +540,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                     child: FilledButton(
                       onPressed: _isLoading ? null : () => _save(keepOpen: false),
                       style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
                       ),
                       child: _isLoading 
                         ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))

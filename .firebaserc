@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "schedly-production"
+  },
+  "targets": {},
+  "etags": {}
+}

@@ -92,7 +92,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
 
     Widget cardContent = Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: EdgeInsets.only(bottom: AppSpacing.md),
       child: AnimatedCard(
         onTap: onTap,
           borderRadius: AppRadius.xl,
@@ -105,7 +105,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
                 width: 1,
               ),
             ),
-            padding: const EdgeInsets.all(AppSpacing.xl),
+            padding: EdgeInsets.all(AppSpacing.xl),
             child: Row(
               children: [
                 // Icon container
@@ -177,7 +177,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
     return StaggeredListItem(
       index: staggerIndex,
       child: Padding(
-        padding: const EdgeInsets.only(
+        padding: EdgeInsets.only(
           left: AppSpacing.xs,
           bottom: AppSpacing.sm,
           top: AppSpacing.lg,
@@ -224,7 +224,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(
+        padding: EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
         ),
@@ -257,7 +257,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
             StaggeredListItem(
               index: 0,
               child: Container(
-                padding: const EdgeInsets.all(AppSpacing.x2l),
+                padding: EdgeInsets.all(AppSpacing.x2l),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: isCR
@@ -308,7 +308,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
                           ),
                           const SizedBox(height: AppSpacing.xs),
                           Container(
-                            padding: const EdgeInsets.symmetric(
+                            padding: EdgeInsets.symmetric(
                               horizontal: AppSpacing.sm,
                               vertical: AppSpacing.xs,
                             ),
@@ -478,7 +478,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
                   backgroundColor: Colors.transparent,
                   onTap: () => _logoutCR(context),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                       horizontal: AppSpacing.xl,
                       vertical: AppSpacing.lg,
                     ),

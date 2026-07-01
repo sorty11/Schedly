@@ -130,13 +130,16 @@ class _AnimatedIconButtonState extends State<AnimatedIconButton> with TickerProv
                     customBorder: const CircleBorder(),
                     splashColor: iconColor.withValues(alpha: 0.2),
                     highlightColor: iconColor.withValues(alpha: 0.1),
-                    child: Padding(
-                      padding: EdgeInsets.all(widget.padding),
-                      child: IconTheme.merge(
-                        data: IconThemeData(
-                          color: disabled ? theme.colorScheme.onSurface.withValues(alpha: 0.38) : iconColor,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                      child: Padding(
+                        padding: EdgeInsets.all(widget.padding),
+                        child: IconTheme.merge(
+                          data: IconThemeData(
+                            color: disabled ? theme.colorScheme.onSurface.withValues(alpha: 0.38) : iconColor,
+                          ),
+                          child: widget.icon,
                         ),
-                        child: widget.icon,
                       ),
                     ),
                   ),
@@ -155,6 +158,11 @@ class _AnimatedIconButtonState extends State<AnimatedIconButton> with TickerProv
       );
     }
 
-    return button;
+    return Semantics(
+      button: true,
+      enabled: !disabled,
+      label: widget.tooltip,
+      child: button,
+    );
   }
 }

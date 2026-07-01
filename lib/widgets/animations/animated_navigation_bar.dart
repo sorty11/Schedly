@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:schedly/theme/theme.dart';
 
 class AnimatedNavigationBar extends StatelessWidget {
   final int selectedIndex;
@@ -35,7 +36,7 @@ class AnimatedNavigationBar extends StatelessWidget {
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: List.generate(destinations.length, (index) {
@@ -172,12 +173,12 @@ class _AnimatedNavigationItemState extends State<AnimatedNavigationItem> with Ti
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeOutCubic,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.sm),
                     decoration: BoxDecoration(
                       color: isSelected 
                         ? activeColor.withValues(alpha: 0.15)
                         : activeColor.withValues(alpha: 0.05 * _hoverController.value),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(AppRadius.xl),
                     ),
                     child: IconTheme.merge(
                       data: IconThemeData(

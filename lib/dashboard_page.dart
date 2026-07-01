@@ -14,6 +14,7 @@ import 'theme/theme.dart';
 import 'widgets/animations/staggered_list_item.dart';
 import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/floating_empty_state.dart';
+import 'widgets/animations/skeleton_components.dart';
 import 'widgets/animations/animated_button.dart';
 import 'widgets/animations/live_lecture_card.dart';
 import 'models/timetable_entry.dart';
@@ -41,6 +42,7 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   late String currentDay;
+  late Stream<QuerySnapshot> _lecturesStream;
   bool _hasDraft = false;
 
   bool _isLoadingTimetableCheck = true;
@@ -50,6 +52,11 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     currentDay = _getCurrentDay();
+    _lecturesStream = FirebaseFirestore.instance
+        .collection('timetables')
+        .doc(widget.division)
+        .collection(currentDay)
+        .snapshots();
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkCROnboarding());
   }
 
@@ -94,11 +101,11 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildNoTimetableCard(ThemeData theme, AppSemanticColors sem) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      padding: const EdgeInsets.all(24),
+      margin: EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.lg),
+      padding: EdgeInsets.all(AppSpacing.x2l),
       decoration: BoxDecoration(
         color: theme.brightness == Brightness.dark ? sem.surfaceElevated : theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
         border: Border.all(color: sem.borderSubtle, width: 1),
         boxShadow: [
           BoxShadow(
@@ -211,7 +218,7 @@ class _DashboardPageState extends State<DashboardPage> {
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
       ),
       builder: (ctx) => SafeArea(
         child: Column(
@@ -343,21 +350,12 @@ class _DashboardPageState extends State<DashboardPage> {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final firstName = (AppSettings.studentName ?? 'Student').split(' ').first;
 
-    final Stream<QuerySnapshot> lecturesStream = FirebaseFirestore.instance
-        .collection('timetables')
-        .doc(widget.division)
-        .collection(currentDay)
-        .snapshots();
-
     return Scaffold(
       body: SafeArea(
         child: StreamBuilder<QuerySnapshot>(
-          stream: lecturesStream,
+          stream: _lecturesStream,
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting &&
-                !snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
+            final isLoading = snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData;
 
             final docs = snapshot.data?.docs ?? [];
             final rawLectures = docs
@@ -401,7 +399,7 @@ class _DashboardPageState extends State<DashboardPage> {
               slivers: [
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
+                    padding: EdgeInsets.fromLTRB(
                       AppSpacing.x2l,
                       AppSpacing.lg,
                       AppSpacing.lg,
@@ -447,7 +445,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                 },
                                 backgroundColor: colorScheme.primary
                                     .withValues(alpha: 0.1),
-                                padding: const EdgeInsets.symmetric(
+                                padding: EdgeInsets.symmetric(
                                   horizontal: AppSpacing.md,
                                   vertical: AppSpacing.sm,
                                 ),
@@ -483,26 +481,29 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                 ),
 
-                if (!_hasTimetable && !_hasDraft && AppSettings.currentRole == UserRole.cr && !_isLoadingTimetableCheck)
+                if (isLoading)
+                  const SliverToBoxAdapter(child: HeroCardSkeleton()),
+                  
+                if (!isLoading && !_hasTimetable && !_hasDraft && AppSettings.currentRole == UserRole.cr && !_isLoadingTimetableCheck)
                   SliverToBoxAdapter(
                     child: _buildNoTimetableCard(Theme.of(context), sem),
                   ),
 
-                if (_hasDraft)
+                if (!isLoading && _hasDraft)
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.sm),
+                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.sm),
                       child: Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: EdgeInsets.all(AppSpacing.lg),
                         decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                           border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(8),
+                              padding: EdgeInsets.all(AppSpacing.sm),
                               decoration: BoxDecoration(
                                 color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
@@ -526,8 +527,8 @@ class _DashboardPageState extends State<DashboardPage> {
                                 )).then((_) => _checkCROnboarding());
                               },
                               style: FilledButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                               ),
                               child: Text('Resume', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
                             ),
@@ -537,10 +538,10 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                   ),
 
-                if (currentGroup != null)
+                if (!isLoading && currentGroup != null)
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                         horizontal: AppSpacing.x2l,
                       ),
                       child: StaggeredListItem(
@@ -561,15 +562,18 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                   ),
 
-                if (currentGroup != null)
+                if (!isLoading && currentGroup != null)
                   const SliverToBoxAdapter(
                     child: SizedBox(height: AppSpacing.x2l),
                   ),
 
-                if (groupedLectures.isNotEmpty)
+                if (isLoading)
+                  const SliverToBoxAdapter(child: StatsRowSkeleton()),
+                  
+                if (!isLoading && groupedLectures.isNotEmpty)
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                         horizontal: AppSpacing.x2l,
                       ),
                       child: StaggeredListItem(
@@ -583,15 +587,21 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     ),
                   ),
+                  
+                if (isLoading) ...[
+                  const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l), child: LectureCardSkeleton(includeTime: true))),
+                  const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l), child: LectureCardSkeleton(includeTime: true))),
+                  const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l), child: LectureCardSkeleton(includeTime: true))),
+                ],
 
-                if (groupedLectures.isNotEmpty)
+                if (!isLoading && groupedLectures.isEmpty)
                   const SliverToBoxAdapter(
                     child: SizedBox(height: AppSpacing.x2l),
                   ),
 
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.only(
+                    padding: EdgeInsets.only(
                       left: AppSpacing.x2l,
                       right: AppSpacing.x2l,
                       bottom: AppSpacing.md,
@@ -605,9 +615,9 @@ class _DashboardPageState extends State<DashboardPage> {
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                           const Spacer(),
-                          if (groupedLectures.isNotEmpty)
+                          if (!isLoading && groupedLectures.isNotEmpty)
                             Container(
-                              padding: const EdgeInsets.symmetric(
+                              padding: EdgeInsets.symmetric(
                                 horizontal: AppSpacing.md,
                                 vertical: AppSpacing.xs,
                               ),
@@ -631,7 +641,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                 ),
 
-                if (groupedLectures.isEmpty)
+                if (!isLoading && groupedLectures.isEmpty)
                   SliverFillRemaining(
                     hasScrollBody: false,
                     child: FloatingEmptyState(
@@ -641,9 +651,9 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                   ),
 
-                if (groupedLectures.isNotEmpty)
+                if (!isLoading && groupedLectures.isNotEmpty)
                   SliverPadding(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                       horizontal: AppSpacing.x2l,
                     ),
                     sliver: SliverList(
@@ -767,7 +777,7 @@ class _TimelineLectureItem extends StatelessWidget {
                   Expanded(
                     child: Container(
                       width: 1.5,
-                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      margin: EdgeInsets.symmetric(vertical: AppSpacing.xs),
                       decoration: BoxDecoration(
                         color: isDark ? sem.borderSubtle : sem.borderSubtle,
                         borderRadius: BorderRadius.circular(1),
@@ -806,7 +816,7 @@ class _TimelineLectureItem extends StatelessWidget {
                     ),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                       horizontal: AppSpacing.lg,
                       vertical: AppSpacing.md,
                     ),
@@ -838,7 +848,7 @@ class _TimelineLectureItem extends StatelessWidget {
                                   ),
                                   if (entry.batch != 'Whole Class' || entry.room != null)
                                     Padding(
-                                      padding: const EdgeInsets.only(top: AppSpacing.xs),
+                                      padding: EdgeInsets.only(top: AppSpacing.xs),
                                       child: Row(
                                         children: [
                                           if (entry.batch != 'Whole Class')
@@ -873,7 +883,7 @@ class _TimelineLectureItem extends StatelessWidget {
                             if (isCancelled && idx == 0) ...[
                               const SizedBox(width: AppSpacing.sm),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                                padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: sem.cancelled.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(AppRadius.full),
@@ -891,7 +901,7 @@ class _TimelineLectureItem extends StatelessWidget {
                             ] else if (isCurrent && idx == 0) ...[
                               const SizedBox(width: AppSpacing.sm),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                                padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: colorScheme.primary.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(AppRadius.full),
@@ -909,7 +919,7 @@ class _TimelineLectureItem extends StatelessWidget {
                             ] else if (isNext && !isCurrent && idx == 0) ...[
                               const SizedBox(width: AppSpacing.sm),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                                padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: sem.accent.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(AppRadius.full),
@@ -937,7 +947,7 @@ class _TimelineLectureItem extends StatelessWidget {
                             onTap: canEdit(entry) ? () => onEdit(entry) : null,
                             child: Container(
                               margin: EdgeInsets.only(top: idx == 0 ? 0 : AppSpacing.md),
-                              padding: const EdgeInsets.all(AppSpacing.sm),
+                              padding: EdgeInsets.all(AppSpacing.sm),
                               decoration: BoxDecoration(
                                 color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
                                 borderRadius: BorderRadius.circular(AppRadius.md),
@@ -980,7 +990,7 @@ class _QuickStatsRow extends StatelessWidget {
     final activeLectures = lectureCount - cancelledCount;
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: isDark ? sem.surfaceElevated : colorScheme.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -1063,7 +1073,7 @@ class _Divider extends StatelessWidget {
       width: 1,
       height: 32,
       color: sem.borderSubtle,
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      margin: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
     );
   }
 }
