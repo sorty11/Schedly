@@ -35,3 +35,6 @@ macos/Pods/
 firebase-debug.log
 
 # Generated files
+
+node_modules/
+server/node_modules/
