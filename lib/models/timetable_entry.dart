@@ -35,9 +35,29 @@ class TimetableEntry {
 
   bool get isAcademic => category == EventCategory.academic;
 
+  /// Strips trailing component suffixes (Theory, Lab, Tutorial) from a subject string.
+  /// Handles recursive corruption like "CTPS Theory Theory Theory" -> "CTPS".
+  static String stripComponentSuffix(String raw) {
+    String cleaned = raw.trim();
+    // Repeatedly remove trailing Theory/Lab/Tutorial until stable
+    while (true) {
+      final before = cleaned;
+      cleaned = cleaned
+          .replaceAll(RegExp(r'\s+Theory$', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\s+Lab$', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\s+Tutorial$', caseSensitive: false), '')
+          .trim();
+      if (cleaned == before) break;
+    }
+    return cleaned.isEmpty ? raw.trim() : cleaned;
+  }
+
+  /// Returns the canonical subject code without any component suffix.
+  String get subjectCode => stripComponentSuffix(subject);
+
   String get displaySubject {
     if (!isAcademic) return subject;
-    return '$subject $component'.trim();
+    return '${subjectCode} $component'.trim();
   }
 
   factory TimetableEntry.fromFirestore(DocumentSnapshot doc) {
@@ -92,7 +112,7 @@ class TimetableEntry {
 
   Map<String, dynamic> toFirestore() {
     return {
-      'subject': subject,
+      'subject': subjectCode,
       'component': component,
       'category': category.name.toLowerCase(),
       'batch': batch,

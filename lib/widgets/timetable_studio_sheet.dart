@@ -177,10 +177,10 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
   }
 
   Future<void> _save({required bool keepOpen}) async {
-    final subject = _subjectController.text.trim();
+    final rawSubject = _subjectController.text.trim();
     final room = _roomController.text.trim();
 
-    if (subject.isEmpty) {
+    if (rawSubject.isEmpty) {
       _subjectFocusNode?.requestFocus();
       _showErrorDialog('Missing Information', 'Subject cannot be empty.');
       return;
@@ -190,6 +190,9 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
       return;
     }
     
+    // Always strip component suffixes to get the canonical subject code
+    final subject = TimetableEntry.stripComponentSuffix(rawSubject);
+
     // Validation is now handled inside TimetableManager.addLecture
 
     setState(() => _isLoading = true);

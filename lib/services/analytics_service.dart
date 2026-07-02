@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/batch_analytics.dart';
 import '../models/conduct_log.dart';
@@ -243,11 +244,25 @@ class AnalyticsService {
         .snapshots()
         .map((snapshot) {
           final allLogs = snapshot.docs.map((doc) => ConductLog.fromFirestore(doc)).toList();
+          final now = DateTime.now();
+          final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+          final currentMinutes = now.hour * 60 + now.minute;
+
           return allLogs.where((log) {
             if (!log.originalSlot.isAcademic) return false;
-            if (log.originalSlot.subject != subjectFilter) return false;
+
+            // Ensure canonical subject code matching
+            final canonicalSubject = log.originalSlot.subjectCode;
+            final canonicalFilter = TimetableEntry.stripComponentSuffix(subjectFilter);
+            if (canonicalSubject != canonicalFilter) return false;
+
             if (componentFilter != null && log.originalSlot.component != componentFilter) return false;
             if (batchFilter != null && log.originalSlot.batch != batchFilter) return false;
+
+            // Filter out future lectures
+            if (log.date.compareTo(todayStr) > 0) return false;
+            if (log.date == todayStr && log.originalSlot.endTime > currentMinutes) return false;
+
             return true;
           }).toList();
         });

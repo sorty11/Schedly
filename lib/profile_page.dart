@@ -463,7 +463,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           context,
                           MaterialPageRoute(
                             builder: (_) => SrConductDashboard(
-                              division: AppSettings.division ?? '',
+                              division: widget.division,
                               subject: AppSettings.srSubject ?? '',
                             ),
                           ),

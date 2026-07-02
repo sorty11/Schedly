@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'event_category.dart';
 import 'subject_metadata.dart';
+import 'timetable_entry.dart';
 
 class BatchAnalytics {
   final String id; // usually '{subject}_{component}_{batch}'
@@ -27,8 +28,10 @@ class BatchAnalytics {
     this.cancelledLectures = 0,
   });
 
+  String get subjectCode => TimetableEntry.stripComponentSuffix(subject);
+
   String get displaySubject {
-    return '$subject $component'.trim();
+    return '${subjectCode} $component'.trim();
   }
 
   factory BatchAnalytics.fromFirestore(DocumentSnapshot doc) {

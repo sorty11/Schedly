@@ -62,13 +62,24 @@ class _HomePageState extends State<HomePage>
 
   Future<void> _runMigrationIfNeeded() async {
     final prefs = await SharedPreferences.getInstance();
-    final key = 'migration_v2_${widget.division}';
-    if (!(prefs.getBool(key) ?? false)) {
+    final v2Key = 'migration_v2_${widget.division}';
+    if (!(prefs.getBool(v2Key) ?? false)) {
       try {
         await MigrationService.upgradeToV2(widget.division);
-        await prefs.setBool(key, true);
+        await prefs.setBool(v2Key, true);
       } catch (e) {
         debugPrint('Migration failed: $e');
+      }
+    }
+
+    final sanitizeKey = 'migration_sanitize_subjects_${widget.division}';
+    if (!(prefs.getBool(sanitizeKey) ?? false)) {
+      try {
+        await MigrationService.sanitizeSubjectNames(widget.division);
+        await prefs.setBool(sanitizeKey, true);
+        debugPrint('Subject sanitization completed for ${widget.division}');
+      } catch (e) {
+        debugPrint('Subject sanitization failed: $e');
       }
     }
   }

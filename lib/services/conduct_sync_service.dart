@@ -12,51 +12,30 @@ class ConductSyncService {
   ];
 
   static Future<void> syncPendingLectures(String division, {bool forceToday = false}) async {
-    final divRef = _db.collection('sections').doc(division);
-
+    debugPrint('ConductSyncService.syncPendingLectures() called for division: $division');
     try {
-      final startDate = await _db.runTransaction((transaction) async {
-        final divSnapshot = await transaction.get(divRef);
-        final data = divSnapshot.data();
-
-        if (data == null && !forceToday) return null;
-
-        final now = DateTime.now();
-        final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-        
-        final lastSyncDateStr = data?['lastSyncDate'] as String?;
-        if (lastSyncDateStr == todayStr && !forceToday) {
-          return null; // Already synced today
-        }
-
-        DateTime start;
-        if (forceToday) {
-          start = DateTime(now.year, now.month, now.day);
-        } else if (lastSyncDateStr == null) {
-          start = DateTime(now.year, now.month, now.day);
-        } else {
-          final parts = lastSyncDateStr.split('-');
-          start = DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2])).add(const Duration(days: 1));
-        }
-
-        if (now.difference(start).inDays > 7) {
-          start = now.subtract(const Duration(days: 7));
-          start = DateTime(start.year, start.month, start.day);
-        }
-
-        transaction.set(divRef, {'lastSyncDate': todayStr}, SetOptions(merge: true));
-        return start;
-      });
-
-      if (startDate == null) return;
-
       final now = DateTime.now();
+      // Scan last 3 days + today
+      final startDate = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 3));
       final endDate = DateTime(now.year, now.month, now.day);
       DateTime currentDate = startDate;
       
       while (!currentDate.isAfter(endDate)) {
         final dayName = _weekdays[currentDate.weekday - 1];
         final dateStr = '${currentDate.year}-${currentDate.month.toString().padLeft(2, '0')}-${currentDate.day.toString().padLeft(2, '0')}';
+
+        debugPrint('Checking date: $dateStr ($dayName)');
+
+        // Fetch existing logs for this date to ensure idempotency
+        final existingLogsSnap = await _db
+            .collection('sections')
+            .doc(division)
+            .collection('conduct_logs')
+            .where('date', isEqualTo: dateStr)
+            .get();
+        final existingLogIds = existingLogsSnap.docs.map((d) => d.id).toSet();
+        
+        debugPrint('Found ${existingLogIds.length} existing conduct_logs for $dateStr in division $division');
 
         final timetableSnapshot = await _db
             .collection('timetables')
@@ -65,6 +44,8 @@ class ConductSyncService {
             .where('isActive', isEqualTo: true)
             .get();
 
+        debugPrint('Found ${timetableSnapshot.docs.length} active timetable entries for $dayName');
+
         if (timetableSnapshot.docs.isNotEmpty) {
           final batchWriter = _db.batch();
           bool hasWrites = false;
@@ -72,16 +53,29 @@ class ConductSyncService {
           for (var doc in timetableSnapshot.docs) {
             final entry = TimetableEntry.fromFirestore(doc);
             
-            // Only create conduct logs for academic entries to keep things clean.
-            // Non-academic entries don't need conduct logs unless we want to track them.
-            // The architecture says: "Only Academic events should contribute to analytics. Everything else should automatically be ignored."
-            if (!entry.isAcademic) continue;
+            debugPrint('Processing entry: ${entry.id}, Subject: ${entry.subject}, isAcademic: ${entry.isAcademic}');
+            
+            // Only create conduct logs for academic entries
+            if (!entry.isAcademic) {
+              debugPrint('Skipping ${entry.id} because it is not academic');
+              continue;
+            }
+
+            final logId = '${dateStr}_${entry.id}';
+            
+            // Skip if it already exists
+            if (existingLogIds.contains(logId)) {
+              debugPrint('Skipping ${entry.id} because conduct log $logId already exists');
+              continue;
+            }
+
+            debugPrint('Preparing to write conduct log $logId');
 
             final logRef = _db
                 .collection('sections')
                 .doc(division)
                 .collection('conduct_logs')
-                .doc(); // Auto-ID
+                .doc(logId);
 
             batchWriter.set(logRef, {
               'date': dateStr,
@@ -118,7 +112,11 @@ class ConductSyncService {
           }
 
           if (hasWrites) {
+            debugPrint('Committing batch write for $dateStr');
             await batchWriter.commit();
+            debugPrint('Batch write successful for $dateStr');
+          } else {
+            debugPrint('No new logs to write for $dateStr');
           }
         }
         currentDate = currentDate.add(const Duration(days: 1));

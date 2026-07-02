@@ -82,7 +82,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 final aggregatedMap = <String, List<BatchAnalytics>>{};
 
                 for (final batch in batchAnalytics) {
-                  aggregatedMap.putIfAbsent(batch.displaySubject, () => []).add(batch);
+                  aggregatedMap.putIfAbsent(batch.subjectCode, () => []).add(batch);
                 }
 
                 // Apply unique subjects rule to ensure zeroed subjects appear

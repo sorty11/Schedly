@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'models/timetable_entry.dart';
 import 'models/event_category.dart';
 import 'services/timetable_event_service.dart';
+import 'services/conduct_sync_service.dart';
 
 class ValidationException implements Exception {
   final String title;
@@ -92,6 +93,10 @@ class TimetableManager {
       oldEntry: oldEntry,
       newEntry: entry,
     );
+
+    // Trigger sync immediately after a lecture is added or modified
+    // This ensures that conduct_logs are generated immediately for the new lecture
+    await ConductSyncService.syncPendingLectures(division);
   }
 
   // Helper method used by legacy code during migration to format time
@@ -162,7 +167,7 @@ class TimetableManager {
       final entries = await getEntriesForDay(division: division, day: day);
       for (final e in entries) {
         if (e.category == EventCategory.academic) {
-          unique.add(e.displaySubject);
+          unique.add(e.subjectCode);
         }
       }
     }
@@ -175,7 +180,7 @@ class TimetableManager {
     for (final day in days) {
       final entries = await getEntriesForDay(division: division, day: day);
       for (final e in entries) {
-        if ((e.displaySubject == subject || e.subject == subject) && e.durationMinutes > maxDuration) {
+        if ((e.subjectCode == subject || e.subject == subject || e.displaySubject == subject) && e.durationMinutes > maxDuration) {
           maxDuration = e.durationMinutes;
         }
       }
