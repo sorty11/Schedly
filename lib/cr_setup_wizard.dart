@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -83,6 +84,15 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
         'createdAt': FieldValue.serverTimestamp(),
         'timetablePublished': false,
       });
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await db.collection('users').doc(user.uid).set({
+          'role': 'CR',
+          'division': sectionId,
+          'createdAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
       
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_logged_in', true);

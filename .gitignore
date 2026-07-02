@@ -36,5 +36,5 @@ firebase-debug.log
 
 # Generated files
 
-node_modules/
+**node_modules/
 server/node_modules/

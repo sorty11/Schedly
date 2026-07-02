@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:schedly/theme/theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'nmims_structure.dart';
 import 'cr_setup_wizard.dart';
 
@@ -147,6 +148,15 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
           div: _selectedDivision!,
           secId: _sectionId!,
         );
+
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+            'role': 'CR',
+            'division': _sectionId,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+        }
 
         if (!mounted) return;
         Navigator.pushAndRemoveUntil(

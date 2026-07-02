@@ -72,7 +72,7 @@ async function dispatchNotification(payload) {
             },
         },
     };
-    const dataPayload = {
+    const rawPayload = {
         notificationId: payload.notificationId,
         type: payload.type,
         title: payload.title,
@@ -81,19 +81,31 @@ async function dispatchNotification(payload) {
         createdAt: payload.createdAt || new Date().toISOString(),
     };
     if (payload.batch)
-        dataPayload.batch = payload.batch;
+        rawPayload.batch = payload.batch;
     if (payload.role)
-        dataPayload.role = payload.role;
+        rawPayload.role = payload.role;
     if (payload.lectureId)
-        dataPayload.lectureId = payload.lectureId;
+        rawPayload.lectureId = payload.lectureId;
     if (payload.announcementId)
-        dataPayload.announcementId = payload.announcementId;
+        rawPayload.announcementId = payload.announcementId;
     if (payload.deepLink)
-        dataPayload.deepLink = payload.deepLink;
+        rawPayload.deepLink = payload.deepLink;
     if (payload.room)
-        dataPayload.room = payload.room;
+        rawPayload.room = payload.room;
     if (payload.subject)
-        dataPayload.subject = payload.subject;
+        rawPayload.subject = payload.subject;
+    const dataPayload = {};
+    for (const key of Object.keys(rawPayload)) {
+        const val = rawPayload[key];
+        if (val != null) {
+            if (typeof val.toDate === 'function') {
+                dataPayload[key] = val.toDate().toISOString();
+            }
+            else {
+                dataPayload[key] = String(val);
+            }
+        }
+    }
     const message = {
         topic,
         data: dataPayload,

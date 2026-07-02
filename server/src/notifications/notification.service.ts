@@ -45,7 +45,7 @@ export async function dispatchNotification(payload: NotificationPayload): Promis
     },
   };
 
-  const dataPayload: any = {
+  const rawPayload: any = {
     notificationId: payload.notificationId,
     type: payload.type,
     title: payload.title,
@@ -53,13 +53,25 @@ export async function dispatchNotification(payload: NotificationPayload): Promis
     division: payload.division,
     createdAt: payload.createdAt || new Date().toISOString(),
   };
-  if (payload.batch) dataPayload.batch = payload.batch;
-  if (payload.role) dataPayload.role = payload.role;
-  if (payload.lectureId) dataPayload.lectureId = payload.lectureId;
-  if (payload.announcementId) dataPayload.announcementId = payload.announcementId;
-  if (payload.deepLink) dataPayload.deepLink = payload.deepLink;
-  if (payload.room) dataPayload.room = payload.room;
-  if (payload.subject) dataPayload.subject = payload.subject;
+  if (payload.batch) rawPayload.batch = payload.batch;
+  if (payload.role) rawPayload.role = payload.role;
+  if (payload.lectureId) rawPayload.lectureId = payload.lectureId;
+  if (payload.announcementId) rawPayload.announcementId = payload.announcementId;
+  if (payload.deepLink) rawPayload.deepLink = payload.deepLink;
+  if (payload.room) rawPayload.room = payload.room;
+  if (payload.subject) rawPayload.subject = payload.subject;
+
+  const dataPayload: Record<string, string> = {};
+  for (const key of Object.keys(rawPayload)) {
+    const val = rawPayload[key];
+    if (val != null) {
+      if (typeof val.toDate === 'function') {
+        dataPayload[key] = val.toDate().toISOString();
+      } else {
+        dataPayload[key] = String(val);
+      }
+    }
+  }
 
   const message: admin.messaging.Message = {
     topic,
