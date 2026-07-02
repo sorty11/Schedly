@@ -78,8 +78,43 @@ export async function dispatchNotification(payload: NotificationPayload): Promis
     data: dataPayload,
     android: androidConfig,
     apns: apnsConfig,
+    notification: {
+      title: payload.title,
+      body: payload.body,
+    },
     fcmOptions: { analyticsLabel: payload.type },
   };
 
   await admin.messaging().send(message);
+
+  try {
+    let query = admin.firestore().collectionGroup('fcm_tokens')
+      .where('platform', '==', 'web')
+      .where('division', '==', payload.division);
+
+    if (payload.role && payload.role !== 'student') {
+      query = query.where('role', '==', payload.role);
+    }
+
+    const webTokensSnap = await query.get();
+    const webTokens = webTokensSnap.docs.map(doc => doc.data().token).filter(Boolean);
+
+    if (webTokens.length > 0) {
+      for (let i = 0; i < webTokens.length; i += 500) {
+        const tokenChunk = webTokens.slice(i, i + 500);
+        await admin.messaging().sendEachForMulticast({
+          tokens: tokenChunk,
+          data: dataPayload,
+          notification: {
+            title: payload.title,
+            body: payload.body,
+          },
+          fcmOptions: { analyticsLabel: payload.type },
+        });
+      }
+      logger.info(`Successfully dispatched to ${webTokens.length} web clients`);
+    }
+  } catch (error) {
+    logger.error('Failed to dispatch to web clients', { error });
+  }
 }

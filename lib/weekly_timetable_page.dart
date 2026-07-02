@@ -22,10 +22,12 @@ import 'services/timetable_event_service.dart';
 
 class WeeklyTimetablePage extends StatefulWidget {
   final String division;
+  final bool isEditMode;
 
   const WeeklyTimetablePage({
     super.key,
     required this.division,
+    this.isEditMode = false,
   });
 
   @override
@@ -246,13 +248,20 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
               ),
               child: Row(
                 children: [
+                  if (widget.isEditMode)
+                    Padding(
+                      padding: const EdgeInsets.only(right: AppSpacing.md),
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_rounded),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ),
                   Text(
-                    'Timetable',
+                    widget.isEditMode ? 'Select Lecture' : 'Timetable',
                     style: Theme.of(context).appBarTheme.titleTextStyle,
                   ),
                   const Spacer(),
-                  if (AppSettings.currentRole == UserRole.cr ||
-                      AppSettings.currentRole == UserRole.sr)
+                  if (!widget.isEditMode && (AppSettings.currentRole == UserRole.cr || AppSettings.currentRole == UserRole.sr))
                     Container(
                       padding: EdgeInsets.symmetric(
                         horizontal: AppSpacing.md,
@@ -484,7 +493,10 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                                   : isDark
                                       ? sem.surfaceElevated
                                       : colorScheme.surface,
-                              onLongPress: (entries.length == 1 && _canEdit(entries.first))
+                              onTap: (widget.isEditMode && entries.length == 1 && _canEdit(entries.first))
+                                  ? () => _editLecture(entries.first)
+                                  : null,
+                              onLongPress: (!widget.isEditMode && entries.length == 1 && _canEdit(entries.first))
                                   ? () => _editLecture(entries.first)
                                   : null,
                               child: Container(
@@ -653,7 +665,8 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
 
                                       if (entries.length > 1) {
                                         return GestureDetector(
-                                          onLongPress: _canEdit(entry) ? () => _editLecture(entry) : null,
+                                          onTap: (widget.isEditMode && _canEdit(entry)) ? () => _editLecture(entry) : null,
+                                          onLongPress: (!widget.isEditMode && _canEdit(entry)) ? () => _editLecture(entry) : null,
                                           child: Container(
                                             margin: EdgeInsets.only(top: idx == 0 ? 0 : AppSpacing.md),
                                             padding: EdgeInsets.all(AppSpacing.sm),

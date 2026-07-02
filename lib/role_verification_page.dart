@@ -1,6 +1,7 @@
 import '../services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'widgets/animations/floating_empty_state.dart';
@@ -66,6 +67,15 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('selected_division', widget.division); await NotificationService.updateDivisionSubscription(widget.division);
         await AppSettings.saveRole(UserRole.cr);
+
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+            'role': 'CR',
+            'division': widget.division,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+        }
 
         if (!mounted) return;
         Navigator.pushAndRemoveUntil(
@@ -196,6 +206,16 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
       await prefs.setString('selected_division', widget.division); await NotificationService.updateDivisionSubscription(widget.division);
       await AppSettings.saveRole(UserRole.sr);
       await AppSettings.saveSRSection(sectionId: widget.division);
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'role': 'SR',
+          'division': widget.division,
+          'subject': subject,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
       
       // We pass null for component and batch because the SR now manages the entire root subject
       await AppSettings.saveSRDetails(

@@ -15,6 +15,7 @@ import 'create_announcement_page.dart';
 import 'draft_studio_page.dart';
 import 'manual_timetable_studio.dart';
 import 'student_roster_page.dart';
+import 'weekly_timetable_page.dart';
 import 'theme/theme.dart';
 import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/staggered_list_item.dart';
@@ -354,8 +355,8 @@ class _CRPanelPageState extends State<CRPanelPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => ManualTimetableStudio(
-                        division: division, editMode: true),
+                    builder: (_) => WeeklyTimetablePage(
+                        division: division, isEditMode: true),
                   ),
                 );
               },

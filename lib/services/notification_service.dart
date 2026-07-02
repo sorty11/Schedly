@@ -7,12 +7,19 @@ import 'topic_subscription_service.dart';
 
 class NotificationService {
   static final FirebaseMessaging messaging = FirebaseMessaging.instance;
+  static const String webVapidKey = "BKHIetL_dUjNsl40lp2OmV5EU1ebUm9GFhGcHDwH8hFJIVrOuNTx9vwuZQn1fadTFXw9WFUG7wB3_iNdK_Hrt_g";
 
   static Future<void> initialize() async {
     try {
       await messaging.requestPermission();
 
-      final token = await messaging.getToken();
+      String? token;
+      if (kIsWeb) {
+        token = await messaging.getToken(vapidKey: webVapidKey);
+      } else {
+        token = await messaging.getToken();
+      }
+      
       if (token != null) {
         await _saveTokenToFirestore(token);
       }
