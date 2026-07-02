@@ -18,23 +18,116 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Smart Timetable, Attendance & Analytics Platform">
+  <meta name="description" content="Smart Timetable, Attendance &amp; Analytics Platform">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-  <!-- iOS meta tags & icons -->
+  <!-- iOS PWA meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0C0C10">
   <meta name="apple-mobile-web-app-title" content="Schedly">
+
+  <!-- iOS icons (multiple sizes for best quality) -->
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/Icon-512.png">
+
+  <!-- iOS splash screens -->
+  <link rel="apple-touch-startup-image" href="icons/Icon-512.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
   <title>Schedly</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* iOS install banner */
+    #ios-install-banner {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 99999;
+      background: #1A1A2E;
+      border-top: 1px solid rgba(79, 70, 229, 0.4);
+      padding: 14px 16px 28px 16px;
+      font-family: -apple-system, 'Inter', sans-serif;
+      color: #fff;
+      animation: slideUp 0.35s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+    #ios-install-banner .banner-inner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    #ios-install-banner img {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+    }
+    #ios-install-banner .banner-text { flex: 1; }
+    #ios-install-banner .banner-text strong {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+    }
+    #ios-install-banner .banner-text span {
+      font-size: 12px;
+      color: rgba(255,255,255,0.65);
+      line-height: 1.4;
+    }
+    #ios-install-banner .banner-text span b {
+      color: rgba(255,255,255,0.9);
+    }
+    #ios-install-banner .banner-close {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.5);
+      font-size: 22px;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+    }
+    #ios-install-banner .share-icon {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      vertical-align: middle;
+      margin: 0 2px;
+    }
+  </style>
 </head>
 <body>
+  <!-- iOS Add-to-Home-Screen banner -->
+  <div id="ios-install-banner">
+    <div class="banner-inner">
+      <img src="icons/Icon-192.png" alt="Schedly">
+      <div class="banner-text">
+        <strong>Install Schedly for notifications</strong>
+        <span>
+          Tap
+          <svg class="share-icon" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/>
+            <polyline points="16 6 12 2 8 6"/>
+            <line x1="12" y1="2" x2="12" y2="15"/>
+          </svg>
+          then <b>Add to Home Screen</b> to get push notifications.
+        </span>
+      </div>
+      <button class="banner-close" id="ios-banner-close" aria-label="Dismiss">&#x2715;</button>
+    </div>
+  </div>
+
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
@@ -44,5 +137,37 @@
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
   <script src="flutter_bootstrap.js" async></script>
+
+  <script>
+    // ── iOS install banner logic ──────────────────────────────────────────
+    (function() {
+      var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      var isStandalone = window.navigator.standalone === true;
+      var dismissed = sessionStorage.getItem('ios_banner_dismissed');
+
+      if (isIOS && !isStandalone && !dismissed) {
+        // Show banner after app loads
+        window.addEventListener('flutter-first-frame', function() {
+          setTimeout(function() {
+            var banner = document.getElementById('ios-install-banner');
+            if (banner) banner.style.display = 'block';
+          }, 2500);
+        });
+
+        // Also show if flutter-first-frame never fires (older Flutter web)
+        setTimeout(function() {
+          var banner = document.getElementById('ios-install-banner');
+          if (banner && banner.style.display !== 'block') {
+            banner.style.display = 'block';
+          }
+        }, 5000);
+      }
+
+      document.getElementById('ios-banner-close').addEventListener('click', function() {
+        document.getElementById('ios-install-banner').style.display = 'none';
+        sessionStorage.setItem('ios_banner_dismissed', '1');
+      });
+    })();
+  </script>
 </body>
 </html>

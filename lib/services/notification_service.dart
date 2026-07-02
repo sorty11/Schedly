@@ -7,11 +7,28 @@ import 'topic_subscription_service.dart';
 
 class NotificationService {
   static final FirebaseMessaging messaging = FirebaseMessaging.instance;
-  static const String webVapidKey = "BKHIetL_dUjNsl40lp2OmV5EU1ebUm9GFhGcHDwH8hFJIVrOuNTx9vwuZQn1fadTFXw9WFUG7wB3_iNdK_Hrt_g";
+  static const String webVapidKey =
+      "BKHIetL_dUjNsl40lp2OmV5EU1ebUm9GFhGcHDwH8hFJIVrOuNTx9vwuZQn1fadTFXw9WFUG7wB3_iNdK_Hrt_g";
 
   static Future<void> initialize() async {
     try {
-      await messaging.requestPermission();
+      // On web, ensure we have an anonymous Firebase Auth user so we can
+      // persist the FCM token under a stable UID.
+      if (kIsWeb) {
+        await _ensureAnonymousSignIn();
+      }
+
+      final settings = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+
+      if (settings.authorizationStatus == AuthorizationStatus.denied) {
+        debugPrint('NotificationService: Permission denied by user.');
+        return;
+      }
 
       String? token;
       if (kIsWeb) {
@@ -19,12 +36,20 @@ class NotificationService {
       } else {
         token = await messaging.getToken();
       }
-      
+
+      debugPrint('NotificationService: FCM token obtained: ${token != null ? "YES" : "NO"}');
+
       if (token != null) {
         await _saveTokenToFirestore(token);
       }
-      
-      // Topic subscriptions
+
+      // Listen for token refresh
+      messaging.onTokenRefresh.listen((newToken) async {
+        debugPrint('NotificationService: FCM token refreshed');
+        await _saveTokenToFirestore(newToken);
+      });
+
+      // Topic subscriptions (Android/iOS only — web uses direct token dispatch)
       final prefs = await SharedPreferences.getInstance();
       final division = prefs.getString('selected_division');
       final role = prefs.getString('user_role') ?? 'student';
@@ -32,21 +57,36 @@ class NotificationService {
       if (division != null) {
         await TopicSubscriptionService.updateSubscriptions(division, role, batch: batch);
       }
-
     } catch (e) {
-      // FCM is unavailable on this device/emulator (e.g. no Google Play Services).
-      debugPrint('FCM init skipped: $e');
+      debugPrint('NotificationService: Init skipped: $e');
+    }
+  }
+
+  /// Ensures there is a Firebase Auth user (anonymous) on web so we can
+  /// store the FCM token under a stable document ID.
+  static Future<void> _ensureAnonymousSignIn() async {
+    try {
+      if (FirebaseAuth.instance.currentUser == null) {
+        debugPrint('NotificationService: No auth user on web — signing in anonymously');
+        await FirebaseAuth.instance.signInAnonymously();
+      }
+    } catch (e) {
+      debugPrint('NotificationService: Anonymous sign-in failed: $e');
     }
   }
 
   static Future<void> _saveTokenToFirestore(String token) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
-
       final prefs = await SharedPreferences.getInstance();
       final division = prefs.getString('selected_division') ?? 'unknown';
       final role = prefs.getString('user_role') ?? 'student';
+
+      // Prefer authenticated UID; fall back to division-keyed path
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        debugPrint('NotificationService: No auth user, skipping token save');
+        return;
+      }
 
       await FirebaseFirestore.instance
           .collection('users')
@@ -55,28 +95,70 @@ class NotificationService {
           .doc(token)
           .set({
         'token': token,
-        'platform': kIsWeb ? 'web' : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
+        'platform': kIsWeb
+            ? 'web'
+            : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
         'division': division,
         'role': role,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+
+      debugPrint('NotificationService: Token saved to Firestore (uid: ${user.uid}, div: $division)');
     } catch (e) {
-      debugPrint('Failed to save FCM token: $e');
+      debugPrint('NotificationService: Failed to save FCM token: $e');
     }
   }
 
   static Future<void> updateDivisionSubscription(String newDivision) async {
-    final prefs = await SharedPreferences.getInstance();
-    final role = prefs.getString('user_role') ?? 'student';
-    final batch = prefs.getString('selected_batch');
-    await TopicSubscriptionService.updateSubscriptions(newDivision, role, batch: batch);
+    try {
+      // Update token's division field in Firestore
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final role = (await SharedPreferences.getInstance()).getString('user_role') ?? 'student';
+        String? token;
+        if (kIsWeb) {
+          token = await messaging.getToken(vapidKey: webVapidKey);
+        } else {
+          token = await messaging.getToken();
+        }
+        if (token != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('fcm_tokens')
+              .doc(token)
+              .set({
+            'token': token,
+            'platform': kIsWeb
+                ? 'web'
+                : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
+            'division': newDivision,
+            'role': role,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+        }
+      }
+
+      // Android/iOS topic subscriptions
+      final prefs = await SharedPreferences.getInstance();
+      final role = prefs.getString('user_role') ?? 'student';
+      final batch = prefs.getString('selected_batch');
+      await TopicSubscriptionService.updateSubscriptions(newDivision, role, batch: batch);
+    } catch (e) {
+      debugPrint('NotificationService: updateDivisionSubscription failed: $e');
+    }
   }
 
   static Future<void> clearTokenOnLogout() async {
     await TopicSubscriptionService.clearAllSubscriptions();
     try {
-      final String? token = await messaging.getToken();
       final user = FirebaseAuth.instance.currentUser;
+      String? token;
+      if (kIsWeb) {
+        token = await messaging.getToken(vapidKey: webVapidKey);
+      } else {
+        token = await messaging.getToken();
+      }
       if (token != null && user != null) {
         await FirebaseFirestore.instance
             .collection('users')
@@ -85,8 +167,10 @@ class NotificationService {
             .doc(token)
             .delete();
       }
+      // Delete the FCM token itself so this device stops receiving
+      await messaging.deleteToken();
     } catch (e) {
-      debugPrint('Failed to delete token on logout: $e');
+      debugPrint('NotificationService: Failed to clear token on logout: $e');
     }
   }
 }

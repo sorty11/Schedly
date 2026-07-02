@@ -97,20 +97,55 @@ export async function dispatchNotification(payload: NotificationPayload): Promis
     }
 
     const webTokensSnap = await query.get();
-    const webTokens = webTokensSnap.docs.map(doc => doc.data().token).filter(Boolean);
+    let webTokens = webTokensSnap.docs.map(doc => doc.data().token).filter(Boolean);
+
+    // Filter by batch client-side (Firestore doesn't allow multiple != / array filters in one query)
+    if (payload.batch && !payload.role) {
+      const batchSnap = await admin.firestore().collectionGroup('fcm_tokens')
+        .where('platform', '==', 'web')
+        .where('division', '==', payload.division)
+        .where('batch', '==', payload.batch)
+        .get();
+      const batchTokens = batchSnap.docs.map(doc => doc.data().token).filter(Boolean);
+      // Use the union: division-wide tokens OR batch-specific tokens
+      const tokenSet = new Set([...webTokens, ...batchTokens]);
+      webTokens = Array.from(tokenSet);
+    }
 
     if (webTokens.length > 0) {
+      const link = payload.deepLink || '/';
+      const webpushConfig: admin.messaging.WebpushConfig = {
+        notification: {
+          title: payload.title,
+          body: payload.body,
+          icon: '/icons/Icon-192.png',
+          badge: '/icons/Icon-192.png',
+          tag: payload.notificationId || 'schedly-notification',
+          renotify: true,
+          vibrate: [200, 100, 200],
+        },
+        fcmOptions: {
+          link,
+        },
+        data: dataPayload,
+      };
+
       for (let i = 0; i < webTokens.length; i += 500) {
         const tokenChunk = webTokens.slice(i, i + 500);
-        await admin.messaging().sendEachForMulticast({
+        const result = await admin.messaging().sendEachForMulticast({
           tokens: tokenChunk,
           data: dataPayload,
           notification: {
             title: payload.title,
             body: payload.body,
           },
+          webpush: webpushConfig,
           fcmOptions: { analyticsLabel: payload.type },
         });
+        const failures = result.responses.filter(r => !r.success).length;
+        if (failures > 0) {
+          logger.warn(`Web push: ${failures}/${tokenChunk.length} failed`);
+        }
       }
       logger.info(`Successfully dispatched to ${webTokens.length} web clients`);
     }
