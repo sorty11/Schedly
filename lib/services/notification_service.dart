@@ -43,6 +43,20 @@ class NotificationService {
         await _saveTokenToFirestore(token);
       }
 
+      // iOS: show notifications as banners even when app is in foreground
+      await messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      // Listen for foreground messages (all platforms)
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        debugPrint('NotificationService: Foreground message received: ${message.notification?.title}');
+        // The iOS AppDelegate + setForegroundNotificationPresentationOptions
+        // will automatically display the banner. No manual display needed.
+      });
+
       // Listen for token refresh
       messaging.onTokenRefresh.listen((newToken) async {
         debugPrint('NotificationService: FCM token refreshed');
