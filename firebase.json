@@ -3,20 +3,18 @@
     "platforms": {
       "android": {
         "default": {
-          "projectId": "schedly-e625d",
-          "appId": "1:981132399209:android:2c797317ec09ae7f6e88f8",
+          "projectId": "schedly-production",
+          "appId": "1:1044389536762:android:0a81b56a4181437311ba43",
           "fileOutput": "android/app/google-services.json"
         }
       },
       "dart": {
         "lib/firebase_options.dart": {
-          "projectId": "schedly-e625d",
+          "projectId": "schedly-production",
           "configurations": {
-            "android": "1:981132399209:android:2c797317ec09ae7f6e88f8",
-            "ios": "1:981132399209:ios:5d158d5ddd339ece6e88f8",
-            "macos": "1:981132399209:ios:5d158d5ddd339ece6e88f8",
-            "web": "1:981132399209:web:792ac46f48a77e896e88f8",
-            "windows": "1:981132399209:web:33007ab6500c98ee6e88f8"
+            "android": "1:1044389536762:android:0a81b56a4181437311ba43",
+            "web": "1:1044389536762:web:8b8c7ec25645328411ba43",
+            "windows": "1:1044389536762:web:8b8c7ec25645328411ba43"
           }
         }
       }

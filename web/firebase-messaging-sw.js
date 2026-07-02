@@ -2,13 +2,13 @@ importScripts("https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"
 importScripts("https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js");
 
 firebase.initializeApp({
-  apiKey: "AIzaSyCArNp9zrzErkeuwMgG-_wPxlKcWZsyn1g",
-  appId: "1:981132399209:web:792ac46f48a77e896e88f8",
-  messagingSenderId: "981132399209",
-  projectId: "schedly-e625d",
-  authDomain: "schedly-e625d.firebaseapp.com",
-  storageBucket: "schedly-e625d.firebasestorage.app",
-  measurementId: "G-HZQ5GZE5T2"
+  apiKey: "AIzaSyCvHene63scD_yzJiR0HHWHBKTad-n-sSI",
+  appId: "1:1044389536762:web:8b8c7ec25645328411ba43",
+  messagingSenderId: "1044389536762",
+  projectId: "schedly-production",
+  authDomain: "schedly-production.firebaseapp.com",
+  storageBucket: "schedly-production.firebasestorage.app",
+  measurementId: "G-RKCNHWHVX9"
 });
 
 const messaging = firebase.messaging();

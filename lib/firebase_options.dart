@@ -41,48 +41,51 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCArNp9zrzErkeuwMgG-_wPxlKcWZsyn1g',
-    appId: '1:981132399209:web:792ac46f48a77e896e88f8',
-    messagingSenderId: '981132399209',
-    projectId: 'schedly-e625d',
-    authDomain: 'schedly-e625d.firebaseapp.com',
-    storageBucket: 'schedly-e625d.firebasestorage.app',
-    measurementId: 'G-HZQ5GZE5T2',
+    apiKey: 'AIzaSyCvHene63scD_yzJiR0HHWHBKTad-n-sSI',
+    appId: '1:1044389536762:web:8b8c7ec25645328411ba43',
+    messagingSenderId: '1044389536762',
+    projectId: 'schedly-production',
+    authDomain: 'schedly-production.firebaseapp.com',
+    storageBucket: 'schedly-production.firebasestorage.app',
+    measurementId: 'G-RKCNHWHVX9',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDTDHdp4zNYZO_iXQA5TMg48vBhIjYbcYk',
-    appId: '1:981132399209:android:2c797317ec09ae7f6e88f8',
-    messagingSenderId: '981132399209',
-    projectId: 'schedly-e625d',
-    storageBucket: 'schedly-e625d.firebasestorage.app',
+    apiKey: 'AIzaSyBYKdbBnmvB5Bl5_f-KHNyGPbm7n-bxBgU',
+    appId: '1:1044389536762:android:0a81b56a4181437311ba43',
+    messagingSenderId: '1044389536762',
+    projectId: 'schedly-production',
+    storageBucket: 'schedly-production.firebasestorage.app',
   );
 
+  // NOTE: iOS app is not yet registered in schedly-production.
+  // Register it at console.firebase.google.com → schedly-production → Add app → iOS
+  // Then download GoogleService-Info.plist and replace these placeholder values.
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBYNBgYXS0maUTFpsx9YlbZwbihnbkRrOw',
-    appId: '1:981132399209:ios:5d158d5ddd339ece6e88f8',
-    messagingSenderId: '981132399209',
-    projectId: 'schedly-e625d',
-    storageBucket: 'schedly-e625d.firebasestorage.app',
+    apiKey: 'AIzaSyCvHene63scD_yzJiR0HHWHBKTad-n-sSI', // placeholder: use iOS-specific key after registering
+    appId: '1:1044389536762:ios:REPLACE_WITH_REAL_IOS_APP_ID',
+    messagingSenderId: '1044389536762',
+    projectId: 'schedly-production',
+    storageBucket: 'schedly-production.firebasestorage.app',
     iosBundleId: 'com.example.schedly',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyBYNBgYXS0maUTFpsx9YlbZwbihnbkRrOw',
-    appId: '1:981132399209:ios:5d158d5ddd339ece6e88f8',
-    messagingSenderId: '981132399209',
-    projectId: 'schedly-e625d',
-    storageBucket: 'schedly-e625d.firebasestorage.app',
+    apiKey: 'AIzaSyCvHene63scD_yzJiR0HHWHBKTad-n-sSI',
+    appId: '1:1044389536762:ios:REPLACE_WITH_REAL_IOS_APP_ID',
+    messagingSenderId: '1044389536762',
+    projectId: 'schedly-production',
+    storageBucket: 'schedly-production.firebasestorage.app',
     iosBundleId: 'com.example.schedly',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCArNp9zrzErkeuwMgG-_wPxlKcWZsyn1g',
-    appId: '1:981132399209:web:33007ab6500c98ee6e88f8',
-    messagingSenderId: '981132399209',
-    projectId: 'schedly-e625d',
-    authDomain: 'schedly-e625d.firebaseapp.com',
-    storageBucket: 'schedly-e625d.firebasestorage.app',
-    measurementId: 'G-7C37E0BB8S',
+    apiKey: 'AIzaSyCvHene63scD_yzJiR0HHWHBKTad-n-sSI',
+    appId: '1:1044389536762:web:8b8c7ec25645328411ba43',
+    messagingSenderId: '1044389536762',
+    projectId: 'schedly-production',
+    authDomain: 'schedly-production.firebaseapp.com',
+    storageBucket: 'schedly-production.firebasestorage.app',
+    measurementId: 'G-RKCNHWHVX9',
   );
 }
