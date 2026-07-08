@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'services/notification_service.dart';
 
 import 'app_settings.dart';
 import 'user_roles.dart';
@@ -526,6 +529,29 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
               ]),
             ),
+
+            // ── App Settings (Web Only for Notifications) ─────────────────
+            if (kIsWeb) ...[
+              _sectionHeader('App Settings'),
+              StaggeredListItem(
+                index: 3,
+                child: _buildTileGroup([
+                  _buildRoleTile(
+                    icon: Icons.notifications_active_outlined,
+                    title: 'Push Notifications',
+                    subtitle: 'Tap to enable notifications on this device',
+                    iconColor: semanticColors.accent,
+                    onTap: () async {
+                      await NotificationService.promptWebPermission();
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Notification settings updated')),
+                      );
+                    },
+                  ),
+                ]),
+              ),
+            ],
 
             // ── Help & Tutorials ──────────────────────────────────────────
             _sectionHeader('Help & Tutorials'),

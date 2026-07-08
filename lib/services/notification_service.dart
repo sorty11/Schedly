@@ -18,15 +18,22 @@ class NotificationService {
         await _ensureAnonymousSignIn();
       }
 
-      final settings = await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-        provisional: false,
-      );
+      NotificationSettings? settings;
+      if (!kIsWeb) {
+        settings = await messaging.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+          provisional: false,
+        );
+      } else {
+        // On web, we check existing status. We DO NOT request on startup,
+        // because browsers auto-deny if not in a user gesture.
+        settings = await messaging.getNotificationSettings();
+      }
 
-      if (settings.authorizationStatus == AuthorizationStatus.denied) {
-        debugPrint('NotificationService: Permission denied by user.');
+      if (settings.authorizationStatus != AuthorizationStatus.authorized) {
+        debugPrint('NotificationService: Permission not granted yet or denied.');
         return;
       }
 
@@ -76,6 +83,27 @@ class NotificationService {
     }
   }
 
+  static Future<void> promptWebPermission() async {
+    if (!kIsWeb) return;
+    try {
+      await _ensureAnonymousSignIn();
+      final settings = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        final token = await messaging.getToken(vapidKey: webVapidKey);
+        if (token != null) {
+          await _saveTokenToFirestore(token);
+        }
+      }
+    } catch (e) {
+      debugPrint('NotificationService: promptWebPermission failed: $e');
+    }
+  }
+
   /// Ensures there is a Firebase Auth user (anonymous) on web so we can
   /// store the FCM token under a stable document ID.
   static Future<void> _ensureAnonymousSignIn() async {
@@ -94,6 +122,7 @@ class NotificationService {
       final prefs = await SharedPreferences.getInstance();
       final division = prefs.getString('selected_division') ?? 'unknown';
       final role = prefs.getString('user_role') ?? 'student';
+      final batch = prefs.getString('selected_batch') ?? '';
 
       // Prefer authenticated UID; fall back to division-keyed path
       final user = FirebaseAuth.instance.currentUser;
@@ -114,6 +143,7 @@ class NotificationService {
             : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
         'division': division,
         'role': role,
+        'batch': batch,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
@@ -148,6 +178,7 @@ class NotificationService {
                 : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
             'division': newDivision,
             'role': role,
+            'batch': (await SharedPreferences.getInstance()).getString('selected_batch') ?? '',
             'updatedAt': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
         }

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.worker = void 0;
+exports.tokenWorker = exports.worker = void 0;
 const express_1 = __importDefault(require("express"));
 const helmet_1 = __importDefault(require("helmet"));
 const cors_1 = __importDefault(require("cors"));
@@ -12,6 +12,7 @@ const morgan_1 = __importDefault(require("morgan"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const logger_1 = require("./utils/logger");
 const outbox_worker_1 = require("./worker/outbox.worker");
+const token_worker_1 = require("./worker/token.worker");
 const env_config_1 = require("./config/env.config");
 const api_v1_routes_1 = __importDefault(require("./routes/api.v1.routes"));
 dotenv_1.default.config();
@@ -23,6 +24,7 @@ app.use((0, compression_1.default)());
 app.use(express_1.default.json());
 app.use((0, morgan_1.default)('combined', { stream: { write: message => logger_1.logger.info(message.trim()) } }));
 exports.worker = new outbox_worker_1.OutboxWorker();
+exports.tokenWorker = new token_worker_1.TokenWorker();
 app.get('/', (req, res) => {
     res.json({
         service: "Schedly Notification API",
@@ -42,6 +44,7 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Internal Server Error' });
 });
 exports.worker.start();
+exports.tokenWorker.start();
 app.listen(env_config_1.AppConfig.PORT, () => {
     logger_1.logger.info(JSON.stringify({
         event: 'server_start',

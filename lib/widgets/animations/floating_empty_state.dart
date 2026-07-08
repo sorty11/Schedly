@@ -92,6 +92,13 @@ class _FloatingEmptyStateState extends State<FloatingEmptyState>
                       color: semanticColors.borderSubtle,
                       width: 1.5,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: colorScheme.primary.withValues(alpha: 0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
                   child: Icon(
                     widget.icon,

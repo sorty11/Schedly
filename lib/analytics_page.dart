@@ -16,6 +16,9 @@ import 'onboarding/services/onboarding_service.dart';
 import 'onboarding/widgets/tutorial_target.dart';
 import 'models/subject_metadata.dart';
 import 'services/subject_metadata_service.dart';
+import 'attendance_page.dart';
+import 'services/attendance_service.dart';
+import 'models/attendance_record.dart';
 
 class AnalyticsPage extends StatefulWidget {
   final String division;
@@ -122,6 +125,28 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                         'Semester Progress',
                         style: Theme.of(context).appBarTheme.titleTextStyle,
                       ),
+                      actions: [
+                        if (AppSettings.currentRole != UserRole.sr)
+                          Padding(
+                            padding: const EdgeInsets.only(right: AppSpacing.lg),
+                            child: TextButton.icon(
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => AttendancePage(
+                                    division: widget.division,
+                                    allAnalytics: analytics,
+                                  ),
+                                ),
+                              ),
+                              icon: const Icon(Icons.fact_check_outlined, size: 18),
+                              label: Text('Attendance',
+                                  style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700)),
+                            ),
+                          ),
+                      ],
                     ),
 
                     if (isLoading) ...[
@@ -732,6 +757,12 @@ class _SubjectProgressCard extends StatelessWidget {
 
               const SizedBox(height: AppSpacing.lg),
 
+              // Attendance indicator (students only)
+              if (AppSettings.currentRole == UserRole.student)
+                _AttendanceMiniRow(subject: subject.subject),
+
+              const SizedBox(height: AppSpacing.lg),
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -918,5 +949,79 @@ class _StackedBarPainter extends CustomPainter {
     return oldDelegate.completed != completed ||
         oldDelegate.cancelled != cancelled ||
         oldDelegate.pending != pending;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+/// Inline attendance % badge shown on each subject card for student role.
+class _AttendanceMiniRow extends StatelessWidget {
+  final String subject;
+
+  const _AttendanceMiniRow({super.key, required this.subject});
+
+  @override
+  Widget build(BuildContext context) {
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
+    final division = AppSettings.sectionId ?? AppSettings.division ?? '';
+
+    return StreamBuilder(
+      stream: AttendanceService.streamRecord(division, subject, 'Theory'),
+      builder: (context, snap) {
+        final record = snap.data;
+        if (record == null || record.total == 0) {
+          return Row(
+            children: [
+              Icon(Icons.fact_check_outlined, size: 13, color: sem.onSurfaceMuted),
+              const SizedBox(width: 5),
+              Text(
+                'No attendance marked',
+                style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: sem.onSurfaceMuted,
+                    fontWeight: FontWeight.w500),
+              ),
+            ],
+          );
+        }
+        final pct = record.percentage;
+        final color = pct >= 0.75
+            ? sem.conducted
+            : pct >= 0.65
+                ? sem.warning
+                : sem.cancelled;
+        return Row(
+          children: [
+            Icon(Icons.fact_check_rounded, size: 13, color: color),
+            const SizedBox(width: 5),
+            Text(
+              'Attendance: ${(pct * 100).round()}%  (${record.present}/${record.total})',
+              style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: color,
+                  fontWeight: FontWeight.w700),
+            ),
+            if (pct < 0.75) ...[
+              const SizedBox(width: AppSpacing.sm),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppRadius.full),
+                ),
+                child: Text(
+                  pct >= 0.65
+                      ? 'Miss ${record.canMiss} max'
+                      : 'Need ${record.needToAttend}',
+                  style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: color),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
   }
 }
