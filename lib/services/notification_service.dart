@@ -38,10 +38,14 @@ class NotificationService {
       }
 
       String? token;
-      if (kIsWeb) {
-        token = await messaging.getToken(vapidKey: webVapidKey);
-      } else {
-        token = await messaging.getToken();
+      try {
+        if (kIsWeb) {
+          token = await messaging.getToken(vapidKey: webVapidKey);
+        } else {
+          token = await messaging.getToken();
+        }
+      } catch (e) {
+        debugPrint('NotificationService: Failed to get FCM token. This is normal if the browser (like Brave) blocks push services: $e');
       }
 
       debugPrint('NotificationService: FCM token obtained: ${token != null ? "YES" : "NO"}');

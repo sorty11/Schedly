@@ -53,8 +53,8 @@ Future<void> main() async {
     await Firebase.initializeApp();
   }
 
-  FirebaseFirestore.instance.settings = const Settings(
-    persistenceEnabled: true,
+  FirebaseFirestore.instance.settings = Settings(
+    persistenceEnabled: !kIsWeb, // Disabled on Web to prevent BloomFilter crashes
     cacheSizeBytes: 104857600, // 100 MB
   );
 

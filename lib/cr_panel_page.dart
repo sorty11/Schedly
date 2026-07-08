@@ -341,7 +341,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
 
             _buildActionCard(
               staggerIndex: 2,
-              targetId: 'manage_lectures_btn',
+              targetId: 'edit_lecture_btn',
               icon: Icons.edit_calendar_rounded,
               title: 'Edit Lectures',
               subtitle: isCR
@@ -364,6 +364,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
 
             _buildActionCard(
               staggerIndex: 3,
+              targetId: 'replace_lecture_btn',
               icon: Icons.add_circle_outline_rounded,
               title: 'Add Lecture',
               subtitle: isCR
@@ -437,6 +438,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
 
               _buildActionCard(
                 staggerIndex: 9,
+                targetId: 'cancel_lecture_btn',
                 icon: Icons.delete_outline_rounded,
                 title: 'Delete Lecture',
                 subtitle: 'Remove a scheduled lecture',

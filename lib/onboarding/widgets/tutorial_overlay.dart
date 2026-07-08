@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'dart:ui';
 import '../services/tutorial_controller.dart';
 import 'tutorial_target.dart';
@@ -46,22 +47,42 @@ class _TutorialOverlayWidget extends StatefulWidget {
   State<_TutorialOverlayWidget> createState() => _TutorialOverlayWidgetState();
 }
 
-class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget> {
+class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget> with SingleTickerProviderStateMixin {
   final TutorialController _controller = TutorialController.instance;
   
   Rect? _currentTargetBounds;
   Rect? _previousTargetBounds;
+  Ticker? _ticker;
   
   @override
   void initState() {
     super.initState();
     _controller.addListener(_onControllerUpdate);
+    _ticker = createTicker(_onTick)..start();
   }
 
   @override
   void dispose() {
+    _ticker?.dispose();
     _controller.removeListener(_onControllerUpdate);
     super.dispose();
+  }
+
+  void _onTick(Duration elapsed) {
+    if (!_controller.isVisible) return;
+    
+    final step = _controller.currentStep;
+    if (step != null) {
+      final bounds = TargetRegistry.instance.getBounds(step.targetId);
+      if (bounds != null && bounds != _currentTargetBounds) {
+        if (mounted) {
+          setState(() {
+            _previousTargetBounds = _currentTargetBounds ?? bounds;
+            _currentTargetBounds = bounds;
+          });
+        }
+      }
+    }
   }
 
   void _onControllerUpdate() {
@@ -74,20 +95,22 @@ class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget> {
     if (step != null) {
       final bounds = TargetRegistry.instance.getBounds(step.targetId);
       if (bounds != null && bounds != _currentTargetBounds) {
-        setState(() {
-          _previousTargetBounds = _currentTargetBounds ?? bounds;
-          _currentTargetBounds = bounds;
-        });
+        if (mounted) {
+          setState(() {
+            _previousTargetBounds = _currentTargetBounds ?? bounds;
+            _currentTargetBounds = bounds;
+          });
+        }
       } else if (bounds == null) {
         // Target is missing, state is likely waitingForTarget.
         // We do NOT clear _currentTargetBounds. We keep the previous bounds 
         // to prevent the overlay from unmounting or jumping to an error state.
-        setState(() {});
+        if (mounted) setState(() {});
       } else {
-        setState(() {});
+        if (mounted) setState(() {});
       }
     } else {
-      setState(() {});
+      if (mounted) setState(() {});
     }
   }
 

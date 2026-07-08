@@ -127,12 +127,11 @@ class TutorialTooltip extends StatelessWidget {
                       Padding(
                         padding: EdgeInsets.only(bottom: AppSpacing.sm),
                         child: Text(
-                          _buildProgressBar(controller.currentStepIndex + 1, controller.activeTour?.steps.length ?? 1),
+                          'Step ${controller.currentStepIndex + 1} of ${controller.activeTour?.steps.length ?? 1}',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: Theme.of(context).colorScheme.primary,
-                            letterSpacing: 2.0,
                           ),
                         ),
                       ),
@@ -143,6 +142,14 @@ class TutorialTooltip extends StatelessWidget {
                           spacing: 8,
                           runSpacing: 8,
                           children: [
+                            if (controller.currentStepIndex > 0)
+                              TextButton(
+                                onPressed: () => controller.previousStep(),
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                                ),
+                                child: Text('Previous', style: GoogleFonts.inter(fontSize: 13)),
+                              ),
                             TextButton(
                               onPressed: () => controller.skipTour(),
                               style: TextButton.styleFrom(
@@ -207,13 +214,4 @@ class TutorialTooltip extends StatelessWidget {
     );
   }
 
-  String _buildProgressBar(int current, int total) {
-    if (total <= 0) return '';
-    final progress = current / total;
-    final filledBars = (progress * 4).round().clamp(0, 4);
-    final emptyBars = 4 - filledBars;
-    final filledStr = '█' * filledBars;
-    final emptyStr = '░' * emptyBars;
-    return '$filledStr$emptyStr';
-  }
 }

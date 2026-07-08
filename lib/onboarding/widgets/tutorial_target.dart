@@ -26,15 +26,14 @@ class TargetRegistry extends ChangeNotifier {
   
   Rect? getBounds(String id) {
     final key = _targets[id];
-    if (key == null || key.currentContext == null) return null;
+    if (key == null || key.currentContext == null || !key.currentContext!.mounted) return null;
     
-    final renderBox = key.currentContext!.findRenderObject() as RenderBox?;
-    if (renderBox == null) return null;
+    final renderObject = key.currentContext!.findRenderObject();
+    if (renderObject is! RenderBox || !renderObject.attached) return null;
+    if (!renderObject.hasSize) return null;
     
-    if (!renderBox.hasSize) return null;
-    
-    final position = renderBox.localToGlobal(Offset.zero);
-    return position & renderBox.size;
+    final position = renderObject.localToGlobal(Offset.zero);
+    return position & renderObject.size;
   }
 }
 

@@ -560,7 +560,7 @@ class _ProfilePageState extends State<ProfilePage> {
               child: _buildTileGroup([
                 _buildRoleTile(
                   icon: Icons.help_outline_rounded,
-                  title: 'Restart Tutorial Tour',
+                  title: 'Replay Tutorial',
                   subtitle: 'Replay the interactive guide',
                   iconColor: semanticColors.accent,
                   onTap: () async {

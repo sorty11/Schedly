@@ -136,6 +136,15 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <!-- Force explicitly register the Firebase Service Worker before Flutter's caching SW takes over -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      });
+    }
+  </script>
+
   <script src="flutter_bootstrap.js" async></script>
 
   <script>

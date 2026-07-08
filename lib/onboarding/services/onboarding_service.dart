@@ -85,6 +85,11 @@ class OnboardingService {
           requireInteraction: true,
         ),
         TutorialStep(
+          targetId: 'announcements_tab',
+          title: 'Notifications',
+          description: 'Check for important updates and announcements.',
+        ),
+        TutorialStep(
           targetId: 'analytics_tab',
           title: 'Semester Analytics',
           description: 'Keep track of how many lectures are completed or pending.',
@@ -107,7 +112,7 @@ class OnboardingService {
         TutorialStep(
           targetId: 'dashboard_tab',
           title: 'SR Dashboard',
-          description: 'As an SR, your dashboard highlights lectures waiting for your verification.',
+          description: 'Your dashboard highlights lectures waiting for your verification.',
           ccMessage: 'You have special permissions now.',
         ),
         TutorialStep(
@@ -115,6 +120,21 @@ class OnboardingService {
           title: 'Conduct Dashboard',
           description: 'Tap here to manage all lectures for your assigned subject.',
           requireInteraction: true,
+        ),
+        TutorialStep(
+          targetId: 'verify_lecture_btn',
+          title: 'Verify Lectures',
+          description: 'Easily verify lectures to maintain accurate records.',
+        ),
+        TutorialStep(
+          targetId: 'analytics_tab',
+          title: 'Analytics',
+          description: 'Monitor overall attendance and subject completion.',
+        ),
+        TutorialStep(
+          targetId: 'announcements_tab',
+          title: 'Notifications',
+          description: 'Get alerted instantly when CRs assign you to a lecture.',
         ),
       ],
     );
@@ -126,6 +146,16 @@ class OnboardingService {
       name: 'Class Representative Guide',
       steps: [
         TutorialStep(
+          targetId: 'dashboard_tab',
+          title: 'CR Dashboard',
+          description: 'Welcome to your enhanced dashboard.',
+        ),
+        TutorialStep(
+          targetId: 'timetable_tab',
+          title: 'Timetable',
+          description: 'View the schedule to find slots that need modifications.',
+        ),
+        TutorialStep(
           targetId: 'cr_panel_btn',
           title: 'CR Control Panel',
           description: 'Tap here to access your powerful class management tools.',
@@ -133,19 +163,29 @@ class OnboardingService {
           requireInteraction: true,
         ),
         TutorialStep(
-          targetId: 'import_timetable_btn',
-          title: 'Import Timetable',
-          description: 'Upload the official PDF to automatically generate the schedule for everyone.',
+          targetId: 'edit_lecture_btn',
+          title: 'Edit Lectures',
+          description: 'Modify timings, faculty, or rooms for an existing lecture.',
         ),
         TutorialStep(
-          targetId: 'manage_lectures_btn',
-          title: 'Manage Lectures',
-          description: 'Add, edit, or delete specific lectures if the schedule changes.',
+          targetId: 'replace_lecture_btn',
+          title: 'Replace Lectures',
+          description: 'Swap a cancelled lecture with a different subject.',
         ),
         TutorialStep(
-          targetId: 'create_announcement_btn',
-          title: 'Announcements',
-          description: 'Broadcast messages to your entire section instantly.',
+          targetId: 'cancel_lecture_btn',
+          title: 'Cancel Lectures',
+          description: 'Remove a lecture from the schedule for everyone.',
+        ),
+        TutorialStep(
+          targetId: 'announcements_tab',
+          title: 'Notifications',
+          description: 'Receive updates when SRs verify the lectures you modified.',
+        ),
+        TutorialStep(
+          targetId: 'analytics_tab',
+          title: 'Analytics',
+          description: 'Ensure your section is hitting the required academic targets.',
         ),
       ],
     );
