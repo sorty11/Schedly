@@ -60,6 +60,7 @@ class TopicSubscriptionService {
     }
 
     if (oldTopic != newTopic) {
+      debugPrint('TopicSubscriptionService: Subscribing to division topic: $newTopic');
       await subscribeToDivision(newTopic);
       await prefs.setString('current_fcm_topic', newTopic);
     }
@@ -76,6 +77,7 @@ class TopicSubscriptionService {
 
     if (role != 'student') {
       final newRoleTopic = 'role_${role}_${sanitizeTopic(division)}';
+      debugPrint('TopicSubscriptionService: Subscribing to role topic: $newRoleTopic');
       await subscribeRole(newRoleTopic);
       await prefs.setString('current_fcm_role_topic', newRoleTopic);
     }
@@ -91,6 +93,7 @@ class TopicSubscriptionService {
     }
 
     if (oldBatchTopic != newBatchTopic) {
+      debugPrint('TopicSubscriptionService: Subscribing to batch topic: $newBatchTopic');
       await subscribeBatch(newBatchTopic);
       await prefs.setString('current_fcm_batch_topic', newBatchTopic);
     }

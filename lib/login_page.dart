@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import 'home_page.dart';
 import 'cr_auth_bottom_sheet.dart';
+import 'faculty/faculty_auth_bottom_sheet.dart';
 import 'nmims_structure.dart';
 import 'app_settings.dart';
 import 'user_roles.dart';
@@ -678,6 +679,114 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                   Icons.arrow_forward_ios_rounded,
                                   size: 14,
                                   color: colorScheme.secondary.withValues(alpha: 0.6),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ── Faculty Portal card ─────────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.x2l,
+                      AppSpacing.sm,
+                      AppSpacing.x2l,
+                      AppSpacing.x4l,
+                    ),
+                    child: StaggeredListItem(
+                      index: 5,
+                      child: GestureDetector(
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (_) => const FacultyAuthBottomSheet(),
+                          );
+                        },
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: Container(
+                            padding: EdgeInsets.all(AppSpacing.xl),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(AppRadius.xl),
+                              border: Border.all(
+                                color: colorScheme.primary.withValues(alpha: 0.3),
+                                width: 1.5,
+                              ),
+                              gradient: LinearGradient(
+                                colors: [
+                                  colorScheme.primary.withValues(alpha: 0.06),
+                                  colorScheme.secondary.withValues(alpha: 0.03),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(AppSpacing.md),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        colorScheme.primary,
+                                        colorScheme.secondary,
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius:
+                                        BorderRadius.circular(AppRadius.md),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: colorScheme.primary
+                                            .withValues(alpha: 0.3),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.school_rounded,
+                                    color: Colors.white,
+                                    size: 22,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.lg),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Faculty Portal',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                          color: colorScheme.primary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        'View schedules and manage your classes',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          color: sem.onSurfaceMuted,
+                                          height: 1.3,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  size: 14,
+                                  color: colorScheme.primary.withValues(alpha: 0.6),
                                 ),
                               ],
                             ),

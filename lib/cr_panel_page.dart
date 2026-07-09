@@ -24,6 +24,8 @@ import 'widgets/app_dialogs.dart';
 import 'onboarding/widgets/tutorial_target.dart';
 import 'services/subject_metadata_service.dart';
 import 'course_details_setup_page.dart';
+import 'cr/cr_faculty_requests_page.dart';
+import 'cr/cr_faculty_view_page.dart';
 
 class CRPanelPage extends StatefulWidget {
   const CRPanelPage({super.key});
@@ -423,6 +425,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
                 title: 'Class Roster',
                 subtitle: 'View and manage registered students',
                 color: semanticColors.pending,
+                targetId: 'student_roster_btn',
                 onTap: () async {
                   final prefs = await SharedPreferences.getInstance();
                   final division = prefs.getString('selected_division');
@@ -438,6 +441,46 @@ class _CRPanelPageState extends State<CRPanelPage> {
 
               _buildActionCard(
                 staggerIndex: 9,
+                icon: Icons.school_rounded,
+                title: 'Faculty Roster',
+                subtitle: 'View assigned faculty and subjects',
+                targetId: 'faculty_roster_btn',
+                color: semanticColors.pending,
+                onTap: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  final division = prefs.getString('selected_division');
+                  if (!context.mounted || division == null) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CRFacultyViewPage(division: division),
+                    ),
+                  );
+                },
+              ),
+
+              _buildActionCard(
+                staggerIndex: 10,
+                icon: Icons.hourglass_empty_rounded,
+                title: 'Pending Faculty Requests',
+                subtitle: 'Approve or deny lecture changes',
+                targetId: 'faculty_requests_btn',
+                color: semanticColors.pending,
+                onTap: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  final division = prefs.getString('selected_division');
+                  if (!context.mounted || division == null) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CRFacultyRequestsPage(division: division),
+                    ),
+                  );
+                },
+              ),
+
+              _buildActionCard(
+                staggerIndex: 11,
                 targetId: 'cancel_lecture_btn',
                 icon: Icons.delete_outline_rounded,
                 title: 'Delete Lecture',
@@ -454,7 +497,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
               ),
 
               _buildActionCard(
-                staggerIndex: 10,
+                staggerIndex: 12,
                 icon: Icons.delete_forever_rounded,
                 title: 'Delete Timetable',
                 subtitle: 'Permanently remove the entire published timetable',

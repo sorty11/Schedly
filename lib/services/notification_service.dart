@@ -4,13 +4,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'topic_subscription_service.dart';
+import 'local_notification_service.dart';
 
 class NotificationService {
   static final FirebaseMessaging messaging = FirebaseMessaging.instance;
   static const String webVapidKey =
       "BKHIetL_dUjNsl40lp2OmV5EU1ebUm9GFhGcHDwH8hFJIVrOuNTx9vwuZQn1fadTFXw9WFUG7wB3_iNdK_Hrt_g";
 
+  static bool _initialized = false;
+
   static Future<void> initialize() async {
+    if (_initialized) return;
+    _initialized = true;
+
     try {
       // On web, ensure we have an anonymous Firebase Auth user so we can
       // persist the FCM token under a stable UID.
@@ -63,9 +69,19 @@ class NotificationService {
 
       // Listen for foreground messages (all platforms)
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        debugPrint('NotificationService: Foreground message received: ${message.notification?.title}');
-        // The iOS AppDelegate + setForegroundNotificationPresentationOptions
-        // will automatically display the banner. No manual display needed.
+        final title = message.notification?.title ?? message.data['title'] ?? 'Schedly';
+        final body = message.notification?.body ?? message.data['body'] ?? '';
+        final link = message.data['deepLink'] ?? '/';
+
+        debugPrint('NotificationService: Foreground message received: $title (link: $link)');
+        
+        if (defaultTargetPlatform == TargetPlatform.android) {
+          LocalNotificationService.showNotification(
+            title: title,
+            body: body,
+            payload: link,
+          );
+        }
       });
 
       // Listen for token refresh
@@ -134,6 +150,8 @@ class NotificationService {
         debugPrint('NotificationService: No auth user, skipping token save');
         return;
       }
+      
+      final String finalDivision = role == 'faculty' ? user.uid : division;
 
       await FirebaseFirestore.instance
           .collection('users')
@@ -145,7 +163,7 @@ class NotificationService {
         'platform': kIsWeb
             ? 'web'
             : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
-        'division': division,
+        'division': finalDivision,
         'role': role,
         'batch': batch,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -170,6 +188,7 @@ class NotificationService {
           token = await messaging.getToken();
         }
         if (token != null) {
+          final String finalDivision = role == 'faculty' ? user.uid : newDivision;
           await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
@@ -180,7 +199,7 @@ class NotificationService {
             'platform': kIsWeb
                 ? 'web'
                 : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
-            'division': newDivision,
+            'division': finalDivision,
             'role': role,
             'batch': (await SharedPreferences.getInstance()).getString('selected_batch') ?? '',
             'updatedAt': FieldValue.serverTimestamp(),

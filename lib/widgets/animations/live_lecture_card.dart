@@ -10,6 +10,8 @@ class LiveLectureCard extends StatefulWidget {
   final String subject;
   final String time;
   final String room;
+  final String? facultyName;
+  final VoidCallback? onFacultyTap;
   final VoidCallback? onTap;
 
   const LiveLectureCard({
@@ -17,6 +19,8 @@ class LiveLectureCard extends StatefulWidget {
     required this.subject,
     required this.time,
     required this.room,
+    this.facultyName,
+    this.onFacultyTap,
     this.onTap,
   });
 
@@ -259,18 +263,28 @@ class _LiveLectureCardState extends State<LiveLectureCard>
 
                           const SizedBox(height: AppSpacing.md),
 
-                          // Time + Room
-                          Row(
+                          // Time + Room + Faculty
+                          Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.sm,
                             children: [
                               _buildInfoChip(
                                 Icons.access_time_rounded,
                                 widget.time,
                               ),
-                              const SizedBox(width: AppSpacing.sm),
                               _buildInfoChip(
                                 Icons.room_rounded,
                                 'Room ${widget.room}',
                               ),
+                              if (widget.facultyName != null && widget.facultyName!.isNotEmpty)
+                                GestureDetector(
+                                  onTap: widget.onFacultyTap,
+                                  child: _buildInfoChip(
+                                    Icons.person_rounded,
+                                    widget.facultyName!,
+                                    highlight: true,
+                                  ),
+                                ),
                             ],
                           ),
 
@@ -338,15 +352,16 @@ class _LiveLectureCardState extends State<LiveLectureCard>
     );
   }
 
-  Widget _buildInfoChip(IconData icon, String label) {
+  Widget _buildInfoChip(IconData icon, String label, {bool highlight = false}) {
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm - 2,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
+        color: highlight ? Colors.white.withValues(alpha: 0.25) : Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(AppRadius.full),
+        border: highlight ? Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1) : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -359,6 +374,8 @@ class _LiveLectureCardState extends State<LiveLectureCard>
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: Colors.white,
+              decoration: highlight ? TextDecoration.underline : null,
+              decorationColor: Colors.white.withValues(alpha: 0.5),
             ),
           ),
         ],

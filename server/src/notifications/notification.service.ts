@@ -7,6 +7,9 @@ export function sanitizeTopic(topic: string): string {
 }
 
 export function getTargetTopic(division: string, batch?: string, role?: string): string {
+  if (role === 'faculty') {
+    return `faculty_${sanitizeTopic(division)}`;
+  }
   if (role && role !== 'student') {
     return `role_${role}_${sanitizeTopic(division)}`;
   }
@@ -102,6 +105,8 @@ export async function dispatchNotification(payload: NotificationPayload): Promis
     },
     fcmOptions: { analyticsLabel: payload.type },
   };
+
+  logger.info(`[FCM] Sending payload to topic ${topic}: ${JSON.stringify(message)}`);
 
   try {
     await admin.messaging().send(message);

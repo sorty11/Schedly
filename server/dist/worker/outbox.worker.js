@@ -42,6 +42,7 @@ class OutboxWorker {
     _isRunning = false;
     isProcessing = false;
     timer = null;
+    remindersTimer = null;
     currentPollMs = env_config_1.WorkerConfig.IDLE_INTERVAL_MS;
     // Stats
     stats = {
@@ -91,12 +92,17 @@ class OutboxWorker {
             timestamp: new Date().toISOString()
         }));
         this.scheduleNext(0);
+        this.scheduleRemindersScan(0);
     }
     stop() {
         this._isRunning = false;
         if (this.timer) {
             clearTimeout(this.timer);
             this.timer = null;
+        }
+        if (this.remindersTimer) {
+            clearTimeout(this.remindersTimer);
+            this.remindersTimer = null;
         }
         logger_1.logger.info(JSON.stringify({
             event: 'worker_stopped',
@@ -108,6 +114,57 @@ class OutboxWorker {
         if (!this._isRunning)
             return;
         this.timer = setTimeout(() => this.processOutbox(), delayMs);
+    }
+    scheduleRemindersScan(delayMs) {
+        if (!this._isRunning)
+            return;
+        this.remindersTimer = setTimeout(() => this.processFacultyReminders(), delayMs);
+    }
+    async processFacultyReminders() {
+        try {
+            const db = admin.firestore();
+            // Look for due reminders
+            const snapshot = await db.collection('faculty_reminders')
+                .where('sendAt', '<=', admin.firestore.Timestamp.now())
+                .limit(50)
+                .get();
+            if (!snapshot.empty) {
+                const batch = db.batch();
+                for (const doc of snapshot.docs) {
+                    const data = doc.data();
+                    const uid = data.uid;
+                    if (!uid) {
+                        batch.delete(doc.ref);
+                        continue;
+                    }
+                    // Create standard outbox entry for delivery
+                    const outboxRef = db.collection('notification_outbox').doc();
+                    batch.set(outboxRef, {
+                        type: 'faculty_reminder',
+                        title: data.title || '📚 Upcoming Class',
+                        body: data.body || '',
+                        deepLink: 'faculty_dashboard',
+                        division: uid,
+                        role: 'faculty',
+                        uid: uid,
+                        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                        processed: false,
+                        attempts: 0,
+                        nextRetryAt: admin.firestore.FieldValue.serverTimestamp() // Process immediately
+                    });
+                    // Delete the reminder now that it's queued
+                    batch.delete(doc.ref);
+                }
+                await batch.commit();
+                logger_1.logger.info(`Transferred ${snapshot.size} due faculty reminders to outbox.`);
+            }
+        }
+        catch (error) {
+            logger_1.logger.error('Error processing faculty reminders', { error });
+        }
+        finally {
+            this.scheduleRemindersScan(15000); // Check every 15 seconds
+        }
     }
     async processOutbox() {
         if (this.isProcessing) {
@@ -171,7 +228,7 @@ class OutboxWorker {
                 const userDoc = await db.collection('users').doc(uid).get();
                 if (userDoc.exists) {
                     role = userDoc.data()?.role || 'unknown';
-                    if (role === 'CR' || role === 'SR') {
+                    if (role === 'CR' || role === 'SR' || role === 'faculty') {
                         authorized = true;
                     }
                 }

@@ -42,6 +42,9 @@ function sanitizeTopic(topic) {
     return topic.replace(/[^a-zA-Z0-9-_.~%]/g, '_');
 }
 function getTargetTopic(division, batch, role) {
+    if (role === 'faculty') {
+        return `faculty_${sanitizeTopic(division)}`;
+    }
     if (role && role !== 'student') {
         return `role_${role}_${sanitizeTopic(division)}`;
     }
@@ -137,6 +140,7 @@ async function dispatchNotification(payload) {
         },
         fcmOptions: { analyticsLabel: payload.type },
     };
+    logger_1.logger.info(`[FCM] Sending payload to topic ${topic}: ${JSON.stringify(message)}`);
     try {
         await admin.messaging().send(message);
         logger_1.logger.info(`Successfully dispatched topic message to ${topic}`);

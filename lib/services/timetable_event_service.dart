@@ -121,20 +121,50 @@ class TimetableEventService {
     }
 
     // Trigger Render Backend Push Notification via Outbox
-    final outboxRef = FirebaseFirestore.instance.collection('notification_outbox').doc();
-    await outboxRef.set({
-      'notificationId': 'tt_${DateTime.now().millisecondsSinceEpoch}',
+    final baseNotificationId = 'tt_${DateTime.now().millisecondsSinceEpoch}';
+    final priority = (type == 'cancel' || type == 'edit' || type == 'time_change' || type == 'room_change') ? 'high' : 'normal';
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+    final Map<String, dynamic> divisionPayload = {
+      'notificationId': baseNotificationId,
       'type': type,
       'title': title,
       'body': message,
       'division': division,
-      'priority': (type == 'cancel' || type == 'edit' || type == 'time_change' || type == 'room_change') ? 'high' : 'normal',
+      'priority': priority,
       'processed': false,
       'attempts': 0,
       'nextRetryAt': FieldValue.serverTimestamp(),
       'createdAt': FieldValue.serverTimestamp(),
-      'uid': FirebaseAuth.instance.currentUser?.uid ?? '',
-    });
+      'uid': uid,
+    };
+    
+    debugPrint('OUTBOX PAYLOAD (Division): $divisionPayload');
+    final outboxRef = FirebaseFirestore.instance.collection('notification_outbox').doc();
+    await outboxRef.set(divisionPayload);
+
+    // If assigned to a faculty, also notify the faculty specifically
+    final facultyId = newEntry?.facultyId ?? oldEntry?.facultyId;
+    if (facultyId != null && facultyId.isNotEmpty) {
+      final Map<String, dynamic> facultyPayload = {
+        'notificationId': '${baseNotificationId}_fac',
+        'type': type,
+        'title': title,
+        'body': message,
+        'division': facultyId,
+        'role': 'faculty',
+        'priority': priority,
+        'processed': false,
+        'attempts': 0,
+        'nextRetryAt': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'uid': uid,
+      };
+      
+      debugPrint('OUTBOX PAYLOAD (Faculty): $facultyPayload');
+      final facultyOutboxRef = FirebaseFirestore.instance.collection('notification_outbox').doc();
+      await facultyOutboxRef.set(facultyPayload);
+    }
 // 3. Local Push Notification
     final targetId = newEntry?.id ?? oldEntry?.id ?? '0';
     await LocalNotificationService.notifications.cancel(targetId.hashCode);

@@ -3,6 +3,8 @@ import 'package:schedly/theme/theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/app_notification_service.dart';
 import 'services/announcement_service.dart';
+import 'app_settings.dart';
+import 'user_roles.dart';
 
 import 'widgets/animations/animated_button.dart';
 import 'widgets/app_dialogs.dart';
@@ -28,6 +30,23 @@ class _CreateAnnouncementPageState
 
   String priority = 'Normal';
   bool _isPublishing = false;
+  final Set<String> _selectedDivisions = {};
+
+  @override
+  void initState() {
+    super.initState();
+    if (AppSettings.currentRole != UserRole.faculty) {
+      _loadCRDivision();
+    }
+  }
+  
+  Future<void> _loadCRDivision() async {
+    final prefs = await SharedPreferences.getInstance();
+    final sectionId = prefs.getString('section_id') ?? prefs.getString('selected_division');
+    if (sectionId != null && mounted) {
+      setState(() => _selectedDivisions.add(sectionId));
+    }
+  }
 
   @override
   void dispose() {
@@ -43,36 +62,42 @@ class _CreateAnnouncementPageState
         return;
       }
 
-      final prefs = await SharedPreferences.getInstance();
-
-      final sectionId = prefs.getString('section_id') ?? prefs.getString('selected_division');
-
-      if (sectionId == null) {
+      if (_selectedDivisions.isEmpty) {
+        AppDialogs.showSnackBar(
+          context: context,
+          message: 'Select at least one division',
+        );
         return;
       }
 
-      await AnnouncementService.createAnnouncement(
-        title: titleController.text,
-        message: messageController.text,
-        priority: priority,
-        sectionId: sectionId,
-      );
-      await AppNotificationService.createNotification(
-        title: 'New Announcement',
-        message: messageController.text,
-        division: sectionId,
-        type: 'announcement',
-      );
+      setState(() => _isPublishing = true);
+
+      for (final sectionId in _selectedDivisions) {
+        await AnnouncementService.createAnnouncement(
+          title: titleController.text,
+          message: messageController.text,
+          priority: priority,
+          sectionId: sectionId,
+        );
+        await AppNotificationService.createNotification(
+          title: 'New Announcement',
+          message: messageController.text,
+          division: sectionId,
+          type: 'announcement',
+        );
+      }
       if (!mounted) return;
 
       AppDialogs.showSnackBar(
         context: context,
-        message: 'Announcement published for $sectionId',
+        message: 'Announcement published successfully',
       );
 
       Navigator.pop(context);
     } catch (e) {
       debugPrint('ANNOUNCEMENT ERROR: $e');
+    } finally {
+      if (mounted) setState(() => _isPublishing = false);
     }
   }
   InputDecoration _modernDecoration(String label, IconData icon) {
@@ -159,6 +184,31 @@ class _CreateAnnouncementPageState
                       }
                     },
                   ),
+
+                  if (AppSettings.currentRole == UserRole.faculty) ...[
+                    const SizedBox(height: 20),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('Target Divisions', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).extension<AppSemanticColors>()!.onSurfaceMuted)),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: (AppSettings.facultyAssignedDivisions ?? []).map((div) {
+                        final isSelected = _selectedDivisions.contains(div);
+                        return FilterChip(
+                          label: Text(div.replaceAll('_', ' ')),
+                          selected: isSelected,
+                          onSelected: (val) {
+                            setState(() {
+                              if (val) _selectedDivisions.add(div);
+                              else _selectedDivisions.remove(div);
+                            });
+                          },
+                        );
+                      }).toList(),
+                    )
+                  ],
                 ],
               ),
             ),

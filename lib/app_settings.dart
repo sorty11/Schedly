@@ -21,6 +21,18 @@ class AppSettings {
   static String? division;
   static String? sectionId;
 
+  // Faculty fields
+  static String? facultyName;
+  static String? facultyEmail;
+  static String? facultyDepartment;
+  static String? facultyDesignation;
+  static String? facultyCabin;
+  static bool facultySetupCompleted = false;
+  static int facultyReminderTime = 5;
+  static List<String>? facultyAssignedDivisions;
+  // To avoid complexity, we can store simple strings or retrieve them dynamically from Firestore.
+  // We'll store basic identifiers.
+
   static Future<void> loadRole() async {
     final prefs =
         await SharedPreferences.getInstance();
@@ -35,6 +47,10 @@ class AppSettings {
 
       case 'sr':
         currentRole = UserRole.sr;
+        break;
+
+      case 'faculty':
+        currentRole = UserRole.faculty;
         break;
 
       default:
@@ -72,6 +88,18 @@ class AppSettings {
     branch = prefs.getString('branch');
     division = prefs.getString('division');
     sectionId = prefs.getString('section_id');
+  }
+
+  static Future<void> loadFacultyDetails() async {
+    final prefs = await SharedPreferences.getInstance();
+    facultyName = prefs.getString('faculty_name');
+    facultyEmail = prefs.getString('faculty_email');
+    facultyDepartment = prefs.getString('faculty_department');
+    facultyDesignation = prefs.getString('faculty_designation');
+    facultyCabin = prefs.getString('faculty_cabin');
+    facultySetupCompleted = prefs.getBool('faculty_setup_completed') ?? false;
+    facultyReminderTime = prefs.getInt('faculty_reminder_time') ?? 5;
+    facultyAssignedDivisions = prefs.getStringList('faculty_assigned_divisions');
   }
 
   static Future<void> saveRole(
@@ -166,6 +194,44 @@ class AppSettings {
     await prefs.setString('section_id', secId);
   }
 
+  static Future<void> saveFacultyDetails({
+    required String name,
+    required String email,
+    required String department,
+    required String designation,
+    required String cabin,
+    required List<String> assignedDivisions,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    facultyName = name;
+    facultyEmail = email;
+    facultyDepartment = department;
+    facultyDesignation = designation;
+    facultyCabin = cabin;
+    facultySetupCompleted = prefs.getBool('faculty_setup_completed') ?? false;
+    facultyAssignedDivisions = assignedDivisions;
+    
+    await prefs.setString('faculty_name', name);
+    await prefs.setString('faculty_email', email);
+    await prefs.setString('faculty_department', department);
+    await prefs.setString('faculty_designation', designation);
+    await prefs.setString('faculty_cabin', cabin);
+    await prefs.setBool('faculty_setup_completed', facultySetupCompleted);
+    await prefs.setStringList('faculty_assigned_divisions', assignedDivisions);
+  }
+  
+  static Future<void> completeFacultySetup() async {
+    final prefs = await SharedPreferences.getInstance();
+    facultySetupCompleted = true;
+    await prefs.setBool('faculty_setup_completed', true);
+  }
+
+  static Future<void> setFacultyReminderTime(int minutes) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('faculty_reminder_time', minutes);
+    facultyReminderTime = minutes;
+  }
+
   static Future<void> resetRole() async {
     final prefs =
         await SharedPreferences.getInstance();
@@ -180,6 +246,13 @@ class AppSettings {
     await prefs.remove('sr_component');
     await prefs.remove('sr_section_id');
     await prefs.remove('sr_batch');
+    await prefs.remove('faculty_name');
+    await prefs.remove('faculty_email');
+    await prefs.remove('faculty_department');
+    await prefs.remove('faculty_designation');
+    await prefs.remove('faculty_cabin');
+    await prefs.remove('faculty_setup_completed');
+    await prefs.remove('faculty_assigned_divisions');
 
     currentRole = UserRole.student;
 
@@ -187,5 +260,13 @@ class AppSettings {
     srSubject = null;
     srComponent = null;
     srSectionId = null;
+
+    facultyName = null;
+    facultyEmail = null;
+    facultyDepartment = null;
+    facultyDesignation = null;
+    facultyCabin = null;
+    facultySetupCompleted = false;
+    facultyAssignedDivisions = null;
   }
 }

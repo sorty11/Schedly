@@ -16,6 +16,8 @@ import 'login_page.dart';
 import 'theme/theme.dart';
 import 'firebase_options.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'faculty/faculty_home_page.dart';
+import 'user_roles.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -75,6 +77,7 @@ Future<void> main() async {
   await AppSettings.loadRole();
   await AppSettings.loadSRDetails();
   await AppSettings.loadStudentDetails();
+  await AppSettings.loadFacultyDetails();
 
   final prefs = await SharedPreferences.getInstance();
   themeController = ThemeController(prefs);
@@ -127,6 +130,18 @@ class _StartupRouterState
   final legacyDivision = prefs.getString('selected_division');
   
   if (!mounted) return;
+
+  if (AppSettings.currentRole == UserRole.faculty) {
+    if (!hasLoggedIn || AppSettings.facultyName == null) {
+      await prefs.remove('has_logged_in');
+      await AppSettings.resetRole();
+      if (!mounted) return;
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+    } else {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FacultyHomePage()));
+    }
+    return;
+  }
 
   // Migration Check: If legacy division exists but no sectionId, force re-login
   if (legacyDivision != null && AppSettings.sectionId == null) {
