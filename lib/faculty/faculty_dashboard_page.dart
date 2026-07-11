@@ -45,16 +45,9 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
     final uid = AppSettings.facultyId ?? '';
     if (uid.isEmpty) return Stream.value([]);
     
-    // We must query across all assigned divisions. For simplicity in Flutter,
-    // if a faculty has 1-10 divisions, we can just merge streams or use a single query if structured differently.
-    // Since we put requests in sections/{div}/faculty_requests, we need multiple streams.
-    
     final divisions = AppSettings.facultyAssignedDivisions ?? [];
     if (divisions.isEmpty) return Stream.value([]);
     
-    // Merge streams from multiple collections
-    // Since Firebase doesn't support logical OR across subcollections without collectionGroup,
-    // and collectionGroup would need an index, let's just use collectionGroup filtering by facultyId.
     return FirebaseFirestore.instance
         .collectionGroup('faculty_requests')
         .where('facultyId', isEqualTo: uid)
@@ -73,7 +66,6 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
       return;
     }
 
-    // Fetch faculty subjects
     final profileSnap = await FirebaseFirestore.instance.collection('faculty_profiles').doc(uid).get();
     final profileData = profileSnap.data() ?? {};
     final subjectsMap = (profileData['subjects'] as Map<String, dynamic>?) ?? {};
@@ -83,7 +75,6 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
       return;
     }
 
-    // Create a list of streams for all assigned divisions
     final streams = divisions.map((div) {
       final mySubjects = List<String>.from(subjectsMap[div] ?? []);
       if (mySubjects.isEmpty) return Stream.value(<FacultyLectureContext>[]);
@@ -96,12 +87,10 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
       });
     }).toList();
 
-    // Combine all division streams into one stream using rxdart CombineLatestStream
     yield* CombineLatestStream.list(streams).map((listOfLists) {
       final allLectures = listOfLists.expand((l) => l).toList();
       allLectures.sort((a, b) => a.entry.startTime.compareTo(b.entry.startTime));
       
-      // Auto-schedule reminders for today's lectures
       LocalNotificationService.scheduleFacultyReminders(
         allLectures,
         AppSettings.facultyReminderTime,
@@ -120,81 +109,21 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
     return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $ampm';
   }
 
-  Widget _buildLectureCard(FacultyLectureContext item) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final sem = Theme.of(context).extension<AppSemanticColors>()!;
-    final divLabel = item.division.split('_').last; 
-    
-    return Card(
-      margin: EdgeInsets.only(bottom: AppSpacing.md),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        onTap: () {
-          _showLectureOptions(context, item);
-        },
-        child: Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
-          child: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: colorScheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      _formatTime(item.entry.startTime),
-                      style: TextStyle(fontWeight: FontWeight.w800, color: colorScheme.primary, fontSize: 13),
-                    ),
-                    Text(
-                      '${item.entry.durationMinutes}m',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: colorScheme.primary.withValues(alpha: 0.7), fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.lg),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.entry.displaySubject,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.group_rounded, size: 14, color: sem.onSurfaceMuted),
-                        const SizedBox(width: 4),
-                        Text('Div $divLabel', style: TextStyle(color: sem.onSurfaceMuted, fontSize: 12)),
-                        if (item.entry.room != null && item.entry.room!.isNotEmpty) ...[
-                          const SizedBox(width: 12),
-                          Icon(Icons.room_rounded, size: 14, color: sem.onSurfaceMuted),
-                          const SizedBox(width: 4),
-                          Text(item.entry.room!, style: TextStyle(color: sem.onSurfaceMuted, fontSize: 12)),
-                        ]
-                      ],
-                    )
-                  ],
-                ),
-              ),
-              Icon(Icons.more_vert_rounded, color: sem.onSurfaceMuted),
-            ],
-          ),
-        ),
-      ),
-    );
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
   }
 
   @override
   Widget build(BuildContext context) {
     final name = AppSettings.facultyName ?? 'Faculty';
+    final firstName = name.split(' ').first;
     final colorScheme = Theme.of(context).colorScheme;
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final today = DateFormat('EEEE, MMM d').format(DateTime.now());
 
     return Scaffold(
       body: SafeArea(
@@ -205,205 +134,184 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
               constraints: const BoxConstraints(maxWidth: 800),
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-            slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.x2l, AppSpacing.x2l, AppSpacing.lg),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Good Morning,',
-                        style: GoogleFonts.outfit(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w400,
-                          color: colorScheme.onSurface.withValues(alpha: 0.7),
-                        ),
+                slivers: [
+                  // ── Greeting header ──────────────────────────────────────────
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.x2l,
+                        AppSpacing.x2l,
+                        AppSpacing.x2l,
+                        AppSpacing.md,
                       ),
-                      Text(
-                        name,
-                        style: GoogleFonts.outfit(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                          color: colorScheme.onSurface,
-                          height: 1.1,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Pending Requests Banner
-              SliverToBoxAdapter(
-                child: StreamBuilder<List<FacultyRequest>>(
-                  stream: _pendingRequestsStream,
-                  builder: (context, snapshot) {
-                    final requests = snapshot.data ?? [];
-                    if (requests.isEmpty) return const SizedBox.shrink();
-
-                    return Padding(
-                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.md),
-                      child: Container(
-                        padding: EdgeInsets.all(AppSpacing.lg),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(AppRadius.lg),
-                          border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.hourglass_empty_rounded, color: Colors.orange[800]),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: Text(
-                                'You have ${requests.length} pending lecture request(s) awaiting CR approval.',
-                                style: TextStyle(color: Colors.orange[900], fontWeight: FontWeight.w600),
-                              ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${_getGreeting()}, $firstName 👋',
+                                  style: Theme.of(context).textTheme.headlineMedium,
+                                ),
+                                const SizedBox(height: AppSpacing.xs),
+                                Text(
+                                  today,
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                          // Quick actions cluster
+                          Row(
+                            children: [
+                              _HeaderAction(
+                                icon: Icons.add_circle_outline_rounded,
+                                label: 'Extra Class',
+                                color: colorScheme.primary,
+                                onTap: () => showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (_) => const FacultyRequestSheet(
+                                    requestType: FacultyRequestType.addExtra,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              _HeaderAction(
+                                icon: Icons.campaign_outlined,
+                                label: 'Announce',
+                                color: colorScheme.secondary,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const CreateAnnouncementPage()),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                ),
-              ),
-
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.lg, AppSpacing.x2l, AppSpacing.sm),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Today\'s Classes',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      Text(
-                        DateFormat('MMM d').format(DateTime.now()),
-                        style: TextStyle(color: sem.onSurfaceMuted, fontWeight: FontWeight.w600),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
 
-              SliverToBoxAdapter(
-                child: StreamBuilder<List<FacultyLectureContext>>(
-                  stream: _todayLecturesStream,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Padding(
-                        padding: EdgeInsets.all(AppSpacing.x3l),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-                    if (snapshot.hasError) {
-                      return Padding(
-                        padding: const EdgeInsets.all(AppSpacing.x3l),
-                        child: Center(child: Text('Error loading classes: ${snapshot.error}')),
-                      );
-                    }
-                    
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4l),
-                        alignment: Alignment.center,
-                        child: Column(
-                          children: [
-                            Icon(Icons.event_available_rounded, size: 48, color: sem.onSurfaceMuted.withValues(alpha: 0.5)),
-                            const SizedBox(height: AppSpacing.md),
-                            Text('No classes scheduled for today!', style: TextStyle(color: sem.onSurfaceMuted)),
-                          ],
-                        ),
-                      );
-                    }
-                    
-                    return ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
-                      itemCount: snapshot.data!.length,
-                      itemBuilder: (context, index) {
-                        final lecture = snapshot.data![index];
-                        return StaggeredListItem(
-                          index: index,
-                          child: _buildLectureCard(lecture),
+                  // ── Pending requests banner ───────────────────────────────────
+                  SliverToBoxAdapter(
+                    child: StreamBuilder<List<FacultyRequest>>(
+                      stream: _pendingRequestsStream,
+                      builder: (context, snapshot) {
+                        final requests = snapshot.data ?? [];
+                        if (requests.isEmpty) return const SizedBox.shrink();
+
+                        return Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.x2l, AppSpacing.sm, AppSpacing.x2l, AppSpacing.sm,
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            decoration: BoxDecoration(
+                              color: sem.warning.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(AppRadius.lg),
+                              border: Border.all(color: sem.warning.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(AppSpacing.sm),
+                                  decoration: BoxDecoration(
+                                    color: sem.warning.withValues(alpha: 0.15),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(Icons.hourglass_top_rounded, color: sem.warning, size: 18),
+                                ),
+                                const SizedBox(width: AppSpacing.md),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${requests.length} request${requests.length > 1 ? 's' : ''} pending',
+                                        style: GoogleFonts.inter(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14,
+                                          color: sem.warning,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Awaiting CR approval',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          color: sem.warning.withValues(alpha: 0.8),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         );
                       },
-                    );
-                  },
-                ),
-              ),
-
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.xl, AppSpacing.x2l, AppSpacing.sm),
-                  child: Text(
-                    'Quick Actions',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                    ),
                   ),
-                ),
-              ),
 
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: AnimatedButton(
-                          onPressed: () {
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.transparent,
-                              builder: (_) => const FacultyRequestSheet(requestType: FacultyRequestType.addExtra),
-                            );
-                          },
-                          backgroundColor: isDark ? sem.surfaceElevated2 : const Color(0xFFF5F5F7),
-                          foregroundColor: colorScheme.primary,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(Icons.add_circle_outline_rounded, size: 20),
-                              SizedBox(width: 8),
-                              Flexible(child: Text('Extra Class', overflow: TextOverflow.ellipsis)),
-                            ],
-                          ),
-                        ),
+                  // ── Today's classes header ────────────────────────────────────
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.x2l, AppSpacing.xl, AppSpacing.x2l, AppSpacing.md,
                       ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: AnimatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const CreateAnnouncementPage(),
+                      child: Text(
+                        "Today's Schedule",
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                  ),
+
+                  // ── Today's classes list ─────────────────────────────────────
+                  SliverToBoxAdapter(
+                    child: StreamBuilder<List<FacultyLectureContext>>(
+                      stream: _todayLecturesStream,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: AppSpacing.x4l),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+                        if (snapshot.hasError) {
+                          return _ErrorState(error: '${snapshot.error}');
+                        }
+                        
+                        final lectures = snapshot.data ?? [];
+                        if (lectures.isEmpty) {
+                          return const _EmptySchedule();
+                        }
+                        
+                        return ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
+                          itemCount: lectures.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
+                          itemBuilder: (context, index) {
+                            return StaggeredListItem(
+                              index: index,
+                              child: _LectureCard(
+                                item: lectures[index],
+                                formatTime: _formatTime,
+                                onOptions: () => _showLectureOptions(context, lectures[index]),
                               ),
                             );
                           },
-                          backgroundColor: isDark ? sem.surfaceElevated2 : const Color(0xFFF5F5F7),
-                          foregroundColor: colorScheme.secondary,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(Icons.campaign_outlined, size: 20),
-                              SizedBox(width: 8),
-                              Flexible(child: Text('Announce', overflow: TextOverflow.ellipsis)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.x4l)),
-            ],
-          ),
+                  const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.x6l)),
+                ],
+              ),
             ),
           ),
         ),
@@ -412,42 +320,127 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
   }
 
   void _showLectureOptions(BuildContext context, FacultyLectureContext item) {
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Text(
-                  'Options for ${item.entry.displaySubject}',
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-                ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.cancel_outlined, color: Colors.red),
-                title: const Text('Request Cancellation', style: TextStyle(color: Colors.red)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (_) => FacultyRequestSheet(
-                      requestType: FacultyRequestType.cancel,
-                      prefillDivision: item.division,
-                      prefillEntry: item.entry,
+        return Container(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.x2l, AppSpacing.lg, AppSpacing.x2l, AppSpacing.x2l,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? sem.surfaceElevated : colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.x2l)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // drag handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: sem.borderSubtle,
+                      borderRadius: BorderRadius.circular(AppRadius.full),
                     ),
-                  );
-                },
-              ),
-              const SizedBox(height: AppSpacing.md),
-            ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+
+                // Lecture info
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      child: Icon(Icons.class_rounded, color: colorScheme.primary, size: 20),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.entry.displaySubject,
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            'Div ${item.division.split('_').last}',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: sem.onSurfaceMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                const Divider(height: 1),
+                const SizedBox(height: AppSpacing.md),
+
+                // Request cancellation
+                Material(
+                  color: Colors.transparent,
+                  child: ListTile(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                    leading: Container(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: sem.cancelled.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: Icon(Icons.cancel_outlined, color: sem.cancelled, size: 20),
+                    ),
+                    title: Text(
+                      'Request Cancellation',
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                        color: sem.cancelled,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Send a cancellation request to your CR',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: sem.onSurfaceMuted,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (_) => FacultyRequestSheet(
+                          requestType: FacultyRequestType.cancel,
+                          prefillDivision: item.division,
+                          prefillEntry: item.entry,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+              ],
+            ),
           ),
         );
       },
@@ -455,4 +448,333 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
   }
 }
 
+// ── Header Action Button ────────────────────────────────────────────────────────
+class _HeaderAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
 
+  const _HeaderAction({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: AppSpacing.xs),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Lecture Card ───────────────────────────────────────────────────────────────
+class _LectureCard extends StatelessWidget {
+  final FacultyLectureContext item;
+  final String Function(int) formatTime;
+  final VoidCallback onOptions;
+
+  const _LectureCard({
+    required this.item,
+    required this.formatTime,
+    required this.onOptions,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final entry = item.entry;
+    final divLabel = item.division.split('_').last;
+    final isActive = entry.isActive;
+    final now = DateTime.now();
+    final nowMins = now.hour * 60 + now.minute;
+    final isLive = nowMins >= entry.startTime && nowMins < entry.endTime;
+    final isUpcoming = nowMins < entry.startTime;
+    final isPast = nowMins >= entry.endTime;
+
+    Color statusColor = sem.onSurfaceMuted;
+    String statusLabel = 'Past';
+    IconData statusIcon = Icons.check_circle_outline_rounded;
+
+    if (!isActive) {
+      statusColor = sem.cancelled;
+      statusLabel = 'Cancelled';
+      statusIcon = Icons.cancel_outlined;
+    } else if (isLive) {
+      statusColor = sem.conducted;
+      statusLabel = 'Live now';
+      statusIcon = Icons.circle;
+    } else if (isUpcoming) {
+      statusColor = colorScheme.primary;
+      statusLabel = 'Upcoming';
+      statusIcon = Icons.schedule_rounded;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onOptions,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isLive
+                ? colorScheme.primary.withValues(alpha: isDark ? 0.1 : 0.06)
+                : isDark ? sem.surfaceElevated : colorScheme.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(
+              color: isLive
+                  ? colorScheme.primary.withValues(alpha: 0.3)
+                  : sem.borderSubtle,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Time column
+                SizedBox(
+                  width: 68,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        formatTime(entry.startTime),
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w700,
+                          color: isLive ? colorScheme.primary : colorScheme.onSurface,
+                          fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        formatTime(entry.endTime),
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w500,
+                          color: sem.onSurfaceMuted,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xs,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: sem.onSurfaceMuted.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(AppRadius.xs),
+                        ),
+                        child: Text(
+                          '${entry.durationMinutes}m',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: sem.onSurfaceMuted,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: 60,
+                  margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  color: sem.borderSubtle,
+                ),
+                // Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry.displaySubject,
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          decoration: !isActive ? TextDecoration.lineThrough : null,
+                          decorationColor: sem.cancelled,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Wrap(
+                        spacing: AppSpacing.sm,
+                        children: [
+                          _MetaChip(icon: Icons.group_rounded, label: 'Div $divLabel'),
+                          if (entry.room != null && entry.room!.isNotEmpty)
+                            _MetaChip(icon: Icons.room_rounded, label: entry.room!),
+                          if (entry.batch != 'Whole Class')
+                            _MetaChip(icon: Icons.groups_2_rounded, label: entry.batch),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                // Status badge + options
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Row(
+                      children: [
+                        if (isLive)
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: sem.conducted,
+                            ),
+                          ),
+                        const SizedBox(width: 4),
+                        Text(
+                          statusLabel,
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: statusColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Icon(Icons.more_vert_rounded, size: 20, color: sem.onSurfaceMuted),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Meta chip ─────────────────────────────────────────────────────────────────
+class _MetaChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _MetaChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: sem.onSurfaceMuted),
+        const SizedBox(width: 3),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: sem.onSurfaceMuted,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Empty state ────────────────────────────────────────────────────────────────
+class _EmptySchedule extends StatelessWidget {
+  const _EmptySchedule();
+
+  @override
+  Widget build(BuildContext context) {
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        vertical: AppSpacing.x5l,
+        horizontal: AppSpacing.x2l,
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.event_available_rounded,
+            size: 56,
+            color: sem.onSurfaceMuted.withValues(alpha: 0.4),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            'No classes today',
+            style: GoogleFonts.outfit(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: sem.onSurfaceMuted,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Enjoy your free day!',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: sem.onSurfaceMuted.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Error state ────────────────────────────────────────────────────────────────
+class _ErrorState extends StatelessWidget {
+  final String error;
+  const _ErrorState({required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.x2l),
+      child: Column(
+        children: [
+          Icon(Icons.error_outline_rounded, size: 40, color: sem.error),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Could not load classes',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: sem.error),
+          ),
+          Text(
+            error,
+            style: GoogleFonts.inter(fontSize: 12, color: sem.onSurfaceMuted),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}

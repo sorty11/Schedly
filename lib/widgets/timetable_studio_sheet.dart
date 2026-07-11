@@ -183,18 +183,24 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
 
     if (rawSubject.isEmpty) {
       _subjectFocusNode?.requestFocus();
-      _showErrorDialog('Missing Information', 'Subject cannot be empty.');
+      AppDialogs.showError(
+        context: context,
+        title: 'Missing Subject',
+        message: 'Please enter or select a subject before saving.',
+      );
       return;
     }
     if (_endTime <= _startTime) {
-      _showErrorDialog('Invalid Time', 'End time must be after start time.');
+      AppDialogs.showError(
+        context: context,
+        title: 'Invalid Time',
+        message: 'End time must be after the start time.',
+      );
       return;
     }
     
     // Always strip component suffixes to get the canonical subject code
     final subject = TimetableEntry.stripComponentSuffix(rawSubject);
-
-    // Validation is now handled inside TimetableManager.addLecture
 
     setState(() => _isLoading = true);
 
@@ -204,7 +210,6 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
       // Auto-populate facultyId if a mapping exists in faculty_profiles
       final facultyMap = await TimetableManager.getSubjectToFacultyIdMap(widget.division);
       final mappedFacultyId = facultyMap[subject];
-      debugPrint('[DEBUG_FAC_1] mappedFacultyId = $mappedFacultyId (subject="$subject", division="${widget.division}", facultyMap keys=${facultyMap.keys.toList()})');
 
       final entry = TimetableEntry(
         id: entryId,
@@ -219,7 +224,6 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
         status: 'active',
         facultyId: mappedFacultyId,
       );
-      debugPrint('[DEBUG_FAC_2] entry.facultyId = ${entry.facultyId}');
 
       if (widget.existingEntry != null && widget.initialDay != _selectedDay) {
         await FirebaseFirestore.instance
@@ -230,7 +234,6 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
             .delete();
       }
 
-      debugPrint('[DEBUG_FAC_2b] entry.facultyId before addLecture = ${entry.facultyId}');
       await TimetableManager.addLecture(
         division: widget.division,
         day: _selectedDay,
@@ -261,7 +264,6 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
       );
 
       if (keepOpen) {
-        // Reset time for next entry
         setState(() {
           _startTime = _endTime;
           _endTime = _startTime + 60;
@@ -270,30 +272,16 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
         Navigator.pop(context);
       }
     } on ValidationException catch (e) {
-      _showErrorDialog(e.title, e.message);
+      AppDialogs.showError(context: context, title: e.title, message: e.message);
     } catch (e) {
-      _showErrorDialog('Error', e.toString().replaceAll('Exception: ', ''));
+      AppDialogs.showError(
+        context: context,
+        title: 'Error',
+        message: e.toString().replaceAll('Exception: ', ''),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _showErrorDialog(String title, String message) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 32),
-        title: Text(title, textAlign: TextAlign.center),
-        content: Text(message),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
   }
 
   String _formatTime(int minutes) {
@@ -304,293 +292,629 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
     return '$hour12:${m.toString().padLeft(2, '0')} $suffix';
   }
 
+  // Calculate duration label
+  String get _durationLabel {
+    final mins = _endTime - _startTime;
+    if (mins <= 0) return '';
+    if (mins < 60) return '${mins}m';
+    final h = mins ~/ 60;
+    final m = mins % 60;
+    return m == 0 ? '${h}h' : '${h}h ${m}m';
+  }
+
+  Widget _buildSectionLabel(String label) {
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Text(
+        label.toUpperCase(),
+        style: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.0,
+          color: sem.onSurfaceMuted,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final colorScheme = Theme.of(context).colorScheme;
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
+    final isEditing = widget.existingEntry != null;
+    final isCR = AppSettings.currentRole == UserRole.cr;
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
-        padding: EdgeInsets.all(AppSpacing.x2l),
         decoration: BoxDecoration(
           color: isDark ? sem.surfaceElevated : colorScheme.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.x2l)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.x2l)),
         ),
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: sem.onSurfaceMuted.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(AppRadius.full),
-                  ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── Drag handle ────────────────────────────────────────────────
+            const SizedBox(height: AppSpacing.md),
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: sem.borderSubtle,
+                  borderRadius: BorderRadius.circular(AppRadius.full),
                 ),
               ),
-              const SizedBox(height: AppSpacing.x2l),
-              Text(
-                widget.existingEntry != null ? 'Edit Lecture' : 'Add Lecture',
-                style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: AppSpacing.x2l),
+            ),
+            const SizedBox(height: AppSpacing.lg),
 
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: SegmentedButton<String>(
-                  segments: _days.map((day) => ButtonSegment<String>(
-                    value: day,
-                    label: Text(day.substring(0, 3)),
-                  )).toList(),
-                  selected: {_selectedDay},
-                  onSelectionChanged: (set) => setState(() => _selectedDay = set.first),
-                  style: ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-
-              Autocomplete<String>(
-                optionsBuilder: (textEditingValue) {
-                  if (textEditingValue.text.isEmpty) return _availableSubjects;
-                  return _availableSubjects.where((option) =>
-                      option.toLowerCase().contains(textEditingValue.text.toLowerCase()));
-                },
-                fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-                  if (controller.text.isEmpty && _subjectController.text.isNotEmpty) {
-                    controller.text = _subjectController.text;
-                  }
-                  controller.addListener(() => _subjectController.text = controller.text);
-                  _subjectFocusNode = focusNode;
-                  return TextFormField(
-                    controller: controller,
-                    focusNode: focusNode,
-                    decoration: InputDecoration(
-                      labelText: 'Subject',
-                      prefixIcon: const Icon(Icons.book_rounded),
-                      filled: true,
-                      fillColor: colorScheme.surface,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: AppSpacing.lg),
-
-              Row(
+            // ── Header ─────────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
+              child: Row(
                 children: [
-                  Expanded(
-                    flex: 1,
-                    child: DropdownButtonFormField<String>(
-                      value: _batch,
-                      decoration: InputDecoration(
-                        labelText: 'Batch',
-                        prefixIcon: const Icon(Icons.groups_rounded),
-                        filled: true,
-                        fillColor: colorScheme.surface,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
-                      ),
-                      isExpanded: true,
-                      items: _batchOptions.map((b) => DropdownMenuItem(value: b, child: Text(b, overflow: TextOverflow.ellipsis))).toList(),
-                      onChanged: (val) => setState(() => _batch = val!),
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    child: Icon(
+                      isEditing ? Icons.edit_calendar_rounded : Icons.add_box_rounded,
+                      color: colorScheme.primary,
+                      size: 20,
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
-                    flex: 1,
-                    child: Autocomplete<String>(
-                      optionsBuilder: (tv) {
-                        if (tv.text.isEmpty) return _availableRooms;
-                        return _availableRooms.where((option) =>
-                            option.toLowerCase().contains(tv.text.toLowerCase()));
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isEditing ? 'Edit Lecture' : 'Add Lecture',
+                          style: GoogleFonts.outfit(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        if (isEditing)
+                          Text(
+                            widget.existingEntry!.displaySubject,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: sem.onSurfaceMuted,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+
+            // ── Scrollable body ────────────────────────────────────────────
+            Flexible(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // ── Section: Day ─────────────────────────────────────────
+                    _buildSectionLabel('Day'),
+                    _DayPillSelector(
+                      days: _days,
+                      selected: _selectedDay,
+                      onSelected: (d) => setState(() => _selectedDay = d),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+
+                    // ── Section: Lecture Details ──────────────────────────────
+                    _buildSectionLabel('Lecture Details'),
+
+                    // Subject autocomplete
+                    Autocomplete<String>(
+                      optionsBuilder: (textEditingValue) {
+                        if (textEditingValue.text.isEmpty) return _availableSubjects;
+                        return _availableSubjects.where((option) =>
+                            option.toLowerCase().contains(textEditingValue.text.toLowerCase()));
                       },
-                      fieldViewBuilder: (context, controller, focusNode, _) {
-                        if (controller.text.isEmpty && _roomController.text.isNotEmpty) {
-                          controller.text = _roomController.text;
+                      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                        if (controller.text.isEmpty && _subjectController.text.isNotEmpty) {
+                          controller.text = _subjectController.text;
                         }
-                        controller.addListener(() => _roomController.text = controller.text);
+                        controller.addListener(() => _subjectController.text = controller.text);
+                        _subjectFocusNode = focusNode;
                         return TextFormField(
                           controller: controller,
                           focusNode: focusNode,
                           decoration: InputDecoration(
-                            labelText: 'Room',
-                            prefixIcon: const Icon(Icons.room_rounded),
-                            filled: true,
-                            fillColor: colorScheme.surface,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                            labelText: 'Subject / Course Code',
+                            prefixIcon: Icon(Icons.book_rounded, size: 20, color: sem.onSurfaceMuted),
+                            fillColor: isDark ? sem.surfaceElevated2 : const Color(0xFFF8F8FC),
                           ),
                         );
                       },
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.lg),
+                    const SizedBox(height: AppSpacing.md),
 
-              Text('Lecture Type', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: sem.onSurfaceMuted)),
-              const SizedBox(height: AppSpacing.sm),
-              Wrap(
-                spacing: 8.0,
-                runSpacing: 0.0,
-                children: [
-                  _buildTypeChip('Theory', EventCategory.academic),
-                  _buildTypeChip('Lab', EventCategory.academic),
-                  _buildTypeChip('Tutorial', EventCategory.academic),
-                  _buildTypeChip('Event', EventCategory.event),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.lg),
+                    // Batch + Room
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: _batch,
+                            decoration: InputDecoration(
+                              labelText: 'Batch',
+                              prefixIcon: Icon(Icons.groups_rounded, size: 20, color: sem.onSurfaceMuted),
+                              fillColor: isDark ? sem.surfaceElevated2 : const Color(0xFFF8F8FC),
+                            ),
+                            isExpanded: true,
+                            items: _batchOptions.map((b) => DropdownMenuItem(value: b, child: Text(b, overflow: TextOverflow.ellipsis))).toList(),
+                            onChanged: (val) => setState(() => _batch = val!),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Autocomplete<String>(
+                            optionsBuilder: (tv) {
+                              if (tv.text.isEmpty) return _availableRooms;
+                              return _availableRooms.where((option) =>
+                                  option.toLowerCase().contains(tv.text.toLowerCase()));
+                            },
+                            fieldViewBuilder: (context, controller, focusNode, _) {
+                              if (controller.text.isEmpty && _roomController.text.isNotEmpty) {
+                                controller.text = _roomController.text;
+                              }
+                              controller.addListener(() => _roomController.text = controller.text);
+                              return TextFormField(
+                                controller: controller,
+                                focusNode: focusNode,
+                                decoration: InputDecoration(
+                                  labelText: 'Room',
+                                  prefixIcon: Icon(Icons.room_rounded, size: 20, color: sem.onSurfaceMuted),
+                                  fillColor: isDark ? sem.surfaceElevated2 : const Color(0xFFF8F8FC),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: _selectStartTime,
-                      borderRadius: BorderRadius.circular(AppRadius.lg),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.md),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: sem.borderSubtle),
-                          borderRadius: BorderRadius.circular(AppRadius.lg),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Start Time', style: TextStyle(fontSize: 12, color: sem.onSurfaceMuted)),
-                            const SizedBox(height: 4),
-                            Text(_formatTime(_startTime), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                          ],
-                        ),
+                    // Lecture type chips
+                    Text(
+                      'Type',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: sem.onSurfaceMuted,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: InkWell(
-                      onTap: _selectEndTime,
-                      borderRadius: BorderRadius.circular(AppRadius.lg),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.md),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: sem.borderSubtle),
-                          borderRadius: BorderRadius.circular(AppRadius.lg),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('End Time', style: TextStyle(fontSize: 12, color: sem.onSurfaceMuted)),
-                            const SizedBox(height: 4),
-                            Text(_formatTime(_endTime), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                          ],
-                        ),
-                      ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: [
+                        _buildTypeChip('Theory', EventCategory.academic, Icons.auto_stories_rounded),
+                        _buildTypeChip('Lab', EventCategory.academic, Icons.science_rounded),
+                        _buildTypeChip('Tutorial', EventCategory.academic, Icons.school_rounded),
+                        _buildTypeChip('Event', EventCategory.event, Icons.celebration_rounded),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.lg),
+                    const SizedBox(height: AppSpacing.xl),
 
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                title: const Text('Repeat weekly', style: TextStyle(fontWeight: FontWeight.w500)),
-                value: _repeatWeekly,
-                onChanged: (val) => setState(() => _repeatWeekly = val ?? true),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-
-              Row(
-                children: [
-                  if (widget.existingEntry != null && AppSettings.currentRole == UserRole.cr)
-                    Expanded(
-                      flex: 1,
-                      child: OutlinedButton(
-                        onPressed: _isLoading ? null : () async {
-                          final confirmed = await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: const Text('Delete Lecture', style: TextStyle(fontWeight: FontWeight.bold)),
-                              content: const Text('Are you sure you want to delete this lecture? Students and faculty will be notified.'),
-                              actions: [
-                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, true), 
-                                  child: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                    // ── Section: Timing ────────────────────────────────────────
+                    _buildSectionLabel('Timing'),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _TimePicker(
+                            label: 'Start',
+                            time: _formatTime(_startTime),
+                            onTap: _selectStartTime,
+                            isDark: isDark,
+                            sem: sem,
+                            colorScheme: colorScheme,
+                            isStart: true,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                          child: Column(
+                            children: [
+                              Icon(Icons.arrow_forward_rounded, size: 18, color: sem.onSurfaceMuted),
+                              if (_durationLabel.isNotEmpty) ...[
+                                const SizedBox(height: AppSpacing.xs),
+                                Text(
+                                  _durationLabel,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: sem.onSurfaceMuted,
+                                  ),
                                 ),
                               ],
-                            ),
-                          );
-                          if (confirmed != true) return;
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: _TimePicker(
+                            label: 'End',
+                            time: _formatTime(_endTime),
+                            onTap: _selectEndTime,
+                            isDark: isDark,
+                            sem: sem,
+                            colorScheme: colorScheme,
+                            isStart: false,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
 
-                          setState(() => _isLoading = true);
-                          try {
-                            await FirebaseFirestore.instance
-                                .collection('timetables')
-                                .doc(widget.division)
-                                .collection(widget.initialDay)
-                                .doc(widget.existingEntry!.id)
-                                .delete();
-                                
-                            await TimetableEventService.handleModification(
-                              division: widget.division,
-                              day: widget.initialDay,
-                              oldEntry: widget.existingEntry,
-                              newEntry: null,
-                              isDelete: true,
-                            );
-                            
-                            HapticFeedback.mediumImpact();
-                            if (mounted) Navigator.pop(context);
-                          } catch (e) {
-                            _showErrorDialog('Error', e.toString());
-                          } finally {
-                            if (mounted) setState(() => _isLoading = false);
-                          }
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: colorScheme.error,
-                          side: BorderSide(color: colorScheme.error.withValues(alpha: 0.5)),
-                          padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                    // ── Section: Options ──────────────────────────────────────
+                    _buildSectionLabel('Options'),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? sem.surfaceElevated2 : const Color(0xFFF8F8FC),
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        border: Border.all(color: sem.borderSubtle),
+                      ),
+                      child: SwitchListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.xs,
                         ),
-                        child: const Icon(Icons.delete_rounded),
+                        title: Text(
+                          'Repeat weekly',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Lecture appears every week on this day',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: sem.onSurfaceMuted,
+                          ),
+                        ),
+                        value: _repeatWeekly,
+                        onChanged: (val) => setState(() => _repeatWeekly = val),
+                        activeColor: colorScheme.primary,
                       ),
                     ),
-                  if (widget.existingEntry != null && AppSettings.currentRole == UserRole.cr) const SizedBox(width: AppSpacing.md),
-                  if (widget.existingEntry == null)
-                    Expanded(
-                      flex: 1,
-                      child: OutlinedButton(
-                        onPressed: _isLoading ? null : () => _save(keepOpen: true),
-                        style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                        ),
-                        child: _isLoading 
-                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Text('Save & Add Next', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: AppSpacing.x2l),
+
+                    // ── Action Buttons ────────────────────────────────────────
+                    if (isEditing && isCR)
+                      Row(
+                        children: [
+                          // Delete button (icon only, outlined)
+                          SizedBox(
+                            height: 52,
+                            child: OutlinedButton(
+                              onPressed: _isLoading ? null : _confirmDelete,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: colorScheme.error,
+                                side: BorderSide(color: colorScheme.error.withValues(alpha: 0.5)),
+                                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                                ),
+                              ),
+                              child: const Icon(Icons.delete_rounded, size: 20),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: _ActionButton(
+                              label: 'Save Changes',
+                              isLoading: _isLoading,
+                              onPressed: () => _save(keepOpen: false),
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _ActionButton(
+                              label: 'Save & Add Next',
+                              isLoading: _isLoading,
+                              isFilled: false,
+                              onPressed: () => _save(keepOpen: true),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: _ActionButton(
+                              label: 'Save & Close',
+                              isLoading: _isLoading,
+                              onPressed: () => _save(keepOpen: false),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  if (widget.existingEntry == null) const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    flex: 1,
-                    child: FilledButton(
-                      onPressed: _isLoading ? null : () => _save(keepOpen: false),
-                      style: FilledButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                      ),
-                      child: _isLoading 
-                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : Text(widget.existingEntry != null ? 'Save Changes' : 'Save & Close', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: AppSpacing.x2l),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final colorScheme = Theme.of(ctx).colorScheme;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
+          icon: Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: colorScheme.error.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.delete_rounded, color: colorScheme.error, size: 28),
+          ),
+          title: Text(
+            'Delete Lecture?',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+            textAlign: TextAlign.center,
+          ),
+          content: Text(
+            'This will permanently remove the lecture. Students and faculty will be notified.',
+            style: GoogleFonts.inter(fontSize: 14, height: 1.5),
+            textAlign: TextAlign.center,
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(backgroundColor: colorScheme.error),
+              child: Text('Delete', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await FirebaseFirestore.instance
+          .collection('timetables')
+          .doc(widget.division)
+          .collection(widget.initialDay)
+          .doc(widget.existingEntry!.id)
+          .delete();
+          
+      await TimetableEventService.handleModification(
+        division: widget.division,
+        day: widget.initialDay,
+        oldEntry: widget.existingEntry,
+        newEntry: null,
+        isDelete: true,
+      );
+      
+      HapticFeedback.mediumImpact();
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        AppDialogs.showError(context: context, title: 'Error', message: e.toString());
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Widget _buildTypeChip(String component, EventCategory category, IconData icon) {
+    final isSelected = _component == component && _category == category;
+    final colorScheme = Theme.of(context).colorScheme;
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _component = component;
+          _category = category;
+        });
+      },
+      child: AnimatedContainer(
+        duration: AppDuration.standard,
+        curve: AppCurves.standard,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? colorScheme.primary
+              : isDark ? sem.surfaceElevated2 : const Color(0xFFF0F0F8),
+          borderRadius: BorderRadius.circular(AppRadius.full),
+          border: Border.all(
+            color: isSelected ? colorScheme.primary : sem.borderSubtle,
+            width: isSelected ? 0 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: isSelected ? Colors.white : sem.onSurfaceMuted,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Text(
+              component,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? Colors.white : colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Day Pill Selector ──────────────────────────────────────────────────────────
+class _DayPillSelector extends StatelessWidget {
+  final List<String> days;
+  final String selected;
+  final ValueChanged<String> onSelected;
+
+  const _DayPillSelector({
+    required this.days,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: days.map((day) {
+          final isSelected = selected == day;
+          return Padding(
+            padding: EdgeInsets.only(right: days.last == day ? 0 : AppSpacing.sm),
+            child: GestureDetector(
+              onTap: () => onSelected(day),
+              child: AnimatedContainer(
+                duration: AppDuration.standard,
+                curve: AppCurves.standard,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.sm + 2,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected ? colorScheme.primary : isDark ? sem.surfaceElevated2 : const Color(0xFFF0F0F8),
+                  borderRadius: BorderRadius.circular(AppRadius.full),
+                  border: Border.all(
+                    color: isSelected ? colorScheme.primary : sem.borderSubtle,
+                    width: isSelected ? 0 : 1,
+                  ),
+                ),
+                child: Text(
+                  day.substring(0, 3),
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected ? Colors.white : colorScheme.onSurface,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+// ── Time Picker Card ───────────────────────────────────────────────────────────
+class _TimePicker extends StatelessWidget {
+  final String label;
+  final String time;
+  final VoidCallback onTap;
+  final bool isDark;
+  final AppSemanticColors sem;
+  final ColorScheme colorScheme;
+  final bool isStart;
+
+  const _TimePicker({
+    required this.label,
+    required this.time,
+    required this.onTap,
+    required this.isDark,
+    required this.sem,
+    required this.colorScheme,
+    required this.isStart,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.lg,
+            horizontal: AppSpacing.md,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? sem.surfaceElevated2 : const Color(0xFFF8F8FC),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: sem.borderSubtle),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    isStart ? Icons.play_circle_outline_rounded : Icons.stop_circle_outlined,
+                    size: 14,
+                    color: sem.onSurfaceMuted,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    label,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: sem.onSurfaceMuted,
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                time,
+                style: GoogleFonts.outfit(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Tap to change',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  color: colorScheme.primary.withValues(alpha: 0.7),
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -598,20 +922,60 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
       ),
     );
   }
+}
 
-  Widget _buildTypeChip(String component, EventCategory category) {
-    final isSelected = _component == component && _category == category;
-    return ChoiceChip(
-      label: Text(component),
-      selected: isSelected,
-      onSelected: (val) {
-        if (val) {
-          setState(() {
-            _component = component;
-            _category = category;
-          });
-        }
-      },
+// ── Action Button ──────────────────────────────────────────────────────────────
+class _ActionButton extends StatelessWidget {
+  final String label;
+  final bool isLoading;
+  final bool isFilled;
+  final VoidCallback onPressed;
+
+  const _ActionButton({
+    required this.label,
+    required this.isLoading,
+    required this.onPressed,
+    this.isFilled = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final child = isLoading
+        ? SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: isFilled ? Colors.white : colorScheme.primary,
+            ),
+          )
+        : Text(
+            label,
+            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+          );
+
+    final style = ButtonStyle(
+      padding: const WidgetStatePropertyAll(
+        EdgeInsets.symmetric(vertical: AppSpacing.lg),
+      ),
+      shape: WidgetStatePropertyAll(
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+      ),
     );
+
+    if (isFilled) {
+      return FilledButton(
+        onPressed: isLoading ? null : onPressed,
+        style: style,
+        child: child,
+      );
+    } else {
+      return OutlinedButton(
+        onPressed: isLoading ? null : onPressed,
+        style: style,
+        child: child,
+      );
+    }
   }
 }

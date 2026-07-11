@@ -23,6 +23,8 @@ import '../widgets/animations/staggered_list_item.dart';
 import '../onboarding/services/tutorial_storage_service.dart';
 import '../onboarding/services/onboarding_service.dart';
 import '../about_schedly_page.dart';
+import '../widgets/app_dialogs.dart';
+
 
 class FacultyProfilePage extends StatefulWidget {
   const FacultyProfilePage({super.key});
@@ -134,7 +136,9 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
       
       await _calculateEstimates();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving changes: $e')));
+      if (mounted) {
+        AppDialogs.showSnackBar(context: context, message: 'Error saving: ${e.toString().replaceAll('Exception: ', '')}');
+      }
     }
   }
 
@@ -167,6 +171,13 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
       allLectures,
       AppSettings.facultyReminderTime,
     );
+
+    if (mounted) {
+      AppDialogs.showSnackBar(
+        context: context,
+        message: 'Reminders updated for today.',
+      );
+    }
   }
 
   Future<void> _logout(BuildContext context) async {
@@ -247,22 +258,28 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
   }
 
   void _showRemoveDivisionConfirmation(String div) {
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Remove Division?'),
-        content: Text('Are you sure you want to remove $div? This will remove all associated subjects from your profile. It will not affect the actual CR timetable.'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
+        title: Text('Remove Division?', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
+        content: Text(
+          'Remove $div from your profile? This will also remove its associated subjects. The CR\'s timetable is not affected.',
+          style: GoogleFonts.inter(fontSize: 14, height: 1.5),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () {
               Navigator.pop(ctx);
               _removeDivision(div);
             },
-            child: const Text('Remove', style: TextStyle(color: Colors.red)),
+            style: FilledButton.styleFrom(backgroundColor: sem.cancelled),
+            child: Text('Remove', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -561,7 +578,7 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
             color: color,
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: AppSpacing.xs),
         Text(
           label,
           style: GoogleFonts.inter(
@@ -637,19 +654,26 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
           if (subjects.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.lg),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
               children: subjects.map((s) => Chip(
-                label: Text(s, style: const TextStyle(fontSize: 12)),
+                label: Text(
+                  s,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
                 onDeleted: () {
                   setState(() {
                     _subjectsMap[div]?.remove(s);
                   });
                   _saveChanges();
                 },
-                deleteIcon: const Icon(Icons.close_rounded, size: 16),
-                backgroundColor: isDark ? sem.surfaceElevated2 : const Color(0xFFF0F0F5),
-                side: BorderSide.none,
+                deleteIcon: Icon(Icons.close_rounded, size: 14, color: sem.onSurfaceMuted),
+                backgroundColor: isDark ? sem.surfaceElevated2 : const Color(0xFFF0F0F8),
+                side: BorderSide(color: sem.borderSubtle, width: 1),
               )).toList(),
             ),
           ],
@@ -699,7 +723,6 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
             fontSize: 20,
           ),
         ),
-        centerTitle: true,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -881,18 +904,38 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                     StaggeredListItem(
                       index: staggerIndex++,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4l),
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4l, horizontal: AppSpacing.x2l),
                         decoration: BoxDecoration(
                           color: sem.surfaceElevated,
                           borderRadius: BorderRadius.circular(AppRadius.xl),
                           border: Border.all(color: sem.borderSubtle, width: 1),
                         ),
-                        child: Center(
-                          child: Text(
-                            'No divisions assigned yet.\nTap "Add" to get started.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: sem.onSurfaceMuted),
-                          ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.school_outlined,
+                              size: 40,
+                              color: sem.onSurfaceMuted.withValues(alpha: 0.4),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            Text(
+                              'No divisions assigned',
+                              style: GoogleFonts.outfit(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: sem.onSurfaceMuted,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              'Tap "Add" above to assign your divisions',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: sem.onSurfaceMuted.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     )

@@ -213,134 +213,241 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> _editLecture(TimetableEntry entry) async {
     final isCR = AppSettings.currentRole == UserRole.cr;
+    final colorScheme = Theme.of(context).colorScheme;
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit_rounded),
-              title: const Text('Edit Lecture'),
-              onTap: () {
-                Navigator.pop(ctx);
-                TimetableStudioSheet.show(
-                  context,
-                  division: widget.division,
-                  initialDay: currentDay,
-                  existingEntry: entry,
-                );
-              },
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.x2l, AppSpacing.lg, AppSpacing.x2l, AppSpacing.x2l,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? sem.surfaceElevated : colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.x2l)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Drag handle
+                Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(
+                      color: sem.borderSubtle,
+                      borderRadius: BorderRadius.circular(AppRadius.full),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+
+                // Lecture context card
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary.withValues(alpha: isDark ? 0.08 : 0.05),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    border: Border.all(color: colorScheme.primary.withValues(alpha: 0.15)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                        ),
+                        child: Icon(Icons.class_rounded, color: colorScheme.primary, size: 18),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              entry.displaySubject,
+                              style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 16),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              TimetableManager.formatTime(entry.startTime, entry.endTime),
+                              style: GoogleFonts.inter(fontSize: 13, color: sem.onSurfaceMuted),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+
+                // Edit action
+                _ActionTile(
+                  icon: Icons.edit_calendar_rounded,
+                  label: 'Edit Lecture',
+                  subtitle: 'Modify subject, time, or batch',
+                  iconColor: colorScheme.primary,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    TimetableStudioSheet.show(
+                      context,
+                      division: widget.division,
+                      initialDay: currentDay,
+                      existingEntry: entry,
+                    );
+                  },
+                ),
+
+                // Cancel / Restore action
+                if (entry.isActive) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _ActionTile(
+                    icon: Icons.block_rounded,
+                    label: 'Cancel Today',
+                    subtitle: 'Mark this lecture as cancelled',
+                    iconColor: sem.warning,
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      await FirebaseFirestore.instance
+                          .collection('timetables')
+                          .doc(widget.division)
+                          .collection(currentDay)
+                          .doc(entry.id)
+                          .update({'status': 'cancelled', 'isActive': false});
+                      
+                      final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
+                      await HistoryService.logOperation(
+                        division: widget.division,
+                        operation: 'Lecture Cancelled',
+                        details: '${entry.displaySubject} on $currentDay at $timeStr',
+                        role: AppSettings.currentRole.name,
+                      );
+                      await TimetableEventService.handleModification(
+                        division: widget.division,
+                        day: currentDay,
+                        oldEntry: entry,
+                        isCancel: true,
+                      );
+                    },
+                  ),
+                ] else ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _ActionTile(
+                    icon: Icons.restore_rounded,
+                    label: 'Restore Lecture',
+                    subtitle: 'Mark this lecture as active again',
+                    iconColor: sem.conducted,
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      await FirebaseFirestore.instance
+                          .collection('timetables')
+                          .doc(widget.division)
+                          .collection(currentDay)
+                          .doc(entry.id)
+                          .update({'status': 'active', 'isActive': true});
+                      
+                      final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
+                      await HistoryService.logOperation(
+                        division: widget.division,
+                        operation: 'Lecture Restored',
+                        details: '${entry.displaySubject} on $currentDay at $timeStr',
+                        role: AppSettings.currentRole.name,
+                      );
+                      await TimetableEventService.handleModification(
+                        division: widget.division,
+                        day: currentDay,
+                        oldEntry: entry,
+                        isRestore: true,
+                      );
+                    },
+                  ),
+                ],
+
+                // Delete action — CR only, with confirmation
+                if (isCR) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _ActionTile(
+                    icon: Icons.delete_rounded,
+                    label: 'Delete Permanently',
+                    subtitle: 'Remove from timetable — cannot be undone',
+                    iconColor: sem.cancelled,
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (dCtx) => AlertDialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.xl),
+                          ),
+                          icon: Container(
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            decoration: BoxDecoration(
+                              color: sem.cancelled.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.delete_rounded, color: sem.cancelled, size: 28),
+                          ),
+                          title: Text(
+                            'Delete Lecture?',
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+                            textAlign: TextAlign.center,
+                          ),
+                          content: Text(
+                            'This permanently removes the lecture from the timetable. Students and faculty will be notified.',
+                            style: GoogleFonts.inter(fontSize: 14, height: 1.5),
+                            textAlign: TextAlign.center,
+                          ),
+                          actionsAlignment: MainAxisAlignment.center,
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(dCtx, false),
+                              child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                            ),
+                            FilledButton(
+                              onPressed: () => Navigator.pop(dCtx, true),
+                              style: FilledButton.styleFrom(backgroundColor: sem.cancelled),
+                              child: Text('Delete', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirmed != true) return;
+
+                      await FirebaseFirestore.instance
+                          .collection('timetables')
+                          .doc(widget.division)
+                          .collection(currentDay)
+                          .doc(entry.id)
+                          .delete();
+                      
+                      final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
+                      await HistoryService.logOperation(
+                        division: widget.division,
+                        operation: 'Lecture Deleted',
+                        details: '${entry.displaySubject} on $currentDay at $timeStr',
+                        role: AppSettings.currentRole.name,
+                      );
+                      await TimetableEventService.handleModification(
+                        division: widget.division,
+                        day: currentDay,
+                        oldEntry: entry,
+                        isDelete: true,
+                      );
+                    },
+                  ),
+                ],
+              ],
             ),
-            ListTile(
-              leading: const Icon(Icons.find_replace_rounded),
-              title: const Text('Replace Lecture'),
-              onTap: () {
-                Navigator.pop(ctx);
-                TimetableStudioSheet.show(
-                  context,
-                  division: widget.division,
-                  initialDay: currentDay,
-                  existingEntry: entry,
-                );
-              },
-            ),
-            if (entry.isActive)
-              ListTile(
-                leading: const Icon(Icons.cancel_outlined, color: Colors.orange),
-                title: const Text('Cancel Lecture', style: TextStyle(color: Colors.orange)),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await FirebaseFirestore.instance
-                      .collection('timetables')
-                      .doc(widget.division)
-                      .collection(currentDay)
-                      .doc(entry.id)
-                      .update({'status': 'cancelled', 'isActive': false});
-                  
-                  final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
-                  
-                  await HistoryService.logOperation(
-                    division: widget.division,
-                    operation: 'Lecture Cancelled',
-                    details: '${entry.displaySubject} on $currentDay at $timeStr',
-                    role: AppSettings.currentRole.name,
-                  );
-
-                  await TimetableEventService.handleModification(
-                    division: widget.division,
-                    day: currentDay,
-                    oldEntry: entry,
-                    isCancel: true,
-                  );
-                },
-              )
-            else
-              ListTile(
-                leading: const Icon(Icons.check_circle_outline, color: Colors.green),
-                title: const Text('Restore Lecture', style: TextStyle(color: Colors.green)),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await FirebaseFirestore.instance
-                      .collection('timetables')
-                      .doc(widget.division)
-                      .collection(currentDay)
-                      .doc(entry.id)
-                      .update({'status': 'active', 'isActive': true});
-                  
-                  final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
-                  await HistoryService.logOperation(
-                    division: widget.division,
-                    operation: 'Lecture Restored',
-                    details: '${entry.displaySubject} on $currentDay at $timeStr',
-                    role: AppSettings.currentRole.name,
-                  );
-
-                  await TimetableEventService.handleModification(
-                    division: widget.division,
-                    day: currentDay,
-                    oldEntry: entry,
-                    isRestore: true,
-                  );
-                },
-              ),
-            if (isCR)
-              ListTile(
-                leading: const Icon(Icons.delete_rounded, color: Colors.red),
-                title: const Text('Delete Lecture', style: TextStyle(color: Colors.red)),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await FirebaseFirestore.instance
-                      .collection('timetables')
-                      .doc(widget.division)
-                      .collection(currentDay)
-                      .doc(entry.id)
-                      .delete();
-                  
-                  final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
-                  await HistoryService.logOperation(
-                    division: widget.division,
-                    operation: 'Lecture Deleted',
-                    details: '${entry.displaySubject} on $currentDay at $timeStr',
-                    role: AppSettings.currentRole.name,
-                  );
-
-                  await TimetableEventService.handleModification(
-                    division: widget.division,
-                    day: currentDay,
-                    oldEntry: entry,
-                    isDelete: true,
-                  );
-                },
-              ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -1050,7 +1157,7 @@ class _StatCell extends StatelessWidget {
               height: 1,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             label,
             style: GoogleFonts.inter(
@@ -1077,3 +1184,79 @@ class _Divider extends StatelessWidget {
     );
   }
 }
+
+// ── Action Tile ─────────────────────────────────────────────────────────────────
+// Reusable themed action tile for bottom sheet action menus
+class _ActionTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final Color iconColor;
+  final VoidCallback onTap;
+
+  const _ActionTile({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.iconColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.md,
+            horizontal: AppSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Icon(icon, color: iconColor, size: 22),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: sem.onSurfaceMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, size: 20, color: sem.onSurfaceMuted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
