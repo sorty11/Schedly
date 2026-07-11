@@ -7,7 +7,6 @@ export class OutboxWorker {
   private _isRunning = false;
   private isProcessing = false;
   private timer: NodeJS.Timeout | null = null;
-  private remindersTimer: NodeJS.Timeout | null = null;
   
   private currentPollMs = WorkerConfig.IDLE_INTERVAL_MS;
 
@@ -65,7 +64,6 @@ export class OutboxWorker {
     }));
     
     this.scheduleNext(0);
-    this.scheduleRemindersScan(0);
   }
 
   public stop() {
@@ -73,10 +71,6 @@ export class OutboxWorker {
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;
-    }
-    if (this.remindersTimer) {
-      clearTimeout(this.remindersTimer);
-      this.remindersTimer = null;
     }
     
     logger.info(JSON.stringify({
@@ -91,25 +85,24 @@ export class OutboxWorker {
     this.timer = setTimeout(() => this.processOutbox(), delayMs);
   }
 
-  private scheduleRemindersScan(delayMs: number) {
-    if (!this._isRunning) return;
-    this.remindersTimer = setTimeout(() => this.processFacultyReminders(), delayMs);
-  }
-
-  private async processFacultyReminders() {
+  private async transferDueFacultyReminders() {
     try {
+      console.log("[REMINDER] Checking due faculty reminders");
       const db = admin.firestore();
-      // Look for due reminders
+      // Look for due reminders using scheduledFor to match the new architecture
       const snapshot = await db.collection('faculty_reminders')
-        .where('sendAt', '<=', admin.firestore.Timestamp.now())
+        .where('scheduledFor', '<=', admin.firestore.Timestamp.now())
         .limit(50)
         .get();
+
+      console.log("[REMINDER] Found " + snapshot.size + " reminders");
 
       if (!snapshot.empty) {
         const batch = db.batch();
         
         for (const doc of snapshot.docs) {
           const data = doc.data();
+          console.log("[REMINDER] Moving reminder", doc.id);
           const targetFacultyId = data.facultyId || data.uid;
           
           if (!targetFacultyId) {
@@ -138,12 +131,11 @@ export class OutboxWorker {
         }
         
         await batch.commit();
+        console.log("[REMINDER] Finished transfer");
         logger.info(`Transferred ${snapshot.size} due faculty reminders to outbox.`);
       }
     } catch (error) {
       logger.error('Error processing faculty reminders', { error });
-    } finally {
-      this.scheduleRemindersScan(15000); // Check every 15 seconds
     }
   }
 
@@ -156,6 +148,8 @@ export class OutboxWorker {
     this.isProcessing = true;
     const loopStartTime = Date.now();
     try {
+      await this.transferDueFacultyReminders();
+      
       this.checkResetStats();
       const db = admin.firestore();
       

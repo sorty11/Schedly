@@ -132,8 +132,8 @@ class OutboxWorker {
                 const batch = db.batch();
                 for (const doc of snapshot.docs) {
                     const data = doc.data();
-                    const uid = data.uid;
-                    if (!uid) {
+                    const targetFacultyId = data.facultyId || data.uid;
+                    if (!targetFacultyId) {
                         batch.delete(doc.ref);
                         continue;
                     }
@@ -144,9 +144,9 @@ class OutboxWorker {
                         title: data.title || '📚 Upcoming Class',
                         body: data.body || '',
                         deepLink: 'faculty_dashboard',
-                        division: uid,
+                        division: targetFacultyId, // Route to the faculty's topic
                         role: 'faculty',
-                        uid: uid,
+                        uid: data.uid || targetFacultyId, // Maintain original creator uid if present
                         createdAt: admin.firestore.FieldValue.serverTimestamp(),
                         processed: false,
                         attempts: 0,
@@ -227,7 +227,13 @@ class OutboxWorker {
             let role = 'unknown';
             logger_1.logger.info(`[ROUTER] Validating authorization for uid: ${uid}`);
             logger_1.logger.info(`[AUTH] uid=${uid}`);
-            if (uid) {
+            // Backend-generated jobs do not require client authorization
+            if (type === 'faculty_reminder') {
+                authorized = true;
+                role = 'backend';
+                logger_1.logger.info(`[AUTH] Bypassing auth check for internal backend job: ${type}`);
+            }
+            else if (uid) {
                 const userDoc = await db.collection('users').doc(uid).get();
                 logger_1.logger.info(`[AUTH] Firestore document exists=${userDoc.exists}`);
                 if (userDoc.exists) {
