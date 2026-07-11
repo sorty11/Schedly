@@ -1,3 +1,6 @@
+import 'package:flutter/foundation.dart';
+import '../app_settings.dart';
+import '../user_roles.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:schedly/models/timetable_entry.dart';
@@ -121,38 +124,22 @@ class TimetableEventService {
     }
 
     // Trigger Render Backend Push Notification via Outbox
-    final baseNotificationId = 'tt_${DateTime.now().millisecondsSinceEpoch}';
-    final priority = (type == 'cancel' || type == 'edit' || type == 'time_change' || type == 'room_change') ? 'high' : 'normal';
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    // IMPORTANT: Wrapped in try-catch so outbox failures NEVER block the save operation
+    try {
+      final baseNotificationId = 'tt_${DateTime.now().millisecondsSinceEpoch}';
+      final priority = (type == 'cancel' || type == 'edit' || type == 'time_change' || type == 'room_change') ? 'high' : 'normal';
+      // Resolve correct UID for outbox
+      String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+      if (AppSettings.currentRole == UserRole.faculty && AppSettings.facultyId != null) {
+        uid = AppSettings.facultyId!;
+      }
 
-    final Map<String, dynamic> divisionPayload = {
-      'notificationId': baseNotificationId,
-      'type': type,
-      'title': title,
-      'body': message,
-      'division': division,
-      'priority': priority,
-      'processed': false,
-      'attempts': 0,
-      'nextRetryAt': FieldValue.serverTimestamp(),
-      'createdAt': FieldValue.serverTimestamp(),
-      'uid': uid,
-    };
-    
-    debugPrint('OUTBOX PAYLOAD (Division): $divisionPayload');
-    final outboxRef = FirebaseFirestore.instance.collection('notification_outbox').doc();
-    await outboxRef.set(divisionPayload);
-
-    // If assigned to a faculty, also notify the faculty specifically
-    final facultyId = newEntry?.facultyId ?? oldEntry?.facultyId;
-    if (facultyId != null && facultyId.isNotEmpty) {
-      final Map<String, dynamic> facultyPayload = {
-        'notificationId': '${baseNotificationId}_fac',
+      final Map<String, dynamic> divisionPayload = {
+        'notificationId': baseNotificationId,
         'type': type,
         'title': title,
         'body': message,
-        'division': facultyId,
-        'role': 'faculty',
+        'division': division,
         'priority': priority,
         'processed': false,
         'attempts': 0,
@@ -161,9 +148,62 @@ class TimetableEventService {
         'uid': uid,
       };
       
-      debugPrint('OUTBOX PAYLOAD (Faculty): $facultyPayload');
-      final facultyOutboxRef = FirebaseFirestore.instance.collection('notification_outbox').doc();
-      await facultyOutboxRef.set(facultyPayload);
+      debugPrint('OUTBOX PAYLOAD (Division): $divisionPayload');
+      final outboxRef = FirebaseFirestore.instance.collection('notification_outbox').doc();
+      await outboxRef.set(divisionPayload);
+
+      // If assigned to a faculty, also notify the faculty specifically
+      debugPrint('[DEBUG_FAC_3] newEntry?.facultyId = ${newEntry?.facultyId} | oldEntry?.facultyId = ${oldEntry?.facultyId}');
+      final facultyId = newEntry?.facultyId ?? oldEntry?.facultyId;
+      if (facultyId != null && facultyId.isNotEmpty) {
+        final Map<String, dynamic> facultyPayload = {
+          'notificationId': '${baseNotificationId}_fac',
+          'type': type,
+          'title': title,
+          'body': message,
+          'division': facultyId,
+          'role': 'faculty',
+          'priority': priority,
+          'processed': false,
+          'attempts': 0,
+          'nextRetryAt': FieldValue.serverTimestamp(),
+          'createdAt': FieldValue.serverTimestamp(),
+          'uid': uid,
+        };
+        
+        debugPrint('OUTBOX PAYLOAD (Faculty): $facultyPayload');
+        final facultyOutboxRef = FirebaseFirestore.instance.collection('notification_outbox').doc();
+        await facultyOutboxRef.set(facultyPayload);
+      }
+
+      // Automatically create a backend faculty reminder if it's an add or edit
+      if (newEntry != null && newEntry.facultyId != null && newEntry.facultyId!.isNotEmpty) {
+        // Only schedule if it's not a cancellation/deletion
+        if (type != 'cancel' && type != 'delete') {
+          final lectureTime = _getNextOccurrence(day, newEntry.startTime);
+          final scheduledFor = lectureTime.subtract(const Duration(minutes: 5));
+          
+          final reminderPayload = {
+            'facultyId': newEntry.facultyId,
+            'lectureId': newEntry.id,
+            'division': division,
+            'title': '📚 Upcoming Class',
+            'body': '${newEntry.displaySubject}\n${division.replaceAll('_', ' ')}\nRoom ${newEntry.room}\nStarts in 5 minutes.',
+            'scheduledFor': Timestamp.fromDate(scheduledFor),
+            'processed': false,
+            'createdAt': FieldValue.serverTimestamp(),
+            'uid': uid,
+          };
+          
+          // Use a deterministic ID so edits overwrite the existing reminder rather than duplicating
+          final reminderDocId = '${division}_${newEntry.id}';
+          await FirebaseFirestore.instance.collection('faculty_reminders').doc(reminderDocId).set(reminderPayload);
+          debugPrint('BACKEND REMINDER created: $reminderDocId for ${newEntry.facultyId} at $scheduledFor');
+        }
+      }
+    } catch (e) {
+      // Non-fatal: push notification outbox failure should never block timetable saves
+      debugPrint('OUTBOX WARNING (non-fatal): Failed to write notification outbox: $e');
     }
 // 3. Local Push Notification
     final targetId = newEntry?.id ?? oldEntry?.id ?? '0';
@@ -175,5 +215,30 @@ class TimetableEventService {
       title: title,
       body: message,
     );
+  }
+
+  static DateTime _getNextOccurrence(String dayName, int timeInMinutes) {
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    final targetDay = days.indexOf(dayName) + 1; // 1 = Mon, 7 = Sun
+    if (targetDay == 0) return DateTime.now(); // Fallback
+
+    final now = DateTime.now();
+    int daysToAdd = targetDay - now.weekday;
+    if (daysToAdd < 0) {
+      daysToAdd += 7;
+    }
+    
+    final hour = timeInMinutes ~/ 60;
+    final minute = timeInMinutes % 60;
+    
+    var nextDate = DateTime(now.year, now.month, now.day).add(Duration(days: daysToAdd));
+    nextDate = DateTime(nextDate.year, nextDate.month, nextDate.day, hour, minute);
+    
+    // If it's today but the time has already passed, schedule for next week
+    if (daysToAdd == 0 && nextDate.isBefore(now)) {
+      nextDate = nextDate.add(const Duration(days: 7));
+    }
+    
+    return nextDate;
   }
 }

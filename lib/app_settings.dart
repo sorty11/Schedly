@@ -1,6 +1,10 @@
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'user_roles.dart';
+import 'services/topic_subscription_service.dart';
+import 'services/notification_service.dart';
+import 'services/diagnostic_logger.dart';
 
 class AppSettings {
   static UserRole currentRole =
@@ -22,6 +26,8 @@ class AppSettings {
   static String? sectionId;
 
   // Faculty fields
+  static String? facultyId;
+  static int facultyIdMigrationVersion = 0;
   static String? facultyName;
   static String? facultyEmail;
   static String? facultyDepartment;
@@ -92,6 +98,8 @@ class AppSettings {
 
   static Future<void> loadFacultyDetails() async {
     final prefs = await SharedPreferences.getInstance();
+    facultyId = prefs.getString('faculty_id');
+    facultyIdMigrationVersion = prefs.getInt('faculty_id_migration_version') ?? 0;
     facultyName = prefs.getString('faculty_name');
     facultyEmail = prefs.getString('faculty_email');
     facultyDepartment = prefs.getString('faculty_department');
@@ -200,17 +208,29 @@ class AppSettings {
     required String department,
     required String designation,
     required String cabin,
-    required List<String> assignedDivisions,
+    List<String> assignedDivisions = const [],
+    String? id,
+    int? migrationVersion,
   }) async {
     final prefs = await SharedPreferences.getInstance();
+    
+    if (id != null) {
+      facultyId = id;
+      await prefs.setString('faculty_id', id);
+    }
+    
+    if (migrationVersion != null) {
+      facultyIdMigrationVersion = migrationVersion;
+      await prefs.setInt('faculty_id_migration_version', migrationVersion);
+    }
+
     facultyName = name;
     facultyEmail = email;
     facultyDepartment = department;
     facultyDesignation = designation;
     facultyCabin = cabin;
-    facultySetupCompleted = prefs.getBool('faculty_setup_completed') ?? false;
     facultyAssignedDivisions = assignedDivisions;
-    
+
     await prefs.setString('faculty_name', name);
     await prefs.setString('faculty_email', email);
     await prefs.setString('faculty_department', department);
@@ -232,9 +252,35 @@ class AppSettings {
     facultyReminderTime = minutes;
   }
 
+  static Future<void> clearFacultyDetails() async {
+    final prefs = await SharedPreferences.getInstance();
+    facultyId = null;
+    facultyIdMigrationVersion = 0;
+    facultyName = null;
+    facultyEmail = null;
+    facultyDepartment = null;
+    facultyDesignation = null;
+    facultyCabin = null;
+    facultySetupCompleted = false;
+    facultyAssignedDivisions = null;
+
+    await prefs.remove('faculty_id');
+    await prefs.remove('faculty_id_migration_version');
+    await prefs.remove('faculty_name');
+    await prefs.remove('faculty_email');
+    await prefs.remove('faculty_department');
+    await prefs.remove('faculty_designation');
+    await prefs.remove('faculty_cabin');
+    await prefs.remove('faculty_setup_completed');
+    await prefs.remove('faculty_assigned_divisions');
+  }
+
   static Future<void> resetRole() async {
     final prefs =
         await SharedPreferences.getInstance();
+
+    DiagnosticLogger.logSession('[SESSION_TRANSITION] Purging legacy subscriptions before role reset');
+    await TopicSubscriptionService.clearAllSubscriptions();
 
     await prefs.remove('user_role');
     await prefs.remove('student_name');
@@ -246,6 +292,8 @@ class AppSettings {
     await prefs.remove('sr_component');
     await prefs.remove('sr_section_id');
     await prefs.remove('sr_batch');
+    await prefs.remove('faculty_id');
+    await prefs.remove('faculty_id_migration_version');
     await prefs.remove('faculty_name');
     await prefs.remove('faculty_email');
     await prefs.remove('faculty_department');
@@ -267,6 +315,9 @@ class AppSettings {
     facultyDesignation = null;
     facultyCabin = null;
     facultySetupCompleted = false;
-    facultyAssignedDivisions = null;
+    facultyAssignedDivisions = [];
+
+    DiagnosticLogger.logSession('[SESSION_TRANSITION] Re-registering fresh token for fallback Student role');
+    NotificationService.reRegisterToken();
   }
-}
+}

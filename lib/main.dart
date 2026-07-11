@@ -12,6 +12,7 @@ import 'package:flutter/foundation.dart';
 import 'home_page.dart';
 import 'splash_screen.dart';
 import 'app_settings.dart';
+import 'services/migration_service.dart';
 import 'login_page.dart';
 import 'theme/theme.dart';
 import 'firebase_options.dart';
@@ -69,20 +70,85 @@ Future<void> main() async {
     }
   }
 
-  await NotificationService.initialize();
-
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  await LocalNotificationService.initialize();
-
   await AppSettings.loadRole();
   await AppSettings.loadSRDetails();
   await AppSettings.loadStudentDetails();
   await AppSettings.loadFacultyDetails();
+  
+  await MigrationService.migrateFacultyIds();
+
+  // Fire and forget to prevent blocking the UI thread (fixes black screen bug)
+  NotificationService.initialize();
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  
+  await LocalNotificationService.initialize();
 
   final prefs = await SharedPreferences.getInstance();
+  
   themeController = ThemeController(prefs);
 
+  // Trigger the proof
+  _proveMismatch();
+
   runApp(const SchedlyApp());
+}
+
+Future<void> _proveMismatch() async {
+  try {
+    debugPrint('--- PROVING MISMATCH ---');
+    
+    // 1. AppSettings.facultyId
+    debugPrint('1. AppSettings.facultyId: \${AppSettings.facultyId}');
+    
+    // 2. faculty_profiles document ID
+    final profiles = await FirebaseFirestore.instance.collection('faculty_profiles').get();
+    for (final doc in profiles.docs) {
+      final data = doc.data();
+      debugPrint('2. faculty_profiles ID: ${doc.id} (Name: ${data['name']})');
+    }
+    
+    // 3. facultyId stored inside the timetable document
+    final timetables = await FirebaseFirestore.instance.collectionGroup('Monday').get();
+    for (final doc in timetables.docs) {
+      final data = doc.data();
+      if (data.containsKey('facultyId')) {
+        debugPrint('3. Timetable Entry (${doc.id}) -> facultyId: ${data['facultyId']}');
+      }
+    }
+    
+    // 4. division written into notification_outbox
+    final outbox = await FirebaseFirestore.instance.collection('notification_outbox').orderBy('createdAt', descending: true).limit(5).get();
+    for (final doc in outbox.docs) {
+      final data = doc.data();
+      if (data['role'] == 'faculty' || data['type'] == 'faculty_reminder') {
+        debugPrint('4. Outbox (${doc.id}) -> division: ${data['division']}, type: ${data['type']}');
+      }
+    }
+    
+    // 5. topic subscribed by TopicSubscriptionService (fcm_tokens)
+    final tokens = await FirebaseFirestore.instance.collectionGroup('fcm_tokens').get();
+    for (final doc in tokens.docs) {
+      final data = doc.data();
+      if (data['role'] == 'faculty') {
+        debugPrint('5. fcm_tokens (${doc.id}) -> division (Topic): ${data['division']}');
+      }
+    }
+    
+    // 6. Firestore users/{uid}.role
+    final users = await FirebaseFirestore.instance.collection('users').get();
+    for (final doc in users.docs) {
+      final data = doc.data();
+      final role = data['role'];
+      if (role == 'faculty' || role == 'FACULTY') {
+        debugPrint('6. users (${doc.id}) -> role: $role');
+      }
+    }
+    
+    debugPrint('--- END OF PROOF ---');
+  } catch (e) {
+    debugPrint('Proof error: \$e');
+  }
 }
 
 class SchedlyApp extends StatelessWidget {

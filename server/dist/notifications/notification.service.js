@@ -42,11 +42,12 @@ function sanitizeTopic(topic) {
     return topic.replace(/[^a-zA-Z0-9-_.~%]/g, '_');
 }
 function getTargetTopic(division, batch, role) {
-    if (role === 'faculty') {
+    const normalizedRole = role?.toLowerCase();
+    if (normalizedRole === 'faculty') {
         return `faculty_${sanitizeTopic(division)}`;
     }
-    if (role && role !== 'student') {
-        return `role_${role}_${sanitizeTopic(division)}`;
+    if (normalizedRole && normalizedRole !== 'student') {
+        return `role_${normalizedRole}_${sanitizeTopic(division)}`;
     }
     if (batch) {
         return `batch_${sanitizeTopic(batch)}_${sanitizeTopic(division)}`;
@@ -55,6 +56,7 @@ function getTargetTopic(division, batch, role) {
 }
 async function dispatchNotification(payload) {
     const topic = getTargetTopic(payload.division, payload.batch, payload.role);
+    logger_1.logger.info(`[TOPIC] Resolved topic: ${topic} from division=${payload.division}, batch=${payload.batch}, role=${payload.role}`);
     const priority = payload.priority || 'normal';
     const ttlSeconds = priority === 'high' ? 3600 : 86400; // 1 hour high, 24 hours normal
     const androidConfig = {
@@ -142,10 +144,11 @@ async function dispatchNotification(payload) {
     };
     logger_1.logger.info(`[FCM] Sending payload to topic ${topic}: ${JSON.stringify(message)}`);
     try {
-        await admin.messaging().send(message);
-        logger_1.logger.info(`Successfully dispatched topic message to ${topic}`);
+        const messageId = await admin.messaging().send(message);
+        logger_1.logger.info(`[FCM_SEND] SUCCESS | Topic: ${topic} | Message ID: ${messageId} | Payload: ${JSON.stringify(message)}`);
     }
     catch (error) {
-        logger_1.logger.error(`Failed to dispatch topic message to ${topic}`, { error });
+        logger_1.logger.error(`[FCM_SEND] FAILURE | Topic: ${topic} | Error Code: ${error.code} | Message: ${error.message}`);
+        throw error;
     }
 }

@@ -1,8 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 
+import 'package:shared_preferences/shared_preferences.dart';
+import '../app_settings.dart';
 import '../models/timetable_entry.dart';
 import 'pdf_timetable_import_service.dart';
+import 'package:flutter/foundation.dart';
 
 class MigrationService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -10,6 +13,80 @@ class MigrationService {
   static const List<String> _days = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
   ];
+
+  static Future<bool> migrateFacultyIds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final version = prefs.getInt('faculty_id_migration_version') ?? 0;
+      if (version >= 2) return true; 
+
+      final role = prefs.getString('user_role');
+      if (role != 'faculty') {
+        await prefs.setInt('faculty_id_migration_version', 2);
+        return true;
+      }
+
+      final name = prefs.getString('faculty_name');
+      if (name == null || name.isEmpty) return false;
+
+      final legacyId = 'fac_${name.replaceAll(' ', '').toLowerCase()}';
+      final newId = _db.collection('faculty_profiles').doc().id;
+
+      // STEP 1: Copy
+      final profileSnap = await _db.collection('faculty_profiles').doc(legacyId).get();
+      if (profileSnap.exists) {
+        await _db.collection('faculty_profiles').doc(newId).set(profileSnap.data()!);
+      } else {
+        await _db.collection('faculty_profiles').doc(newId).set({
+          'name': name,
+          'createdAt': FieldValue.serverTimestamp(),
+          'department': prefs.getString('faculty_department'),
+          'designation': prefs.getString('faculty_designation'),
+          'cabin': prefs.getString('faculty_cabin'),
+          'assignedDivisions': prefs.getStringList('faculty_assigned_divisions'),
+        });
+      }
+
+      final userSnap = await _db.collection('users').doc(legacyId).get();
+      if (userSnap.exists) {
+        await _db.collection('users').doc(newId).set(userSnap.data()!);
+      } else {
+        await _db.collection('users').doc(newId).set({
+          'role': 'FACULTY',
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // STEP 2: Verify Copied Data
+      final verifyProfile = await _db.collection('faculty_profiles').doc(newId).get();
+      final verifyUser = await _db.collection('users').doc(newId).get();
+      if (!verifyProfile.exists || !verifyUser.exists) {
+        throw Exception("Verification failed: Copied documents do not exist.");
+      }
+
+      // STEP 3: Mark migration successful locally
+      await AppSettings.saveFacultyDetails(
+        name: name,
+        email: prefs.getString('faculty_email') ?? '',
+        department: prefs.getString('faculty_department') ?? '',
+        designation: prefs.getString('faculty_designation') ?? '',
+        cabin: prefs.getString('faculty_cabin') ?? '',
+        assignedDivisions: prefs.getStringList('faculty_assigned_divisions') ?? [],
+        id: newId,
+        migrationVersion: 2,
+      );
+
+      // STEP 4: Remove legacy documents
+      await _db.collection('faculty_profiles').doc(legacyId).delete();
+      await _db.collection('users').doc(legacyId).delete();
+      
+      debugPrint('MIGRATION: Successfully migrated $legacyId to $newId and deleted legacy docs.');
+      return true;
+    } catch (e) {
+      debugPrint('MIGRATION ERROR: $e');
+      return false;
+    }
+  }
 
   /// Upgrade the database for a specific division to the Architecture v2 data model.
   static Future<void> upgradeToV2(String division) async {

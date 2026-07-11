@@ -71,7 +71,7 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
 
     setState(() => _isLoading = true);
     try {
-      final uid = FirebaseAuth.instance.currentUser!.uid;
+      final uid = AppSettings.facultyId ?? '';
       
       final subjectMap = <String, List<String>>{};
       for (final div in _selectedDivisions) {
@@ -88,9 +88,22 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      await FirebaseFirestore.instance.collection('faculty_profiles').doc(uid).set(profileData, SetOptions(merge: true));
+      debugPrint('[FS_TRACE] WRITE faculty_profiles/\$uid');
+      try {
+        await FirebaseFirestore.instance.collection('faculty_profiles').doc(uid).set(profileData, SetOptions(merge: true));
+      } catch (e) {
+        debugPrint('[FS_ERROR]\ncollection: faculty_profiles\ndocument: \$uid\noperation: WRITE\nexception: \$e');
+        rethrow;
+      }
 
-      final profileSnap = await FirebaseFirestore.instance.collection('faculty_profiles').doc(uid).get();
+      debugPrint('[FS_TRACE] READ faculty_profiles/\$uid');
+      DocumentSnapshot<Map<String, dynamic>> profileSnap;
+      try {
+        profileSnap = await FirebaseFirestore.instance.collection('faculty_profiles').doc(uid).get();
+      } catch (e) {
+        debugPrint('[FS_ERROR]\ncollection: faculty_profiles\ndocument: \$uid\noperation: READ\nexception: \$e');
+        rethrow;
+      }
       final data = profileSnap.data()!;
 
       await AppSettings.saveFacultyDetails(

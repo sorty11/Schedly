@@ -7,11 +7,12 @@ export function sanitizeTopic(topic: string): string {
 }
 
 export function getTargetTopic(division: string, batch?: string, role?: string): string {
-  if (role === 'faculty') {
+  const normalizedRole = role?.toLowerCase();
+  if (normalizedRole === 'faculty') {
     return `faculty_${sanitizeTopic(division)}`;
   }
-  if (role && role !== 'student') {
-    return `role_${role}_${sanitizeTopic(division)}`;
+  if (normalizedRole && normalizedRole !== 'student') {
+    return `role_${normalizedRole}_${sanitizeTopic(division)}`;
   }
   if (batch) {
     return `batch_${sanitizeTopic(batch)}_${sanitizeTopic(division)}`;
@@ -21,6 +22,7 @@ export function getTargetTopic(division: string, batch?: string, role?: string):
 
 export async function dispatchNotification(payload: NotificationPayload): Promise<void> {
   const topic = getTargetTopic(payload.division, payload.batch, payload.role);
+  logger.info(`[TOPIC] Resolved topic: ${topic} from division=${payload.division}, batch=${payload.batch}, role=${payload.role}`);
   
   const priority = payload.priority || 'normal';
   const ttlSeconds = priority === 'high' ? 3600 : 86400; // 1 hour high, 24 hours normal
@@ -109,9 +111,10 @@ export async function dispatchNotification(payload: NotificationPayload): Promis
   logger.info(`[FCM] Sending payload to topic ${topic}: ${JSON.stringify(message)}`);
 
   try {
-    await admin.messaging().send(message);
-    logger.info(`Successfully dispatched topic message to ${topic}`);
-  } catch (error) {
-    logger.error(`Failed to dispatch topic message to ${topic}`, { error });
+    const messageId = await admin.messaging().send(message);
+    logger.info(`[FCM_SEND] SUCCESS | Topic: ${topic} | Message ID: ${messageId} | Payload: ${JSON.stringify(message)}`);
+  } catch (error: any) {
+    logger.error(`[FCM_SEND] FAILURE | Topic: ${topic} | Error Code: ${error.code} | Message: ${error.message}`);
+    throw error;
   }
 }

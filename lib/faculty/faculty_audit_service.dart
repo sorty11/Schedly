@@ -21,7 +21,7 @@ class FacultyAuditService {
     Map<String, dynamic>? metadata,
   }) async {
     try {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final uid = AppSettings.facultyId;
       if (uid == null) return;
       
       final name = AppSettings.facultyName ?? 'Unknown Faculty';

@@ -110,9 +110,9 @@ export class OutboxWorker {
         
         for (const doc of snapshot.docs) {
           const data = doc.data();
-          const uid = data.uid;
+          const targetFacultyId = data.facultyId || data.uid;
           
-          if (!uid) {
+          if (!targetFacultyId) {
             batch.delete(doc.ref);
             continue;
           }
@@ -124,9 +124,9 @@ export class OutboxWorker {
             title: data.title || '📚 Upcoming Class',
             body: data.body || '',
             deepLink: 'faculty_dashboard',
-            division: uid,
+            division: targetFacultyId, // Route to the faculty's topic
             role: 'faculty',
-            uid: uid,
+            uid: data.uid || targetFacultyId, // Maintain original creator uid if present
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             processed: false,
             attempts: 0,
@@ -201,6 +201,7 @@ export class OutboxWorker {
 
   private async processSingleEntry(doc: admin.firestore.QueryDocumentSnapshot, workerLatency: number) {
     const data = doc.data();
+    logger.info(`[OUTBOX] Read doc ${doc.id} with data: ${JSON.stringify(data)}`);
     const uid = data.uid;
     const notificationId = data.notificationId || doc.id;
     const division = data.division || 'unknown';
@@ -212,15 +213,27 @@ export class OutboxWorker {
     try {
       let authorized = false;
       let role = 'unknown';
-      if (uid) {
+      logger.info(`[ROUTER] Validating authorization for uid: ${uid}`);
+      logger.info(`[AUTH] uid=${uid}`);
+      
+      // Backend-generated jobs do not require client authorization
+      if (type === 'faculty_reminder') {
+        authorized = true;
+        role = 'backend';
+        logger.info(`[AUTH] Bypassing auth check for internal backend job: ${type}`);
+      } else if (uid) {
         const userDoc = await db.collection('users').doc(uid).get();
+        logger.info(`[AUTH] Firestore document exists=${userDoc.exists}`);
         if (userDoc.exists) {
           role = userDoc.data()?.role || 'unknown';
-          if (role === 'CR' || role === 'SR' || role === 'faculty') {
+          logger.info(`[AUTH] role=${role}`);
+          const normalizedRole = role.toUpperCase();
+          if (normalizedRole === 'CR' || normalizedRole === 'SR' || normalizedRole === 'FACULTY') {
             authorized = true;
           }
         }
       }
+      logger.info(`[AUTH] authorized=${authorized}`);
 
       if (!authorized) {
         const processingTime = Date.now() - startTime;

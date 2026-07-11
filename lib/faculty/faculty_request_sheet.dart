@@ -69,7 +69,7 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
   }
 
   Future<void> _loadSubjectsForDivision(String div) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = AppSettings.facultyId;
     if (uid == null) return;
 
     final profileSnap = await FirebaseFirestore.instance.collection('faculty_profiles').doc(uid).get();
@@ -98,7 +98,7 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
     setState(() => _isLoading = true);
 
     try {
-      final uid = FirebaseAuth.instance.currentUser!.uid;
+      final uid = AppSettings.facultyId ?? '';
       final name = AppSettings.facultyName ?? 'Faculty';
 
       int? startTimeMinutes;
@@ -147,17 +147,27 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
         },
       );
 
-      // Notify CR
-      await FirebaseFirestore.instance.collection('notification_outbox').add({
-        'topic': 'cr_${_selectedDivision}',
-        'title': 'New Faculty Request',
-        'body': 'Prof. $name requested to ${widget.requestType == FacultyRequestType.cancel ? 'cancel' : 'add'} a $_selectedSubject lecture.',
-        'data': {
+      // Notify CR — wrapped in try-catch so failures never block request submission
+      try {
+        await FirebaseFirestore.instance.collection('notification_outbox').add({
+          'division': _selectedDivision,
+          'topic': 'cr_$_selectedDivision',
+          'role': 'CR',
+          'title': 'New Faculty Request',
+          'body': 'Prof. $name requested to ${widget.requestType == FacultyRequestType.cancel ? 'cancel' : 'add'} a $_selectedSubject lecture.',
           'type': 'faculty_request',
-          'requestId': request.id,
-        },
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+          'uid': uid,
+          'data': {
+            'requestId': request.id,
+          },
+          'createdAt': FieldValue.serverTimestamp(),
+          'processed': false,
+          'attempts': 0,
+          'nextRetryAt': FieldValue.serverTimestamp(),
+        });
+      } catch (outboxErr) {
+        debugPrint('OUTBOX WARNING (non-fatal, faculty request): $outboxErr');
+      }
 
       if (!mounted) return;
       Navigator.pop(context);

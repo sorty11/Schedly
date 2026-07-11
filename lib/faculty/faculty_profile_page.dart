@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app_settings.dart';
@@ -34,22 +35,35 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
   bool _isLoading = true;
   Map<String, List<String>> _subjectsMap = {};
   int _estimatedClasses = 0;
+  AuthorizationStatus? _webNotificationStatus;
 
   @override
   void initState() {
     super.initState();
     _loadProfileData();
+    if (kIsWeb) {
+      _checkWebNotificationStatus();
+    }
   }
 
-  String get _deterministicUid {
-    final name = AppSettings.facultyName ?? 'Unknown';
-    return 'fac_${name.replaceAll(' ', '').toLowerCase()}';
+  Future<void> _checkWebNotificationStatus() async {
+    final settings = await FirebaseMessaging.instance.getNotificationSettings();
+    if (mounted) {
+      setState(() {
+        _webNotificationStatus = settings.authorizationStatus;
+      });
+    }
+  }
+
+  String get _facultyId {
+    return AppSettings.facultyId ?? '';
   }
 
   Future<void> _loadProfileData() async {
     setState(() => _isLoading = true);
     try {
-      final snap = await FirebaseFirestore.instance.collection('faculty_profiles').doc(_deterministicUid).get();
+      if (_facultyId.isEmpty) throw Exception('Faculty ID is missing.');
+      final snap = await FirebaseFirestore.instance.collection('faculty_profiles').doc(_facultyId).get();
       if (snap.exists) {
         final data = snap.data()!;
         final dynamic rawSubjects = data['subjects'];
@@ -103,7 +117,7 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
     try {
       final assignedDivs = _subjectsMap.keys.toList()..sort();
       
-      await FirebaseFirestore.instance.collection('faculty_profiles').doc(_deterministicUid).set({
+      await FirebaseFirestore.instance.collection('faculty_profiles').doc(_facultyId).set({
         'assignedDivisions': assignedDivs,
         'subjects': _subjectsMap,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -689,13 +703,16 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.md,
-              ),
-              physics: const BouncingScrollPhysics(),
-              child: Column(
+          : Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 800),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.md,
+                  ),
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // ── Hero header card ──────────────────────────────────────────
@@ -946,27 +963,29 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                                 if (newValue > 0) {
                                   if (kIsWeb) {
                                     await NotificationService.promptWebPermission();
+                                    await _checkWebNotificationStatus();
                                   } else {
                                     final plugin = LocalNotificationService.notifications.resolvePlatformSpecificImplementation<
                                         AndroidFlutterLocalNotificationsPlugin>();
                                     final isGranted = await plugin?.areNotificationsEnabled();
-                                  if (isGranted == false) {
-                                    if (context.mounted) {
-                                      showDialog(
-                                        context: context,
-                                        builder: (ctx) => AlertDialog(
-                                          title: const Text('Permissions Required'),
-                                          content: const Text('To receive reminders, please enable notifications for Schedly in your device settings.'),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.pop(ctx),
-                                              child: const Text('OK'),
-                                            ),
-                                          ],
-                                        ),
-                                      );
+                                    if (isGranted == false) {
+                                      if (context.mounted) {
+                                        showDialog(
+                                          context: context,
+                                          builder: (ctx) => AlertDialog(
+                                            title: const Text('Permissions Required'),
+                                            content: const Text('To receive reminders, please enable notifications for Schedly in your device settings.'),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(ctx),
+                                                child: const Text('OK'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }
+                                      return;
                                     }
-                                    return;
                                   }
                                 }
                                 await AppSettings.setFacultyReminderTime(newValue);
@@ -981,6 +1000,17 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                       ),
                     ]),
                   ),
+
+                  // ── App Settings (Web Only for Notifications) ─────────────────
+                  if (kIsWeb) ...[
+                    _sectionHeader('App Settings'),
+                    StaggeredListItem(
+                      index: staggerIndex++,
+                      child: _buildTileGroup([
+                        _buildWebNotificationTile(sem),
+                      ]),
+                    ),
+                  ],
 
                   // ── Help & Tutorials ──────────────────────────────────────────
                   _sectionHeader('Help & Tutorials'),
@@ -1047,6 +1077,95 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                   ),
                   const SizedBox(height: AppSpacing.x4l),
                 ],
+              ),
+            ),
+            ),
+          ),
+    );
+  }
+
+  Widget _buildWebNotificationTile(AppSemanticColors sem) {
+    IconData icon;
+    String title;
+    String subtitle;
+    Color color;
+    bool isEnabled = false;
+    bool isBlocked = false;
+
+    switch (_webNotificationStatus) {
+      case AuthorizationStatus.authorized:
+        icon = Icons.notifications_active_rounded;
+        title = 'Notifications Enabled';
+        subtitle = 'You will receive push notifications';
+        color = sem.success;
+        isEnabled = true;
+        break;
+      case AuthorizationStatus.denied:
+        icon = Icons.notifications_off_rounded;
+        title = 'Permission Blocked';
+        subtitle = 'Please enable notifications in your browser settings';
+        color = sem.cancelled;
+        isBlocked = true;
+        break;
+      default:
+        icon = Icons.notifications_none_rounded;
+        title = 'Push Notifications';
+        subtitle = 'Tap to enable notifications on this device';
+        color = sem.accent;
+        break;
+    }
+
+    return AnimatedListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+      leading: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: Icon(icon, color: color, size: 22),
+      ),
+      title: Text(
+        title,
+        style: GoogleFonts.inter(
+          fontWeight: FontWeight.w600,
+          fontSize: 15,
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          color: sem.onSurfaceMuted,
+        ),
+      ),
+      trailing: isEnabled || isBlocked
+          ? null
+          : AnimatedButton(
+              onPressed: () async {
+                await NotificationService.promptWebPermission();
+                await _checkWebNotificationStatus();
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Notification settings updated')),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Text(
+                  'Enable',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: color,
+                  ),
+                ),
               ),
             ),
     );

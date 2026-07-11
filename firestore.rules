@@ -21,49 +21,77 @@ service cloud.firestore {
       match /notifications/{notificationId} {
         allow read, write: if request.auth != null;
       }
+      match /faculty_requests/{requestId} {
+        allow read, write: if request.auth != null;
+      }
+      match /students/{studentId} {
+        allow read, write: if request.auth != null;
+      }
+      match /announcements/{announcementId} {
+        allow read, write: if request.auth != null;
+      }
+      match /history/{historyId} {
+        allow read, write: if request.auth != null;
+      }
     }
-    
 
     // FUNCTION: Check if user is CR or SR
     function isCRorSR() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['CR', 'SR'];
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(userPath) && get(userPath).data.role in ['CR', 'SR'];
     }
 
     // OUTBOX FOR RENDER WORKER
     match /notification_outbox/{docId} {
       allow read: if false; // Only backend admin can read
-      allow create: if request.auth != null && isCRorSR();
+      allow create: if request.auth != null;
       allow update, delete: if false; // Only backend admin can update/delete
     }
-
-    // FACULTY REMINDERS QUEUE
     match /faculty_reminders/{docId} {
-      allow read, delete: if request.auth != null && resource.data.uid == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
-      allow update: if false;
+      allow read, write: if request.auth != null;
     }
 
     // TIMETABLES
+    match /timetables/{sectionId} {
+      allow read, write: if request.auth != null;
+    }
     match /timetables/{sectionId}/{day}/{lectureId} {
       allow read, write: if request.auth != null;
     }
     
-    // ANNOUNCEMENTS
+    // ANNOUNCEMENTS (Legacy root rule kept)
     match /announcements/{announcementId} {
       allow read, write: if request.auth != null;
     }
     
-    // HISTORY
+    // HISTORY (Legacy root rule kept)
     match /history/{historyId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // FACULTY PROFILES
+    match /faculty_profiles/{profileId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // FACULTY AUDIT LOGS
+    match /faculty_audit_logs/{logId} {
+      allow read, write: if request.auth != null;
+    }
+    match /faculty_audit_log/{logId} {
       allow read, write: if request.auth != null;
     }
 
     // USERS (FCM Tokens)
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth != null;
       
       match /fcm_tokens/{tokenId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if request.auth != null;
+      }
+      
+      match /attendance/{attendanceId} {
+        allow read, write: if request.auth != null;
       }
     }
   }

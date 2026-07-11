@@ -6,6 +6,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/faculty_lecture_context.dart';
+import '../app_settings.dart';
 
 class LocalNotificationService {
   static final FlutterLocalNotificationsPlugin notifications =
@@ -103,83 +104,9 @@ class LocalNotificationService {
     );
   }
 
-  static Future<void> _scheduleWebFacultyReminders(
-    List<FacultyLectureContext> todayLectures,
-    int reminderMinutes,
-  ) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-    final uid = user.uid;
-    final db = FirebaseFirestore.instance;
-
-    try {
-      // 1. Cancel all existing pending reminders for this faculty
-      final existingReminders = await db.collection('faculty_reminders')
-          .where('uid', isEqualTo: uid)
-          .get();
-          
-      if (existingReminders.docs.isNotEmpty) {
-        final batch = db.batch();
-        for (final doc in existingReminders.docs) {
-          batch.delete(doc.reference);
-        }
-        await batch.commit();
-      }
-
-      if (todayLectures.isEmpty || reminderMinutes <= 0) {
-        return;
-      }
-
-      final now = DateTime.now();
-      final batch = db.batch();
-      int scheduledCount = 0;
-
-      for (final item in todayLectures) {
-        if (scheduledCount >= 50) break;
-
-        final startTimeInMins = item.entry.startTime;
-        final hour = startTimeInMins ~/ 60;
-        final minute = startTimeInMins % 60;
-
-        final lectureTime = DateTime(
-          now.year,
-          now.month,
-          now.day,
-          hour,
-          minute,
-        );
-
-        final reminderTime = lectureTime.subtract(Duration(minutes: reminderMinutes));
-
-        if (now.isAfter(lectureTime)) {
-          continue;
-        }
-
-        // If the reminder time passed but lecture hasn't started, schedule it for NOW
-        final actualSendAt = now.isAfter(reminderTime) ? now : reminderTime;
-
-        final docRef = db.collection('faculty_reminders').doc();
-        batch.set(docRef, {
-          'uid': uid,
-          'title': '📚 Upcoming Class',
-          'body': '${item.entry.displaySubject}\n${item.division.replaceAll('_', ' ')}\nRoom ${item.entry.room}\nStarts in $reminderMinutes minutes.',
-          'sendAt': Timestamp.fromDate(actualSendAt),
-        });
-        
-        scheduledCount++;
-      }
-
-      if (scheduledCount > 0) {
-        await batch.commit();
-      }
-    } catch (e) {
-      debugPrint('Error scheduling web notifications: $e');
-    }
-  }
-
   static Future<void> scheduleFacultyReminders(List<FacultyLectureContext> todayLectures, int reminderMinutes) async {
     if (kIsWeb) {
-      await _scheduleWebFacultyReminders(todayLectures, reminderMinutes);
+      // Backend now handles web reminders automatically via faculty_reminders collection on lecture creation
       return;
     }
 

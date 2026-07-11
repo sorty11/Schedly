@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../app_settings.dart';
+import '../user_roles.dart';
 
 class AnnouncementService {
   static final FirebaseFirestore db = FirebaseFirestore.instance;
@@ -21,6 +23,12 @@ class AnnouncementService {
       'createdAt': FieldValue.serverTimestamp(),
     });
 
+    // Resolve correct UID for outbox
+    String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (AppSettings.currentRole == UserRole.faculty && AppSettings.facultyId != null) {
+      uid = AppSettings.facultyId!;
+    }
+
     // 2. Create outbox entry
     final outboxRef = db.collection('notification_outbox').doc();
     batch.set(outboxRef, {
@@ -34,7 +42,7 @@ class AnnouncementService {
       'attempts': 0,
       'nextRetryAt': FieldValue.serverTimestamp(),
       'createdAt': FieldValue.serverTimestamp(),
-      'uid': FirebaseAuth.instance.currentUser?.uid ?? '',
+      'uid': uid,
     });
 
     await batch.commit();

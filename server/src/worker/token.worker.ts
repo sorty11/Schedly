@@ -88,6 +88,9 @@ export class TokenWorker {
 
       if (change.type === 'added') {
         this.tokenTopicMap.set(token, newTopic);
+        
+        logger.info(`[TOKEN_MATCH] Subscribing token: ${token.substring(0, 20)}... | Role: ${data.role} | Division: ${data.division} | Topic: ${newTopic}`);
+        
         try {
           await admin.messaging().subscribeToTopic(token, newTopic);
           logger.info(JSON.stringify({
@@ -119,6 +122,9 @@ export class TokenWorker {
           try {
             await admin.messaging().subscribeToTopic(token, newTopic);
             this.tokenTopicMap.set(token, newTopic);
+            
+            logger.info(`[TOKEN_MATCH] Modified token: ${token.substring(0, 20)}... | Role: ${data.role} | Division: ${data.division} | Topic: ${newTopic}`);
+            
             logger.info(JSON.stringify({
               event: 'token_subscribed',
               token: token.substring(0, 10) + '...',

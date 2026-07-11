@@ -1,0 +1,707 @@
+commit b0b8d045c9f3e3f8a0fbafc28ae3a6fc0bff78ac
+Author: Sorty <sorty797@gmail.com>
+Date:   Thu Jul 9 18:01:43 2026 +0530
+
+    chore: stabilize faculty notification system
+
+diff --git a/lib/services/notification_service.dart b/lib/services/notification_service.dart
+index 47e487c..af30578 100644
+--- a/lib/services/notification_service.dart
++++ b/lib/services/notification_service.dart
+@@ -4,13 +4,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
+ import 'package:firebase_auth/firebase_auth.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
+ import 'topic_subscription_service.dart';
++import 'local_notification_service.dart';
+ 
+ class NotificationService {
+   static final FirebaseMessaging messaging = FirebaseMessaging.instance;
+   static const String webVapidKey =
+       "BKHIetL_dUjNsl40lp2OmV5EU1ebUm9GFhGcHDwH8hFJIVrOuNTx9vwuZQn1fadTFXw9WFUG7wB3_iNdK_Hrt_g";
+ 
++  static bool _initialized = false;
++
+   static Future<void> initialize() async {
++    if (_initialized) return;
++    _initialized = true;
++
+     try {
+       // On web, ensure we have an anonymous Firebase Auth user so we can
+       // persist the FCM token under a stable UID.
+@@ -63,9 +69,19 @@ class NotificationService {
+ 
+       // Listen for foreground messages (all platforms)
+       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+-        debugPrint('NotificationService: Foreground message received: ${message.notification?.title}');
+-        // The iOS AppDelegate + setForegroundNotificationPresentationOptions
+-        // will automatically display the banner. No manual display needed.
++        final title = message.notification?.title ?? message.data['title'] ?? 'Schedly';
++        final body = message.notification?.body ?? message.data['body'] ?? '';
++        final link = message.data['deepLink'] ?? '/';
++
++        debugPrint('NotificationService: Foreground message received: $title (link: $link)');
++        
++        if (defaultTargetPlatform == TargetPlatform.android) {
++          LocalNotificationService.showNotification(
++            title: title,
++            body: body,
++            payload: link,
++          );
++        }
+       });
+ 
+       // Listen for token refresh
+@@ -134,6 +150,8 @@ class NotificationService {
+         debugPrint('NotificationService: No auth user, skipping token save');
+         return;
+       }
++      
++      final String finalDivision = role == 'faculty' ? user.uid : division;
+ 
+       await FirebaseFirestore.instance
+           .collection('users')
+@@ -145,7 +163,7 @@ class NotificationService {
+         'platform': kIsWeb
+             ? 'web'
+             : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
+-        'division': division,
++        'division': finalDivision,
+         'role': role,
+         'batch': batch,
+         'updatedAt': FieldValue.serverTimestamp(),
+@@ -170,6 +188,7 @@ class NotificationService {
+           token = await messaging.getToken();
+         }
+         if (token != null) {
++          final String finalDivision = role == 'faculty' ? user.uid : newDivision;
+           await FirebaseFirestore.instance
+               .collection('users')
+               .doc(user.uid)
+@@ -180,7 +199,7 @@ class NotificationService {
+             'platform': kIsWeb
+                 ? 'web'
+                 : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
+-            'division': newDivision,
++            'division': finalDivision,
+             'role': role,
+             'batch': (await SharedPreferences.getInstance()).getString('selected_batch') ?? '',
+             'updatedAt': FieldValue.serverTimestamp(),
+
+commit 313677de1457878f71b5bfbb4898fa4cf935c395
+Author: Sorty <sorty797@gmail.com>
+Date:   Thu Jul 9 02:27:55 2026 +0530
+
+    Initial commit
+
+diff --git a/lib/services/notification_service.dart b/lib/services/notification_service.dart
+index 16c5bba..47e487c 100644
+--- a/lib/services/notification_service.dart
++++ b/lib/services/notification_service.dart
+@@ -38,10 +38,14 @@ class NotificationService {
+       }
+ 
+       String? token;
+-      if (kIsWeb) {
+-        token = await messaging.getToken(vapidKey: webVapidKey);
+-      } else {
+-        token = await messaging.getToken();
++      try {
++        if (kIsWeb) {
++          token = await messaging.getToken(vapidKey: webVapidKey);
++        } else {
++          token = await messaging.getToken();
++        }
++      } catch (e) {
++        debugPrint('NotificationService: Failed to get FCM token. This is normal if the browser (like Brave) blocks push services: $e');
+       }
+ 
+       debugPrint('NotificationService: FCM token obtained: ${token != null ? "YES" : "NO"}');
+
+commit a06cd129104530a267fee152020b1dccbaa21059
+Author: Sorty <sorty797@gmail.com>
+Date:   Wed Jul 8 22:37:04 2026 +0530
+
+    Migrate web push notifications to Render
+
+diff --git a/lib/services/notification_service.dart b/lib/services/notification_service.dart
+index f84df90..16c5bba 100644
+--- a/lib/services/notification_service.dart
++++ b/lib/services/notification_service.dart
+@@ -18,15 +18,22 @@ class NotificationService {
+         await _ensureAnonymousSignIn();
+       }
+ 
+-      final settings = await messaging.requestPermission(
+-        alert: true,
+-        badge: true,
+-        sound: true,
+-        provisional: false,
+-      );
++      NotificationSettings? settings;
++      if (!kIsWeb) {
++        settings = await messaging.requestPermission(
++          alert: true,
++          badge: true,
++          sound: true,
++          provisional: false,
++        );
++      } else {
++        // On web, we check existing status. We DO NOT request on startup,
++        // because browsers auto-deny if not in a user gesture.
++        settings = await messaging.getNotificationSettings();
++      }
+ 
+-      if (settings.authorizationStatus == AuthorizationStatus.denied) {
+-        debugPrint('NotificationService: Permission denied by user.');
++      if (settings.authorizationStatus != AuthorizationStatus.authorized) {
++        debugPrint('NotificationService: Permission not granted yet or denied.');
+         return;
+       }
+ 
+@@ -76,6 +83,27 @@ class NotificationService {
+     }
+   }
+ 
++  static Future<void> promptWebPermission() async {
++    if (!kIsWeb) return;
++    try {
++      await _ensureAnonymousSignIn();
++      final settings = await messaging.requestPermission(
++        alert: true,
++        badge: true,
++        sound: true,
++        provisional: false,
++      );
++      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
++        final token = await messaging.getToken(vapidKey: webVapidKey);
++        if (token != null) {
++          await _saveTokenToFirestore(token);
++        }
++      }
++    } catch (e) {
++      debugPrint('NotificationService: promptWebPermission failed: $e');
++    }
++  }
++
+   /// Ensures there is a Firebase Auth user (anonymous) on web so we can
+   /// store the FCM token under a stable document ID.
+   static Future<void> _ensureAnonymousSignIn() async {
+@@ -94,6 +122,7 @@ class NotificationService {
+       final prefs = await SharedPreferences.getInstance();
+       final division = prefs.getString('selected_division') ?? 'unknown';
+       final role = prefs.getString('user_role') ?? 'student';
++      final batch = prefs.getString('selected_batch') ?? '';
+ 
+       // Prefer authenticated UID; fall back to division-keyed path
+       final user = FirebaseAuth.instance.currentUser;
+@@ -114,6 +143,7 @@ class NotificationService {
+             : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
+         'division': division,
+         'role': role,
++        'batch': batch,
+         'updatedAt': FieldValue.serverTimestamp(),
+       }, SetOptions(merge: true));
+ 
+@@ -148,6 +178,7 @@ class NotificationService {
+                 : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
+             'division': newDivision,
+             'role': role,
++            'batch': (await SharedPreferences.getInstance()).getString('selected_batch') ?? '',
+             'updatedAt': FieldValue.serverTimestamp(),
+           }, SetOptions(merge: true));
+         }
+
+commit aa317b7213b5b2ece6c117e354a28e1aa7b59cbe
+Author: Sorty <sorty797@gmail.com>
+Date:   Thu Jul 2 21:00:33 2026 +0530
+
+    fix(ios): enable push notifications for iOS native app
+    
+    - AppDelegate.swift: request UNUserNotificationCenter permission, register for remote notifications, pass APNs token to Firebase Messaging, implement MessagingDelegate, show banners in foreground (iOS 14+ banner+badge+sound)
+    - Runner.entitlements: add aps-environment=production + time-sensitive notifications capability
+    - Info.plist: add UIBackgroundModes (fetch, remote-notification) + FirebaseAppDelegateProxyEnabled=NO for manual APNs handling
+    - notification_service.dart: add setForegroundNotificationPresentationOptions for iOS + onMessage listener
+
+diff --git a/lib/services/notification_service.dart b/lib/services/notification_service.dart
+index 543bba3..f84df90 100644
+--- a/lib/services/notification_service.dart
++++ b/lib/services/notification_service.dart
+@@ -43,6 +43,20 @@ class NotificationService {
+         await _saveTokenToFirestore(token);
+       }
+ 
++      // iOS: show notifications as banners even when app is in foreground
++      await messaging.setForegroundNotificationPresentationOptions(
++        alert: true,
++        badge: true,
++        sound: true,
++      );
++
++      // Listen for foreground messages (all platforms)
++      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
++        debugPrint('NotificationService: Foreground message received: ${message.notification?.title}');
++        // The iOS AppDelegate + setForegroundNotificationPresentationOptions
++        // will automatically display the banner. No manual display needed.
++      });
++
+       // Listen for token refresh
+       messaging.onTokenRefresh.listen((newToken) async {
+         debugPrint('NotificationService: FCM token refreshed');
+
+commit ea3a80c88acae75d1faee0ef031b730d512c3532
+Author: Sorty <sorty797@gmail.com>
+Date:   Thu Jul 2 20:55:16 2026 +0530
+
+    fix(pwa): fix web push notifications for PWA and iOS
+    
+    - firebase-messaging-sw.js: add raw 'push' event fallback, notificationclick handler (opens app on tap), skipWaiting/claim lifecycle, badge + vibration
+    - notification_service.dart: anonymous sign-in on web so FCM token is always saved; onTokenRefresh listener; explicit permission request; deleteToken on logout
+    - notification.service.ts (backend): add webpush config block to sendEachForMulticast so browsers receive notifications; add failure logging per token chunk
+    - web/index.html: add viewport meta, multi-size apple-touch-icons, iOS install banner (prompts Safari users to Add to Home Screen to enable push)
+
+diff --git a/lib/services/notification_service.dart b/lib/services/notification_service.dart
+index 0db7f30..543bba3 100644
+--- a/lib/services/notification_service.dart
++++ b/lib/services/notification_service.dart
+@@ -7,11 +7,28 @@ import 'topic_subscription_service.dart';
+ 
+ class NotificationService {
+   static final FirebaseMessaging messaging = FirebaseMessaging.instance;
+-  static const String webVapidKey = "BKHIetL_dUjNsl40lp2OmV5EU1ebUm9GFhGcHDwH8hFJIVrOuNTx9vwuZQn1fadTFXw9WFUG7wB3_iNdK_Hrt_g";
++  static const String webVapidKey =
++      "BKHIetL_dUjNsl40lp2OmV5EU1ebUm9GFhGcHDwH8hFJIVrOuNTx9vwuZQn1fadTFXw9WFUG7wB3_iNdK_Hrt_g";
+ 
+   static Future<void> initialize() async {
+     try {
+-      await messaging.requestPermission();
++      // On web, ensure we have an anonymous Firebase Auth user so we can
++      // persist the FCM token under a stable UID.
++      if (kIsWeb) {
++        await _ensureAnonymousSignIn();
++      }
++
++      final settings = await messaging.requestPermission(
++        alert: true,
++        badge: true,
++        sound: true,
++        provisional: false,
++      );
++
++      if (settings.authorizationStatus == AuthorizationStatus.denied) {
++        debugPrint('NotificationService: Permission denied by user.');
++        return;
++      }
+ 
+       String? token;
+       if (kIsWeb) {
+@@ -19,12 +36,20 @@ class NotificationService {
+       } else {
+         token = await messaging.getToken();
+       }
+-      
++
++      debugPrint('NotificationService: FCM token obtained: ${token != null ? "YES" : "NO"}');
++
+       if (token != null) {
+         await _saveTokenToFirestore(token);
+       }
+-      
+-      // Topic subscriptions
++
++      // Listen for token refresh
++      messaging.onTokenRefresh.listen((newToken) async {
++        debugPrint('NotificationService: FCM token refreshed');
++        await _saveTokenToFirestore(newToken);
++      });
++
++      // Topic subscriptions (Android/iOS only — web uses direct token dispatch)
+       final prefs = await SharedPreferences.getInstance();
+       final division = prefs.getString('selected_division');
+       final role = prefs.getString('user_role') ?? 'student';
+@@ -32,22 +57,37 @@ class NotificationService {
+       if (division != null) {
+         await TopicSubscriptionService.updateSubscriptions(division, role, batch: batch);
+       }
++    } catch (e) {
++      debugPrint('NotificationService: Init skipped: $e');
++    }
++  }
+ 
++  /// Ensures there is a Firebase Auth user (anonymous) on web so we can
++  /// store the FCM token under a stable document ID.
++  static Future<void> _ensureAnonymousSignIn() async {
++    try {
++      if (FirebaseAuth.instance.currentUser == null) {
++        debugPrint('NotificationService: No auth user on web — signing in anonymously');
++        await FirebaseAuth.instance.signInAnonymously();
++      }
+     } catch (e) {
+-      // FCM is unavailable on this device/emulator (e.g. no Google Play Services).
+-      debugPrint('FCM init skipped: $e');
++      debugPrint('NotificationService: Anonymous sign-in failed: $e');
+     }
+   }
+ 
+   static Future<void> _saveTokenToFirestore(String token) async {
+     try {
+-      final user = FirebaseAuth.instance.currentUser;
+-      if (user == null) return;
+-
+       final prefs = await SharedPreferences.getInstance();
+       final division = prefs.getString('selected_division') ?? 'unknown';
+       final role = prefs.getString('user_role') ?? 'student';
+ 
++      // Prefer authenticated UID; fall back to division-keyed path
++      final user = FirebaseAuth.instance.currentUser;
++      if (user == null) {
++        debugPrint('NotificationService: No auth user, skipping token save');
++        return;
++      }
++
+       await FirebaseFirestore.instance
+           .collection('users')
+           .doc(user.uid)
+@@ -55,28 +95,70 @@ class NotificationService {
+           .doc(token)
+           .set({
+         'token': token,
+-        'platform': kIsWeb ? 'web' : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
++        'platform': kIsWeb
++            ? 'web'
++            : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
+         'division': division,
+         'role': role,
+         'updatedAt': FieldValue.serverTimestamp(),
+       }, SetOptions(merge: true));
++
++      debugPrint('NotificationService: Token saved to Firestore (uid: ${user.uid}, div: $division)');
+     } catch (e) {
+-      debugPrint('Failed to save FCM token: $e');
++      debugPrint('NotificationService: Failed to save FCM token: $e');
+     }
+   }
+ 
+   static Future<void> updateDivisionSubscription(String newDivision) async {
+-    final prefs = await SharedPreferences.getInstance();
+-    final role = prefs.getString('user_role') ?? 'student';
+-    final batch = prefs.getString('selected_batch');
+-    await TopicSubscriptionService.updateSubscriptions(newDivision, role, batch: batch);
++    try {
++      // Update token's division field in Firestore
++      final user = FirebaseAuth.instance.currentUser;
++      if (user != null) {
++        final role = (await SharedPreferences.getInstance()).getString('user_role') ?? 'student';
++        String? token;
++        if (kIsWeb) {
++          token = await messaging.getToken(vapidKey: webVapidKey);
++        } else {
++          token = await messaging.getToken();
++        }
++        if (token != null) {
++          await FirebaseFirestore.instance
++              .collection('users')
++              .doc(user.uid)
++              .collection('fcm_tokens')
++              .doc(token)
++              .set({
++            'token': token,
++            'platform': kIsWeb
++                ? 'web'
++                : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
++            'division': newDivision,
++            'role': role,
++            'updatedAt': FieldValue.serverTimestamp(),
++          }, SetOptions(merge: true));
++        }
++      }
++
++      // Android/iOS topic subscriptions
++      final prefs = await SharedPreferences.getInstance();
++      final role = prefs.getString('user_role') ?? 'student';
++      final batch = prefs.getString('selected_batch');
++      await TopicSubscriptionService.updateSubscriptions(newDivision, role, batch: batch);
++    } catch (e) {
++      debugPrint('NotificationService: updateDivisionSubscription failed: $e');
++    }
+   }
+ 
+   static Future<void> clearTokenOnLogout() async {
+     await TopicSubscriptionService.clearAllSubscriptions();
+     try {
+-      final String? token = await messaging.getToken();
+       final user = FirebaseAuth.instance.currentUser;
++      String? token;
++      if (kIsWeb) {
++        token = await messaging.getToken(vapidKey: webVapidKey);
++      } else {
++        token = await messaging.getToken();
++      }
+       if (token != null && user != null) {
+         await FirebaseFirestore.instance
+             .collection('users')
+@@ -85,8 +167,10 @@ class NotificationService {
+             .doc(token)
+             .delete();
+       }
++      // Delete the FCM token itself so this device stops receiving
++      await messaging.deleteToken();
+     } catch (e) {
+-      debugPrint('Failed to delete token on logout: $e');
++      debugPrint('NotificationService: Failed to clear token on logout: $e');
+     }
+   }
+ }
+\ No newline at end of file
+
+commit b3ed2488b09e1d3281dd394dc47a38d852255773
+Author: Sorty <sorty797@gmail.com>
+Date:   Thu Jul 2 18:50:47 2026 +0530
+
+    Fix web push FCM notifications
+
+diff --git a/lib/services/notification_service.dart b/lib/services/notification_service.dart
+index 11d2a1c..0db7f30 100644
+--- a/lib/services/notification_service.dart
++++ b/lib/services/notification_service.dart
+@@ -7,12 +7,19 @@ import 'topic_subscription_service.dart';
+ 
+ class NotificationService {
+   static final FirebaseMessaging messaging = FirebaseMessaging.instance;
++  static const String webVapidKey = "BKHIetL_dUjNsl40lp2OmV5EU1ebUm9GFhGcHDwH8hFJIVrOuNTx9vwuZQn1fadTFXw9WFUG7wB3_iNdK_Hrt_g";
+ 
+   static Future<void> initialize() async {
+     try {
+       await messaging.requestPermission();
+ 
+-      final token = await messaging.getToken();
++      String? token;
++      if (kIsWeb) {
++        token = await messaging.getToken(vapidKey: webVapidKey);
++      } else {
++        token = await messaging.getToken();
++      }
++      
+       if (token != null) {
+         await _saveTokenToFirestore(token);
+       }
+
+commit 42416b31987067eca1a4a500ab7fc3ea511a3604
+Author: Sorty <sorty797@gmail.com>
+Date:   Wed Jul 1 23:20:46 2026 +0530
+
+    chore: Update outbox worker logging and add diagnostics
+
+diff --git a/lib/services/notification_service.dart b/lib/services/notification_service.dart
+index bb1059b..11d2a1c 100644
+--- a/lib/services/notification_service.dart
++++ b/lib/services/notification_service.dart
+@@ -1,19 +1,85 @@
+-import 'package:flutter/foundation.dart';
+-import 'package:firebase_messaging/firebase_messaging.dart';
+-
+-class NotificationService {
+-  static final FirebaseMessaging messaging =
+-      FirebaseMessaging.instance;
+-
+-  static Future<void> initialize() async {
+-    try {
+-      await messaging.requestPermission();
+-
+-      await messaging.getToken();
+-    } catch (e) {
+-      // FCM is unavailable on this device/emulator (e.g. no Google Play Services).
+-      // This is non-fatal — the in-app notification feed still works without FCM.
+-      debugPrint('FCM init skipped: $e');
+-    }
+-  }
+-}
+\ No newline at end of file
++import 'package:flutter/foundation.dart';
++import 'package:firebase_messaging/firebase_messaging.dart';
++import 'package:cloud_firestore/cloud_firestore.dart';
++import 'package:firebase_auth/firebase_auth.dart';
++import 'package:shared_preferences/shared_preferences.dart';
++import 'topic_subscription_service.dart';
++
++class NotificationService {
++  static final FirebaseMessaging messaging = FirebaseMessaging.instance;
++
++  static Future<void> initialize() async {
++    try {
++      await messaging.requestPermission();
++
++      final token = await messaging.getToken();
++      if (token != null) {
++        await _saveTokenToFirestore(token);
++      }
++      
++      // Topic subscriptions
++      final prefs = await SharedPreferences.getInstance();
++      final division = prefs.getString('selected_division');
++      final role = prefs.getString('user_role') ?? 'student';
++      final batch = prefs.getString('selected_batch');
++      if (division != null) {
++        await TopicSubscriptionService.updateSubscriptions(division, role, batch: batch);
++      }
++
++    } catch (e) {
++      // FCM is unavailable on this device/emulator (e.g. no Google Play Services).
++      debugPrint('FCM init skipped: $e');
++    }
++  }
++
++  static Future<void> _saveTokenToFirestore(String token) async {
++    try {
++      final user = FirebaseAuth.instance.currentUser;
++      if (user == null) return;
++
++      final prefs = await SharedPreferences.getInstance();
++      final division = prefs.getString('selected_division') ?? 'unknown';
++      final role = prefs.getString('user_role') ?? 'student';
++
++      await FirebaseFirestore.instance
++          .collection('users')
++          .doc(user.uid)
++          .collection('fcm_tokens')
++          .doc(token)
++          .set({
++        'token': token,
++        'platform': kIsWeb ? 'web' : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
++        'division': division,
++        'role': role,
++        'updatedAt': FieldValue.serverTimestamp(),
++      }, SetOptions(merge: true));
++    } catch (e) {
++      debugPrint('Failed to save FCM token: $e');
++    }
++  }
++
++  static Future<void> updateDivisionSubscription(String newDivision) async {
++    final prefs = await SharedPreferences.getInstance();
++    final role = prefs.getString('user_role') ?? 'student';
++    final batch = prefs.getString('selected_batch');
++    await TopicSubscriptionService.updateSubscriptions(newDivision, role, batch: batch);
++  }
++
++  static Future<void> clearTokenOnLogout() async {
++    await TopicSubscriptionService.clearAllSubscriptions();
++    try {
++      final String? token = await messaging.getToken();
++      final user = FirebaseAuth.instance.currentUser;
++      if (token != null && user != null) {
++        await FirebaseFirestore.instance
++            .collection('users')
++            .doc(user.uid)
++            .collection('fcm_tokens')
++            .doc(token)
++            .delete();
++      }
++    } catch (e) {
++      debugPrint('Failed to delete token on logout: $e');
++    }
++  }
++}
+\ No newline at end of file
+
+commit 968f9d5ff2f47231bf2e28d3d035a3929b7d96a7
+Author: Sorty <sorty797@gmail.com>
+Date:   Mon Jun 29 17:28:57 2026 +0530
+
+    Schedly v1.0 RC1
+
+diff --git a/lib/services/notification_service.dart b/lib/services/notification_service.dart
+index 58b5b2c..bb1059b 100644
+--- a/lib/services/notification_service.dart
++++ b/lib/services/notification_service.dart
+@@ -9,8 +9,7 @@ class NotificationService {
+     try {
+       await messaging.requestPermission();
+ 
+-      final token = await messaging.getToken();
+-      debugPrint('FCM TOKEN: $token');
++      await messaging.getToken();
+     } catch (e) {
+       // FCM is unavailable on this device/emulator (e.g. no Google Play Services).
+       // This is non-fatal — the in-app notification feed still works without FCM.
+
+commit acba5149bdea6d51a3ba28c3601f94d2d8edff36
+Author: Sorty <sorty797@gmail.com>
+Date:   Mon Jun 29 17:07:21 2026 +0530
+
+    Pre-RC Cleanup
+
+diff --git a/lib/services/notification_service.dart b/lib/services/notification_service.dart
+index 49ef6bb..58b5b2c 100644
+--- a/lib/services/notification_service.dart
++++ b/lib/services/notification_service.dart
+@@ -1,17 +1,20 @@
+-import 'package:firebase_messaging/firebase_messaging.dart';
+-
+-class NotificationService {
+-  static final FirebaseMessaging messaging =
+-      FirebaseMessaging.instance;
+-
+-  static Future<void> initialize() async {
+-    await messaging.requestPermission();
+-
+-    String? token =
+-        await messaging.getToken();
+-
+-    print(
+-      'FCM TOKEN: $token',
+-    );
+-  }
+-}
+\ No newline at end of file
++import 'package:flutter/foundation.dart';
++import 'package:firebase_messaging/firebase_messaging.dart';
++
++class NotificationService {
++  static final FirebaseMessaging messaging =
++      FirebaseMessaging.instance;
++
++  static Future<void> initialize() async {
++    try {
++      await messaging.requestPermission();
++
++      final token = await messaging.getToken();
++      debugPrint('FCM TOKEN: $token');
++    } catch (e) {
++      // FCM is unavailable on this device/emulator (e.g. no Google Play Services).
++      // This is non-fatal — the in-app notification feed still works without FCM.
++      debugPrint('FCM init skipped: $e');
++    }
++  }
++}
+\ No newline at end of file
+
+commit e5cb652df2ff94877622a1c80a9d17cc77a21827
+Author: Sorty <sorty797@gmail.com>
+Date:   Sat Jun 6 00:22:51 2026 +0530
+
+    PDF preview and import working
+
+diff --git a/lib/services/notification_service.dart b/lib/services/notification_service.dart
+new file mode 100644
+index 0000000..49ef6bb
+--- /dev/null
++++ b/lib/services/notification_service.dart
+@@ -0,0 +1,17 @@
++import 'package:firebase_messaging/firebase_messaging.dart';
++
++class NotificationService {
++  static final FirebaseMessaging messaging =
++      FirebaseMessaging.instance;
++
++  static Future<void> initialize() async {
++    await messaging.requestPermission();
++
++    String? token =
++        await messaging.getToken();
++
++    print(
++      'FCM TOKEN: $token',
++    );
++  }
++}
+\ No newline at end of file

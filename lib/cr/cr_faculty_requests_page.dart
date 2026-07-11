@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../theme/theme.dart';
 import '../models/faculty_request.dart';
@@ -43,11 +44,9 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
           // Since our FacultyRequest only stores 'date', we format it to EEEE.
           final dayStr = DateFormat('EEEE').format(request.date ?? DateTime.now());
           final lecRef = FirebaseFirestore.instance
-              .collection('sections')
+              .collection('timetables')
               .doc(widget.division)
-              .collection('timetable')
-              .doc(dayStr)
-              .collection('lectures')
+              .collection(dayStr)
               .doc(request.originalLectureId);
               
           batch.update(lecRef, {'status': 'cancelled', 'isActive': false});
@@ -55,11 +54,9 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
       } else if (request.type == FacultyRequestType.addExtra) {
         final dayStr = DateFormat('EEEE').format(request.date ?? DateTime.now());
         final newLecRef = FirebaseFirestore.instance
-            .collection('sections')
+            .collection('timetables')
             .doc(widget.division)
-            .collection('timetable')
-            .doc(dayStr)
-            .collection('lectures')
+            .collection(dayStr)
             .doc();
             
         final entry = TimetableEntry(
@@ -79,20 +76,41 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
 
       await batch.commit();
 
-      // Notify Faculty & Students
-      await FirebaseFirestore.instance.collection('notification_outbox').add({
-        'topic': widget.division,
-        'title': 'Timetable Update',
-        'body': '${request.type == FacultyRequestType.cancel ? 'Cancelled' : 'Extra'} ${request.subject} lecture by Prof. ${request.facultyName}.',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-      
-      await FirebaseFirestore.instance.collection('notification_outbox').add({
-        'topic': 'faculty_${request.facultyId}',
-        'title': 'Request Approved',
-        'body': 'Your request for ${request.subject} has been approved by the CR.',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      final String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+      // Notify Faculty & Students — wrapped in try-catch so failures never block approval
+      try {
+        debugPrint('[FAC_REQ_1] request.facultyId = ${request.facultyId}');
+        await FirebaseFirestore.instance.collection('notification_outbox').add({
+          'division': widget.division,
+          'role': 'student',
+          'title': 'Timetable Update',
+          'body': '${request.type == FacultyRequestType.cancel ? 'Cancelled' : 'Extra'} ${request.subject} lecture by Prof. ${request.facultyName}.',
+          'createdAt': FieldValue.serverTimestamp(),
+          'uid': uid,
+          'type': request.type == FacultyRequestType.cancel ? 'cancel' : 'add',
+          'processed': false,
+          'attempts': 0,
+          'nextRetryAt': FieldValue.serverTimestamp(),
+        });
+        
+        final facultyPayload = {
+          'division': request.facultyId,
+          'role': 'faculty',
+          'title': 'Request Approved',
+          'body': 'Your request for ${request.subject} has been approved by the CR.',
+          'createdAt': FieldValue.serverTimestamp(),
+          'uid': uid,
+          'type': 'add',
+          'processed': false,
+          'attempts': 0,
+          'nextRetryAt': FieldValue.serverTimestamp(),
+        };
+        debugPrint('[FAC_REQ_2] Faculty payload = $facultyPayload');
+        await FirebaseFirestore.instance.collection('notification_outbox').add(facultyPayload);
+      } catch (outboxErr) {
+        debugPrint('OUTBOX WARNING (non-fatal, approve): $outboxErr');
+      }
 
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request approved and timetable updated.')));
     } catch (e) {
@@ -115,13 +133,25 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
         'resolvedAt': FieldValue.serverTimestamp(),
       });
 
-      // Notify Faculty
-      await FirebaseFirestore.instance.collection('notification_outbox').add({
-        'topic': 'faculty_${request.facultyId}',
-        'title': 'Request Denied',
-        'body': 'Your request for ${request.subject} was denied by the CR.',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      final String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+      // Notify Faculty — wrapped in try-catch so failures never block denial
+      try {
+        await FirebaseFirestore.instance.collection('notification_outbox').add({
+          'division': request.facultyId,
+          'role': 'faculty',
+          'title': 'Request Denied',
+          'body': 'Your request for ${request.subject} was denied by the CR.',
+          'createdAt': FieldValue.serverTimestamp(),
+          'uid': uid,
+          'type': 'cancel',
+          'processed': false,
+          'attempts': 0,
+          'nextRetryAt': FieldValue.serverTimestamp(),
+        });
+      } catch (outboxErr) {
+        debugPrint('OUTBOX WARNING (non-fatal, deny): $outboxErr');
+      }
 
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request denied.')));
     } catch (e) {

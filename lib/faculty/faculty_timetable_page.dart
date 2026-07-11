@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:rxdart/rxdart.dart';
 
 import '../app_settings.dart';
 import '../theme/theme.dart';
@@ -22,9 +23,8 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
   late String _selectedDay;
   final List<String> _days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   
-  bool _isLoading = false;
-  List<_FacultyTimetableEntry> _lectures = [];
   bool _hasConflict = false;
+  late Stream<List<_FacultyTimetableEntry>> _timetableStream;
 
   @override
   void initState() {
@@ -35,71 +35,70 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
     } else {
       _selectedDay = 'Monday';
     }
-    _fetchTimetable();
+    _timetableStream = _streamTimetable();
   }
 
-  Future<void> _fetchTimetable() async {
-    setState(() {
-      _isLoading = true;
-      _hasConflict = false;
-    });
+  Stream<List<_FacultyTimetableEntry>> _streamTimetable() async* {
 
     try {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid == null) return;
+      final uid = AppSettings.facultyId;
+      if (uid == null) {
+        yield [];
+        return;
+      }
 
       final divisions = AppSettings.facultyAssignedDivisions ?? [];
       final profileSnap = await FirebaseFirestore.instance.collection('faculty_profiles').doc(uid).get();
       final subjectsMap = (profileSnap.data()?['subjects'] as Map<String, dynamic>?) ?? {};
 
-      List<_FacultyTimetableEntry> allLectures = [];
+      if (divisions.isEmpty) {
+        yield [];
+        return;
+      }
 
-      for (final div in divisions) {
+      final streams = divisions.map((div) {
         final mySubjects = List<String>.from(subjectsMap[div] ?? []);
-        if (mySubjects.isEmpty) continue;
+        if (mySubjects.isEmpty) return Stream.value(<_FacultyTimetableEntry>[]);
 
-        final entries = await TimetableManager.getEntriesForDay(division: div, day: _selectedDay);
+        return TimetableManager.streamEntriesForDay(division: div, day: _selectedDay).map((entries) {
+          return entries
+              .where((e) => mySubjects.contains(e.subjectCode))
+              .map((e) => _FacultyTimetableEntry(division: div, entry: e))
+              .toList();
+        });
+      }).toList();
 
-        for (final entry in entries) {
-          if (mySubjects.contains(entry.subjectCode)) {
-            allLectures.add(_FacultyTimetableEntry(
-              division: div,
-              entry: entry,
-            ));
+      yield* CombineLatestStream.list(streams).map((listOfLists) {
+        final allLectures = listOfLists.expand((l) => l).toList();
+        allLectures.sort((a, b) => a.entry.startTime.compareTo(b.entry.startTime));
+        
+        // Conflict Detection
+        bool conflict = false;
+        for (int i = 0; i < allLectures.length - 1; i++) {
+          final current = allLectures[i].entry;
+          final next = allLectures[i + 1].entry;
+          if (next.startTime < current.endTime) {
+            conflict = true;
+            break;
           }
         }
-      }
-
-      // Sort by start time
-      allLectures.sort((a, b) => a.entry.startTime.compareTo(b.entry.startTime));
-
-      // Conflict Detection
-      bool conflict = false;
-      for (int i = 0; i < allLectures.length - 1; i++) {
-        final current = allLectures[i].entry;
-        final next = allLectures[i + 1].entry;
-        // If next lecture starts before current lecture ends, and they are in different divisions
-        if (next.startTime < current.endTime) {
-          conflict = true;
-          break;
-        }
-      }
-
-      if (mounted) {
-        setState(() {
-          _lectures = allLectures;
-          _hasConflict = conflict;
+        
+        Future.microtask(() {
+          if (mounted && _hasConflict != conflict) {
+            setState(() => _hasConflict = conflict);
+          }
         });
-      }
+
+        return allLectures;
+      });
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading timetable: $e')));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      yield [];
     }
   }
 
   void _notifyCRsOfConflict() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = AppSettings.facultyId;
     final name = AppSettings.facultyName ?? 'Faculty';
     final divisions = AppSettings.facultyAssignedDivisions ?? [];
     
@@ -110,18 +109,22 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
         'title': 'Faculty Schedule Conflict',
         'body': 'Prof. $name has reported a schedule conflict on $_selectedDay. Please check your timetables.',
         'division': div,
-        'role': 'CR',
+        'role': 'cr',
         'uid': uid ?? '',
         'priority': 'high',
-        'deepLink': '/cr_dashboard', // Verify this deeplink exists or matches your structure
+        'deepLink': '/cr_dashboard',
         'processed': false,
         'attempts': 0,
         'nextRetryAt': FieldValue.serverTimestamp(),
         'createdAt': FieldValue.serverTimestamp(),
       };
       
-      debugPrint('OUTBOX PAYLOAD (Notify CRs): $crPayload');
-      await FirebaseFirestore.instance.collection('notification_outbox').add(crPayload);
+      try {
+        debugPrint('OUTBOX PAYLOAD (Notify CRs): $crPayload');
+        await FirebaseFirestore.instance.collection('notification_outbox').add(crPayload);
+      } catch (outboxErr) {
+        debugPrint('OUTBOX WARNING (non-fatal, conflict notify): $outboxErr');
+      }
     }
 
     if (mounted) {
@@ -147,10 +150,10 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
     return _selectedDay == DateFormat('EEEE').format(DateTime.now());
   }
 
-  String _getNextClass() {
-    if (!_isToday() || _lectures.isEmpty) return 'None';
+  String _getNextClass(List<_FacultyTimetableEntry> lectures) {
+    if (!_isToday() || lectures.isEmpty) return 'None';
     final current = _currentMinutes;
-    for (final item in _lectures) {
+    for (final item in lectures) {
       if (item.entry.startTime > current) {
         return '${item.entry.displaySubject} at ${_formatTime(item.entry.startTime)}';
       }
@@ -158,7 +161,7 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
     return 'None';
   }
 
-  Widget _buildSummaryCard(ColorScheme colorScheme, AppSemanticColors sem) {
+  Widget _buildSummaryCard(ColorScheme colorScheme, AppSemanticColors sem, List<_FacultyTimetableEntry> lectures) {
     return AnimatedCard(
       borderRadius: AppRadius.xl,
       backgroundColor: sem.surfaceElevated,
@@ -175,7 +178,7 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
                 Expanded(
                   child: _buildSummaryMetric(
                     title: 'Today\'s Classes',
-                    value: _lectures.length.toString(),
+                    value: lectures.length.toString(),
                     icon: Icons.class_rounded,
                     color: colorScheme.primary,
                   ),
@@ -191,7 +194,7 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
                 ),
               ],
             ),
-            if (_isToday() && _lectures.isNotEmpty) ...[
+            if (_isToday() && lectures.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
               Divider(color: sem.borderSubtle, height: 1),
               const SizedBox(height: AppSpacing.md),
@@ -202,7 +205,7 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
                   Text('Next Class: ', style: TextStyle(color: sem.onSurfaceMuted, fontSize: 13, fontWeight: FontWeight.w600)),
                   Expanded(
                     child: Text(
-                      _getNextClass(),
+                      _getNextClass(lectures),
                       style: TextStyle(color: colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w700),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -261,123 +264,134 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
               ),
             ),
             
-            // Summary Card
-            if (!_isLoading)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
-                child: _buildSummaryCard(colorScheme, sem),
-              ),
-
-            const SizedBox(height: AppSpacing.xl),
-
-            // Segmented Day Selector
-            SizedBox(
-              height: 44,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
-                itemCount: _days.length,
-                itemBuilder: (context, index) {
-                  final day = _days[index];
-                  final isSelected = day == _selectedDay;
-                  
-                  return Padding(
-                    padding: const EdgeInsets.only(right: AppSpacing.md),
-                    child: GestureDetector(
-                      onTap: () {
-                        if (!isSelected) {
-                          setState(() => _selectedDay = day);
-                          _fetchTimetable();
-                        }
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 250),
-                        curve: Curves.easeInOut,
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-                        decoration: BoxDecoration(
-                          color: isSelected ? colorScheme.primary : sem.surfaceElevated,
-                          borderRadius: BorderRadius.circular(AppRadius.full),
-                          border: Border.all(
-                            color: isSelected ? colorScheme.primary : sem.borderSubtle,
-                          ),
-                          boxShadow: isSelected
-                              ? [
-                                  BoxShadow(
-                                    color: colorScheme.primary.withValues(alpha: 0.3),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  )
-                                ]
-                              : [],
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          day.substring(0, 3),
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : colorScheme.onSurface,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            
-            if (_hasConflict)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.lg, AppSpacing.x2l, 0),
-                child: Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: sem.cancelled.withValues(alpha: 0.1),
-                    border: Border.all(color: sem.cancelled.withValues(alpha: 0.5)),
-                    borderRadius: BorderRadius.circular(AppRadius.lg),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.warning_amber_rounded, color: sem.cancelled),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Text(
-                          'Schedule Conflict Detected!',
-                          style: TextStyle(color: sem.cancelled, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: _notifyCRsOfConflict,
-                        child: Text('Notify CRs', style: TextStyle(color: sem.cancelled)),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-            const SizedBox(height: AppSpacing.md),
-
-            // Lectures List
             Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _lectures.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.calendar_today_rounded, size: 64, color: colorScheme.primary.withValues(alpha: 0.2)),
-                              const SizedBox(height: AppSpacing.lg),
-                              Text('No Classes Scheduled', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
-                              const SizedBox(height: AppSpacing.xs),
-                              Text('You have a free day on $_selectedDay.', style: TextStyle(color: sem.onSurfaceMuted)),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.sm, AppSpacing.x2l, AppSpacing.x4l),
-                          itemCount: _lectures.length,
+              child: StreamBuilder<List<_FacultyTimetableEntry>>(
+                stream: _timetableStream,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  
+                  final _lectures = snapshot.data ?? [];
+                  
+                  return Column(
+                    children: [
+                      // Summary Card
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
+                        child: _buildSummaryCard(colorScheme, sem, _lectures),
+                      ),
+
+                      const SizedBox(height: AppSpacing.xl),
+
+                      // Segmented Day Selector
+                      SizedBox(
+                        height: 44,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
+                          itemCount: _days.length,
                           itemBuilder: (context, index) {
-                            final item = _lectures[index];
+                            final day = _days[index];
+                            final isSelected = day == _selectedDay;
+                            
+                            return Padding(
+                              padding: const EdgeInsets.only(right: AppSpacing.md),
+                              child: GestureDetector(
+                                onTap: () {
+                                  if (!isSelected) {
+                                    setState(() {
+                                      _selectedDay = day;
+                                      _timetableStream = _streamTimetable();
+                                    });
+                                  }
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 250),
+                                  curve: Curves.easeInOut,
+                                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? colorScheme.primary : sem.surfaceElevated,
+                                    borderRadius: BorderRadius.circular(AppRadius.full),
+                                    border: Border.all(
+                                      color: isSelected ? colorScheme.primary : sem.borderSubtle,
+                                    ),
+                                    boxShadow: isSelected
+                                        ? [
+                                            BoxShadow(
+                                              color: colorScheme.primary.withValues(alpha: 0.3),
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 4),
+                                            )
+                                          ]
+                                        : [],
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    day.substring(0, 3),
+                                    style: TextStyle(
+                                      color: isSelected ? Colors.white : colorScheme.onSurface,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      
+                      if (_hasConflict)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.lg, AppSpacing.x2l, 0),
+                          child: Container(
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            decoration: BoxDecoration(
+                              color: sem.cancelled.withValues(alpha: 0.1),
+                              border: Border.all(color: sem.cancelled.withValues(alpha: 0.5)),
+                              borderRadius: BorderRadius.circular(AppRadius.lg),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.warning_amber_rounded, color: sem.cancelled),
+                                const SizedBox(width: AppSpacing.md),
+                                Expanded(
+                                  child: Text(
+                                    'Schedule Conflict Detected!',
+                                    style: TextStyle(color: sem.cancelled, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: _notifyCRsOfConflict,
+                                  child: Text('Notify CRs', style: TextStyle(color: sem.cancelled)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(height: AppSpacing.md),
+
+                      // Lectures List
+                      Expanded(
+                        child: _lectures.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.calendar_today_rounded, size: 64, color: colorScheme.primary.withValues(alpha: 0.2)),
+                                    const SizedBox(height: AppSpacing.lg),
+                                    Text('No Classes Scheduled', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
+                                    const SizedBox(height: AppSpacing.xs),
+                                    Text('You have a free day on \$_selectedDay.', style: TextStyle(color: sem.onSurfaceMuted)),
+                                  ],
+                                ),
+                              )
+                            : ListView.builder(
+                                padding: const EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.sm, AppSpacing.x2l, AppSpacing.x4l),
+                                itemCount: _lectures.length,
+                                itemBuilder: (context, index) {
+                                  final item = _lectures[index];
                             final divLabel = item.division.split('_').last;
                             
                             final isLive = _isToday() && item.entry.startTime <= _currentMinutes && item.entry.endTime > _currentMinutes;
@@ -495,6 +509,11 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
                             );
                           },
                         ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ],
         ),

@@ -10,6 +10,7 @@ import '../timetable_manager.dart';
 import '../app_settings.dart';
 import '../user_roles.dart';
 import '../services/history_service.dart';
+import '../services/timetable_event_service.dart';
 import 'app_dialogs.dart';
 
 class TimetableStudioSheet extends StatefulWidget {
@@ -200,6 +201,11 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
     try {
       final entryId = widget.existingEntry?.id ?? FirebaseFirestore.instance.collection('timetables').doc().id;
 
+      // Auto-populate facultyId if a mapping exists in faculty_profiles
+      final facultyMap = await TimetableManager.getSubjectToFacultyIdMap(widget.division);
+      final mappedFacultyId = facultyMap[subject];
+      debugPrint('[DEBUG_FAC_1] mappedFacultyId = $mappedFacultyId (subject="$subject", division="${widget.division}", facultyMap keys=${facultyMap.keys.toList()})');
+
       final entry = TimetableEntry(
         id: entryId,
         subject: subject,
@@ -211,7 +217,9 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
         durationMinutes: _endTime - _startTime,
         room: room.isEmpty ? null : room,
         status: 'active',
+        facultyId: mappedFacultyId,
       );
+      debugPrint('[DEBUG_FAC_2] entry.facultyId = ${entry.facultyId}');
 
       if (widget.existingEntry != null && widget.initialDay != _selectedDay) {
         await FirebaseFirestore.instance
@@ -222,6 +230,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
             .delete();
       }
 
+      debugPrint('[DEBUG_FAC_2b] entry.facultyId before addLecture = ${entry.facultyId}');
       await TimetableManager.addLecture(
         division: widget.division,
         day: _selectedDay,
@@ -505,15 +514,46 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                       flex: 1,
                       child: OutlinedButton(
                         onPressed: _isLoading ? null : () async {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Delete Lecture', style: TextStyle(fontWeight: FontWeight.bold)),
+                              content: const Text('Are you sure you want to delete this lecture? Students and faculty will be notified.'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, true), 
+                                  child: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirmed != true) return;
+
                           setState(() => _isLoading = true);
-                          await FirebaseFirestore.instance
-                              .collection('timetables')
-                              .doc(widget.division)
-                              .collection(widget.initialDay)
-                              .doc(widget.existingEntry!.id)
-                              .delete();
-                          HapticFeedback.mediumImpact();
-                          if (mounted) Navigator.pop(context);
+                          try {
+                            await FirebaseFirestore.instance
+                                .collection('timetables')
+                                .doc(widget.division)
+                                .collection(widget.initialDay)
+                                .doc(widget.existingEntry!.id)
+                                .delete();
+                                
+                            await TimetableEventService.handleModification(
+                              division: widget.division,
+                              day: widget.initialDay,
+                              oldEntry: widget.existingEntry,
+                              newEntry: null,
+                              isDelete: true,
+                            );
+                            
+                            HapticFeedback.mediumImpact();
+                            if (mounted) Navigator.pop(context);
+                          } catch (e) {
+                            _showErrorDialog('Error', e.toString());
+                          } finally {
+                            if (mounted) setState(() => _isLoading = false);
+                          }
                         },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: colorScheme.error,

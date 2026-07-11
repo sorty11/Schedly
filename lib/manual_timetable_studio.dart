@@ -13,6 +13,7 @@ import 'widgets/studio/period_builder_step.dart';
 import 'widgets/studio/weekly_builder_step.dart';
 import 'widgets/app_dialogs.dart';
 import 'widgets/studio/working_days_step.dart';
+import 'timetable_manager.dart';
 
 class ManualTimetableStudio extends StatefulWidget {
   final String division;
@@ -116,6 +117,7 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
   Future<void> _publish() async {
     setState(() => _isPublishing = true);
     try {
+      final facultyMap = await TimetableManager.getSubjectToFacultyIdMap(widget.division);
       final batch = FirebaseFirestore.instance.batch();
 
       for (final day in _draft.selectedDays) {
@@ -152,10 +154,13 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
                   .doc(); // Auto ID
 
               final category = EventCategoryExtension.inferFromSubject(slot.subject ?? '');
+              final subjectRaw = slot.subject!;
+              final subjectCanonical = TimetableEntry.stripComponentSuffix(subjectRaw);
+              final facultyId = facultyMap[subjectCanonical];
 
               final entry = TimetableEntry(
                 id: ref.id,
-                subject: slot.subject!,
+                subject: subjectRaw,
                 category: category,
                 batch: slot.batch ?? 'Whole Class',
                 startTime: period.startMinutes,
@@ -163,6 +168,7 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
                 durationMinutes: duration,
                 component: slot.component,
                 room: slot.room,
+                facultyId: facultyId,
               );
 
               batch.set(ref, entry.toFirestore());

@@ -24,6 +24,27 @@ class TimetableManager {
     '4:00 PM - 5:00 PM',
   ];
 
+  static Future<Map<String, String>> getSubjectToFacultyIdMap(String division) async {
+    final snap = await FirebaseFirestore.instance
+        .collection('faculty_profiles')
+        .where('assignedDivisions', arrayContains: division)
+        .get();
+
+    final map = <String, String>{};
+    for (final doc in snap.docs) {
+      final data = doc.data();
+      final subjectsMap = data['subjects'] as Map<String, dynamic>?;
+      if (subjectsMap != null) {
+        final divisionSubjects = subjectsMap[division] as List<dynamic>? ?? [];
+        for (final subj in divisionSubjects) {
+          map[subj.toString()] = doc.id;
+        }
+      }
+    }
+    return map;
+  }
+
+
   static Future<void> addLecture({
     required String division,
     required String day,
@@ -158,6 +179,21 @@ class TimetableManager {
         
     entries.sort((a, b) => a.startTime.compareTo(b.startTime));
     return entries;
+  }
+
+  static Stream<List<TimetableEntry>> streamEntriesForDay({required String division, required String day}) {
+    return FirebaseFirestore.instance
+        .collection('timetables')
+        .doc(division)
+        .collection(day)
+        .snapshots()
+        .map((snapshot) {
+      final entries = snapshot.docs
+          .map((doc) => TimetableEntry.fromFirestore(doc))
+          .toList();
+      entries.sort((a, b) => a.startTime.compareTo(b.startTime));
+      return entries;
+    });
   }
 
   static Future<List<String>> getUniqueSubjects({required String division}) async {

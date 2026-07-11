@@ -214,6 +214,7 @@ class OutboxWorker {
     }
     async processSingleEntry(doc, workerLatency) {
         const data = doc.data();
+        logger_1.logger.info(`[OUTBOX] Read doc ${doc.id} with data: ${JSON.stringify(data)}`);
         const uid = data.uid;
         const notificationId = data.notificationId || doc.id;
         const division = data.division || 'unknown';
@@ -224,15 +225,21 @@ class OutboxWorker {
         try {
             let authorized = false;
             let role = 'unknown';
+            logger_1.logger.info(`[ROUTER] Validating authorization for uid: ${uid}`);
+            logger_1.logger.info(`[AUTH] uid=${uid}`);
             if (uid) {
                 const userDoc = await db.collection('users').doc(uid).get();
+                logger_1.logger.info(`[AUTH] Firestore document exists=${userDoc.exists}`);
                 if (userDoc.exists) {
                     role = userDoc.data()?.role || 'unknown';
-                    if (role === 'CR' || role === 'SR' || role === 'faculty') {
+                    logger_1.logger.info(`[AUTH] role=${role}`);
+                    const normalizedRole = role.toUpperCase();
+                    if (normalizedRole === 'CR' || normalizedRole === 'SR' || normalizedRole === 'FACULTY') {
                         authorized = true;
                     }
                 }
             }
+            logger_1.logger.info(`[AUTH] authorized=${authorized}`);
             if (!authorized) {
                 const processingTime = Date.now() - startTime;
                 await doc.ref.update({

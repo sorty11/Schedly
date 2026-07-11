@@ -15,6 +15,7 @@ import '../widgets/animations/animated_icon_button.dart';
 import '../widgets/app_dialogs.dart';
 import 'faculty_setup_wizard.dart';
 import 'faculty_home_page.dart';
+import '../services/notification_service.dart';
 
 class FacultyAuthBottomSheet extends StatefulWidget {
   const FacultyAuthBottomSheet({super.key});
@@ -84,33 +85,80 @@ class _FacultyAuthBottomSheetState extends State<FacultyAuthBottomSheet> {
     setState(() => _loading = true);
 
     try {
-      // Deterministic ID based on name to retain settings without Firebase Auth
-      final uid = 'fac_${name.replaceAll(' ', '').toLowerCase()}';
+      final legacyId = 'fac_${name.replaceAll(' ', '').toLowerCase()}';
       
-      final profileSnap = await FirebaseFirestore.instance.collection('faculty_profiles').doc(uid).get();
-
-      if (!profileSnap.exists) {
-        await FirebaseFirestore.instance.collection('faculty_profiles').doc(uid).set({
-          'name': name,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-
-        await FirebaseFirestore.instance.collection('users').doc(uid).set({
-          'role': 'FACULTY',
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-
-        await _finishLogin(uid, name, '');
-      } else {
-        final data = profileSnap.data()!;
-        
-        await FirebaseFirestore.instance.collection('users').doc(uid).set({
-          'role': 'FACULTY',
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-
-        await _finishLogin(uid, data['name'] ?? name, '', profileData: data);
+      // 1. Try Legacy ID first
+      debugPrint('[FS_TRACE] READ faculty_profiles/\$legacyId');
+      DocumentSnapshot<Map<String, dynamic>> legacySnap;
+      try {
+        legacySnap = await FirebaseFirestore.instance.collection('faculty_profiles').doc(legacyId).get();
+      } catch (e) {
+        debugPrint('[FS_ERROR]\ncollection: faculty_profiles\ndocument: \$legacyId\noperation: READ\nexception: \$e');
+        rethrow;
       }
+      
+      String uidToUse;
+      Map<String, dynamic> profileData = {};
+      bool isNew = false;
+
+      if (legacySnap.exists) {
+        uidToUse = legacyId;
+        profileData = legacySnap.data()!;
+      } else {
+        // 2. Try querying by name for migrated profiles
+        debugPrint('[FS_TRACE] READ faculty_profiles where name == \$name');
+        QuerySnapshot<Map<String, dynamic>> querySnap;
+        try {
+          querySnap = await FirebaseFirestore.instance.collection('faculty_profiles').where('name', isEqualTo: name).get();
+        } catch (e) {
+          debugPrint('[FS_ERROR]\ncollection: faculty_profiles\ndocument: QUERY (name == \$name)\noperation: READ\nexception: \$e');
+          rethrow;
+        }
+        
+        if (querySnap.docs.isNotEmpty) {
+          if (querySnap.docs.length > 1) {
+             throw Exception('Multiple profiles found for this name. Please contact admin.');
+          }
+          uidToUse = querySnap.docs.first.id;
+          profileData = querySnap.docs.first.data();
+        } else {
+          // 3. Completely new profile
+          uidToUse = FirebaseFirestore.instance.collection('faculty_profiles').doc().id;
+          isNew = true;
+        }
+      }
+
+      if (isNew) {
+        debugPrint('[FS_TRACE] WRITE faculty_profiles/\$uidToUse');
+        try {
+          await FirebaseFirestore.instance.collection('faculty_profiles').doc(uidToUse).set({
+            'name': name,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        } catch (e) {
+          debugPrint('[FS_ERROR]\ncollection: faculty_profiles\ndocument: \$uidToUse\noperation: WRITE\nexception: \$e');
+          rethrow;
+        }
+      }
+
+      debugPrint('[FS_TRACE] WRITE users/\$uidToUse');
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(uidToUse).set({
+          'role': 'FACULTY',
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (e) {
+        debugPrint('[FS_ERROR]\ncollection: users\ndocument: \$uidToUse\noperation: WRITE\nexception: \$e');
+        rethrow;
+      }
+
+      await _finishLogin(
+        uidToUse, 
+        profileData['name'] ?? name, 
+        profileData['email'] ?? '', 
+        profileData: profileData
+      );
+      
     } catch (e) {
       if (!mounted) return;
       AppDialogs.showError(
@@ -144,7 +192,14 @@ class _FacultyAuthBottomSheetState extends State<FacultyAuthBottomSheet> {
       designation: profileData?['designation'] ?? '',
       cabin: profileData?['cabin'] ?? '',
       assignedDivisions: assignedDivisions,
+      id: uid,
     );
+
+    // Explicitly re-initialize notifications so the new Faculty ID is captured
+    // Run this without awaiting to prevent Firebase Messaging from freezing the login UI on Web
+    NotificationService.reRegisterToken().catchError((e) {
+      debugPrint('Token registration error: $e');
+    });
 
     if (!mounted) return;
 

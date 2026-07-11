@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:rxdart/rxdart.dart';
 
 import '../app_settings.dart';
 import '../theme/theme.dart';
@@ -24,24 +25,24 @@ class FacultyDashboardPage extends StatefulWidget {
 }
 
 class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
-  late Future<List<FacultyLectureContext>> _todayLecturesFuture;
+  late Stream<List<FacultyLectureContext>> _todayLecturesStream;
   late Stream<List<FacultyRequest>> _pendingRequestsStream;
 
   @override
   void initState() {
     super.initState();
-    _todayLecturesFuture = _fetchTodayLectures();
+    _todayLecturesStream = _streamTodayLectures();
     _pendingRequestsStream = _streamPendingRequests();
   }
   
   void _refresh() {
     setState(() {
-      _todayLecturesFuture = _fetchTodayLectures();
+      _todayLecturesStream = _streamTodayLectures();
     });
   }
 
   Stream<List<FacultyRequest>> _streamPendingRequests() {
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final uid = AppSettings.facultyId ?? '';
     if (uid.isEmpty) return Stream.value([]);
     
     // We must query across all assigned divisions. For simplicity in Flutter,
@@ -62,46 +63,52 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
         .map((snap) => snap.docs.map((d) => FacultyRequest.fromFirestore(d)).toList());
   }
 
-  Future<List<FacultyLectureContext>> _fetchTodayLectures() async {
+  Stream<List<FacultyLectureContext>> _streamTodayLectures() async* {
     final divisions = AppSettings.facultyAssignedDivisions ?? [];
     final String today = DateFormat('EEEE').format(DateTime.now());
     
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return [];
+    final uid = AppSettings.facultyId;
+    if (uid == null) {
+      yield [];
+      return;
+    }
 
     // Fetch faculty subjects
     final profileSnap = await FirebaseFirestore.instance.collection('faculty_profiles').doc(uid).get();
     final profileData = profileSnap.data() ?? {};
     final subjectsMap = (profileData['subjects'] as Map<String, dynamic>?) ?? {};
 
-    List<FacultyLectureContext> allLectures = [];
-
-    for (final div in divisions) {
-      final mySubjects = List<String>.from(subjectsMap[div] ?? []);
-      if (mySubjects.isEmpty) continue;
-
-      final entries = await TimetableManager.getEntriesForDay(division: div, day: today);
-
-      for (final entry in entries) {
-        if (mySubjects.contains(entry.subjectCode)) {
-          allLectures.add(FacultyLectureContext(
-            division: div,
-            entry: entry,
-          ));
-        }
-      }
+    if (divisions.isEmpty) {
+      yield [];
+      return;
     }
-    
-    // Sort by startTime
-    allLectures.sort((a, b) => a.entry.startTime.compareTo(b.entry.startTime));
-    
-    // Auto-schedule reminders for today's lectures
-    await LocalNotificationService.scheduleFacultyReminders(
-      allLectures,
-      AppSettings.facultyReminderTime,
-    );
-    
-    return allLectures;
+
+    // Create a list of streams for all assigned divisions
+    final streams = divisions.map((div) {
+      final mySubjects = List<String>.from(subjectsMap[div] ?? []);
+      if (mySubjects.isEmpty) return Stream.value(<FacultyLectureContext>[]);
+      
+      return TimetableManager.streamEntriesForDay(division: div, day: today).map((entries) {
+        return entries
+            .where((e) => mySubjects.contains(e.subjectCode))
+            .map((e) => FacultyLectureContext(division: div, entry: e))
+            .toList();
+      });
+    }).toList();
+
+    // Combine all division streams into one stream using rxdart CombineLatestStream
+    yield* CombineLatestStream.list(streams).map((listOfLists) {
+      final allLectures = listOfLists.expand((l) => l).toList();
+      allLectures.sort((a, b) => a.entry.startTime.compareTo(b.entry.startTime));
+      
+      // Auto-schedule reminders for today's lectures
+      LocalNotificationService.scheduleFacultyReminders(
+        allLectures,
+        AppSettings.facultyReminderTime,
+      );
+      
+      return allLectures;
+    });
   }
 
   String _formatTime(int minutesFromMidnight) {
@@ -193,8 +200,11 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async => _refresh(),
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 800),
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
             slivers: [
               SliverToBoxAdapter(
                 child: Padding(
@@ -279,8 +289,8 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
               ),
 
               SliverToBoxAdapter(
-                child: FutureBuilder<List<FacultyLectureContext>>(
-                  future: _todayLecturesFuture,
+                child: StreamBuilder<List<FacultyLectureContext>>(
+                  stream: _todayLecturesStream,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Padding(
@@ -358,7 +368,7 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
                             children: const [
                               Icon(Icons.add_circle_outline_rounded, size: 20),
                               SizedBox(width: 8),
-                              Text('Add Extra Class'),
+                              Flexible(child: Text('Extra Class', overflow: TextOverflow.ellipsis)),
                             ],
                           ),
                         ),
@@ -381,7 +391,7 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
                             children: const [
                               Icon(Icons.campaign_outlined, size: 20),
                               SizedBox(width: 8),
-                              Text('Announce'),
+                              Flexible(child: Text('Announce', overflow: TextOverflow.ellipsis)),
                             ],
                           ),
                         ),
@@ -393,6 +403,8 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
 
               const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.x4l)),
             ],
+          ),
+            ),
           ),
         ),
       ),
