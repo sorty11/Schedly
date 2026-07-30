@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'models/subject_metadata.dart';
 import 'models/timetable_entry.dart';
@@ -8,7 +7,10 @@ import 'theme/theme.dart';
 import 'app_settings.dart';
 import 'widgets/app_dialogs.dart';
 import 'widgets/animations/floating_empty_state.dart';
-
+import 'widgets/schedly_card.dart';
+import 'widgets/schedly_text_field.dart';
+import 'widgets/dashboard_layout.dart';
+import 'widgets/section_header.dart';
 class CourseDetailsSetupPage extends StatefulWidget {
   final String division;
   final bool isFromPublish;
@@ -200,72 +202,55 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (_isLoading) {
-      return Scaffold(
-        backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
-        body: const Center(child: CircularProgressIndicator()),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
-    return Scaffold(
-      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
-      appBar: AppBar(
-        title: Text('Course Details Setup', style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 18)),
-        centerTitle: false,
-        actions: [
-          if (widget.isFromPublish)
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Skip', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+    return Workspace(
+      children: [
+        SectionHeader(
+          title: 'Course Details Setup',
+          trailing: widget.isFromPublish
+              ? TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Skip', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+                )
+              : null,
+        ),
+        if (_subjects.isEmpty)
+          Center(
+            child: FloatingEmptyState(
+              icon: Icons.book_rounded,
+              title: 'No Subjects Found',
+              subtitle: 'We could not find any subjects in your timetable.',
             ),
-          const SizedBox(width: 8),
+          )
+        else ...[
+          for (var sub in _subjects)
+            _buildSubjectCard(sub, sem, colorScheme, isDark),
+          const SizedBox(height: AppSpacing.xl),
+          _buildSummaryAndSave(sem, colorScheme, isDark),
         ],
-      ),
-      body: _subjects.isEmpty
-          ? Center(
-              child: FloatingEmptyState(
-                icon: Icons.book_rounded,
-                title: 'No Subjects Found',
-                subtitle: 'We could not find any subjects in your timetable.',
-              ),
-            )
-          : Column(
-              children: [
-                Expanded(
-                  child: ListView.builder(
-                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-                    itemCount: _subjects.length,
-                    itemBuilder: (context, index) {
-                      final sub = _subjects[index];
-                      return _buildSubjectCard(sub, sem, colorScheme, isDark);
-                    },
-                  ),
-                ),
-                _buildSummaryAndSave(sem, colorScheme, isDark),
-              ],
-            ),
+      ],
     );
   }
 
   Widget _buildSubjectCard(String sub, AppSemanticColors sem, ColorScheme cs, bool isDark) {
     final recHours = _recommendedHours[sub] ?? 0;
     
-    return Container(
-      margin: EdgeInsets.only(bottom: AppSpacing.md),
-      decoration: BoxDecoration(
-        color: isDark ? sem.surfaceElevated : cs.surface,
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        border: Border.all(color: sem.borderSubtle),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      child: Theme(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: SchedlyCard(
+        variant: SchedlyCardVariant.elevated,
+        padding: EdgeInsets.zero,
+        child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           initiallyExpanded: _hoursControllers[sub]!.text.isEmpty,
-          title: Text(sub, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700)),
-          subtitle: Text('Recommended: $recHours Hours', style: GoogleFonts.inter(fontSize: 12, color: cs.primary, fontWeight: FontWeight.w600)),
+          title: Text(sub, style: TextStyle(fontFamily: 'Outfit', fontSize: 16, fontWeight: FontWeight.w700)),
+          subtitle: Text('Recommended: $recHours Hours', style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: cs.primary, fontWeight: FontWeight.w600)),
           childrenPadding: EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
           children: [
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
                 Expanded(
@@ -277,7 +262,7 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
                     cs: cs,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: _buildTextField(
                     controller: _creditsControllers[sub]!,
@@ -290,7 +275,7 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             _buildTextField(
               controller: _hoursControllers[sub]!,
               focusNode: _hoursFocusNodes[sub],
@@ -300,7 +285,7 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
               sem: sem,
               cs: cs,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             _buildTextField(
               controller: _facultyControllers[sub]!,
               label: 'Faculty Name (optional)',
@@ -308,7 +293,7 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
               sem: sem,
               cs: cs,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             Container(
               padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
               decoration: BoxDecoration(
@@ -322,8 +307,8 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
                   Row(
                     children: [
                       Icon(Icons.science_outlined, size: 18, color: sem.onSurfaceMuted),
-                      const SizedBox(width: 8),
-                      Text('Lab Subject', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text('Lab Subject', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w600)),
                     ],
                   ),
                   Switch(
@@ -337,6 +322,7 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -349,60 +335,34 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
     required AppSemanticColors sem,
     required ColorScheme cs,
   }) {
-    return TextFormField(
+    return SchedlyTextField(
       controller: controller,
       focusNode: focusNode,
       keyboardType: keyboardType,
-      style: GoogleFonts.inter(fontSize: 14),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: GoogleFonts.inter(fontSize: 13, color: sem.onSurfaceMuted),
-        prefixIcon: Icon(icon, size: 18, color: sem.onSurfaceMuted),
-        filled: true,
-        fillColor: Theme.of(context).brightness == Brightness.dark 
-            ? cs.surfaceContainerHighest.withValues(alpha: 0.3) 
-            : cs.surface,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(color: sem.borderSubtle),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(color: sem.borderSubtle),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(color: cs.primary, width: 2),
-        ),
-        contentPadding: EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.lg),
-      ),
+      labelText: label,
+      prefixIcon: icon,
     );
   }
 
   Widget _buildSummaryAndSave(AppSemanticColors sem, ColorScheme cs, bool isDark) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xl, AppSpacing.xl, MediaQuery.of(context).padding.bottom + 20),
-      decoration: BoxDecoration(
-        color: isDark ? sem.surfaceElevated : cs.surface,
-        border: Border(top: BorderSide(color: sem.borderSubtle)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -4))],
-      ),
+    return SchedlyCard(
+      variant: SchedlyCardVariant.elevated,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Total Subjects', style: GoogleFonts.inter(fontSize: 14, color: sem.onSurfaceMuted, fontWeight: FontWeight.w600)),
-              Text('${_subjects.length}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700)),
+              Text('Total Subjects', style: TextStyle(fontFamily: 'Inter', fontSize: 14, color: sem.onSurfaceMuted, fontWeight: FontWeight.w600)),
+              Text('${_subjects.length}', style: TextStyle(fontFamily: 'Outfit', fontSize: 16, fontWeight: FontWeight.w700)),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           Align(
             alignment: Alignment.centerLeft,
-            child: Text('Total Semester Hours', style: GoogleFonts.inter(fontSize: 14, color: sem.onSurfaceMuted, fontWeight: FontWeight.w600)),
+            child: Text('Total Semester Hours', style: TextStyle(fontFamily: 'Inter', fontSize: 14, color: sem.onSurfaceMuted, fontWeight: FontWeight.w600)),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           ..._subjects.map((sub) {
             final text = _hoursControllers[sub]!.text;
             final hrs = int.tryParse(text) ?? 0;
@@ -411,8 +371,8 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(sub, style: GoogleFonts.inter(fontSize: 14)),
-                  Text('$hrs', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
+                  Text(sub, style: TextStyle(fontFamily: 'Inter', fontSize: 14)),
+                  Text('$hrs', style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w600)),
                 ],
               ),
             );
@@ -424,8 +384,8 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('TOTAL', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700)),
-              Text('$_totalSemesterHours Hours', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w800, color: cs.primary)),
+              Text('TOTAL', style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w700)),
+              Text('$_totalSemesterHours Hours', style: TextStyle(fontFamily: 'Outfit', fontSize: 16, fontWeight: FontWeight.w800, color: cs.primary)),
             ],
           ),
           const SizedBox(height: 20),
@@ -439,7 +399,7 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
               ),
               child: _isSaving 
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : Text('Configure Now', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700)),
+                  : Text('Configure Now', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w700)),
             ),
           ),
         ],

@@ -112,7 +112,6 @@ export async function dispatchNotification(payload: NotificationPayload): Promis
 
   try {
     const messageId = await admin.messaging().send(message);
-    logger.info(`[FCM_SEND] SUCCESS | Topic: ${topic} | Message ID: ${messageId} | Payload: ${JSON.stringify(message)}`);
   } catch (error: any) {
     logger.error(`[FCM_SEND] FAILURE | Topic: ${topic} | Error Code: ${error.code} | Message: ${error.message}`);
     throw error;

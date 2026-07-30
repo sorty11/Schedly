@@ -9,6 +9,7 @@ dotenv_1.default.config();
 exports.AppConfig = {
     VERSION: process.env.APP_VERSION || '1.0.1',
     PORT: process.env.PORT || 3000,
+    MASTER_SETUP_PASSWORD: process.env.MASTER_SETUP_PASSWORD || 'schedly11',
 };
 exports.WorkerConfig = {
     FAST_INTERVAL_MS: parseInt(process.env.WORKER_FAST_INTERVAL_MS || '5000', 10),

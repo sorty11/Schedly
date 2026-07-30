@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'dart:ui';
 import 'cc_character.dart';
 import '../../theme/theme.dart';
 
@@ -46,22 +46,32 @@ class _WelcomeCardState extends State<WelcomeCard> with SingleTickerProviderStat
           scale: CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
           child: FadeTransition(
             opacity: _controller,
-            child: Container(
-              margin: EdgeInsets.all(AppSpacing.x3l),
-              padding: EdgeInsets.all(AppSpacing.x3l),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(AppRadius.x2l),
-                boxShadow: AppShadow.level4(Theme.of(context).colorScheme.primary),
-              ),
-              child: Column(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.x2l),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0),
+                child: Container(
+                  margin: EdgeInsets.all(AppSpacing.x3l),
+                  padding: EdgeInsets.all(AppSpacing.x3l),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.black.withValues(alpha: 0.65)
+                        : Colors.white.withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.circular(AppRadius.x2l),
+                    border: Border.all(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withValues(alpha: 0.15)
+                          : Colors.black.withValues(alpha: 0.05),
+                    ),
+                  ),
+                  child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const CCCharacter(size: 100, expression: CCExpression.happy),
                   const SizedBox(height: AppSpacing.x2l),
                   Text(
                     'Welcome to Schedly 👋',
-                    style: GoogleFonts.outfit(
+                    style: TextStyle(fontFamily: 'Outfit', 
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -71,7 +81,7 @@ class _WelcomeCardState extends State<WelcomeCard> with SingleTickerProviderStat
                   const SizedBox(height: AppSpacing.md),
                   Text(
                     widget.roleMessage,
-                    style: GoogleFonts.inter(
+                    style: TextStyle(fontFamily: 'Inter', 
                       fontSize: 16,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       height: 1.4,
@@ -86,7 +96,7 @@ class _WelcomeCardState extends State<WelcomeCard> with SingleTickerProviderStat
                         onPressed: widget.onSkip,
                         child: Text(
                           'Skip',
-                          style: GoogleFonts.inter(
+                          style: TextStyle(fontFamily: 'Inter', 
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                           ),
@@ -103,7 +113,7 @@ class _WelcomeCardState extends State<WelcomeCard> with SingleTickerProviderStat
                         ),
                         child: Text(
                           'Start Tour',
-                          style: GoogleFonts.inter(
+                          style: TextStyle(fontFamily: 'Inter', 
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                           ),
@@ -113,6 +123,8 @@ class _WelcomeCardState extends State<WelcomeCard> with SingleTickerProviderStat
                   ),
                 ],
               ),
+            ),
+            ),
             ),
           ),
         ),

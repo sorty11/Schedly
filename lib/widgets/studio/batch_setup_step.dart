@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../theme/theme.dart';
 import 'bottom_continue_button.dart';
@@ -123,16 +122,16 @@ class _BatchSetupStepState extends State<BatchSetupStep> {
                 Text('DEBUG BATCHES IN SETUP: ${widget.batches}', style: TextStyle(color: Colors.red)),
                 Text(
                   'How are students grouped?',
-                  style: GoogleFonts.outfit(
+                  style: TextStyle(fontFamily: 'Outfit', 
                       fontSize: 26, fontWeight: FontWeight.w700, height: 1.2),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   'This determines lecture batch assignments.',
-                  style: GoogleFonts.inter(
+                  style: TextStyle(fontFamily: 'Inter', 
                       fontSize: 16, color: sem.onSurfaceMuted, height: 1.5),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: AppSpacing.x3l),
                 ...options.asMap().entries.map((e) {
                   final idx = e.key;
                   final opt = e.value;
@@ -184,20 +183,20 @@ class _BatchSetupStepState extends State<BatchSetupStep> {
                                       ? cs.primary
                                       : sem.onSurfaceMuted),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: AppSpacing.lg),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(opt.title,
-                                      style: GoogleFonts.inter(
+                                      style: TextStyle(fontFamily: 'Inter', 
                                           fontSize: 15,
                                           fontWeight: FontWeight.w700,
                                           color: isSelected
                                               ? cs.primary
                                               : cs.onSurface)),
                                   Text(opt.subtitle,
-                                      style: GoogleFonts.inter(
+                                      style: TextStyle(fontFamily: 'Inter', 
                                           fontSize: 13,
                                           color: sem.onSurfaceMuted)),
                                 ],
@@ -215,13 +214,13 @@ class _BatchSetupStepState extends State<BatchSetupStep> {
 
                 // Batch Inputs for 2, 3, or 4 batches
                 if (_option == 1 || _option == 2 || _option == 3) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Text('Batch Names',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(fontFamily: 'Inter', 
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: sem.onSurfaceMuted)),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   Row(
                     children: List.generate(_option == 1 ? 2 : (_option == 2 ? 3 : 4), (i) {
                       final currentName = i < _batches.length ? _batches[i] : 'A${i+1}';
@@ -250,24 +249,24 @@ class _BatchSetupStepState extends State<BatchSetupStep> {
                       );
                     }),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.x2l),
                 ],
 
                 // Custom input
                 if (_option == 4) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Text('Your Groups',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(fontFamily: 'Inter', 
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: sem.onSurfaceMuted)),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
                       ...widget.batches.map((batch) => Chip(
-                            label: Text(batch, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                            label: Text(batch, style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
                             backgroundColor: sem.surfaceElevated,
                             side: BorderSide(color: sem.borderSubtle),
                             deleteIcon: const Icon(Icons.close, size: 16),
@@ -279,7 +278,7 @@ class _BatchSetupStepState extends State<BatchSetupStep> {
                                 : null,
                           )),
                       ActionChip(
-                        label: Text('Add Batch', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                        label: Text('Add Batch', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
                         avatar: const Icon(Icons.add, size: 16),
                         backgroundColor: cs.primaryContainer.withValues(alpha: 0.5),
                         side: BorderSide(color: cs.primary.withValues(alpha: 0.3)),
@@ -290,7 +289,7 @@ class _BatchSetupStepState extends State<BatchSetupStep> {
                               final ctrl = TextEditingController();
                               return AlertDialog(
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
-                                title: Text('Add Batch', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
+                                title: Text('Add Batch', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700)),
                                 content: TextField(
                                   controller: ctrl,
                                   decoration: InputDecoration(
@@ -319,7 +318,7 @@ class _BatchSetupStepState extends State<BatchSetupStep> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.x2l),
                 ],
               ],
             ),

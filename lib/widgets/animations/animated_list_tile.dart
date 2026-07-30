@@ -133,7 +133,7 @@ class _AnimatedListTileState extends State<AnimatedListTile> with TickerProvider
                         children: [
                           if (widget.leading != null) ...[
                             widget.leading!,
-                            const SizedBox(width: 16),
+                            const SizedBox(width: AppSpacing.lg),
                           ],
                           Expanded(
                             child: Column(
@@ -159,7 +159,7 @@ class _AnimatedListTileState extends State<AnimatedListTile> with TickerProvider
                             ),
                           ),
                           if (widget.trailing != null) ...[
-                            const SizedBox(width: 16),
+                            const SizedBox(width: AppSpacing.lg),
                             widget.trailing!,
                           ],
                         ],

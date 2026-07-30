@@ -37,7 +37,44 @@ const express_1 = require("express");
 const app_1 = require("../app");
 const env_config_1 = require("../config/env.config");
 const admin = __importStar(require("firebase-admin"));
+const auth_middleware_1 = require("../middleware/auth.middleware");
+const rateLimiter_middleware_1 = require("../middleware/rateLimiter.middleware");
+const logger_1 = require("../utils/logger");
 const router = (0, express_1.Router)();
+router.post('/create-section', rateLimiter_middleware_1.sectionCreateRateLimiter, auth_middleware_1.verifyIdToken, async (req, res) => {
+    const { masterPassword, sectionId, sectionData, crPassword, srPassword } = req.body;
+    if (masterPassword !== env_config_1.AppConfig.MASTER_SETUP_PASSWORD) {
+        logger_1.logger.warn('Failed section creation: Invalid master password', { uid: req.user?.uid, sectionId });
+        return res.status(403).json({ error: 'Incorrect Master Password' });
+    }
+    if (!sectionId || !sectionData || !crPassword || !srPassword) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+    try {
+        const db = admin.firestore();
+        const sectionRef = db.collection('sections').doc(sectionId);
+        // Check if it already exists
+        const doc = await sectionRef.get();
+        if (doc.exists) {
+            logger_1.logger.warn('Failed section creation: Section already exists', { uid: req.user?.uid, sectionId });
+            return res.status(409).json({ error: 'Section already exists' });
+        }
+        // Create the section securely
+        await sectionRef.set({
+            ...sectionData,
+            crPassword,
+            srPassword,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            timetablePublished: false,
+        });
+        logger_1.logger.info('Section created successfully', { uid: req.user?.uid, sectionId });
+        return res.status(201).json({ success: true, message: 'Section created' });
+    }
+    catch (error) {
+        logger_1.logger.error('Error creating section', { error: error.message });
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+});
 router.get('/health', async (req, res) => {
     try {
         const stats = app_1.worker.getStats();

@@ -268,6 +268,16 @@ class PeriodTemplates {
         PeriodDef(id: 'p6', name: 'Period 6', startMinutes: _m(15, 15), endMinutes: _m(16, 15)),
       ];
 
+  static List<PeriodDef> nmimsHyderabad() => [
+        PeriodDef(id: 'p1', name: 'Period 1', startMinutes: _m(9, 15), endMinutes: _m(10, 15)),
+        PeriodDef(id: 'p2', name: 'Period 2', startMinutes: _m(10, 15), endMinutes: _m(11, 15)),
+        PeriodDef(id: 'p3', name: 'Period 3', startMinutes: _m(11, 15), endMinutes: _m(12, 15)),
+        PeriodDef(id: 'l1', name: 'Lunch', startMinutes: _m(12, 15), endMinutes: _m(13, 0), kind: PeriodKind.lunch),
+        PeriodDef(id: 'p4', name: 'Period 4', startMinutes: _m(13, 0), endMinutes: _m(14, 0)),
+        PeriodDef(id: 'p5', name: 'Period 5', startMinutes: _m(14, 0), endMinutes: _m(15, 0)),
+        PeriodDef(id: 'p6', name: 'Period 6', startMinutes: _m(15, 0), endMinutes: _m(16, 0)),
+      ];
+
   static List<PeriodDef> jntuh() => [
         PeriodDef(id: 'p1', name: 'Period 1', startMinutes: _m(9, 20), endMinutes: _m(10, 10)),
         PeriodDef(id: 'p2', name: 'Period 2', startMinutes: _m(10, 10), endMinutes: _m(11, 0)),

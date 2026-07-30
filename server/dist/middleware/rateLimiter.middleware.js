@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.notificationRateLimiter = void 0;
+exports.sectionCreateRateLimiter = exports.notificationRateLimiter = void 0;
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const logger_1 = require("../utils/logger");
 exports.notificationRateLimiter = (0, express_rate_limit_1.default)({
@@ -12,6 +12,16 @@ exports.notificationRateLimiter = (0, express_rate_limit_1.default)({
     message: { error: 'Too many requests, please try again later.' },
     handler: (req, res, next, options) => {
         logger_1.logger.warn('Rate limit exceeded', { ip: req.ip });
+        res.status(options.statusCode).send(options.message);
+    }
+});
+exports.sectionCreateRateLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 10 * 60 * 1000, // 10 minutes
+    max: 5, // 5 failed attempts
+    skipSuccessfulRequests: true, // Only count failed attempts towards the limit
+    message: { error: 'Too many failed creation attempts. Please try again later.' },
+    handler: (req, res, next, options) => {
+        logger_1.logger.warn('Section creation rate limit exceeded', { ip: req.ip });
         res.status(options.statusCode).send(options.message);
     }
 });

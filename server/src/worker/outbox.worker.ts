@@ -87,7 +87,6 @@ export class OutboxWorker {
 
   private async transferDueFacultyReminders() {
     try {
-      console.log("[REMINDER] Checking due faculty reminders");
       const db = admin.firestore();
       // Look for due reminders using scheduledFor to match the new architecture
       const snapshot = await db.collection('faculty_reminders')
@@ -95,14 +94,12 @@ export class OutboxWorker {
         .limit(50)
         .get();
 
-      console.log("[REMINDER] Found " + snapshot.size + " reminders");
 
       if (!snapshot.empty) {
         const batch = db.batch();
         
         for (const doc of snapshot.docs) {
           const data = doc.data();
-          console.log("[REMINDER] Moving reminder", doc.id);
           const targetFacultyId = data.facultyId || data.uid;
           
           if (!targetFacultyId) {
@@ -131,7 +128,6 @@ export class OutboxWorker {
         }
         
         await batch.commit();
-        console.log("[REMINDER] Finished transfer");
         logger.info(`Transferred ${snapshot.size} due faculty reminders to outbox.`);
       }
     } catch (error) {
@@ -195,7 +191,6 @@ export class OutboxWorker {
 
   private async processSingleEntry(doc: admin.firestore.QueryDocumentSnapshot, workerLatency: number) {
     const data = doc.data();
-    logger.info(`[OUTBOX] Read doc ${doc.id} with data: ${JSON.stringify(data)}`);
     const uid = data.uid;
     const notificationId = data.notificationId || doc.id;
     const division = data.division || 'unknown';

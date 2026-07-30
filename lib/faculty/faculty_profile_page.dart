@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app_settings.dart';
 import '../theme/theme.dart';
-import '../login_page.dart';
+import '../onboarding_flow.dart';
 import '../widgets/animations/animated_button.dart';
 import '../timetable_manager.dart';
 import '../main.dart';
@@ -227,7 +227,7 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
     if (!context.mounted) return;
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => const LoginPage()),
+      MaterialPageRoute(builder: (_) => const OnboardingFlow()),
       (_) => false,
     );
   }
@@ -708,7 +708,7 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : 'F';
 
     final int totalDivisions = _subjectsMap.keys.length;
-    final int totalSubjects = _subjectsMap.values.fold(0, (sum, list) => sum + list.length);
+    final int totalSubjects = _subjectsMap.values.fold(0, (acc, list) => acc + list.length);
 
     int staggerIndex = 0;
 

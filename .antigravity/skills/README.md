@@ -1,0 +1,15 @@
+# Skills Directory Manifest
+
+- [accessibility-reviewer.md](accessibility-reviewer.md)
+- [animation-engineer.md](animation-engineer.md)
+- [component-architect.md](component-architect.md)
+- [dashboard-designer.md](dashboard-designer.md)
+- [design-critic.md](design-critic.md)
+- [design-system-reviewer.md](design-system-reviewer.md)
+- [empty-state-generator.md](empty-state-generator.md)
+- [loading-state-optimizer.md](loading-state-optimizer.md)
+- [mobile-ui-reviewer.md](mobile-ui-reviewer.md)
+- [motion-designer.md](motion-designer.md)
+- [premium-ui-reviewer.md](premium-ui-reviewer.md)
+- [ui-designer.md](ui-designer.md)
+- [ux-reviewer.md](ux-reviewer.md)

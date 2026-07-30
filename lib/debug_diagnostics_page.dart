@@ -14,6 +14,7 @@ import 'services/diagnostic_logger.dart';
 import 'models/timetable_entry.dart';
 import 'models/faculty_lecture_context.dart';
 import 'models/event_category.dart';
+import 'theme/design_tokens.dart';
 
 class DebugDiagnosticsPage extends StatefulWidget {
   const DebugDiagnosticsPage({super.key});
@@ -227,7 +228,7 @@ class _DebugDiagnosticsPageState extends State<DebugDiagnosticsPage> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
           _buildHeader('Identity & Environment'),
           _buildItem('Current Role', AppSettings.currentRole.toString().split('.').last),
@@ -323,10 +324,10 @@ class _DebugDiagnosticsPageState extends State<DebugDiagnosticsPage> {
           const Divider(),
           _buildHeader('Notification Test Runner'),
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
               color: Colors.black87,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
             height: 200,
             child: ListView.builder(
@@ -337,7 +338,7 @@ class _DebugDiagnosticsPageState extends State<DebugDiagnosticsPage> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           _buildHeader('Live Verification Checklist'),
           ..._checklist.entries.map((e) => CheckboxListTile(
             title: Text(e.key, style: const TextStyle(fontWeight: FontWeight.w500)),

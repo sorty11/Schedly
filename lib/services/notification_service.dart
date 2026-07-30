@@ -197,7 +197,6 @@ class NotificationService {
 
       DiagnosticLogger.logFCM('[FCM_TRACE] Preparing Token Registration -> Current Role: ${AppSettings.currentRole.name} | Routing Role: $role | Routing ID: $finalDivision');
 
-      debugPrint('[FS_TRACE] WRITE users/\${user.uid}/fcm_tokens/\$token');
       try {
         await FirebaseFirestore.instance
             .collection('users')

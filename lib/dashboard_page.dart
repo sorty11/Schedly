@@ -21,10 +21,8 @@ import 'models/timetable_entry.dart';
 import 'models/event_category.dart';
 import 'timetable_manager.dart';
 import 'manual_timetable_studio.dart';
+import 'weekly_timetable_page.dart';
 import 'upload_timetable_pdf_page.dart';
-import 'system_update_manager.dart';
-import 'services/announcement_service.dart';
-import 'services/local_notification_service.dart';
 import 'services/history_service.dart';
 import 'services/timetable_event_service.dart';
 
@@ -99,78 +97,270 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  Widget _buildNoTimetableCard(ThemeData theme, AppSemanticColors sem) {
+  Widget _buildTimetableCommandCenter(
+    ThemeData theme,
+    AppSemanticColors sem,
+    bool hasTimetable,
+    bool hasDraft,
+    int todayCount,
+    TimetableEntry? nextLecture,
+  ) {
+    final isDark = theme.brightness == Brightness.dark;
+    final primary = theme.colorScheme.primary;
+
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.lg),
-      padding: EdgeInsets.all(AppSpacing.x2l),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.x2l),
       decoration: BoxDecoration(
-        color: theme.brightness == Brightness.dark ? sem.surfaceElevated : theme.colorScheme.surface,
+        color: isDark ? sem.surfaceElevated2 : theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(AppRadius.xl),
         border: Border.all(color: sem.borderSubtle, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'No Timetable Found',
-            style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w800),
+          // ── Header: title + status ──────────────────────────────────────
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Timetable',
+                      style: GoogleFonts.outfit(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.onSurface,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: hasTimetable
+                                ? sem.success
+                                : hasDraft
+                                    ? sem.pending
+                                    : sem.onSurfaceMuted.withValues(alpha: 0.4),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          hasTimetable
+                              ? 'Published & active'
+                              : hasDraft
+                                  ? 'Draft saved — not published'
+                                  : 'No timetable yet',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: hasTimetable
+                                ? sem.success
+                                : hasDraft
+                                    ? sem.pending
+                                    : sem.onSurfaceMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Stats (only when timetable exists)
+              if (hasTimetable) ...
+              [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '$todayCount',
+                      style: GoogleFonts.outfit(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.onSurface,
+                        height: 1,
+                      ),
+                    ),
+                    Text(
+                      'today',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: sem.onSurfaceMuted,
+                      ),
+                    ),
+                  ],
+                ),
+                if (nextLecture != null) ...
+                [
+                  Container(
+                    width: 1,
+                    height: 36,
+                    margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                    color: sem.borderSubtle,
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'NEXT UP',
+                        style: GoogleFonts.inter(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
+                          color: sem.onSurfaceMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 80),
+                        child: Text(
+                          nextLecture.displaySubject,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.end,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Create your class timetable manually or import a PDF.',
-            style: GoogleFonts.inter(fontSize: 14, color: sem.onSurfaceMuted, height: 1.5),
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(
-                builder: (_) => ManualTimetableStudio(division: widget.division),
-              ));
-            },
-            icon: const Icon(Icons.edit_calendar_rounded, size: 18),
-            label: Text('Create Timetable', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700)),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+
+          const SizedBox(height: AppSpacing.x2l),
+
+          // ── Primary CTA — full width, highest visual weight ──────────────
+          SizedBox(
+            height: 48,
+            child: FilledButton.icon(
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => ManualTimetableStudio(division: widget.division),
+                ));
+              },
+              icon: const Icon(Icons.calendar_view_week_rounded, size: 18),
+              label: Text(
+                hasTimetable ? 'Bulk Edit Week' : 'Create Timetable',
+                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                elevation: 0,
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-          OutlinedButton(
-            onPressed: () {
+
+          const SizedBox(height: AppSpacing.sm),
+
+          // ── Secondary actions — equal weight, outlined ───────────────────
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 44,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => WeeklyTimetablePage(division: widget.division, isEditMode: true),
+                      ));
+                    },
+                    icon: Icon(Icons.view_week_outlined, size: 16, color: primary),
+                    label: Text(
+                      'Week View',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: primary,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: primary.withValues(alpha: 0.25), width: 1),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: SizedBox(
+                  height: 44,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final prefs = await SharedPreferences.getInstance();
+                      final division = prefs.getString('selected_division');
+                      if (!mounted || division == null) return;
+                      await TimetableStudioSheet.show(
+                        context,
+                        division: division,
+                        initialDay: 'Monday',
+                      );
+                    },
+                    icon: Icon(Icons.add_rounded, size: 16, color: theme.colorScheme.onSurface),
+                    label: Text(
+                      'Quick Add',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: sem.borderSubtle, width: 1),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // ── Tertiary action — Import PDF as text-row ──────────────────────
+          const SizedBox(height: AppSpacing.xs),
+          GestureDetector(
+            onTap: () {
               Navigator.push(context, MaterialPageRoute(
                 builder: (_) => const UploadTimetablePdfPage(),
               ));
             },
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              side: BorderSide(color: sem.borderSubtle, width: 1.5),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.picture_as_pdf_rounded, size: 18, color: sem.onSurfaceMuted),
-                const SizedBox(width: 8),
-                Text('Import PDF', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface)),
-                const SizedBox(width: 8),
-                const BetaBadge(),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Center(
-            child: TextButton(
-              onPressed: () => setState(() => _hasTimetable = true), // Dismiss the card by faking timetable presence
-              child: Text('Skip for now',
-                  style: GoogleFonts.inter(
-                      fontSize: 13, color: sem.onSurfaceMuted, fontWeight: FontWeight.w500)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.picture_as_pdf_outlined, size: 14, color: sem.onSurfaceMuted),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text(
+                    'Import from PDF',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: sem.onSurfaceMuted,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  const BetaBadge(),
+                ],
+              ),
             ),
           ),
         ],
@@ -226,7 +416,7 @@ class _DashboardPageState extends State<DashboardPage> {
             AppSpacing.x2l, AppSpacing.lg, AppSpacing.x2l, AppSpacing.x2l,
           ),
           decoration: BoxDecoration(
-            color: isDark ? sem.surfaceElevated : colorScheme.surface,
+            color: isDark ? sem.surfaceElevated2 : colorScheme.surface,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.x2l)),
           ),
           child: SafeArea(
@@ -591,9 +781,16 @@ class _DashboardPageState extends State<DashboardPage> {
                 if (isLoading)
                   const SliverToBoxAdapter(child: HeroCardSkeleton()),
                   
-                if (!isLoading && !_hasTimetable && !_hasDraft && AppSettings.currentRole == UserRole.cr && !_isLoadingTimetableCheck)
+                if (!isLoading && AppSettings.currentRole == UserRole.cr && !_isLoadingTimetableCheck)
                   SliverToBoxAdapter(
-                    child: _buildNoTimetableCard(Theme.of(context), sem),
+                    child: _buildTimetableCommandCenter(
+                      Theme.of(context), 
+                      sem, 
+                      _hasTimetable,
+                      _hasDraft,
+                      rawLectures.length,
+                      nextGroup?.first,
+                    ),
                   ),
 
                 if (!isLoading && _hasDraft)
@@ -708,7 +905,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.only(
+                    padding: const EdgeInsets.only(
                       left: AppSpacing.x2l,
                       right: AppSpacing.x2l,
                       bottom: AppSpacing.md,
@@ -724,21 +921,21 @@ class _DashboardPageState extends State<DashboardPage> {
                           const Spacer(),
                           if (!isLoading && groupedLectures.isNotEmpty)
                             Container(
-                              padding: EdgeInsets.symmetric(
+                              padding: const EdgeInsets.symmetric(
                                 horizontal: AppSpacing.md,
                                 vertical: AppSpacing.xs,
                               ),
                               decoration: BoxDecoration(
-                                color: colorScheme.primary.withValues(alpha: 0.1),
-                                borderRadius:
-                                    BorderRadius.circular(AppRadius.full),
+                                // Neutral badge — not brand color
+                                color: sem.borderSubtle,
+                                borderRadius: BorderRadius.circular(AppRadius.full),
                               ),
                               child: Text(
                                 '${groupedLectures.length} block${groupedLectures.length == 1 ? '' : 's'}',
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.w500,
+                                  color: sem.onSurfaceMuted,
                                 ),
                               ),
                             ),
@@ -904,9 +1101,11 @@ class _TimelineLectureItem extends StatelessWidget {
                 onTap: (entries.length == 1 && canEdit(entries.first)) ? () => onEdit(entries.first) : null,
                 backgroundColor: isCurrent
                     ? colorScheme.primary.withValues(alpha: isDark ? 0.12 : 0.06)
-                    : isDark
-                        ? sem.surfaceElevated
-                        : colorScheme.surface,
+                    : allCancelled
+                        ? sem.cancelled.withValues(alpha: isDark ? 0.08 : 0.04)
+                        : (isDark
+                            ? sem.surfaceElevated2
+                            : colorScheme.surface),
                 borderRadius: AppRadius.lg,
                 child: Container(
                   decoration: BoxDecoration(
@@ -953,35 +1152,19 @@ class _TimelineLectureItem extends StatelessWidget {
                                       decoration: isCancelled ? TextDecoration.lineThrough : null,
                                     ),
                                   ),
-                                  if (entry.batch != 'Whole Class' || entry.room != null)
+                                  if (entry.batch != 'Whole Class' || (entry.room != null && entry.room!.isNotEmpty))
                                     Padding(
-                                      padding: EdgeInsets.only(top: AppSpacing.xs),
-                                      child: Row(
-                                        children: [
-                                          if (entry.batch != 'Whole Class')
-                                            Text(
-                                              entry.batch,
-                                              style: GoogleFonts.inter(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
-                                                color: sem.onSurfaceMuted,
-                                              ),
-                                            ),
-                                          if (entry.batch != 'Whole Class' && entry.room != null && entry.room!.isNotEmpty)
-                                            Text(
-                                              ' • ',
-                                              style: TextStyle(color: sem.onSurfaceMuted),
-                                            ),
-                                          if (entry.room != null && entry.room!.isNotEmpty)
-                                            Text(
-                                              'Room ${entry.room}',
-                                              style: GoogleFonts.inter(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
-                                                color: sem.onSurfaceMuted,
-                                              ),
-                                            ),
-                                        ],
+                                      padding: const EdgeInsets.only(top: AppSpacing.xs - 2),
+                                      child: Text(
+                                        [
+                                          if (entry.batch != 'Whole Class') entry.batch,
+                                          if (entry.room != null && entry.room!.isNotEmpty) 'Room ${entry.room}',
+                                        ].join(' · '),
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w400,
+                                          color: sem.onSurfaceMuted,
+                                        ),
                                       ),
                                     ),
                                 ],
@@ -1099,7 +1282,7 @@ class _QuickStatsRow extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: isDark ? sem.surfaceElevated : colorScheme.surface,
+        color: isDark ? sem.surfaceElevated2 : colorScheme.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(
           color: isDark ? sem.borderSubtle : const Color(0xFFE8E8F0),
@@ -1111,7 +1294,8 @@ class _QuickStatsRow extends StatelessWidget {
           _StatCell(
             value: '$lectureCount',
             label: 'Total',
-            color: colorScheme.primary,
+            // Neutral — total count is factual, not brand-colored
+            color: colorScheme.onSurface,
           ),
           _Divider(),
           _StatCell(
@@ -1123,7 +1307,7 @@ class _QuickStatsRow extends StatelessWidget {
           _StatCell(
             value: '$cancelledCount',
             label: 'Cancelled',
-            color: sem.cancelled,
+            color: cancelledCount > 0 ? sem.cancelled : sem.onSurfaceMuted,
           ),
         ],
       ),
@@ -1152,7 +1336,7 @@ class _StatCell extends StatelessWidget {
             value,
             style: GoogleFonts.outfit(
               fontSize: 22,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
               color: color,
               height: 1,
             ),
@@ -1162,7 +1346,7 @@ class _StatCell extends StatelessWidget {
             label,
             style: GoogleFonts.inter(
               fontSize: 11,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               color: sem.onSurfaceMuted,
             ),
           ),

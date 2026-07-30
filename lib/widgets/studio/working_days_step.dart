@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../theme/theme.dart';
 import 'bottom_continue_button.dart';
@@ -54,13 +53,13 @@ class _WorkingDaysStepState extends State<WorkingDaysStep> {
               children: [
                 Text(
                   'Which days does your college operate?',
-                  style: GoogleFonts.outfit(
+                  style: TextStyle(fontFamily: 'Outfit', 
                       fontSize: 26, fontWeight: FontWeight.w700, height: 1.2),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   'Select all the days your class has lectures.',
-                  style: GoogleFonts.inter(
+                  style: TextStyle(fontFamily: 'Inter', 
                       fontSize: 16, color: sem.onSurfaceMuted, height: 1.5),
                 ),
                 const SizedBox(height: 40),
@@ -89,7 +88,7 @@ class _WorkingDaysStepState extends State<WorkingDaysStep> {
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.x2l),
                 AnimatedSize(
                   duration: const Duration(milliseconds: 250),
                   child: _selected.isEmpty
@@ -103,9 +102,9 @@ class _WorkingDaysStepState extends State<WorkingDaysStep> {
                             children: [
                               Icon(Icons.warning_rounded,
                                   size: 16, color: cs.error),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: AppSpacing.sm),
                               Text('Select at least one day',
-                                  style: GoogleFonts.inter(
+                                  style: TextStyle(fontFamily: 'Inter', 
                                       fontSize: 13,
                                       color: cs.error,
                                       fontWeight: FontWeight.w600)),
@@ -176,7 +175,7 @@ class _AnimatedDayChip extends StatelessWidget {
             ],
             Text(
               label,
-              style: GoogleFonts.inter(
+              style: TextStyle(fontFamily: 'Inter', 
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: selected ? Colors.white : cs.onSurface,

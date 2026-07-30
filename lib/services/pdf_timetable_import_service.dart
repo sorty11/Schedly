@@ -331,17 +331,40 @@ class PdfTimetableImportService {
     required String division,
     required Map<String, List<TimetableEntry>> timetable,
   }) async {
+    final batches = <WriteBatch>[];
+    WriteBatch currentBatch = db.batch();
+    int opCount = 0;
+
+    void commitOp() {
+      opCount++;
+      if (opCount >= 450) {
+        batches.add(currentBatch);
+        currentBatch = db.batch();
+        opCount = 0;
+      }
+    }
+
     for (final day in timetable.keys) {
       final dayCollection = db.collection('timetables').doc(division).collection(day);
       final existing = await dayCollection.get();
       
       for (final doc in existing.docs) {
-        await doc.reference.delete();
+        currentBatch.delete(doc.reference);
+        commitOp();
       }
 
       for (final entry in timetable[day]!) {
-        await dayCollection.doc(entry.id).set(entry.toFirestore());
+        currentBatch.set(dayCollection.doc(entry.id), entry.toFirestore());
+        commitOp();
       }
+    }
+    
+    if (opCount > 0) {
+      batches.add(currentBatch);
+    }
+
+    for (final b in batches) {
+      await b.commit();
     }
   }
 }

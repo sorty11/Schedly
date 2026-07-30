@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../theme/theme.dart';
 
 /// A section header widget that renders a styled ALL-CAPS label
@@ -29,7 +28,7 @@ class SectionHeader extends StatelessWidget {
         children: [
           Text(
             title.toUpperCase(),
-            style: GoogleFonts.inter(
+            style: TextStyle(fontFamily: 'Inter', 
               fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.2,

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/studio_state.dart';
 import '../../theme/theme.dart';
 import 'bottom_continue_button.dart';
 import 'time_wheel_picker.dart';
+import '../schedly_bottom_sheet.dart';
 
 class PeriodBuilderStep extends StatefulWidget {
   final List<PeriodDef> periods;
@@ -193,13 +193,13 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
                         children: [
                           Text(
                             'Period Schedule',
-                            style: GoogleFonts.outfit(
+                            style: TextStyle(fontFamily: 'Outfit', 
                                 fontSize: 24, fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Define timings once for the whole week.',
-                            style: GoogleFonts.inter(
+                            style: TextStyle(fontFamily: 'Inter', 
                                 fontSize: 14, color: sem.onSurfaceMuted),
                           ),
                         ],
@@ -235,16 +235,17 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
                         margin: EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.sm),
                         padding: EdgeInsets.all(AppSpacing.md),
                         decoration: BoxDecoration(
-                          color: cs.errorContainer,
+                          color: cs.error.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: cs.error.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [
                             Icon(Icons.error_rounded, color: cs.error, size: 18),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Text(_errorMessage!,
-                                  style: GoogleFonts.inter(
+                                  style: TextStyle(fontFamily: 'Inter', 
                                       color: cs.error, fontWeight: FontWeight.w600, fontSize: 13)),
                             ),
                           ],
@@ -419,7 +420,7 @@ class _PeriodCard extends StatelessWidget {
                           value: period.kind,
                           icon: const Icon(Icons.arrow_drop_down, size: 18),
                           isDense: true,
-                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: cs.onSurface),
+                          style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: cs.onSurface),
                           onChanged: (k) {
                             if (k != null) onKindChanged(k);
                           },
@@ -449,13 +450,13 @@ class _PeriodCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 
                 // Name Input
                 TextFormField(
                   initialValue: period.name,
                   onChanged: onNameChanged,
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
+                  style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 16),
                   decoration: InputDecoration(
                     labelText: 'Period Name',
                     contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
@@ -463,7 +464,7 @@ class _PeriodCard extends StatelessWidget {
                     isDense: true,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 
                 // Time Pickers
                 Row(
@@ -481,16 +482,16 @@ class _PeriodCard extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Start', style: GoogleFonts.inter(fontSize: 10, color: sem.onSurfaceMuted)),
-                              Text(formatTime(period.startMinutes), style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14)),
+                              Text('Start', style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: sem.onSurfaceMuted)),
+                              Text(formatTime(period.startMinutes), style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 14)),
                             ],
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.sm),
                     const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.grey),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: InkWell(
                         onTap: onPickEnd,
@@ -504,8 +505,8 @@ class _PeriodCard extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('End', style: GoogleFonts.inter(fontSize: 10, color: sem.onSurfaceMuted)),
-                              Text(formatTime(period.endMinutes), style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14)),
+                              Text('End', style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: sem.onSurfaceMuted)),
+                              Text(formatTime(period.endMinutes), style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 14)),
                             ],
                           ),
                         ),
@@ -529,55 +530,39 @@ class _TemplateSelectorSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final sem = Theme.of(context).extension<AppSemanticColors>()!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? sem.surfaceElevated2 : cs.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 48,
-                height: 5,
-                margin: EdgeInsets.only(bottom: AppSpacing.lg),
-                decoration: BoxDecoration(
-                  color: sem.borderSubtle,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              Text('Load Template', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Icon(Icons.account_balance_rounded),
-                title: const Text('NMIMS (Mumbai)'),
-                subtitle: const Text('9:15 AM - 4:15 PM'),
-                onTap: () => onSelect(PeriodTemplates.nmims()),
-              ),
-              ListTile(
-                leading: const Icon(Icons.account_balance_rounded),
-                title: const Text('JNTUH'),
-                subtitle: const Text('9:20 AM - 3:50 PM'),
-                onTap: () => onSelect(PeriodTemplates.jntuh()),
-              ),
-              ListTile(
-                leading: const Icon(Icons.account_balance_rounded),
-                title: const Text('Osmania University (OU)'),
-                subtitle: const Text('9:00 AM - 3:00 PM'),
-                onTap: () => onSelect(PeriodTemplates.ou()),
-              ),
-            ],
+    return SchedlyBottomSheet(
+      title: 'Load Template',
+      padding: EdgeInsets.zero,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: AppSpacing.md),
+          ListTile(
+            leading: const Icon(Icons.account_balance_rounded),
+            title: const Text('NMIMS (Mumbai)'),
+            subtitle: const Text('9:15 AM - 4:15 PM'),
+            onTap: () => onSelect(PeriodTemplates.nmims()),
           ),
-        ),
+          ListTile(
+            leading: const Icon(Icons.account_balance_rounded),
+            title: const Text('NMIMS (Hyderabad)'),
+            subtitle: const Text('9:15 AM - 4:00 PM'),
+            onTap: () => onSelect(PeriodTemplates.nmimsHyderabad()),
+          ),
+          ListTile(
+            leading: const Icon(Icons.account_balance_rounded),
+            title: const Text('JNTUH'),
+            subtitle: const Text('9:20 AM - 3:50 PM'),
+            onTap: () => onSelect(PeriodTemplates.jntuh()),
+          ),
+          ListTile(
+            leading: const Icon(Icons.account_balance_rounded),
+            title: const Text('Osmania University (OU)'),
+            subtitle: const Text('9:00 AM - 3:00 PM'),
+            onTap: () => onSelect(PeriodTemplates.ou()),
+          ),
+          SizedBox(height: MediaQuery.of(context).padding.bottom + AppSpacing.lg),
+        ],
       ),
     );
   }

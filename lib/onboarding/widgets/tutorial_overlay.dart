@@ -122,49 +122,6 @@ class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget> with Sin
       return const SizedBox.shrink();
     }
 
-    if (state == TutorialState.recovery) {
-      return Material(
-        type: MaterialType.transparency,
-        child: Container(
-          color: Colors.black.withValues(alpha: 0.8),
-          alignment: Alignment.center,
-          padding: EdgeInsets.all(AppSpacing.x2l),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.search_off_rounded, color: Colors.white, size: 64),
-              const SizedBox(height: 16),
-              const Text(
-                'Waiting for next step...',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Please navigate to the required screen or try recovering.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white70),
-              ),
-              const SizedBox(height: 32),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TextButton(
-                    onPressed: () => _controller.skipTour(),
-                    child: const Text('Skip Tutorial', style: TextStyle(color: Colors.white)),
-                  ),
-                  const SizedBox(width: 16),
-                  FilledButton(
-                    onPressed: () => _controller.retryCurrentStep(),
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     final boundsToUse = _currentTargetBounds ?? _previousTargetBounds;
     if (boundsToUse == null) {
       return const SizedBox.shrink();
@@ -210,15 +167,36 @@ class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget> with Sin
                       child: Stack(
                         children: [
                           BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 4.0, sigmaY: 4.0),
+                            filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
                             child: Container(color: Colors.black.withValues(alpha: 0.1)),
                           ),
                           GestureDetector(
                             onTap: () {}, // Block all taps outside the hole
                             behavior: HitTestBehavior.opaque,
-                            child: Container(color: Colors.black.withValues(alpha: 0.6)),
+                            child: Container(color: Colors.black.withValues(alpha: 0.65)),
                           ),
                         ],
+                      ),
+                    ),
+                    Positioned.fromRect(
+                      rect: currentRect,
+                      child: IgnorePointer(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+                              width: 2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                                blurRadius: 15,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ],

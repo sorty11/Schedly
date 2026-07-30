@@ -120,7 +120,6 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
       };
       
       try {
-        debugPrint('OUTBOX PAYLOAD (Notify CRs): $crPayload');
         await FirebaseFirestore.instance.collection('notification_outbox').add(crPayload);
       } catch (outboxErr) {
         debugPrint('OUTBOX WARNING (non-fatal, conflict notify): $outboxErr');
@@ -223,9 +222,9 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
   Widget _buildSummaryMetric({required String title, required String value, required IconData icon, required Color color}) {
     return Column(
       children: [
-        Icon(icon, color: color, size: 24),
+        Icon(icon, color: color, size: 22),
         const SizedBox(height: 4),
-        Text(value, style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w800)),
+        Text(value, style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w700)),
         Text(title, style: TextStyle(fontSize: 11, color: Theme.of(context).extension<AppSemanticColors>()!.onSurfaceMuted)),
       ],
     );
@@ -251,7 +250,7 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
                     'Consolidated Timetable',
                     style: GoogleFonts.outfit(
                       fontSize: 28,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                       color: colorScheme.onSurface,
                     ),
                   ),
@@ -310,21 +309,12 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
                                   duration: const Duration(milliseconds: 250),
                                   curve: Curves.easeInOut,
                                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-                                  decoration: BoxDecoration(
+                                   decoration: BoxDecoration(
                                     color: isSelected ? colorScheme.primary : sem.surfaceElevated,
                                     borderRadius: BorderRadius.circular(AppRadius.full),
                                     border: Border.all(
                                       color: isSelected ? colorScheme.primary : sem.borderSubtle,
                                     ),
-                                    boxShadow: isSelected
-                                        ? [
-                                            BoxShadow(
-                                              color: colorScheme.primary.withValues(alpha: 0.3),
-                                              blurRadius: 10,
-                                              offset: const Offset(0, 4),
-                                            )
-                                          ]
-                                        : [],
                                   ),
                                   alignment: Alignment.center,
                                   child: Text(
@@ -409,7 +399,6 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
                                       width: isLive ? 2 : 1,
                                     ),
                                     borderRadius: BorderRadius.circular(AppRadius.lg),
-                                    boxShadow: isLive ? [BoxShadow(color: colorScheme.primary.withValues(alpha: 0.1), blurRadius: 10, spreadRadius: 2)] : [],
                                   ),
                                   child: Padding(
                                     padding: const EdgeInsets.all(AppSpacing.lg),
@@ -423,21 +412,21 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
                                             color: colorScheme.primary.withValues(alpha: 0.1),
                                             borderRadius: BorderRadius.circular(AppRadius.md),
                                           ),
-                                          child: Column(
+                                           child: Column(
                                             children: [
                                               Text(
                                                 _formatTime(item.entry.startTime),
-                                                style: TextStyle(fontWeight: FontWeight.w800, color: colorScheme.primary, fontSize: 13),
+                                                style: TextStyle(fontWeight: FontWeight.w600, color: colorScheme.primary, fontSize: 13),
                                               ),
                                               const SizedBox(height: 2),
                                               Text(
                                                 'to',
-                                                style: TextStyle(fontSize: 10, color: colorScheme.primary.withValues(alpha: 0.7)),
+                                                style: TextStyle(fontSize: 10, color: colorScheme.primary.withValues(alpha: 0.5)),
                                               ),
                                               const SizedBox(height: 2),
                                               Text(
                                                 _formatTime(item.entry.endTime),
-                                                style: TextStyle(fontWeight: FontWeight.w800, color: colorScheme.primary, fontSize: 13),
+                                                style: TextStyle(fontWeight: FontWeight.w600, color: colorScheme.primary, fontSize: 13),
                                               ),
                                             ],
                                           ),

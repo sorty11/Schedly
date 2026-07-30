@@ -5,7 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:schedly/models/timetable_entry.dart';
 import 'package:schedly/services/app_notification_service.dart';
-import 'package:schedly/services/announcement_service.dart';
 import 'package:schedly/services/local_notification_service.dart';
 import 'package:schedly/timetable_manager.dart';
 
@@ -105,55 +104,25 @@ class TimetableEventService {
       return;
     }
 
-    // 1. Create Notification (Updates Feed)
-    await AppNotificationService.createNotification(
-      title: title,
-      message: message,
-      division: division,
-      type: type,
-    );
-
-    // 2. Announcements
-    if (makeAnnouncement) {
-      await AnnouncementService.createAnnouncement(
+    try {
+      // Primary Notification, Announcement & Outbox
+      await AppNotificationService.dispatch(
         title: title,
         message: message,
-        priority: 'high',
-        sectionId: division,
+        division: division,
+        type: type,
+        priority: (type == 'cancel' || type == 'edit' || type == 'time_change' || type == 'room_change') ? 'High' : 'Normal',
       );
-    }
 
-    // Trigger Render Backend Push Notification via Outbox
-    // IMPORTANT: Wrapped in try-catch so outbox failures NEVER block the save operation
-    try {
-      final baseNotificationId = 'tt_${DateTime.now().millisecondsSinceEpoch}';
-      final priority = (type == 'cancel' || type == 'edit' || type == 'time_change' || type == 'room_change') ? 'high' : 'normal';
       // Resolve correct UID for outbox
       String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
       if (AppSettings.currentRole == UserRole.faculty && AppSettings.facultyId != null) {
         uid = AppSettings.facultyId!;
       }
-
-      final Map<String, dynamic> divisionPayload = {
-        'notificationId': baseNotificationId,
-        'type': type,
-        'title': title,
-        'body': message,
-        'division': division,
-        'priority': priority,
-        'processed': false,
-        'attempts': 0,
-        'nextRetryAt': FieldValue.serverTimestamp(),
-        'createdAt': FieldValue.serverTimestamp(),
-        'uid': uid,
-      };
-      
-      debugPrint('OUTBOX PAYLOAD (Division): $divisionPayload');
-      final outboxRef = FirebaseFirestore.instance.collection('notification_outbox').doc();
-      await outboxRef.set(divisionPayload);
+      final baseNotificationId = 'tt_${DateTime.now().millisecondsSinceEpoch}';
+      final priorityStr = (type == 'cancel' || type == 'edit' || type == 'time_change' || type == 'room_change') ? 'high' : 'normal';
 
       // If assigned to a faculty, also notify the faculty specifically
-      debugPrint('[DEBUG_FAC_3] newEntry?.facultyId = ${newEntry?.facultyId} | oldEntry?.facultyId = ${oldEntry?.facultyId}');
       final facultyId = newEntry?.facultyId ?? oldEntry?.facultyId;
       if (facultyId != null && facultyId.isNotEmpty) {
         final Map<String, dynamic> facultyPayload = {
@@ -163,7 +132,7 @@ class TimetableEventService {
           'body': message,
           'division': facultyId,
           'role': 'faculty',
-          'priority': priority,
+          'priority': priorityStr,
           'processed': false,
           'attempts': 0,
           'nextRetryAt': FieldValue.serverTimestamp(),
@@ -171,7 +140,6 @@ class TimetableEventService {
           'uid': uid,
         };
         
-        debugPrint('OUTBOX PAYLOAD (Faculty): $facultyPayload');
         final facultyOutboxRef = FirebaseFirestore.instance.collection('notification_outbox').doc();
         await facultyOutboxRef.set(facultyPayload);
       }
@@ -198,7 +166,6 @@ class TimetableEventService {
           // Use a deterministic ID so edits overwrite the existing reminder rather than duplicating
           final reminderDocId = '${division}_${newEntry.id}';
           await FirebaseFirestore.instance.collection('faculty_reminders').doc(reminderDocId).set(reminderPayload);
-          debugPrint('BACKEND REMINDER created: $reminderDocId for ${newEntry.facultyId} at $scheduledFor');
         }
       }
     } catch (e) {

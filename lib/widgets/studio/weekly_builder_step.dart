@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/studio_state.dart';
 import '../../theme/theme.dart';
 import 'period_config_sheet.dart';
 import '../app_dialogs.dart';
+import '../schedly_card.dart';
 
 class WeeklyBuilderStep extends StatefulWidget {
   final StudioDraftConfig draft;
@@ -235,7 +235,7 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                                 ],
                                 Text(
                                   day.substring(0, 3),
-                                  style: GoogleFonts.inter(
+                                  style: TextStyle(fontFamily: 'Inter', 
                                     fontWeight: isSelected || isComplete ? FontWeight.w700 : FontWeight.w500,
                                     color: isComplete ? Colors.green : (isSelected ? cs.primary : sem.onSurfaceMuted),
                                   ),
@@ -245,7 +245,7 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                             const SizedBox(height: 2),
                             Text(
                               '${_draft.filledCount(day)} / ${_draft.academicPeriodCount}',
-                              style: GoogleFonts.inter(
+                              style: TextStyle(fontFamily: 'Inter', 
                                 fontSize: 11,
                                 color: isComplete ? Colors.green : sem.onSurfaceMuted,
                               ),
@@ -255,7 +255,7 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                       ),
                     );
                     }),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: AppSpacing.lg),
                     IconButton(
                       icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
                       tooltip: 'Delete Draft',
@@ -263,8 +263,8 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                         showDialog(
                           context: context,
                           builder: (dCtx) => AlertDialog(
-                            title: Text('Delete Draft?', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
-                            content: Text('This will permanently remove all unpublished timetable data.', style: GoogleFonts.inter()),
+                            title: Text('Delete Draft?', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700)),
+                            content: Text('This will permanently remove all unpublished timetable data.', style: TextStyle(fontFamily: 'Inter', )),
                             actions: [
                               TextButton(onPressed: () => Navigator.pop(dCtx), child: const Text('Cancel')),
                               TextButton(
@@ -277,7 +277,7 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                                   }
                                   if (context.mounted) Navigator.pop(context); // Exit studio
                                 },
-                                child: Text('Delete Draft', style: GoogleFonts.inter(color: Colors.red, fontWeight: FontWeight.w700)),
+                                child: Text('Delete Draft', style: TextStyle(fontFamily: 'Inter', color: Colors.red, fontWeight: FontWeight.w700)),
                               ),
                             ],
                           ),
@@ -317,7 +317,7 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                   : const Icon(Icons.publish_rounded, size: 18),
               label: Text(widget.isPublishing ? 'Publishing...' : 'Publish Timetable', 
-                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700)),
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w700)),
               style: FilledButton.styleFrom(
                 minimumSize: const Size(double.infinity, 56),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
@@ -392,10 +392,10 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                   child: Row(
                     children: [
                       Icon(Icons.event_available_rounded, color: sem.onSurfaceMuted, size: 20),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: Text('${slot.type.name.toUpperCase()} • $timeStr', 
-                            style: GoogleFonts.inter(fontSize: 13, color: sem.onSurfaceMuted, fontWeight: FontWeight.w600)),
+                            style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: sem.onSurfaceMuted, fontWeight: FontWeight.w600)),
                       ),
                     ],
                   ),
@@ -412,7 +412,7 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: Text('${period.name} • $timeStr', 
-                      style: GoogleFonts.inter(fontSize: 12, color: sem.onSurfaceMuted, fontWeight: FontWeight.w600)),
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: sem.onSurfaceMuted, fontWeight: FontWeight.w600)),
                 ),
                 Expanded(child: Divider(color: sem.borderSubtle)),
               ],
@@ -421,14 +421,11 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
         }
 
         if (periodLectures.isEmpty) {
-          return Container(
-            margin: EdgeInsets.only(bottom: AppSpacing.md),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.xl),
-              border: Border.all(color: sem.borderSubtle),
-              color: isDark ? sem.surfaceElevated : cs.surface,
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2))],
-            ),
+          return Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+            child: SchedlyCard(
+              variant: SchedlyCardVariant.elevated,
+              padding: EdgeInsets.zero,
             child: InkWell(
               onTap: () => _openPeriodConfig(day, period.id),
               borderRadius: BorderRadius.circular(AppRadius.xl),
@@ -441,13 +438,13 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                         Container(
                           padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                           decoration: BoxDecoration(color: cs.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                          child: Text(period.name, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: cs.primary)),
+                          child: Text(period.name, style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: cs.primary)),
                         ),
-                        const SizedBox(width: 8),
-                        Text(timeStr, style: GoogleFonts.inter(fontSize: 12, color: sem.onSurfaceMuted, fontWeight: FontWeight.w500)),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(timeStr, style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: sem.onSurfaceMuted, fontWeight: FontWeight.w500)),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.lg),
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                       decoration: BoxDecoration(
@@ -458,8 +455,8 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.add_rounded, color: cs.primary, size: 20),
-                          const SizedBox(width: 8),
-                          Text('Configure Period', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: cs.primary)),
+                          const SizedBox(width: AppSpacing.sm),
+                          Text('Configure Period', style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w700, color: cs.primary)),
                         ],
                       ),
                     ),
@@ -467,17 +464,15 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                 ),
               ),
             ),
+            ),
           );
         }
 
-        return Container(
-          margin: EdgeInsets.only(bottom: AppSpacing.md),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.xl),
-            border: Border.all(color: sem.borderSubtle),
-            color: isDark ? sem.surfaceElevated : cs.surface,
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2))],
-          ),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: SchedlyCard(
+            variant: SchedlyCardVariant.elevated,
+            padding: EdgeInsets.zero,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -489,10 +484,10 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                       decoration: BoxDecoration(color: cs.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                      child: Text(period.name, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: cs.primary)),
+                      child: Text(period.name, style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: cs.primary)),
                     ),
-                    const SizedBox(width: 8),
-                    Text(timeStr, style: GoogleFonts.inter(fontSize: 12, color: sem.onSurfaceMuted, fontWeight: FontWeight.w500)),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(timeStr, style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: sem.onSurfaceMuted, fontWeight: FontWeight.w500)),
                   ],
                 ),
               ),
@@ -516,15 +511,15 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                             if (!isWholeClass)
                               SizedBox(
                                 width: 70,
-                                child: Text(slot.batch ?? 'Batch', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: cs.onSurface)),
+                                child: Text(slot.batch ?? 'Batch', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w700, color: cs.onSurface)),
                               ),
-                            if (!isWholeClass) const SizedBox(width: 12),
+                            if (!isWholeClass) const SizedBox(width: AppSpacing.md),
                             Expanded(
                               child: slot.isFilled
                                 ? Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(slot.subject ?? '', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600)),
+                                      Text(slot.subject ?? '', style: TextStyle(fontFamily: 'Outfit', fontSize: 16, fontWeight: FontWeight.w600)),
                                       const SizedBox(height: 6),
                                       Wrap(
                                         spacing: 8,
@@ -544,11 +539,11 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                                     child: Container(
                                       padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 6),
                                       decoration: BoxDecoration(color: cs.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(AppRadius.xl)),
-                                      child: Text('+ Add Lecture', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: cs.primary)),
+                                      child: Text('+ Add Lecture', style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w700, color: cs.primary)),
                                     ),
                                   ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: AppSpacing.sm),
                             Icon(Icons.more_vert_rounded, size: 18, color: sem.onSurfaceMuted.withValues(alpha: 0.5)),
                           ],
                         ),
@@ -558,6 +553,7 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                 );
               }),
             ],
+          ),
           ),
         );
       },
@@ -577,7 +573,7 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
         children: [
           Icon(icon, size: 12, color: sem.onSurfaceMuted),
           const SizedBox(width: 4),
-          Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: sem.onSurfaceMuted)),
+          Text(label, style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w600, color: sem.onSurfaceMuted)),
         ],
       ),
     );

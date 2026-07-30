@@ -1,0 +1,16 @@
+# Playbooks Directory Manifest
+
+- [admin-panel.md](admin-panel.md)
+- [analytics.md](analytics.md)
+- [authentication.md](authentication.md)
+- [dashboard.md](dashboard.md)
+- [desktop.md](desktop.md)
+- [faculty-dashboard.md](faculty-dashboard.md)
+- [forms.md](forms.md)
+- [landing-page.md](landing-page.md)
+- [mobile.md](mobile.md)
+- [onboarding.md](onboarding.md)
+- [profile.md](profile.md)
+- [settings.md](settings.md)
+- [student-dashboard.md](student-dashboard.md)
+- [tables.md](tables.md)

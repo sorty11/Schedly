@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/theme.dart';
@@ -8,6 +7,7 @@ import '../widgets/animations/animated_button.dart';
 import '../app_settings.dart';
 import '../timetable_manager.dart';
 import 'faculty_home_page.dart';
+import '../widgets/schedly_card.dart';
 
 class FacultySetupWizard extends StatefulWidget {
   const FacultySetupWizard({super.key});
@@ -88,7 +88,6 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      debugPrint('[FS_TRACE] WRITE faculty_profiles/\$uid');
       try {
         await FirebaseFirestore.instance.collection('faculty_profiles').doc(uid).set(profileData, SetOptions(merge: true));
       } catch (e) {
@@ -96,7 +95,6 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
         rethrow;
       }
 
-      debugPrint('[FS_TRACE] READ faculty_profiles/\$uid');
       DocumentSnapshot<Map<String, dynamic>> profileSnap;
       try {
         profileSnap = await FirebaseFirestore.instance.collection('faculty_profiles').doc(uid).get();
@@ -137,33 +135,33 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
           'Professional Details',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Text(
           'Please provide your academic information.',
           style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.x2l),
         TextField(
           controller: _departmentController,
           decoration: InputDecoration(
             labelText: 'Department (e.g., Computer Engineering)',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.lg),
         TextField(
           controller: _designationController,
           decoration: InputDecoration(
             labelText: 'Designation (e.g., Assistant Professor)',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.lg),
         TextField(
           controller: _cabinController,
           decoration: InputDecoration(
             labelText: 'Cabin / Office Location (Optional)',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
           ),
         ),
         const Spacer(),
@@ -199,12 +197,12 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Text(
           'Select all the divisions you teach across all branches and years.',
           style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.lg),
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance.collection('sections').where('active', isEqualTo: true).snapshots(),
@@ -303,7 +301,7 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                 children: [
                   Text(
                     'Step 2 of 3',
-                    style: GoogleFonts.inter(
+                    style: TextStyle(fontFamily: 'Inter', 
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: colorScheme.primary,
@@ -313,7 +311,7 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                   const SizedBox(height: 2),
                   Text(
                     'Select Subjects',
-                    style: GoogleFonts.outfit(
+                    style: TextStyle(fontFamily: 'Outfit', 
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
                       color: colorScheme.onSurface,
@@ -324,12 +322,12 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Text(
           'Select the specific subjects you teach in each assigned division.',
           style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6)),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.lg),
         TextField(
           controller: _searchController,
           onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
@@ -340,13 +338,13 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
             filled: true,
             fillColor: isDark ? sem.surfaceElevated : const Color(0xFFF5F5F7),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
               borderSide: BorderSide.none,
             ),
             contentPadding: const EdgeInsets.symmetric(vertical: 16),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.lg),
         Expanded(
           child: ListView.builder(
             physics: const BouncingScrollPhysics(),
@@ -365,25 +363,11 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                 return const SizedBox.shrink();
               }
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 24),
-                decoration: BoxDecoration(
-                  color: isDark ? sem.surfaceElevated : Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: isDark ? sem.borderSubtle : const Color(0xFFEAEAEA),
-                  ),
-                  boxShadow: [
-                    if (!isDark)
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                  ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.x2l),
+                child: SchedlyCard(
+                  variant: SchedlyCardVariant.elevated,
+                  padding: const EdgeInsets.all(AppSpacing.x2l),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -396,7 +380,7 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                               children: [
                                 Text(
                                   div.replaceAll('_', ' '),
-                                  style: GoogleFonts.outfit(
+                                  style: TextStyle(fontFamily: 'Outfit', 
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
                                     color: colorScheme.onSurface,
@@ -405,7 +389,7 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                                 const SizedBox(height: 4),
                                 Text(
                                   '${allSubjects.length} Subjects Available',
-                                  style: GoogleFonts.inter(
+                                  style: TextStyle(fontFamily: 'Inter', 
                                     fontSize: 13,
                                     color: sem.onSurfaceMuted,
                                     fontWeight: FontWeight.w500,
@@ -419,11 +403,11 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
                                 color: colorScheme.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(AppRadius.xl),
                               ),
                               child: Text(
                                 '$selectedCount Selected',
-                                style: GoogleFonts.inter(
+                                style: TextStyle(fontFamily: 'Inter', 
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
                                   color: colorScheme.primary,
@@ -469,7 +453,7 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                                   color: isSelected 
                                       ? colorScheme.primary 
                                       : (isDark ? sem.surfaceElevated2 : Colors.white),
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(AppRadius.lg),
                                   border: Border.all(
                                     color: isSelected 
                                         ? colorScheme.primary 
@@ -494,11 +478,11 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                                       size: 18,
                                       color: isSelected ? Colors.white : colorScheme.primary,
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: AppSpacing.sm),
                                     Flexible(
                                       child: Text(
                                         subj,
-                                        style: GoogleFonts.inter(
+                                        style: TextStyle(fontFamily: 'Inter', 
                                           fontSize: 14,
                                           fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                                           color: isSelected ? Colors.white : colorScheme.onSurface,
@@ -529,14 +513,10 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (totalSelected > 0)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isDark ? sem.surfaceElevated : const Color(0xFFF8F8FC),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: isDark ? sem.borderSubtle : const Color(0xFFE5E5EA)),
-                  ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  child: SchedlyCard(
+                    variant: SchedlyCardVariant.standard,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -545,7 +525,7 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                         children: [
                           Text(
                             'Selected Subjects ($totalSelected)',
-                            style: GoogleFonts.inter(
+                            style: TextStyle(fontFamily: 'Inter', 
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                               color: colorScheme.onSurface,
@@ -563,7 +543,7 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                               },
                               child: Text(
                                 'Clear All',
-                                style: GoogleFonts.inter(
+                                style: TextStyle(fontFamily: 'Inter', 
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                   color: sem.cancelled,
@@ -573,10 +553,10 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       Text(
                         allSelectedSubjects.toSet().join(', '),
-                        style: GoogleFonts.inter(
+                        style: TextStyle(fontFamily: 'Inter', 
                           fontSize: 13,
                           color: sem.onSurfaceMuted,
                           height: 1.4,
@@ -587,6 +567,7 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                     ],
                   ),
                 ),
+              ),
               AnimatedButton(
                 onPressed: _isLoading ? null : _completeSetup,
                 isLoading: _isLoading,

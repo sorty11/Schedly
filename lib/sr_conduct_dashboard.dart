@@ -11,6 +11,7 @@ import 'models/event_category.dart';
 import 'theme/theme.dart';
 import 'widgets/animations/animated_button.dart';
 import 'widgets/animations/animated_card.dart';
+import 'widgets/schedly_card.dart';
 import 'onboarding/widgets/tutorial_target.dart';
 import 'widgets/app_dialogs.dart';
 
@@ -55,7 +56,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 Text(
                   '${log.originalSlot.displaySubject} (${log.originalSlot.batch})\n${log.date} at ${TimetableManager.formatTime(log.originalSlot.startTime, log.originalSlot.endTime)}',
                   style: TextStyle(
@@ -64,11 +65,11 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.x2l),
                 _buildOptionBtn(context, log, 'conducted', 'Conducted', Icons.check_circle_rounded, Theme.of(context).extension<AppSemanticColors>()!.conducted),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 _buildOptionBtn(context, log, 'cancelled', 'Cancelled', Icons.cancel_rounded, Theme.of(context).extension<AppSemanticColors>()!.cancelled),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 _buildOptionBtn(context, log, 'rescheduled', 'Rescheduled', Icons.schedule_rounded, Theme.of(context).extension<AppSemanticColors>()!.rescheduled),
               ],
             ),
@@ -109,7 +110,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, color: Colors.white),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           Text(
             'Mark $statusLabel',
             style: const TextStyle(
@@ -159,7 +160,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     Text(
                       'Which subject was taught instead of ${log.originalSlot.subject}?',
                       style: TextStyle(
@@ -168,7 +169,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AppSpacing.x2l),
                     if (subjects.isEmpty)
                       const FloatingEmptyState(
                         icon: Icons.menu_book_rounded,
@@ -279,7 +280,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                       color: Theme.of(context).extension<AppSemanticColors>()!.conducted,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.x2l),
                   Text(
                     'All Caught Up!',
                     style: TextStyle(
@@ -288,7 +289,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Text(
                     'No pending lectures to verify.',
                     style: TextStyle(
@@ -338,7 +339,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                     ),
                   ),
                   ...dateLogs.asMap().entries.map((e) => _buildLogCard(e.value, isFirst: index == 0 && e.key == 0)),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.lg),
                 ],
               );
             },
@@ -349,79 +350,92 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
   }
 
   Widget _buildLogCard(ConductLog log, {bool isFirst = false}) {
-    Widget card = AnimatedCard(
-      onTap: () => _showMarkingSheet(log),
-      margin: EdgeInsets.only(bottom: AppSpacing.md),
-      borderRadius: 20,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadius.xl),
-          border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.1), width: 1.5),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
-          child: Row(
-            children: [
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    // Check if the log is older than 1 day (warning state)
+    DateTime? parsedDate;
+    try {
+      final parts = log.date.split('-');
+      parsedDate = DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+    } catch (_) {}
+    
+    final isWarning = parsedDate != null && DateTime.now().difference(parsedDate).inDays > 1;
 
-              Container(
-                padding: EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).extension<AppSemanticColors>()!.pending.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                ),
-                child: Icon(
-                  Icons.pending_actions_rounded,
-                  color: Theme.of(context).extension<AppSemanticColors>()!.pending,
-                  size: 24,
-                ),
+    Widget card = SchedlyCard(
+      variant: isWarning ? SchedlyCardVariant.tinted : SchedlyCardVariant.elevated,
+      padding: EdgeInsets.zero,
+      onTap: () => _showMarkingSheet(log),
+      child: Container(
+        decoration: isWarning 
+            ? BoxDecoration(
+                border: Border(left: BorderSide(color: sem.error, width: 4)),
+                borderRadius: BorderRadius.circular(AppRadius.xl),
+              )
+            : null,
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: isWarning ? sem.error.withValues(alpha: 0.1) : sem.pending.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${log.originalSlot.displaySubject} (${log.originalSlot.batch})',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
+              child: Icon(
+                isWarning ? Icons.warning_rounded : Icons.pending_actions_rounded,
+                color: isWarning ? sem.error : sem.pending,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${log.originalSlot.displaySubject} (${log.originalSlot.batch})',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(Icons.access_time_rounded, size: 12, color: sem.onSurfaceMuted),
+                      const SizedBox(width: 4),
+                      Text(
+                        TimetableManager.formatTime(log.originalSlot.startTime, log.originalSlot.endTime),
+                        style: TextStyle(fontSize: 13, color: sem.onSurfaceMuted),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Icon(Icons.room_rounded, size: 12, color: sem.onSurfaceMuted),
+                      const SizedBox(width: 4),
+                      Text(
+                        log.originalSlot.room ?? 'TBD',
+                        style: TextStyle(fontSize: 13, color: sem.onSurfaceMuted),
+                      ),
+                    ],
+                  ),
+                  if (isWarning) ...[
                     const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.access_time_rounded, size: 14, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
-                        const SizedBox(width: 4),
-                        Text(
-                          TimetableManager.formatTime(log.originalSlot.startTime, log.originalSlot.endTime),
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context).textTheme.bodyMedium?.color,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Icon(Icons.room_rounded, size: 14, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
-                        const SizedBox(width: 4),
-                        Text(
-                          log.originalSlot.room ?? 'TBD',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context).textTheme.bodyMedium?.color,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      'Action overdue',
+                      style: TextStyle(fontSize: 12, color: sem.error, fontWeight: FontWeight.bold),
                     ),
                   ],
-                ),
+                ],
               ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
-              ),
-            ],
-          ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: sem.onSurfaceFaint,
+            ),
+          ],
         ),
       ),
     );

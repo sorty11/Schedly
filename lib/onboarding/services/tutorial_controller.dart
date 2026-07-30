@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import '../models/tutorial_tour.dart';
 import '../models/tutorial_step.dart';
 import '../widgets/tutorial_target.dart';
+import 'tutorial_storage_service.dart';
 
 enum TutorialState {
   idle,
@@ -13,7 +14,6 @@ enum TutorialState {
   interactionCompleted,
   celebration,
   paused,
-  recovery,
 }
 
 class TutorialController extends ChangeNotifier with WidgetsBindingObserver {
@@ -95,6 +95,9 @@ class TutorialController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void finishTour() {
+    if (_activeTour != null) {
+      TutorialStorageService.markTourSeen(_activeTour!.tourId);
+    }
     _activeTour = null;
     _currentStepIndex = 0;
     _transitionTo(TutorialState.idle);
@@ -132,15 +135,15 @@ class TutorialController extends ChangeNotifier with WidgetsBindingObserver {
     _checkTargetAvailability();
     
     // Recovery timeout
-    Future.delayed(const Duration(seconds: 5), () {
-      if (_state == TutorialState.waitingForTarget) {
-        _transitionTo(TutorialState.recovery);
+    Future.delayed(const Duration(seconds: 3), () {
+      if (_state == TutorialState.waitingForTarget && _activeTour != null) {
+        advanceStep();
       }
     });
   }
 
   void _onTargetRegistryUpdated() {
-    if (_state == TutorialState.waitingForTarget || _state == TutorialState.recovery) {
+    if (_state == TutorialState.waitingForTarget) {
       _checkTargetAvailability();
     } else if (_state == TutorialState.highlighting || _state == TutorialState.waitingForInteraction) {
       // If target disappears while highlighting, fallback to waiting
@@ -155,6 +158,20 @@ class TutorialController extends ChangeNotifier with WidgetsBindingObserver {
     final step = currentStep;
     if (step == null) return;
     
+    final key = TargetRegistry.instance.getKey(step.targetId);
+    if (key != null && key.currentContext != null && key.currentContext!.mounted) {
+      try {
+        Scrollable.ensureVisible(
+          key.currentContext!,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          alignment: 0.5,
+        );
+      } catch (e) {
+        // Not in a scrollable or already visible
+      }
+    }
+
     final bounds = TargetRegistry.instance.getBounds(step.targetId);
     if (bounds != null) {
       _transitionTo(TutorialState.transitioning);

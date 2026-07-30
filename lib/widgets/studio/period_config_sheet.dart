@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/studio_state.dart';
 import '../../theme/theme.dart';
@@ -166,7 +165,7 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(widget.period.name, style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w700)),
+              Text(widget.period.name, style: TextStyle(fontFamily: 'Outfit', fontSize: 22, fontWeight: FontWeight.w700)),
               IconButton(
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.close_rounded),
@@ -174,7 +173,7 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
 
           Expanded(
             child: SingleChildScrollView(
@@ -182,8 +181,8 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('How is this lecture conducted?', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 12),
+                  Text('How is this lecture conducted?', style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: AppSpacing.md),
                   Row(
                     children: [
                       Expanded(
@@ -191,7 +190,7 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
                           value: false,
                           groupValue: _isSplit,
                           onChanged: (v) => setState(() => _isSplit = v!),
-                          title: Text('Whole Class', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
+                          title: Text('Whole Class', style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w600)),
                           contentPadding: EdgeInsets.zero,
                           dense: true,
                         ),
@@ -201,7 +200,7 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
                           value: true,
                           groupValue: _isSplit,
                           onChanged: (v) => setState(() => _isSplit = v!),
-                          title: Text('Split into Batches', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
+                          title: Text('Split into Batches', style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w600)),
                           contentPadding: EdgeInsets.zero,
                           dense: true,
                         ),
@@ -226,7 +225,7 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
                     padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
                   ),
-                  child: Text('Save Period', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16)),
+                  child: Text('Save Period', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700, fontSize: 16)),
                 ),
               ),
             ],
@@ -252,37 +251,37 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
             ],
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.x2l),
 
         if (_wcType == SlotType.lecture) ...[
           TextFormField(
             controller: _wcSubjectCtrl,
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
+            style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 16),
             decoration: InputDecoration(
               labelText: 'Subject Name',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               prefixIcon: const Icon(Icons.class_outlined),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           TextFormField(
             controller: _wcRoomCtrl,
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
+            style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 16),
             decoration: InputDecoration(
               labelText: 'Room / Lab',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               prefixIcon: const Icon(Icons.door_front_door_outlined),
             ),
           ),
-          const SizedBox(height: 16),
-          Text('Lecture Type', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: sem.onSurfaceMuted)),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.lg),
+          Text('Lecture Type', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w700, color: sem.onSurfaceMuted)),
+          const SizedBox(height: AppSpacing.sm),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: ['Theory', 'Lab', 'Tutorial', 'Event'].map((c) {
               return ChoiceChip(
-                label: Text(c, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                label: Text(c, style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
                 selected: _wcComponent == c,
                 onSelected: (v) {
                   if (v) setState(() => _wcComponent = c);
@@ -294,14 +293,14 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
           ),
         ],
 
-        const SizedBox(height: 24),
-        Text('Duration (Periods)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: sem.onSurfaceMuted)),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.x2l),
+        Text('Duration (Periods)', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w700, color: sem.onSurfaceMuted)),
+        const SizedBox(height: AppSpacing.sm),
         Wrap(
           spacing: 8,
           children: [1, 2, 3].map((d) {
             return ChoiceChip(
-              label: Text('$d Period${d > 1 ? 's' : ''}', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              label: Text('$d Period${d > 1 ? 's' : ''}', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
               selected: _duration == d,
               onSelected: (v) {
                 if (v) setState(() => _duration = d);
@@ -309,7 +308,7 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
             );
           }).toList(),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: AppSpacing.x3l),
       ],
     );
   }
@@ -318,13 +317,13 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Number of Batches', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: sem.onSurfaceMuted)),
-        const SizedBox(height: 8),
+        Text('Number of Batches', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w700, color: sem.onSurfaceMuted)),
+        const SizedBox(height: AppSpacing.sm),
         Wrap(
           spacing: 8,
           children: [2, 3, 4].map((c) {
             return ChoiceChip(
-              label: Text('$c Batches', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              label: Text('$c Batches', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
               selected: _splitCount == c,
               onSelected: (v) {
                 if (v) {
@@ -337,14 +336,14 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
             );
           }).toList(),
         ),
-        const SizedBox(height: 24),
-        Text('Duration (Periods)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: sem.onSurfaceMuted)),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.x2l),
+        Text('Duration (Periods)', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w700, color: sem.onSurfaceMuted)),
+        const SizedBox(height: AppSpacing.sm),
         Wrap(
           spacing: 8,
           children: [1, 2, 3].map((d) {
             return ChoiceChip(
-              label: Text('$d Period${d > 1 ? 's' : ''}', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              label: Text('$d Period${d > 1 ? 's' : ''}', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
               selected: _duration == d,
               onSelected: (v) {
                 if (v) setState(() => _duration = d);
@@ -352,7 +351,7 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
             );
           }).toList(),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.x2l),
 
         for (int i = 0; i < _splitCount; i++) ...[
           Container(
@@ -374,16 +373,16 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
                         color: cs.primaryContainer,
                         borderRadius: BorderRadius.circular(AppRadius.sm),
                       ),
-                      child: Text(_splitBatches[i], style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: cs.onPrimaryContainer)),
+                      child: Text(_splitBatches[i], style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, color: cs.onPrimaryContainer)),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 TextFormField(
                   controller: _splitSubjCtrls[i],
                   decoration: const InputDecoration(labelText: 'Subject', isDense: true),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 Row(
                   children: [
                     Expanded(
@@ -392,7 +391,7 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
                         decoration: const InputDecoration(labelText: 'Room', isDense: true),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         value: _splitComponents[i],
@@ -409,7 +408,7 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
             ),
           ),
         ],
-        const SizedBox(height: 32),
+        const SizedBox(height: AppSpacing.x3l),
       ],
     );
   }
@@ -419,7 +418,7 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
     return Padding(
       padding: EdgeInsets.only(right: AppSpacing.sm),
       child: FilterChip(
-        label: Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        label: Text(label, style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
         avatar: Icon(icon, size: 16),
         selected: selected,
         onSelected: (v) {

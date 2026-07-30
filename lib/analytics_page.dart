@@ -957,7 +957,7 @@ class _StackedBarPainter extends CustomPainter {
 class _AttendanceMiniRow extends StatelessWidget {
   final String subject;
 
-  const _AttendanceMiniRow({super.key, required this.subject});
+  const _AttendanceMiniRow({required this.subject});
 
   @override
   Widget build(BuildContext context) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
-class StaggeredListItem extends StatefulWidget {
+class StaggeredListItem extends StatelessWidget {
   final Widget child;
   final int index;
   final int delayMs;
@@ -12,69 +13,25 @@ class StaggeredListItem extends StatefulWidget {
     required this.child,
     required this.index,
     this.delayMs = 60,
-    this.slideOffset = const Offset(0, 0.04),
+    this.slideOffset = const Offset(0, 0.04), // Kept the same semantic slide definition
     this.axis = Axis.vertical,
   });
 
   @override
-  State<StaggeredListItem> createState() => _StaggeredListItemState();
-}
-
-class _StaggeredListItemState extends State<StaggeredListItem>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-
-    // Derive the actual slide offset based on the axis parameter.
-    // When axis is horizontal, the user's slideOffset x/y values are used but
-    // we flip the axes: horizontal slides come from dx, vertical from dy.
-    final Offset resolvedOffset = widget.axis == Axis.horizontal
-        ? Offset(widget.slideOffset.dy == 0.0 ? widget.slideOffset.dx : widget.slideOffset.dy, 0)
-        : Offset(0, widget.slideOffset.dy == 0.0 ? widget.slideOffset.dx : widget.slideOffset.dy);
-
-    _slideAnimation =
-        Tween<Offset>(begin: resolvedOffset, end: Offset.zero).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
-
-    _playAnimation();
-  }
-
-  void _playAnimation() async {
-    await Future.delayed(
-        Duration(milliseconds: widget.index * widget.delayMs));
-    if (mounted) {
-      _controller.forward();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: widget.child,
-      ),
-    );
+    // Determine translation values (flutter_animate takes translation in pixels/percent,
+    // since we used an offset before, we will use small pixel offsets for subtlety)
+    final double dx = axis == Axis.horizontal ? 20.0 : 0.0;
+    final double dy = axis == Axis.vertical ? 20.0 : 0.0;
+
+    return child
+        .animate(delay: (index * delayMs).ms)
+        .fade(duration: 220.ms, curve: Curves.easeOut)
+        .slide(
+          begin: Offset(slideOffset.dx * 10, slideOffset.dy * 10), // Scale offset for precise flutter_animate pixel/fraction handling
+          end: Offset.zero,
+          duration: 300.ms,
+          curve: Curves.easeOutCubic, // Elegant physics feel
+        );
   }
 }

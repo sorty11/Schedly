@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:schedly/exceptions.dart';
 
 class FirestoreService {
   static final FirebaseFirestore db =
@@ -23,7 +24,7 @@ class FirestoreService {
             .get();
 
     if (existing.docs.isNotEmpty) {
-      throw Exception(
+      throw AppException(
         'This time slot is already occupied.',
       );
     }

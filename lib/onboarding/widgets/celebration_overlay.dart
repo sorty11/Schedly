@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'dart:math' as math;
 import 'cc_character.dart';
 import '../../theme/theme.dart';
@@ -97,7 +96,7 @@ class _CelebrationWidgetState extends State<_CelebrationWidget> with TickerProvi
                   const SizedBox(height: AppSpacing.x2l),
                   Text(
                     "🎉 You're Ready!",
-                    style: GoogleFonts.outfit(
+                    style: TextStyle(fontFamily: 'Outfit', 
                       fontSize: 32,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
@@ -106,7 +105,7 @@ class _CelebrationWidgetState extends State<_CelebrationWidget> with TickerProvi
                   const SizedBox(height: AppSpacing.md),
                   Text(
                     "Welcome to Schedly.",
-                    style: GoogleFonts.inter(
+                    style: TextStyle(fontFamily: 'Inter', 
                       fontSize: 18,
                       fontWeight: FontWeight.w500,
                       color: Colors.white.withValues(alpha: 0.8),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -10,6 +9,7 @@ import '../models/timetable_entry.dart';
 import '../models/event_category.dart';
 import '../services/timetable_event_service.dart';
 import '../widgets/app_dialogs.dart';
+import '../widgets/animations/floating_empty_state.dart';
 
 class CRFacultyRequestsPage extends StatefulWidget {
   final String division;
@@ -199,18 +199,18 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
           ),
           title: Text(
             title,
-            style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 18),
+            style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, fontSize: 18),
           ),
           content: Text(
             message,
-            style: GoogleFonts.inter(fontSize: 14, height: 1.5),
+            style: TextStyle(fontFamily: 'Inter', fontSize: 14, height: 1.5),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
               child: Text(
                 'Cancel',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
               ),
             ),
             FilledButton(
@@ -218,7 +218,7 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
               style: FilledButton.styleFrom(backgroundColor: confirmColor),
               child: Text(
                 confirmLabel,
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
               ),
             ),
           ],
@@ -247,7 +247,7 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
       appBar: AppBar(
         title: Text(
           'Faculty Requests',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 20),
+          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, fontSize: 20),
         ),
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -267,9 +267,13 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
           final docs = snapshot.data!.docs;
 
           // Empty state
-          if (docs.isEmpty) {
-            return _EmptyState(sem: sem, colorScheme: colorScheme);
-          }
+            if (docs.isEmpty) {
+              return const FloatingEmptyState(
+                icon: Icons.check_circle_outline_rounded,
+                title: 'All caught up!',
+                subtitle: 'No pending faculty requests.',
+              );
+            }
 
           return ListView.separated(
             padding: const EdgeInsets.all(AppSpacing.x2l),
@@ -355,7 +359,7 @@ class _RequestCard extends StatelessWidget {
                 const SizedBox(width: AppSpacing.sm),
                 Text(
                   isCancel ? 'Cancellation Request' : 'Extra Lecture Request',
-                  style: GoogleFonts.inter(
+                  style: TextStyle(fontFamily: 'Inter', 
                     fontWeight: FontWeight.w700,
                     color: accentColor,
                     fontSize: 13,
@@ -364,7 +368,7 @@ class _RequestCard extends StatelessWidget {
                 const Spacer(),
                 Text(
                     DateFormat('MMM d, hh:mm a').format(request.createdAt),
-                    style: GoogleFonts.inter(
+                    style: TextStyle(fontFamily: 'Inter', 
                       fontSize: 11,
                       color: sem.onSurfaceMuted,
                     ),
@@ -395,7 +399,7 @@ class _RequestCard extends StatelessWidget {
                           request.facultyName.isNotEmpty
                               ? request.facultyName[0].toUpperCase()
                               : 'F',
-                          style: GoogleFonts.outfit(
+                          style: TextStyle(fontFamily: 'Outfit', 
                             fontWeight: FontWeight.w700,
                             color: colorScheme.primary,
                             fontSize: 18,
@@ -410,14 +414,14 @@ class _RequestCard extends StatelessWidget {
                         children: [
                           Text(
                             'Prof. ${request.facultyName}',
-                            style: GoogleFonts.outfit(
+                            style: TextStyle(fontFamily: 'Outfit', 
                               fontWeight: FontWeight.w700,
                               fontSize: 16,
                             ),
                           ),
                           Text(
                             request.subject,
-                            style: GoogleFonts.inter(
+                            style: TextStyle(fontFamily: 'Inter', 
                               fontSize: 14,
                               color: sem.onSurfaceMuted,
                             ),
@@ -460,7 +464,7 @@ class _RequestCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     decoration: BoxDecoration(
-                      color: isDark ? sem.surfaceElevated2 : const Color(0xFFF8F8FC),
+                      color: sem.surfaceElevated2,
                       borderRadius: BorderRadius.circular(AppRadius.md),
                       border: Border.all(color: sem.borderSubtle),
                     ),
@@ -472,7 +476,7 @@ class _RequestCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             request.reason!,
-                            style: GoogleFonts.inter(
+                            style: TextStyle(fontFamily: 'Inter', 
                               fontSize: 13,
                               fontStyle: FontStyle.italic,
                               color: sem.onSurfaceMuted,
@@ -503,7 +507,7 @@ class _RequestCard extends StatelessWidget {
                         ),
                         child: Text(
                           'Deny',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                          style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
                         ),
                       ),
                     ),
@@ -520,7 +524,7 @@ class _RequestCard extends StatelessWidget {
                         ),
                         child: Text(
                           'Approve',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                          style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
                         ),
                       ),
                     ),
@@ -556,7 +560,7 @@ class _DetailChip extends StatelessWidget {
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: isDark ? sem.surfaceElevated2 : const Color(0xFFF0F0F8),
+        color: sem.surfaceElevated2,
         borderRadius: BorderRadius.circular(AppRadius.full),
       ),
       child: Row(
@@ -566,7 +570,7 @@ class _DetailChip extends StatelessWidget {
           const SizedBox(width: AppSpacing.xs),
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: TextStyle(fontFamily: 'Inter', 
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: sem.onSurfaceMuted,
@@ -578,53 +582,4 @@ class _DetailChip extends StatelessWidget {
   }
 }
 
-// ── Empty State ────────────────────────────────────────────────────────────────
-class _EmptyState extends StatelessWidget {
-  final AppSemanticColors sem;
-  final ColorScheme colorScheme;
-
-  const _EmptyState({required this.sem, required this.colorScheme});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.x4l),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.x2l),
-              decoration: BoxDecoration(
-                color: colorScheme.primary.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.check_circle_outline_rounded,
-                size: 48,
-                color: colorScheme.primary.withValues(alpha: 0.5),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            Text(
-              'All caught up!',
-              style: GoogleFonts.outfit(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'No pending faculty requests.',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: sem.onSurfaceMuted,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+// Removed _EmptyState to use FloatingEmptyState instead

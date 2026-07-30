@@ -1,0 +1,11 @@
+# Typography Tokens
+- **Font Family**: Primary: Inter / San Francisco. Monospace: JetBrains Mono / SF Mono.
+- **Scale**:
+  - `xs`: 12px, line-height 1.5
+  - `sm`: 14px, line-height 1.5
+  - `base`: 16px, line-height 1.5
+  - `lg`: 18px, line-height 1.5
+  - `xl`: 20px, line-height 1.2
+  - `2xl`: 24px, line-height 1.2
+  - `3xl`: 30px, line-height 1.2
+- **Reference**: `/brain/typography.md`

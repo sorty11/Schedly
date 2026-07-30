@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../theme/theme.dart';
 
@@ -27,13 +26,6 @@ class BottomContinueButton extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? sem.surfaceElevated : cs.surface,
         border: Border(top: BorderSide(color: sem.borderSubtle)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -4),
-          )
-        ],
       ),
       child: SafeArea(
         top: false,
@@ -46,7 +38,7 @@ class BottomContinueButton extends StatelessWidget {
           ),
           child: Text(
             label,
-            style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
+            style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w700),
           ),
         ),
       ),

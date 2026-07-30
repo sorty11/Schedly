@@ -5,6 +5,7 @@ import 'timetable_manager.dart';
 import 'theme/theme.dart';
 import 'widgets/animations/animated_button.dart';
 import 'widgets/app_dialogs.dart';
+import 'widgets/schedly_card.dart';
 
 class PdfImportPreviewPage extends StatelessWidget {
   final Map<String, List<TimetableEntry>> timetable;
@@ -44,6 +45,8 @@ class PdfImportPreviewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final days = timetable.keys.toList();
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -52,41 +55,39 @@ class PdfImportPreviewPage extends StatelessWidget {
       ),
       body: Column(
         children: [
-          Container(
-            padding: EdgeInsets.all(AppSpacing.x2l),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
+          SchedlyCard(
+            variant: SchedlyCardVariant.elevated,
+            margin: const EdgeInsets.all(AppSpacing.x2l),
             child: Row(
               children: [
                 Container(
-                  padding: EdgeInsets.all(AppSpacing.md),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).extension<AppSemanticColors>()!.conducted.withValues(alpha: 0.1),
+                    color: sem.conducted.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
-                  child: Icon(Icons.verified_rounded, color: Theme.of(context).extension<AppSemanticColors>()!.conducted),
+                  child: Icon(Icons.verified_rounded, color: sem.conducted),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: AppSpacing.lg),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Data extracted successfully',
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Theme.of(context).colorScheme.onSurface),
+                        style: TextStyle(fontFamily: 'Inter', 
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          color: colorScheme.onSurface,
+                        ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppSpacing.xs),
                       Text(
                         'Target Division: $division',
-                        style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontSize: 14),
+                        style: TextStyle(fontFamily: 'Inter', 
+                          color: sem.onSurfaceMuted,
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
@@ -96,7 +97,7 @@ class PdfImportPreviewPage extends StatelessWidget {
           ),
           Expanded(
             child: ListView.builder(
-              padding: EdgeInsets.all(AppSpacing.x2l),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
               itemCount: days.length,
               itemBuilder: (context, index) {
                 final day = days[index];
@@ -104,87 +105,107 @@ class PdfImportPreviewPage extends StatelessWidget {
 
                 if (lectures.isEmpty) return const SizedBox.shrink();
 
-                return Container(
-                  margin: EdgeInsets.only(bottom: AppSpacing.x2l),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(AppRadius.xl),
-                    border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.1), width: 2),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.all(AppSpacing.xl),
-                        child: Text(
-                          day,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: Theme.of(context).colorScheme.onSurface,
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.x2l),
+                  child: SchedlyCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          child: Text(
+                            day,
+                            style: TextStyle(fontFamily: 'Outfit', 
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              color: colorScheme.onSurface,
+                            ),
                           ),
                         ),
-                      ),
-                      Divider(height: 1, color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
-                      ...lectures.map((entry) {
-                        return Padding(
-                          padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.all(AppSpacing.md),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                        Divider(height: 1, color: sem.borderSubtle),
+                        ...lectures.map((entry) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(AppSpacing.md),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                  ),
+                                  child: Icon(Icons.book_rounded, color: colorScheme.primary, size: 20),
                                 ),
-                                child: Icon(Icons.book_rounded, color: Theme.of(context).colorScheme.primary, size: 20),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${entry.displaySubject} (${entry.batch})',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        color: Theme.of(context).colorScheme.onSurface,
+                                const SizedBox(width: AppSpacing.lg),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${entry.displaySubject} (${entry.batch})',
+                                        style: TextStyle(fontFamily: 'Inter', 
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: colorScheme.onSurface,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Wrap(
-                                      spacing: 12,
-                                      runSpacing: 8,
-                                      crossAxisAlignment: WrapCrossAlignment.center,
-                                      children: [
-                                        Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(Icons.access_time_rounded, size: 14, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
-                                            const SizedBox(width: 4),
-                                            Text(TimetableManager.formatTime(entry.startTime, entry.endTime), style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontSize: 13)),
-                                          ],
-                                        ),
-                                        Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(Icons.room_rounded, size: 14, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
-                                            const SizedBox(width: 4),
-                                            Text(entry.room ?? '', style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontSize: 13)),
-                                          ],
-                                        ),
-                                        Text(entry.category.name, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 12, fontWeight: FontWeight.w600)),
-                                      ],
-                                    ),
-                                  ],
+                                      const SizedBox(height: AppSpacing.xs),
+                                      Wrap(
+                                        spacing: AppSpacing.md,
+                                        runSpacing: AppSpacing.xs,
+                                        crossAxisAlignment: WrapCrossAlignment.center,
+                                        children: [
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.access_time_rounded, size: 14, color: sem.onSurfaceMuted),
+                                              const SizedBox(width: AppSpacing.xs),
+                                              Text(
+                                                TimetableManager.formatTime(entry.startTime, entry.endTime),
+                                                style: TextStyle(fontFamily: 'Inter', color: sem.onSurfaceMuted, fontSize: 13),
+                                              ),
+                                            ],
+                                          ),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.room_rounded, size: 14, color: sem.onSurfaceMuted),
+                                              const SizedBox(width: AppSpacing.xs),
+                                              Text(
+                                                entry.room ?? '',
+                                                style: TextStyle(fontFamily: 'Inter', color: sem.onSurfaceMuted, fontSize: 13),
+                                              ),
+                                            ],
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: colorScheme.primary.withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(AppRadius.xs),
+                                            ),
+                                            child: Text(
+                                              entry.category.name,
+                                              style: TextStyle(fontFamily: 'Inter', 
+                                                color: colorScheme.primary,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                letterSpacing: 0.5,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                    ],
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -193,29 +214,26 @@ class PdfImportPreviewPage extends StatelessWidget {
         ],
       ),
       bottomNavigationBar: Container(
-        padding: EdgeInsets.all(AppSpacing.x2l),
+        padding: const EdgeInsets.all(AppSpacing.x2l),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 16,
-              offset: const Offset(0, -4),
-            ),
-          ],
+          color: colorScheme.surface,
+          border: Border(top: BorderSide(color: sem.borderSubtle)),
         ),
         child: SizedBox(
           height: 56,
           child: AnimatedButton(
             onPressed: () => _importTimetable(context),
-            backgroundColor: Theme.of(context).extension<AppSemanticColors>()!.conducted,
+            backgroundColor: sem.conducted,
             foregroundColor: Colors.white,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(Icons.check_circle_rounded),
-                const SizedBox(width: 8),
-                const Text('Confirm & Import Timetable', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  'Confirm & Import Timetable',
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w700),
+                ),
               ],
             ),
           ),

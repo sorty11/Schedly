@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'dart:async';
 
@@ -112,7 +111,7 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
       ),
       child: Text(
         title.toUpperCase(),
-        style: GoogleFonts.inter(
+        style: TextStyle(fontFamily: 'Inter', 
           fontSize: 12,
           fontWeight: FontWeight.w700,
           letterSpacing: 1.2,
@@ -136,7 +135,7 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
           Expanded(
             child: Text(
               text,
-              style: GoogleFonts.inter(
+              style: TextStyle(fontFamily: 'Inter', 
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -164,7 +163,7 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
       ),
       title: Text(
         title,
-        style: GoogleFonts.inter(
+        style: TextStyle(fontFamily: 'Inter', 
           fontWeight: FontWeight.w600,
           fontSize: 14,
           color: Theme.of(context).colorScheme.onSurface,
@@ -236,7 +235,7 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
                   const SizedBox(height: AppSpacing.x2l),
                   Text(
                     _appName,
-                    style: GoogleFonts.outfit(
+                    style: TextStyle(fontFamily: 'Outfit', 
                       fontSize: 32,
                       fontWeight: FontWeight.w800,
                       color: colorScheme.onSurface,
@@ -246,7 +245,7 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     'Smart Academic Companion',
-                    style: GoogleFonts.inter(
+                    style: TextStyle(fontFamily: 'Inter', 
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: colorScheme.primary,
@@ -257,7 +256,7 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
                   Text(
                     'Designed to simplify academic life by helping students, Subject Representatives (SRs), and Class Representatives (CRs) manage timetables, lectures, analytics, announcements, replacements, and academic workflows through a beautiful offline-first experience.',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
+                    style: TextStyle(fontFamily: 'Inter', 
                       fontSize: 14,
                       height: 1.5,
                       color: semanticColors.onSurfaceMuted,
@@ -312,7 +311,7 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
                             children: [
                               Text(
                                 'Version $_version',
-                                style: GoogleFonts.outfit(
+                                style: TextStyle(fontFamily: 'Outfit', 
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: colorScheme.onSurface,
@@ -320,7 +319,7 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
                               ),
                               Text(
                                 'Build $_buildNumber',
-                                style: GoogleFonts.inter(
+                                style: TextStyle(fontFamily: 'Inter', 
                                   fontSize: 13,
                                   color: semanticColors.onSurfaceMuted,
                                 ),
@@ -382,7 +381,7 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
                   ),
                   child: Text(
                     'Schedly is built specifically for colleges to modernize timetable management, lecture tracking, communication, and analytics. It provides an intuitive experience for Students, Subject Representatives, and Class Representatives while remaining fast, reliable, and offline-capable.',
-                    style: GoogleFonts.inter(
+                    style: TextStyle(fontFamily: 'Inter', 
                       fontSize: 14,
                       height: 1.6,
                       color: colorScheme.onSurface,
@@ -425,15 +424,15 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('Made with ', style: GoogleFonts.inter(color: semanticColors.onSurfaceMuted, fontSize: 13)),
+                      Text('Made with ', style: TextStyle(fontFamily: 'Inter', color: semanticColors.onSurfaceMuted, fontSize: 13)),
                       const Icon(Icons.favorite, color: Colors.red, size: 16),
-                      Text(' for Students', style: GoogleFonts.inter(color: semanticColors.onSurfaceMuted, fontSize: 13)),
+                      Text(' for Students', style: TextStyle(fontFamily: 'Inter', color: semanticColors.onSurfaceMuted, fontSize: 13)),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     '© 2026 $_appName',
-                    style: GoogleFonts.inter(
+                    style: TextStyle(fontFamily: 'Inter', 
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: semanticColors.onSurfaceMuted,
@@ -442,7 +441,7 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     'Designed & Developed by Ayaan Patel',
-                    style: GoogleFonts.inter(
+                    style: TextStyle(fontFamily: 'Inter', 
                       fontSize: 12,
                       color: semanticColors.onSurfaceMuted,
                     ),

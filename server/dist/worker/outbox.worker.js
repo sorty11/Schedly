@@ -42,7 +42,6 @@ class OutboxWorker {
     _isRunning = false;
     isProcessing = false;
     timer = null;
-    remindersTimer = null;
     currentPollMs = env_config_1.WorkerConfig.IDLE_INTERVAL_MS;
     // Stats
     stats = {
@@ -92,17 +91,12 @@ class OutboxWorker {
             timestamp: new Date().toISOString()
         }));
         this.scheduleNext(0);
-        this.scheduleRemindersScan(0);
     }
     stop() {
         this._isRunning = false;
         if (this.timer) {
             clearTimeout(this.timer);
             this.timer = null;
-        }
-        if (this.remindersTimer) {
-            clearTimeout(this.remindersTimer);
-            this.remindersTimer = null;
         }
         logger_1.logger.info(JSON.stringify({
             event: 'worker_stopped',
@@ -115,17 +109,12 @@ class OutboxWorker {
             return;
         this.timer = setTimeout(() => this.processOutbox(), delayMs);
     }
-    scheduleRemindersScan(delayMs) {
-        if (!this._isRunning)
-            return;
-        this.remindersTimer = setTimeout(() => this.processFacultyReminders(), delayMs);
-    }
-    async processFacultyReminders() {
+    async transferDueFacultyReminders() {
         try {
             const db = admin.firestore();
-            // Look for due reminders
+            // Look for due reminders using scheduledFor to match the new architecture
             const snapshot = await db.collection('faculty_reminders')
-                .where('sendAt', '<=', admin.firestore.Timestamp.now())
+                .where('scheduledFor', '<=', admin.firestore.Timestamp.now())
                 .limit(50)
                 .get();
             if (!snapshot.empty) {
@@ -162,9 +151,6 @@ class OutboxWorker {
         catch (error) {
             logger_1.logger.error('Error processing faculty reminders', { error });
         }
-        finally {
-            this.scheduleRemindersScan(15000); // Check every 15 seconds
-        }
     }
     async processOutbox() {
         if (this.isProcessing) {
@@ -174,6 +160,7 @@ class OutboxWorker {
         this.isProcessing = true;
         const loopStartTime = Date.now();
         try {
+            await this.transferDueFacultyReminders();
             this.checkResetStats();
             const db = admin.firestore();
             const snapshot = await db.collection('notification_outbox')
@@ -214,7 +201,6 @@ class OutboxWorker {
     }
     async processSingleEntry(doc, workerLatency) {
         const data = doc.data();
-        logger_1.logger.info(`[OUTBOX] Read doc ${doc.id} with data: ${JSON.stringify(data)}`);
         const uid = data.uid;
         const notificationId = data.notificationId || doc.id;
         const division = data.division || 'unknown';

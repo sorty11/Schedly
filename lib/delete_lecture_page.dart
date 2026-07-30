@@ -90,11 +90,12 @@ class _DeleteLecturePageState
           .delete();
 
       // Notify all students in this division that the lecture was removed
-      await AppNotificationService.createNotification(
+      await AppNotificationService.dispatch(
         title: 'Lecture Cancelled',
         message: '$subject has been removed from $selectedDay.',
         division: division!,
         type: 'cancel',
+        priority: 'high',
       );
 
       HapticFeedback.mediumImpact();

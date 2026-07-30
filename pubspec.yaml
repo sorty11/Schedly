@@ -51,6 +51,11 @@ dependencies:
   http: ^1.6.0
   connectivity_plus: ^7.2.0
   rxdart: ^0.28.0
+  animations: ^2.2.0
+  flutter_animate: ^4.5.2
+  cloud_functions: ^6.3.5
+  firebase_crashlytics: ^5.2.6
+  video_player: ^2.13.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -76,6 +81,7 @@ flutter:
 
   assets:
   - assets/nmims_logo.png
+  - assets/videos/Scene-1.mp4
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -93,25 +99,23 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
-  # fonts:
-  #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
-  #       - asset: fonts/Schyler-Italic.ttf
-  #         style: italic
-  #   - family: Trajan Pro
-  #     fonts:
-  #       - asset: fonts/TrajanPro.ttf
-  #       - asset: fonts/TrajanPro_Bold.ttf
-  #         weight: 700
-  #
-  # For details regarding fonts from package dependencies,
-  # see https://flutter.dev/to/font-from-package
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Variable.ttf
+    - family: Outfit
+      fonts:
+        - asset: assets/fonts/Outfit-Variable.ttf
 
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icon_foreground.png"
-  adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/icon_foreground.png"
+  web:
+    generate: true
+    image_path: "assets/app_logo.jpg"
+    background_color: "#121422"
+    theme_color: "#121422"
+  image_path: "assets/app_logo.jpg"
+  adaptive_icon_background: "#121422" # Dark background matching the image
+  adaptive_icon_foreground: "assets/app_logo.jpg"
   min_sdk_android: 21

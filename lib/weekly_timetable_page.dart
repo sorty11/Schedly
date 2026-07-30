@@ -15,8 +15,9 @@ import 'widgets/animations/floating_empty_state.dart';
 import 'widgets/animations/skeleton_components.dart';
 import 'models/timetable_entry.dart';
 import 'models/event_category.dart';
+import 'upload_timetable_pdf_page.dart';
+import 'services/local_notification_service.dart';
 import 'timetable_manager.dart';
-import 'system_update_manager.dart';
 import 'services/history_service.dart';
 import 'services/timetable_event_service.dart';
 
@@ -118,8 +119,8 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
             ),
             if (entry.isActive)
               ListTile(
-                leading: const Icon(Icons.cancel_outlined, color: Colors.orange),
-                title: const Text('Cancel Lecture', style: TextStyle(color: Colors.orange)),
+                leading: Icon(Icons.cancel_outlined, color: Theme.of(context).extension<AppSemanticColors>()!.cancelled),
+                title: Text('Cancel Lecture', style: TextStyle(color: Theme.of(context).extension<AppSemanticColors>()!.cancelled)),
                 onTap: () async {
                   Navigator.pop(ctx);
                   await FirebaseFirestore.instance
@@ -148,8 +149,8 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
               )
             else
               ListTile(
-                leading: const Icon(Icons.check_circle_outline, color: Colors.green),
-                title: const Text('Restore Lecture', style: TextStyle(color: Colors.green)),
+                leading: Icon(Icons.check_circle_outline, color: Theme.of(context).extension<AppSemanticColors>()!.conducted),
+                title: Text('Restore Lecture', style: TextStyle(color: Theme.of(context).extension<AppSemanticColors>()!.conducted)),
                 onTap: () async {
                   Navigator.pop(ctx);
                   await FirebaseFirestore.instance
@@ -177,8 +178,8 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
               ),
             if (isCR)
               ListTile(
-                leading: const Icon(Icons.delete_rounded, color: Colors.red),
-                title: const Text('Delete Lecture', style: TextStyle(color: Colors.red)),
+                leading: Icon(Icons.delete_rounded, color: Theme.of(context).extension<AppSemanticColors>()!.error),
+                title: Text('Delete Lecture', style: TextStyle(color: Theme.of(context).extension<AppSemanticColors>()!.error)),
                 onTap: () async {
                   Navigator.pop(ctx);
                   await FirebaseFirestore.instance
@@ -318,7 +319,7 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
               child: Container(
                 height: 72,
                 decoration: BoxDecoration(
-                  color: isDark ? sem.surfaceElevated : colorScheme.surface,
+                  color: isDark ? sem.surfaceElevated2 : colorScheme.surface,
                   border: Border(
                     bottom: BorderSide(
                       color: isDark
@@ -620,7 +621,7 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                                                             'Room ${entry.room}',
                                                             style: GoogleFonts.inter(
                                                               fontSize: 13,
-                                                              fontWeight: FontWeight.w600,
+                                                              fontWeight: FontWeight.w500,
                                                               color: sem.onSurfaceMuted,
                                                             ),
                                                           ),

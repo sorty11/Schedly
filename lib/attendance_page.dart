@@ -14,6 +14,11 @@ import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/staggered_list_item.dart';
 import 'widgets/animations/floating_empty_state.dart';
 import 'widgets/animations/counting_text.dart';
+import 'package:file_picker/file_picker.dart';
+import 'services/pdf_attendance_import_service.dart';
+import 'pdf_attendance_preview_page.dart';
+import 'models/attendance_log.dart';
+import 'widgets/app_dialogs.dart';
 
 class AttendancePage extends StatefulWidget {
   final String division;
@@ -38,6 +43,60 @@ class _AttendancePageState extends State<AttendancePage> {
     final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     final today = days[DateTime.now().weekday - 1];
     _todayLecturesFuture = TimetableManager.getEntriesForDay(division: widget.division, day: today);
+  }
+
+  Future<void> _handlePdfImport() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) return;
+      
+      final bytes = result.files.first.bytes;
+      if (bytes == null) {
+        if (!mounted) return;
+        AppDialogs.showError(context: context, title: 'Error', message: 'Could not read file data.');
+        return;
+      }
+
+      if (!mounted) return;
+      
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (c) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final logs = await PdfAttendanceImportService.parseAttendancePdf(
+        pdfBytes: bytes,
+        division: widget.division,
+        analytics: widget.allAnalytics,
+      );
+
+      if (!mounted) return;
+      Navigator.pop(context); // hide loading
+
+      if (logs.isEmpty) {
+        AppDialogs.showError(context: context, title: 'No Data', message: 'Could not find any readable attendance logs in this PDF.');
+        return;
+      }
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PdfAttendancePreviewPage(logs: logs, division: widget.division),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // hide loading
+        AppDialogs.showError(context: context, title: 'Import Failed', message: e.toString());
+      }
+    }
   }
 
   @override
@@ -105,6 +164,14 @@ class _AttendancePageState extends State<AttendancePage> {
                     'My Attendance',
                     style: Theme.of(context).appBarTheme.titleTextStyle,
                   ),
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.picture_as_pdf_rounded),
+                      tooltip: 'Import PDF',
+                      onPressed: _handlePdfImport,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                  ],
                 ),
 
                 // Overall summary card
@@ -187,7 +254,6 @@ class _AttendancePageState extends State<AttendancePage> {
                     ),
                   ),
 
-                if (subjects.isNotEmpty)
                   SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
                     sliver: SliverList(
@@ -209,6 +275,42 @@ class _AttendancePageState extends State<AttendancePage> {
                       ),
                     ),
                   ),
+
+                // Recent Timeline
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.x3l, AppSpacing.x2l, AppSpacing.md),
+                  sliver: SliverToBoxAdapter(
+                    child: Text(
+                      'Recent Activity',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                  ),
+                ),
+
+                SliverToBoxAdapter(
+                  child: StreamBuilder<List<AttendanceLog>>(
+                    stream: AttendanceService.streamLogs(),
+                    builder: (context, logsSnap) {
+                      if (logsSnap.connectionState == ConnectionState.waiting) {
+                        return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
+                      }
+                      final logs = logsSnap.data ?? [];
+                      if (logs.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
+                          child: Text('No recent imported history.'),
+                        );
+                      }
+                      
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
+                        child: Column(
+                          children: logs.take(5).map((log) => _TimelineLogCard(log: log)).toList(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
 
                 const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.x6l)),
               ],
@@ -687,6 +789,58 @@ class _MarkButton extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+class _TimelineLogCard extends StatelessWidget {
+  final AttendanceLog log;
+
+  const _TimelineLogCard({required this.log});
+
+  @override
+  Widget build(BuildContext context) {
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final isPresent = log.status == 'present';
+    final color = isPresent ? sem.conducted : (log.status == 'absent' ? sem.cancelled : sem.onSurfaceMuted);
+    final icon = isPresent ? Icons.check_circle_rounded : (log.status == 'absent' ? Icons.cancel_rounded : Icons.help_rounded);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: isDark ? sem.surfaceElevated : Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: isDark ? sem.borderSubtle : const Color(0xFFE8E8F0)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  log.component == 'Theory' ? log.subjectCode : '\${log.subjectCode} \${log.component}',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '\${log.date.day}/\${log.date.month}/\${log.date.year} • \${TimetableManager.formatTime(log.startTime, log.endTime)}',
+                  style: GoogleFonts.inter(fontSize: 11, color: sem.onSurfaceMuted),
+                ),
+              ],
+            ),
+          ),
+          if (log.confidence != MatchConfidence.perfect && log.confidence != MatchConfidence.normalized)
+            Icon(Icons.warning_amber_rounded, color: sem.warning, size: 16),
+        ],
       ),
     );
   }

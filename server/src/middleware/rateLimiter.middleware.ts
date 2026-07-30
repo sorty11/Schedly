@@ -10,3 +10,14 @@ export const notificationRateLimiter = rateLimit({
     res.status(options.statusCode).send(options.message);
   }
 });
+
+export const sectionCreateRateLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 5, // 5 failed attempts
+  skipSuccessfulRequests: true, // Only count failed attempts towards the limit
+  message: { error: 'Too many failed creation attempts. Please try again later.' },
+  handler: (req, res, next, options) => {
+    logger.warn('Section creation rate limit exceeded', { ip: req.ip });
+    res.status(options.statusCode).send(options.message);
+  }
+});

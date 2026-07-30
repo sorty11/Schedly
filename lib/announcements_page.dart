@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'theme/theme.dart';
@@ -140,7 +139,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                                           const SizedBox(width: 6),
                                           Text(
                                             priority.toUpperCase(),
-                                            style: GoogleFonts.inter(
+                                            style: TextStyle(fontFamily: 'Inter', 
                                               fontSize: 10,
                                               fontWeight: FontWeight.w800,
                                               letterSpacing: 0.8,

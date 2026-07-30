@@ -6,19 +6,21 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'services/local_notification_service.dart';
 
-
 import 'package:flutter/foundation.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 import 'home_page.dart';
-import 'splash_screen.dart';
+import 'onboarding_flow.dart';
 import 'app_settings.dart';
 import 'services/migration_service.dart';
-import 'login_page.dart';
 import 'theme/theme.dart';
 import 'firebase_options.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'faculty/faculty_home_page.dart';
 import 'user_roles.dart';
+import 'email_verification_page.dart';
+import 'account_migration_page.dart';
+import 'onboarding_wizard_page.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -36,9 +38,12 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 
 late final ThemeController themeController;
+final Stopwatch appStartupTimer = Stopwatch();
 
 Future<void> main() async {
+  appStartupTimer.start();
   WidgetsFlutterBinding.ensureInitialized();
+  
 
   if (kIsWeb) {
     await Firebase.initializeApp(
@@ -53,7 +58,16 @@ Future<void> main() async {
       ),
     );
   } else {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    FlutterError.onError = (errorDetails) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    };
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
   }
 
   FirebaseFirestore.instance.settings = Settings(
@@ -61,95 +75,29 @@ Future<void> main() async {
     cacheSizeBytes: 104857600, // 100 MB
   );
 
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) {
-    try {
-      await FirebaseAuth.instance.signInAnonymously();
-    } catch (e) {
-      debugPrint('Auth error: $e');
-    }
-  }
-
-  await AppSettings.loadRole();
-  await AppSettings.loadSRDetails();
-  await AppSettings.loadStudentDetails();
-  await AppSettings.loadFacultyDetails();
-  
-  await MigrationService.migrateFacultyIds();
-
-  // Fire and forget to prevent blocking the UI thread (fixes black screen bug)
-  NotificationService.initialize();
-
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  
-  await LocalNotificationService.initialize();
+  // We no longer automatically sign in anonymously.
+  // The user must go through the LoginPage.
 
   final prefs = await SharedPreferences.getInstance();
-  
   themeController = ThemeController(prefs);
+  
+  // Run these concurrently to speed up initialization
+  await Future.wait([
+    AppSettings.loadRole(),
+    AppSettings.loadSRDetails(),
+    AppSettings.loadStudentDetails(),
+    AppSettings.loadFacultyDetails(),
+    MigrationService.migrateFacultyIds(),
+  ]);
 
-  // Trigger the proof
-  _proveMismatch();
+  // Fire and forget non-critical initializations
+  NotificationService.initialize();
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  LocalNotificationService.initialize();
 
   runApp(const SchedlyApp());
 }
 
-Future<void> _proveMismatch() async {
-  try {
-    debugPrint('--- PROVING MISMATCH ---');
-    
-    // 1. AppSettings.facultyId
-    debugPrint('1. AppSettings.facultyId: \${AppSettings.facultyId}');
-    
-    // 2. faculty_profiles document ID
-    final profiles = await FirebaseFirestore.instance.collection('faculty_profiles').get();
-    for (final doc in profiles.docs) {
-      final data = doc.data();
-      debugPrint('2. faculty_profiles ID: ${doc.id} (Name: ${data['name']})');
-    }
-    
-    // 3. facultyId stored inside the timetable document
-    final timetables = await FirebaseFirestore.instance.collectionGroup('Monday').get();
-    for (final doc in timetables.docs) {
-      final data = doc.data();
-      if (data.containsKey('facultyId')) {
-        debugPrint('3. Timetable Entry (${doc.id}) -> facultyId: ${data['facultyId']}');
-      }
-    }
-    
-    // 4. division written into notification_outbox
-    final outbox = await FirebaseFirestore.instance.collection('notification_outbox').orderBy('createdAt', descending: true).limit(5).get();
-    for (final doc in outbox.docs) {
-      final data = doc.data();
-      if (data['role'] == 'faculty' || data['type'] == 'faculty_reminder') {
-        debugPrint('4. Outbox (${doc.id}) -> division: ${data['division']}, type: ${data['type']}');
-      }
-    }
-    
-    // 5. topic subscribed by TopicSubscriptionService (fcm_tokens)
-    final tokens = await FirebaseFirestore.instance.collectionGroup('fcm_tokens').get();
-    for (final doc in tokens.docs) {
-      final data = doc.data();
-      if (data['role'] == 'faculty') {
-        debugPrint('5. fcm_tokens (${doc.id}) -> division (Topic): ${data['division']}');
-      }
-    }
-    
-    // 6. Firestore users/{uid}.role
-    final users = await FirebaseFirestore.instance.collection('users').get();
-    for (final doc in users.docs) {
-      final data = doc.data();
-      final role = data['role'];
-      if (role == 'faculty' || role == 'FACULTY') {
-        debugPrint('6. users (${doc.id}) -> role: $role');
-      }
-    }
-    
-    debugPrint('--- END OF PROOF ---');
-  } catch (e) {
-    debugPrint('Proof error: \$e');
-  }
-}
 
 class SchedlyApp extends StatelessWidget {
   const SchedlyApp({super.key});
@@ -165,7 +113,7 @@ class SchedlyApp extends StatelessWidget {
           themeMode: themeController.themeMode,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
-          home: const SplashScreen(),
+          home: const StartupRouter(),
         );
       }
     );
@@ -189,58 +137,122 @@ class _StartupRouterState
   }
 
   Future<void> _checkDivision() async {
-  final prefs =
-      await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
 
-  final hasLoggedIn = prefs.getBool('has_logged_in') ?? false;
-  final legacyDivision = prefs.getString('selected_division');
-  
-  if (!mounted) return;
+    final user = FirebaseAuth.instance.currentUser;
 
-  if (AppSettings.currentRole == UserRole.faculty) {
-    if (!hasLoggedIn || AppSettings.facultyName == null) {
-      await prefs.remove('has_logged_in');
-      await AppSettings.resetRole();
-      if (!mounted) return;
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage()));
-    } else {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FacultyHomePage()));
+    if (user == null) {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const OnboardingFlow()));
+      return;
     }
-    return;
+
+    if (user.isAnonymous) {
+      final legacyDivision = prefs.getString('selected_division');
+      if (AppSettings.sectionId != null || AppSettings.facultyName != null || legacyDivision != null) {
+        // Needs migration
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AccountMigrationPage()));
+      } else {
+        // Empty anonymous user
+        await user.delete();
+        await prefs.remove('has_logged_in');
+        await AppSettings.resetRole();
+        if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const OnboardingFlow()));
+      }
+      return;
+    }
+
+    // Force reload to get the latest emailVerified status
+    await user.reload();
+    final updatedUser = FirebaseAuth.instance.currentUser;
+
+    if (updatedUser != null && !updatedUser.emailVerified) {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const EmailVerificationPage()));
+      return;
+    }
+
+    if (AppSettings.studentName != null || AppSettings.facultyName != null) {
+      // Fast path: use cached session
+      final userType = AppSettings.facultyName != null ? 'Faculty' : 'Student';
+      
+      if (userType == 'Faculty') {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FacultyHomePage()));
+      } else {
+        final div = AppSettings.sectionId ?? '';
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomePage(division: div)));
+      }
+      
+      // Update missing session info in the background without blocking navigation
+      _syncSessionInBackground(updatedUser);
+      return;
+    }
+
+    try {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(updatedUser!.uid).get();
+      if (userDoc.exists) {
+        final data = userDoc.data()!;
+        if (data['onboardingCompleted'] == true) {
+          final userType = data['userType'];
+          if (userType == 'Faculty') {
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FacultyHomePage()));
+          } else {
+            // Student
+            final div = AppSettings.sectionId ?? data['division'] ?? '';
+            
+            // Re-populate AppSettings from Firestore on re-login
+            if (AppSettings.studentName == null) {
+              await AppSettings.saveStudentDetails(
+                name: data['name'] ?? 'Student',
+                rollNo: data['rollNo'] ?? 'Unknown',
+                acYear: '', // Handled elsewhere or not needed for core function
+                br: '',
+                div: '',
+                secId: div,
+              );
+              
+              final roleStr = data['role'] as String?;
+              if (roleStr == 'CR') {
+                await AppSettings.saveRole(UserRole.cr);
+              } else if (roleStr == 'SR') {
+                await AppSettings.saveRole(UserRole.sr);
+              } else {
+                await AppSettings.saveRole(UserRole.student);
+              }
+            }
+            
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomePage(division: div)));
+          }
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error reading user document in StartupRouter: $e');
+    }
+
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const OnboardingWizardPage()));
   }
 
-  // Migration Check: If legacy division exists but no sectionId, force re-login
-  if (legacyDivision != null && AppSettings.sectionId == null) {
-    await prefs.remove('has_logged_in');
-    await prefs.remove('selected_division');
-    await AppSettings.resetRole();
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginPage()),
-    );
-    return;
+  Future<void> _syncSessionInBackground(User? user) async {
+    if (user == null) return;
+    try {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (userDoc.exists) {
+        final data = userDoc.data()!;
+        if (data['userType'] != 'Faculty') {
+           final roleStr = data['role'] as String?;
+           if (roleStr == 'CR') {
+             await AppSettings.saveRole(UserRole.cr);
+           } else if (roleStr == 'SR') {
+             await AppSettings.saveRole(UserRole.sr);
+           } else {
+             await AppSettings.saveRole(UserRole.student);
+           }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error in background sync: $e');
+    }
   }
-
-  if (!hasLoggedIn || AppSettings.sectionId == null) {
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const LoginPage(),
-      ),
-    );
-  } else {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => HomePage(
-          division: AppSettings.sectionId!,
-        ),
-      ),
-    );
-  }
-}
 
   @override
   Widget build(BuildContext context) {

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../theme/theme.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'staggered_list_item.dart';
 import 'animated_button.dart';
 
-class FloatingEmptyState extends StatefulWidget {
+class FloatingEmptyState extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
@@ -21,160 +21,117 @@ class FloatingEmptyState extends StatefulWidget {
   });
 
   @override
-  State<FloatingEmptyState> createState() => _FloatingEmptyStateState();
-}
-
-class _FloatingEmptyStateState extends State<FloatingEmptyState>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _floatController;
-  late Animation<double> _floatAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _floatController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2400),
-    )..repeat(reverse: true);
-
-    // Sine-curve floating: gentle up-and-down bob
-    _floatAnimation = Tween<double>(begin: -6.0, end: 6.0).animate(
-      CurvedAnimation(parent: _floatController, curve: Curves.easeInOutSine),
-    );
-  }
-
-  @override
-  void dispose() {
-    _floatController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final semanticColors = theme.extension<AppSemanticColors>()!;
     final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Center(
       child: SingleChildScrollView(
         child: Padding(
-          padding: EdgeInsets.all(AppSpacing.x3l),
+          padding: const EdgeInsets.all(AppSpacing.x3l),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-            // Floating icon container
-            StaggeredListItem(
-              index: 0,
-              child: AnimatedBuilder(
-                animation: _floatAnimation,
-                builder: (context, child) {
-                  return Transform.translate(
-                    offset: Offset(0, _floatAnimation.value),
-                    child: child,
-                  );
-                },
+              // Clean icon container
+              StaggeredListItem(
+                index: 0,
                 child: Container(
-                  width: 100,
-                  height: 100,
+                  width: 64,
+                  height: 64,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(AppRadius.xl),
-                    gradient: LinearGradient(
-                      colors: [
-                        colorScheme.primary.withValues(alpha: 0.08),
-                        colorScheme.secondary.withValues(alpha: 0.08),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    border: Border.all(
-                      color: semanticColors.borderSubtle,
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: colorScheme.primary.withValues(alpha: 0.1),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
+                    color: isDark ? const Color(0xFF2E2E2E) : const Color(0xFFF3F4F6),
+                    shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    widget.icon,
-                    size: 44,
-                    color: colorScheme.primary.withValues(alpha: 0.7),
+                    icon,
+                    size: 28,
+                    color: semanticColors.onSurfaceMuted,
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.x2l),
+              const SizedBox(height: AppSpacing.xl),
 
-            // Title
-            StaggeredListItem(
-              index: 1,
-              child: Text(
-                widget.title,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: colorScheme.onSurface,
-                  height: 1.2,
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-
-            // Subtitle
-            StaggeredListItem(
-              index: 2,
-              child: Text(
-                widget.subtitle,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  color: semanticColors.onSurfaceMuted,
-                  height: 1.6,
-                ),
-              ),
-            ),
-
-            // Optional action button
-            if (widget.onAction != null && widget.actionLabel != null) ...[
-              const SizedBox(height: AppSpacing.x2l),
+              // Title
               StaggeredListItem(
-                index: 3,
-                child: AnimatedButton(
-                  onPressed: widget.onAction,
-                  backgroundColor: colorScheme.primary.withValues(alpha: 0.08),
-                  foregroundColor: colorScheme.primary,
-                  borderRadius: AppRadius.full,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.x2l,
-                    vertical: AppSpacing.md,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.add_rounded, size: 18),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text(
-                        widget.actionLabel!,
-                        style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
+                index: 1,
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontFamily: 'Outfit', 
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                    height: 1.2,
                   ),
                 ),
               ),
+              const SizedBox(height: AppSpacing.xs),
+
+              // Subtitle
+              StaggeredListItem(
+                index: 2,
+                child: Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontFamily: 'Inter', 
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: semanticColors.onSurfaceMuted,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+
+              // Optional action button
+              if (onAction != null && actionLabel != null) ...[
+                const SizedBox(height: AppSpacing.x2l),
+                StaggeredListItem(
+                  index: 3,
+                  child: AnimatedButton(
+                    onPressed: onAction,
+                    backgroundColor: colorScheme.surface,
+                    foregroundColor: colorScheme.onSurface,
+                    borderRadius: AppRadius.md,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.md,
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: semanticColors.borderSubtle),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                        vertical: AppSpacing.sm,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.add_rounded, size: 18),
+                          const SizedBox(width: AppSpacing.sm),
+                          Text(
+                            actionLabel!,
+                            style: TextStyle(fontFamily: 'Inter', 
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+           .moveY(begin: 0, end: -4, duration: 2500.ms, curve: Curves.easeInOutSine),
         ),
       ),
-    ));
+    );
   }
 }

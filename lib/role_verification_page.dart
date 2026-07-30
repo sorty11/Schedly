@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'widgets/animations/floating_empty_state.dart';
 
 import 'home_page.dart';
@@ -14,6 +13,9 @@ import 'theme/theme.dart';
 import 'widgets/animations/animated_button.dart';
 import 'widgets/animations/animated_card.dart';
 import 'widgets/app_dialogs.dart';
+import 'package:schedly/exceptions.dart';
+import '../services/network_service.dart';
+import 'widgets/animations/animated_auth_background.dart';
 
 class RoleVerificationPage extends StatefulWidget {
   final String division;
@@ -44,6 +46,18 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
   }
 
   Future<void> _verify() async {
+    final isOnline = await NetworkService.isOnline();
+    if (!isOnline) {
+      if (mounted) {
+        AppDialogs.showError(
+          context: context,
+          title: 'Network Required',
+          message: 'You must be online to verify your role.',
+        );
+      }
+      return;
+    }
+
     setState(() => loading = true);
 
     try {
@@ -53,14 +67,14 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
           .get();
 
       if (!doc.exists) {
-        throw Exception('Role configuration not found');
+        throw AppException('Role configuration not found');
       }
 
       final data = doc.data()!;
       final savedPassword = widget.role == 'CR' ? data['crPassword'] : data['srPassword'];
 
       if (passwordController.text != savedPassword) {
-        throw Exception('Incorrect password');
+        throw AppException('Incorrect password');
       }
 
       if (widget.role == 'CR') {
@@ -110,6 +124,18 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
   // Replaced by _attemptClaim and _performClaim
 
   Future<void> _attemptClaim(String subject) async {
+    final isOnline = await NetworkService.isOnline();
+    if (!isOnline) {
+      if (mounted) {
+        AppDialogs.showError(
+          context: context,
+          title: 'Network Required',
+          message: 'You must be online to claim an SR role.',
+        );
+      }
+      return;
+    }
+
     setState(() => loading = true);
     
     try {
@@ -139,7 +165,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('This subject already has two active Subject Representatives. Select an SR to transfer their role to yourself:'),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 ...activeSRs.map((sr) => ListTile(
                   title: Text(sr.toString()),
                   trailing: const Icon(Icons.swap_horiz_rounded),
@@ -244,16 +270,22 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.role} Verification'),
+    return AnimatedAuthBackground(
+      isCenteredLogo: true,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: Text('${widget.role} Verification'),
+        ),
+        body: _passwordVerified && widget.role == 'SR'
+            ? _buildSubjectPicker()
+            : Padding(
+                padding: EdgeInsets.all(AppSpacing.lg),
+                child: _buildPasswordStep(),
+              ),
       ),
-      body: _passwordVerified && widget.role == 'SR'
-          ? _buildSubjectPicker()
-          : Padding(
-              padding: EdgeInsets.all(AppSpacing.lg),
-              child: _buildPasswordStep(),
-            ),
     );
   }
 
@@ -326,7 +358,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
                   children: [
                     Text(
                       'Select your assignment',
-                      style: GoogleFonts.outfit(
+                      style: TextStyle(fontFamily: 'Outfit', 
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.5,
@@ -335,7 +367,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       'Division: ${widget.division}',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(fontFamily: 'Inter', 
                         fontSize: 15,
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -394,7 +426,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
                                   children: [
                                     Text(
                                       subject,
-                                      style: GoogleFonts.outfit(
+                                      style: TextStyle(fontFamily: 'Outfit', 
                                         fontSize: 18,
                                         fontWeight: FontWeight.w700,
                                         color: isFullyClaimed ? Theme.of(context).colorScheme.onSurfaceVariant : Theme.of(context).colorScheme.onSurface,
@@ -403,7 +435,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
                                     const SizedBox(height: 4),
                                     Text(
                                       displayStatus,
-                                      style: GoogleFonts.inter(
+                                      style: TextStyle(fontFamily: 'Inter', 
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
                                         color: isFullyClaimed 

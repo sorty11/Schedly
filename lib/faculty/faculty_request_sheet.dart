@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
@@ -10,6 +9,7 @@ import '../theme/theme.dart';
 import '../models/timetable_entry.dart';
 import '../models/faculty_request.dart';
 import '../widgets/animations/animated_button.dart';
+import '../widgets/schedly_bottom_sheet.dart';
 import 'faculty_audit_service.dart';
 
 class FacultyRequestSheet extends StatefulWidget {
@@ -190,157 +190,126 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
     final title = isCancel ? 'Request Cancellation' : 'Request Extra Lecture';
     final divisions = AppSettings.facultyAssignedDivisions ?? [];
 
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.x2l)),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.x2l)),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: EdgeInsets.only(
-                left: AppSpacing.xl,
-                right: AppSpacing.xl,
-                top: AppSpacing.xl,
-                bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.xl,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Text(
-                    title,
-                    style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  
-                  // Division Selector
-                  if (widget.prefillDivision == null)
-                    DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'Select Division', border: OutlineInputBorder()),
-                      value: _selectedDivision,
-                      items: divisions.map((d) => DropdownMenuItem(value: d, child: Text(d.replaceAll('_', ' ')))).toList(),
-                      onChanged: (val) {
-                        setState(() => _selectedDivision = val);
-                        if (val != null) _loadSubjectsForDivision(val);
-                      },
-                    )
-                  else
-                    TextFormField(
-                      initialValue: _selectedDivision!.replaceAll('_', ' '),
-                      enabled: false,
-                      decoration: const InputDecoration(labelText: 'Division', border: OutlineInputBorder()),
-                    ),
-                  
-                  const SizedBox(height: AppSpacing.md),
-                  
-                  // Subject Selector
-                  if (widget.prefillEntry == null)
-                    DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'Select Subject', border: OutlineInputBorder()),
-                      value: _selectedSubject,
-                      items: _availableSubjects.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                      onChanged: (val) => setState(() => _selectedSubject = val),
-                    )
-                  else
-                    TextFormField(
-                      initialValue: _selectedSubject,
-                      enabled: false,
-                      decoration: const InputDecoration(labelText: 'Subject', border: OutlineInputBorder()),
-                    ),
+    return SchedlyBottomSheet(
+      title: title,
+      padding: EdgeInsets.only(
+        left: AppSpacing.x2l,
+        right: AppSpacing.x2l,
+        top: AppSpacing.lg,
+        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.x2l,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Division Selector
+          if (widget.prefillDivision == null)
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(labelText: 'Select Division', border: OutlineInputBorder()),
+              value: _selectedDivision,
+              items: divisions.map((d) => DropdownMenuItem(value: d, child: Text(d.replaceAll('_', ' ')))).toList(),
+              onChanged: (val) {
+                setState(() => _selectedDivision = val);
+                if (val != null) _loadSubjectsForDivision(val);
+              },
+            )
+          else
+            TextFormField(
+              initialValue: _selectedDivision!.replaceAll('_', ' '),
+              enabled: false,
+              decoration: const InputDecoration(labelText: 'Division', border: OutlineInputBorder()),
+            ),
+          
+          const SizedBox(height: AppSpacing.md),
+          
+          // Subject Selector
+          if (widget.prefillEntry == null)
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(labelText: 'Select Subject', border: OutlineInputBorder()),
+              value: _selectedSubject,
+              items: _availableSubjects.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+              onChanged: (val) => setState(() => _selectedSubject = val),
+            )
+          else
+            TextFormField(
+              initialValue: _selectedSubject,
+              enabled: false,
+              decoration: const InputDecoration(labelText: 'Subject', border: OutlineInputBorder()),
+            ),
 
-                  const SizedBox(height: AppSpacing.md),
-                  
-                  // Date Picker
-                  InkWell(
-                    onTap: () async {
-                      final date = await showDatePicker(
-                        context: context,
-                        initialDate: _selectedDate ?? DateTime.now(),
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 30)),
-                      );
-                      if (date != null) setState(() => _selectedDate = date);
-                    },
-                    child: InputDecorator(
-                      decoration: const InputDecoration(labelText: 'Date', border: OutlineInputBorder()),
-                      child: Text(_selectedDate != null ? DateFormat('MMM d, yyyy').format(_selectedDate!) : 'Select Date'),
-                    ),
-                  ),
-                  
-                  if (!isCancel) ...[
-                    const SizedBox(height: AppSpacing.md),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: InkWell(
-                            onTap: () async {
-                              final time = await showTimePicker(
-                                context: context,
-                                initialTime: _selectedTime ?? TimeOfDay.now(),
-                              );
-                              if (time != null) setState(() => _selectedTime = time);
-                            },
-                            child: InputDecorator(
-                              decoration: const InputDecoration(labelText: 'Start Time', border: OutlineInputBorder()),
-                              child: Text(_selectedTime != null ? _selectedTime!.format(context) : 'Select Time'),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: TextField(
-                            controller: _durationController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Duration (mins)', border: OutlineInputBorder()),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    TextField(
-                      controller: _roomController,
-                      decoration: const InputDecoration(labelText: 'Room (Optional)', border: OutlineInputBorder()),
-                    ),
-                  ],
-
-                  const SizedBox(height: AppSpacing.md),
-                  TextField(
-                    controller: _reasonController,
-                    maxLines: 2,
-                    decoration: InputDecoration(
-                      labelText: isCancel ? 'Reason for Cancellation (Optional)' : 'Message to students (Optional)',
-                      border: const OutlineInputBorder(),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: AppSpacing.xl),
-                  AnimatedButton(
-                    onPressed: _isLoading ? null : _submitRequest,
-                    isLoading: _isLoading,
-                    backgroundColor: isCancel ? Colors.red : Theme.of(context).colorScheme.primary,
-                    child: Text(isCancel ? 'Submit Cancellation Request' : 'Submit Extra Lecture Request'),
-                  ),
-                ],
-              ),
+          const SizedBox(height: AppSpacing.md),
+          
+          // Date Picker
+          InkWell(
+            onTap: () async {
+              final date = await showDatePicker(
+                context: context,
+                initialDate: _selectedDate ?? DateTime.now(),
+                firstDate: DateTime.now(),
+                lastDate: DateTime.now().add(const Duration(days: 30)),
+              );
+              if (date != null) setState(() => _selectedDate = date);
+            },
+            child: InputDecorator(
+              decoration: const InputDecoration(labelText: 'Date', border: OutlineInputBorder()),
+              child: Text(_selectedDate != null ? DateFormat('MMM d, yyyy').format(_selectedDate!) : 'Select Date'),
             ),
           ),
-        ),
+          
+          if (!isCancel) ...[
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () async {
+                      final time = await showTimePicker(
+                        context: context,
+                        initialTime: _selectedTime ?? TimeOfDay.now(),
+                      );
+                      if (time != null) setState(() => _selectedTime = time);
+                    },
+                    child: InputDecorator(
+                      decoration: const InputDecoration(labelText: 'Start Time', border: OutlineInputBorder()),
+                      child: Text(_selectedTime != null ? _selectedTime!.format(context) : 'Select Time'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: TextField(
+                    controller: _durationController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Duration (mins)', border: OutlineInputBorder()),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: _roomController,
+              decoration: const InputDecoration(labelText: 'Room (Optional)', border: OutlineInputBorder()),
+            ),
+          ],
+
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _reasonController,
+            maxLines: 2,
+            decoration: InputDecoration(
+              labelText: isCancel ? 'Reason for Cancellation (Optional)' : 'Message to students (Optional)',
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          
+          const SizedBox(height: AppSpacing.xl),
+          AnimatedButton(
+            onPressed: _isLoading ? null : _submitRequest,
+            isLoading: _isLoading,
+            backgroundColor: isCancel ? Colors.red : Theme.of(context).colorScheme.primary,
+            child: Text(isCancel ? 'Submit Cancellation Request' : 'Submit Extra Lecture Request'),
+          ),
+        ],
       ),
     );
   }

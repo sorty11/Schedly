@@ -57,7 +57,7 @@ class TimetableEntry {
 
   String get displaySubject {
     if (!isAcademic) return subject;
-    return '${subjectCode} $component'.trim();
+    return '$subjectCode $component'.trim();
   }
 
   factory TimetableEntry.fromFirestore(DocumentSnapshot doc) {

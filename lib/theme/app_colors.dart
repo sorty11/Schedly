@@ -12,8 +12,11 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
   final Color accent;
   final Color surfaceElevated;
   final Color surfaceElevated2;
+  final Color surfaceTinted;
   final Color borderSubtle;
+  final Color borderFocus;
   final Color onSurfaceMuted;
+  final Color onSurfaceFaint;
 
   const AppSemanticColors({
     required this.pending,
@@ -26,8 +29,11 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     required this.accent,
     required this.surfaceElevated,
     required this.surfaceElevated2,
+    required this.surfaceTinted,
     required this.borderSubtle,
+    required this.borderFocus,
     required this.onSurfaceMuted,
+    required this.onSurfaceFaint,
   });
 
   @override
@@ -42,8 +48,11 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     Color? accent,
     Color? surfaceElevated,
     Color? surfaceElevated2,
+    Color? surfaceTinted,
     Color? borderSubtle,
+    Color? borderFocus,
     Color? onSurfaceMuted,
+    Color? onSurfaceFaint,
   }) {
     return AppSemanticColors(
       pending: pending ?? this.pending,
@@ -56,8 +65,11 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       accent: accent ?? this.accent,
       surfaceElevated: surfaceElevated ?? this.surfaceElevated,
       surfaceElevated2: surfaceElevated2 ?? this.surfaceElevated2,
+      surfaceTinted: surfaceTinted ?? this.surfaceTinted,
       borderSubtle: borderSubtle ?? this.borderSubtle,
+      borderFocus: borderFocus ?? this.borderFocus,
       onSurfaceMuted: onSurfaceMuted ?? this.onSurfaceMuted,
+      onSurfaceFaint: onSurfaceFaint ?? this.onSurfaceFaint,
     );
   }
 
@@ -75,77 +87,86 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       accent: Color.lerp(accent, other.accent, t)!,
       surfaceElevated: Color.lerp(surfaceElevated, other.surfaceElevated, t)!,
       surfaceElevated2: Color.lerp(surfaceElevated2, other.surfaceElevated2, t)!,
+      surfaceTinted: Color.lerp(surfaceTinted, other.surfaceTinted, t)!,
       borderSubtle: Color.lerp(borderSubtle, other.borderSubtle, t)!,
+      borderFocus: Color.lerp(borderFocus, other.borderFocus, t)!,
       onSurfaceMuted: Color.lerp(onSurfaceMuted, other.onSurfaceMuted, t)!,
+      onSurfaceFaint: Color.lerp(onSurfaceFaint, other.onSurfaceFaint, t)!,
     );
   }
 }
 
-// ─── Light Theme Palette ──────────────────────────────────────────────────────
-// Identity: "Indigo Dusk"
+// ─── Light Theme Palette (Project Phoenix) ───────────────────────────────────
+// Inspired by Vercel/Linear: Pure whites, very subtle grays, vibrant electric blue.
 const lightSemanticColors = AppSemanticColors(
-  pending:        Color(0xFFF59E0B),  // Amber 400
-  conducted:      Color(0xFF10B981),  // Emerald 500
-  cancelled:      Color(0xFFEF4444),  // Red 500
-  rescheduled:    Color(0xFF6366F1),  // Indigo 500
-  success:        Color(0xFF22C55E),  // Green 500
-  warning:        Color(0xFFF59E0B),  // Amber 400
-  error:          Color(0xFFEF4444),  // Red 500
-  accent:         Color(0xFF06B6D4),  // Cyan 500
-  surfaceElevated:  Color(0xFFFAFAFE),  // Slightly tinted white
-  surfaceElevated2: Color(0xFFF0F0FA),  // Dialog/sheet surface
-  borderSubtle:   Color(0xFFE8E8F0),
-  onSurfaceMuted: Color(0xFF6B7280),  // Gray 500
+  pending:        Color(0xFFE5A000),  // Crisp Amber
+  conducted:      Color(0xFF007A5A),  // Deep crisp green
+  cancelled:      Color(0xFFE5484D),  // Sharp red
+  rescheduled:    Color(0xFF5E548E),  // Muted purple
+  success:        Color(0xFF007A5A),
+  warning:        Color(0xFFE5A000),
+  error:          Color(0xFFE5484D),
+  accent:         Color(0xFF0066FF),  // Electric Blue
+  surfaceElevated:  Color(0xFFFFFFFF),  // Pure White
+  surfaceElevated2: Color(0xFFFAFAFA),  // Off-white
+  surfaceTinted:  Color(0xFFF3F8FF),  // Barely tinted blue
+  borderSubtle:   Color(0xFFEBEBEB),  // Very faint border
+  borderFocus:    Color(0xFF0066FF),  
+  onSurfaceMuted: Color(0xFF666666),  // True mid-gray
+  onSurfaceFaint: Color(0xFF999999),  // Light text
 );
 
-// ─── Dark Theme Palette ───────────────────────────────────────────────────────
+// ─── Dark Theme Palette (Project Phoenix) ────────────────────────────────────
+// Pure blacks, sharp borders, highly legible typography.
 const darkSemanticColors = AppSemanticColors(
-  pending:        Color(0xFFFBBF24),  // Amber 400
-  conducted:      Color(0xFF34D399),  // Emerald 400
-  cancelled:      Color(0xFFF87171),  // Red 400
-  rescheduled:    Color(0xFF818CF8),  // Indigo 400
-  success:        Color(0xFF4ADE80),  // Green 400
-  warning:        Color(0xFFFBBF24),  // Amber 400
-  error:          Color(0xFFF87171),  // Red 400
-  accent:         Color(0xFF22D3EE),  // Cyan 400
-  surfaceElevated:  Color(0xFF1C1C22),  // Surface 2
-  surfaceElevated2: Color(0xFF242430),  // Surface 3 (dialogs)
-  borderSubtle:   Color(0xFF2A2A38),
-  onSurfaceMuted: Color(0xFF8888A4),
+  pending:        Color(0xFFF5B014),
+  conducted:      Color(0xFF10B981),
+  cancelled:      Color(0xFFF87171),
+  rescheduled:    Color(0xFF818CF8),
+  success:        Color(0xFF10B981),
+  warning:        Color(0xFFF5B014),
+  error:          Color(0xFFF87171),
+  accent:         Color(0xFF0066FF),  // Unchanged Electric Blue, pops on black
+  surfaceElevated:  Color(0xFF0A0A0A),  // True dark, but not OLED black to allow borders
+  surfaceElevated2: Color(0xFF111111),  // Slightly raised
+  surfaceTinted:  Color(0xFF0D1524),  // Extremely faint blue tint
+  borderSubtle:   Color(0xFF222222),  // Sharp hairline border
+  borderFocus:    Color(0xFF0066FF),
+  onSurfaceMuted: Color(0xFFA1A1A1),
+  onSurfaceFaint: Color(0xFF737373),
 );
 
-// ─── Named Color Palette (for use in gradients, hardcoded accents) ────────────
+// ─── Named Color Palette ──────────────────────────────────────────────────────
 class AppColors {
   AppColors._();
 
-  // Primary family — Indigo
-  static const Color primary = Color(0xFF4F46E5);
-  static const Color primaryLight = Color(0xFF6366F1);
-  static const Color primaryDark = Color(0xFF818CF8);   // dark mode primary
+  static const Color primary = Color(0xFF0066FF);
+  static const Color primaryLight = Color(0xFF3385FF);
+  static const Color primaryDark = Color(0xFF005CE6);
 
-  // Secondary family — Violet
-  static const Color secondary = Color(0xFF8B5CF6);
-  static const Color secondaryDark = Color(0xFFA78BFA);
+  static const Color secondary = Color(0xFF666666);
+  static const Color secondaryDark = Color(0xFFA1A1A1);
 
-  // Accent — Cyan
-  static const Color accent = Color(0xFF06B6D4);
-  static const Color accentDark = Color(0xFF22D3EE);
+  static const Color accent = Color(0xFF0066FF);
+  static const Color accentDark = Color(0xFF0066FF);
 
-  // Status
-  static const Color green = Color(0xFF10B981);
-  static const Color greenLight = Color(0xFF34D399);
-  static const Color amber = Color(0xFFF59E0B);
-  static const Color amberLight = Color(0xFFFBBF24);
-  static const Color red = Color(0xFFEF4444);
+  static const Color green = Color(0xFF007A5A);
+  static const Color greenLight = Color(0xFF10B981);
+  static const Color amber = Color(0xFFE5A000);
+  static const Color amberLight = Color(0xFFF5B014);
+  static const Color red = Color(0xFFE5484D);
   static const Color redLight = Color(0xFFF87171);
 
-  // Neutral (light)
-  static const Color background = Color(0xFFF5F5F7);
+  // Backgrounds are solid and neutral
+  static const Color background = Color(0xFFF9F9F9);
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color onSurface = Color(0xFF111827);
+  static const Color onSurface = Color(0xFF111111);
 
-  // Neutral (dark)
-  static const Color backgroundDark = Color(0xFF0C0C10);
-  static const Color surfaceDark = Color(0xFF141418);
-  static const Color onSurfaceDark = Color(0xFFF1F1F5);
+  static const Color backgroundDark = Color(0xFF000000); // OLED black background
+  static const Color surfaceDark = Color(0xFF0A0A0A);
+  static const Color onSurfaceDark = Color(0xFFEDEDED);
+
+  // Deprecated. Kept to not break existing references during transition.
+  static const Color neumorphSurface = Color(0xFFF9F9F9);      
+  static const Color neumorphSurfaceDark = Color(0xFF000000);  
 }

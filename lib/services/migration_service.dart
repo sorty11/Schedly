@@ -6,6 +6,7 @@ import '../app_settings.dart';
 import '../models/timetable_entry.dart';
 import 'pdf_timetable_import_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:schedly/exceptions.dart';
 
 class MigrationService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -61,7 +62,7 @@ class MigrationService {
       final verifyProfile = await _db.collection('faculty_profiles').doc(newId).get();
       final verifyUser = await _db.collection('users').doc(newId).get();
       if (!verifyProfile.exists || !verifyUser.exists) {
-        throw Exception("Verification failed: Copied documents do not exist.");
+        throw AppException("Verification failed: Copied documents do not exist.");
       }
 
       // STEP 3: Mark migration successful locally
@@ -205,7 +206,9 @@ class MigrationService {
 
       if (changed) {
         batch.update(doc.reference, {
+          // ignore: use_null_aware_elements
           if (originalSlot != null) 'originalSlot': originalSlot,
+          // ignore: use_null_aware_elements
           if (actualSubject != null) 'actualSubject': data['actualSubject'],
         });
         ops++;

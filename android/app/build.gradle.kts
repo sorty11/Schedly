@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
     id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
     // END: FlutterFire Configuration
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
@@ -10,7 +11,7 @@ plugins {
 android {
     namespace = "com.example.schedly"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "25.1.8937393"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -36,11 +37,6 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
         debug {
-            packaging {
-                jniLibs {
-                    keepDebugSymbols.add("**/*.so")
-                }
-            }
         }
     }
 }

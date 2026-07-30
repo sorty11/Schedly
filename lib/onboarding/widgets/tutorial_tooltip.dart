@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'dart:ui';
 import '../services/tutorial_controller.dart';
 import 'cc_character.dart';
 import '../../theme/theme.dart';
@@ -75,14 +75,24 @@ class TutorialTooltip extends StatelessWidget {
                 child: const Icon(Icons.arrow_drop_up_rounded, color: Colors.white, size: 40),
               ),
             
-            Container(
-              padding: EdgeInsets.all(AppSpacing.xl),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(AppRadius.xl),
-                boxShadow: AppShadow.level4(Theme.of(context).colorScheme.primary),
-              ),
-              child: Column(
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0),
+                child: Container(
+                  padding: EdgeInsets.all(AppSpacing.xl),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.black.withValues(alpha: 0.65)
+                        : Colors.white.withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.circular(AppRadius.xl),
+                    border: Border.all(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withValues(alpha: 0.15)
+                          : Colors.black.withValues(alpha: 0.05),
+                    ),
+                  ),
+                  child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
@@ -96,7 +106,7 @@ class TutorialTooltip extends StatelessWidget {
                           children: [
                             Text(
                               isCelebration ? "Awesome!" : step.title,
-                              style: GoogleFonts.outfit(
+                              style: TextStyle(fontFamily: 'Outfit', 
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: Theme.of(context).colorScheme.onSurface,
@@ -107,7 +117,7 @@ class TutorialTooltip extends StatelessWidget {
                               isCelebration 
                                 ? "You got it right!" 
                                 : (isWaiting ? step.ccMessage : step.description),
-                              style: GoogleFonts.inter(
+                              style: TextStyle(fontFamily: 'Inter', 
                                 fontSize: 14,
                                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                               ),
@@ -128,7 +138,7 @@ class TutorialTooltip extends StatelessWidget {
                         padding: EdgeInsets.only(bottom: AppSpacing.sm),
                         child: Text(
                           'Step ${controller.currentStepIndex + 1} of ${controller.activeTour?.steps.length ?? 1}',
-                          style: GoogleFonts.inter(
+                          style: TextStyle(fontFamily: 'Inter', 
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: Theme.of(context).colorScheme.primary,
@@ -148,14 +158,14 @@ class TutorialTooltip extends StatelessWidget {
                                 style: TextButton.styleFrom(
                                   padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
                                 ),
-                                child: Text('Previous', style: GoogleFonts.inter(fontSize: 13)),
+                                child: Text('Previous', style: TextStyle(fontFamily: 'Inter', fontSize: 13)),
                               ),
                             TextButton(
                               onPressed: () => controller.skipTour(),
                               style: TextButton.styleFrom(
                                 padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
                               ),
-                              child: Text('Skip', style: GoogleFonts.inter(fontSize: 13)),
+                              child: Text('Skip', style: TextStyle(fontFamily: 'Inter', fontSize: 13)),
                             ),
                             if (!step.requireInteraction && !isCelebration)
                               FilledButton(
@@ -185,7 +195,7 @@ class TutorialTooltip extends StatelessWidget {
                                     const SizedBox(width: 4),
                                     Text(
                                       'Try it',
-                                      style: GoogleFonts.inter(
+                                      style: TextStyle(fontFamily: 'Inter', 
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
                                         color: Theme.of(context).colorScheme.onPrimaryContainer,
@@ -201,6 +211,8 @@ class TutorialTooltip extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+            ),
             ),
   
             if (!placeBelow)

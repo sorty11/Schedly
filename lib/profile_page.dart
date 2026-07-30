@@ -10,7 +10,7 @@ import 'user_roles.dart';
 import 'role_verification_page.dart';
 import 'cr_panel_page.dart';
 import 'sr_conduct_dashboard.dart';
-import 'login_page.dart';
+import 'onboarding_flow.dart';
 import 'theme/theme.dart';
 import 'main.dart';
 import 'widgets/animations/animated_list_tile.dart';
@@ -56,17 +56,17 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _sectionHeader(String label) {
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
     return Padding(
-      padding: EdgeInsets.only(
+      padding: const EdgeInsets.only(
         left: AppSpacing.xs,
         bottom: AppSpacing.sm,
-        top: AppSpacing.x3l,
+        top: 28,
       ),
       child: Text(
         label.toUpperCase(),
         style: GoogleFonts.inter(
           fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.1,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.9,
           color: semanticColors.onSurfaceMuted,
         ),
       ),
@@ -321,7 +321,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   padding: EdgeInsets.all(AppSpacing.x2l),
                   child: Column(
                     children: [
-                      // Avatar gradient circle
+                      // Avatar — gradient circle with a clean ring, no glow
                       Container(
                         width: 88,
                         height: 88,
@@ -332,20 +332,17 @@ class _ProfilePageState extends State<ProfilePage> {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.35),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.18),
+                            width: 3,
+                          ),
                         ),
                         child: Center(
                           child: Text(
                             initial,
                             style: GoogleFonts.outfit(
                               fontSize: 36,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               color: Colors.white,
                             ),
                           ),
@@ -358,7 +355,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         name,
                         style: GoogleFonts.outfit(
                           fontSize: 24,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           color: colorScheme.onSurface,
                         ),
                       ),
@@ -660,7 +657,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                     Navigator.pushAndRemoveUntil(
                       context,
-                      MaterialPageRoute(builder: (_) => const LoginPage()),
+                      MaterialPageRoute(builder: (c) => const OnboardingFlow()),
                       (_) => false,
                     );
                   },
@@ -682,13 +679,17 @@ class _ProfilePageState extends State<ProfilePage> {
     required Color textColor,
   }) {
     return Container(
-      padding: EdgeInsets.symmetric(
+      padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(AppRadius.full),
+        border: Border.all(
+          color: textColor.withValues(alpha: 0.18),
+          width: 1,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -699,7 +700,7 @@ class _ProfilePageState extends State<ProfilePage> {
             label,
             style: GoogleFonts.inter(
               fontSize: 12,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               color: textColor,
             ),
           ),

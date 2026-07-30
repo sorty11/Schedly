@@ -93,10 +93,13 @@ class _AnimatedFABState extends State<AnimatedFAB> with TickerProviderStateMixin
       cursor: SystemMouseCursors.click,
       onEnter: (_) => _hoverController.forward(),
       onExit: (_) => _hoverController.reverse(),
-      child: GestureDetector(
-        onTapDown: _handleTapDown,
-        onTapUp: _handleTapUp,
-        onTapCancel: _handleTapCancel,
+      child: Semantics(
+        button: true,
+        label: widget.tooltip ?? widget.label,
+        child: GestureDetector(
+          onTapDown: _handleTapDown,
+          onTapUp: _handleTapUp,
+          onTapCancel: _handleTapCancel,
         onTap: () {
           HapticFeedback.mediumImpact();
           widget.onPressed();
@@ -127,7 +130,7 @@ class _AnimatedFABState extends State<AnimatedFAB> with TickerProviderStateMixin
                       data: IconThemeData(color: fgColor),
                       child: widget.icon,
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppSpacing.md),
                     Text(
                       widget.label!,
                       style: theme.textTheme.labelLarge?.copyWith(
@@ -174,7 +177,8 @@ class _AnimatedFABState extends State<AnimatedFAB> with TickerProviderStateMixin
           },
         ),
       ),
-    );
+    ),
+  );
 
     if (widget.tooltip != null) {
       fab = Tooltip(

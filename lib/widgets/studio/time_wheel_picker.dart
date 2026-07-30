@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../theme/theme.dart';
 
@@ -26,7 +25,7 @@ Future<TimeOfDay?> showTimeWheelPicker(BuildContext context, {required TimeOfDay
           mainAxisSize: MainAxisSize.min,
           children: [
             // Handle
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             Container(
               width: 48,
               height: 5,
@@ -40,7 +39,7 @@ Future<TimeOfDay?> showTimeWheelPicker(BuildContext context, {required TimeOfDay
             // Title
             Text(
               'Select Time',
-              style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700),
+              style: TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 20),
             
@@ -51,7 +50,7 @@ Future<TimeOfDay?> showTimeWheelPicker(BuildContext context, {required TimeOfDay
                 data: CupertinoThemeData(
                   brightness: isDark ? Brightness.dark : Brightness.light,
                   textTheme: CupertinoTextThemeData(
-                    dateTimePickerTextStyle: GoogleFonts.inter(
+                    dateTimePickerTextStyle: TextStyle(fontFamily: 'Inter', 
                       fontSize: 22,
                       fontWeight: FontWeight.w500,
                       color: cs.onSurface,
@@ -81,10 +80,10 @@ Future<TimeOfDay?> showTimeWheelPicker(BuildContext context, {required TimeOfDay
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
                         side: BorderSide(color: sem.borderSubtle, width: 1.5),
                       ),
-                      child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: cs.onSurface)),
+                      child: Text('Cancel', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, color: cs.onSurface)),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: AppSpacing.lg),
                   Expanded(
                     child: FilledButton(
                       onPressed: () => Navigator.pop(ctx, selectedTime),
@@ -92,7 +91,7 @@ Future<TimeOfDay?> showTimeWheelPicker(BuildContext context, {required TimeOfDay
                         padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
                       ),
-                      child: Text('Confirm', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                      child: Text('Confirm', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700)),
                     ),
                   ),
                 ],

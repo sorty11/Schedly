@@ -31,7 +31,7 @@ class BatchAnalytics {
   String get subjectCode => TimetableEntry.stripComponentSuffix(subject);
 
   String get displaySubject {
-    return '${subjectCode} $component'.trim();
+    return '$subjectCode $component'.trim();
   }
 
   factory BatchAnalytics.fromFirestore(DocumentSnapshot doc) {

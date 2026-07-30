@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class BetaBadge extends StatelessWidget {
   const BetaBadge({super.key});
@@ -14,7 +13,7 @@ class BetaBadge extends StatelessWidget {
       ),
       child: Text(
         'BETA',
-        style: GoogleFonts.inter(
+        style: TextStyle(fontFamily: 'Inter', 
           fontSize: 10,
           fontWeight: FontWeight.w800,
           color: Colors.black87,

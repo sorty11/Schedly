@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/studio_state.dart';
 import '../../theme/theme.dart';
@@ -133,8 +132,8 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(widget.periodName, style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w700)),
-                    Text(widget.timeString, style: GoogleFonts.inter(fontSize: 14, color: sem.onSurfaceMuted)),
+                    Text(widget.periodName, style: TextStyle(fontFamily: 'Outfit', fontSize: 22, fontWeight: FontWeight.w700)),
+                    Text(widget.timeString, style: TextStyle(fontFamily: 'Inter', fontSize: 14, color: sem.onSurfaceMuted)),
                   ],
                 ),
                 IconButton(
@@ -144,11 +143,11 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.x2l),
 
             // Slot Type
-            Text('Slot Type', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: sem.onSurfaceMuted)),
-            const SizedBox(height: 8),
+            Text('Slot Type', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w700, color: sem.onSurfaceMuted)),
+            const SizedBox(height: AppSpacing.sm),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -161,13 +160,13 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.x2l),
 
             if (isLecture) ...[
               // Subject
               TextFormField(
                 controller: _subjectCtrl,
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
+                style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 16),
                 decoration: InputDecoration(
                   labelText: 'Subject Name',
                   hintText: 'e.g. Mathematics',
@@ -180,7 +179,7 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
               // Room
               TextFormField(
                 controller: _roomCtrl,
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
+                style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 16),
                 decoration: InputDecoration(
                   labelText: 'Room / Lab',
                   hintText: 'e.g. Room 402',
@@ -191,15 +190,15 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
 
 
               // Component Type
-              Text('Lecture Type', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: sem.onSurfaceMuted)),
-              const SizedBox(height: 8),
+              Text('Lecture Type', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w700, color: sem.onSurfaceMuted)),
+              const SizedBox(height: AppSpacing.sm),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: ['Theory', 'Lab', 'Tutorial', 'Event'].map((c) {
                   final selected = _component == c;
                   return ChoiceChip(
-                    label: Text(c, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                    label: Text(c, style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
                     selected: selected,
                     onSelected: (v) {
                       if (v) setState(() => _component = c);
@@ -209,9 +208,9 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.x3l),
             ] else ...[
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.x3l),
             ],
 
             // Actions
@@ -230,7 +229,7 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: AppSpacing.lg),
                 ],
                 Expanded(
                   child: OutlinedButton(
@@ -240,17 +239,17 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
                       side: BorderSide(color: sem.borderSubtle, width: 1.5),
                     ),
-                    child: Text('Save', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: cs.onSurface)),
+                    child: Text('Save', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, color: cs.onSurface)),
                   ),
                 ),
                 if (widget.onSaveAndNext != null) ...[
-                  const SizedBox(width: 16),
+                  const SizedBox(width: AppSpacing.lg),
                   Expanded(
                     flex: 2,
                     child: FilledButton.icon(
                       onPressed: _saveAndNext,
                       icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                      label: Text('Save & Next', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                      label: Text('Save & Next', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700)),
                       style: FilledButton.styleFrom(
                         padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
@@ -271,7 +270,7 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
     return Padding(
       padding: EdgeInsets.only(right: AppSpacing.sm),
       child: FilterChip(
-        label: Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: selected ? cs.onPrimaryContainer : cs.onSurface)),
+        label: Text(label, style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, color: selected ? cs.onPrimaryContainer : cs.onSurface)),
         avatar: Icon(icon, size: 16, color: selected ? cs.onPrimaryContainer : sem.onSurfaceMuted),
         selected: selected,
         onSelected: (v) {

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../theme/theme.dart';
 import 'tutorial_storage_service.dart';
 import '../widgets/cc_character.dart';
@@ -54,7 +53,7 @@ class _FeatureCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.x2l),
               Text(
                 '✨ NEW FEATURE',
-                style: GoogleFonts.inter(
+                style: TextStyle(fontFamily: 'Inter', 
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                   color: Theme.of(context).extension<AppSemanticColors>()?.conducted ?? Colors.green,
@@ -64,7 +63,7 @@ class _FeatureCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               Text(
                 'Flagship Onboarding',
-                style: GoogleFonts.outfit(
+                style: TextStyle(fontFamily: 'Outfit', 
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -74,7 +73,7 @@ class _FeatureCard extends StatelessWidget {
               Text(
                 'Meet CC, your new Campus Companion! Experience the redesigned interactive tutorials.',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
+                style: TextStyle(fontFamily: 'Inter', 
                   fontSize: 15,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   height: 1.4,
@@ -86,7 +85,7 @@ class _FeatureCard extends StatelessWidget {
                 style: FilledButton.styleFrom(
                   minimumSize: const Size(double.infinity, 50),
                 ),
-                child: Text('Awesome!', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
+                child: Text('Awesome!', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ],
           ),

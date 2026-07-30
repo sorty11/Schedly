@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,6 +15,7 @@ import '../widgets/app_dialogs.dart';
 import 'faculty_setup_wizard.dart';
 import 'faculty_home_page.dart';
 import '../services/notification_service.dart';
+import '../services/faculty_auth_service.dart';
 
 class FacultyAuthBottomSheet extends StatefulWidget {
   const FacultyAuthBottomSheet({super.key});
@@ -31,6 +31,7 @@ class _FacultyAuthBottomSheetState extends State<FacultyAuthBottomSheet> {
 
   bool _loading = false;
 
+  @override
   void dispose() {
     _nameController.dispose();
     _masterPasswordController.dispose();
@@ -73,148 +74,38 @@ class _FacultyAuthBottomSheetState extends State<FacultyAuthBottomSheet> {
       return;
     }
 
-    if (masterPwd != 'faculty123') {
-      AppDialogs.showError(
-        context: context,
-        title: 'Access Denied',
-        message: 'Incorrect Master Password.',
-      );
-      return;
-    }
-
     setState(() => _loading = true);
 
     try {
-      final legacyId = 'fac_${name.replaceAll(' ', '').toLowerCase()}';
-      
-      // 1. Try Legacy ID first
-      debugPrint('[FS_TRACE] READ faculty_profiles/\$legacyId');
-      DocumentSnapshot<Map<String, dynamic>> legacySnap;
-      try {
-        legacySnap = await FirebaseFirestore.instance.collection('faculty_profiles').doc(legacyId).get();
-      } catch (e) {
-        debugPrint('[FS_ERROR]\ncollection: faculty_profiles\ndocument: \$legacyId\noperation: READ\nexception: \$e');
-        rethrow;
-      }
-      
-      String uidToUse;
-      Map<String, dynamic> profileData = {};
-      bool isNew = false;
-
-      if (legacySnap.exists) {
-        uidToUse = legacyId;
-        profileData = legacySnap.data()!;
-      } else {
-        // 2. Try querying by name for migrated profiles
-        debugPrint('[FS_TRACE] READ faculty_profiles where name == \$name');
-        QuerySnapshot<Map<String, dynamic>> querySnap;
-        try {
-          querySnap = await FirebaseFirestore.instance.collection('faculty_profiles').where('name', isEqualTo: name).get();
-        } catch (e) {
-          debugPrint('[FS_ERROR]\ncollection: faculty_profiles\ndocument: QUERY (name == \$name)\noperation: READ\nexception: \$e');
-          rethrow;
-        }
-        
-        if (querySnap.docs.isNotEmpty) {
-          if (querySnap.docs.length > 1) {
-             throw Exception('Multiple profiles found for this name. Please contact admin.');
-          }
-          uidToUse = querySnap.docs.first.id;
-          profileData = querySnap.docs.first.data();
-        } else {
-          // 3. Completely new profile
-          uidToUse = FirebaseFirestore.instance.collection('faculty_profiles').doc().id;
-          isNew = true;
-        }
-      }
-
-      if (isNew) {
-        debugPrint('[FS_TRACE] WRITE faculty_profiles/\$uidToUse');
-        try {
-          await FirebaseFirestore.instance.collection('faculty_profiles').doc(uidToUse).set({
-            'name': name,
-            'createdAt': FieldValue.serverTimestamp(),
-          });
-        } catch (e) {
-          debugPrint('[FS_ERROR]\ncollection: faculty_profiles\ndocument: \$uidToUse\noperation: WRITE\nexception: \$e');
-          rethrow;
-        }
-      }
-
-      debugPrint('[FS_TRACE] WRITE users/\$uidToUse');
-      try {
-        await FirebaseFirestore.instance.collection('users').doc(uidToUse).set({
-          'role': 'FACULTY',
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-      } catch (e) {
-        debugPrint('[FS_ERROR]\ncollection: users\ndocument: \$uidToUse\noperation: WRITE\nexception: \$e');
-        rethrow;
-      }
-
-      await _finishLogin(
-        uidToUse, 
-        profileData['name'] ?? name, 
-        profileData['email'] ?? '', 
-        profileData: profileData
+      final needsSetup = await FacultyAuthService.elevateToFaculty(
+        name: name,
+        masterPassword: masterPwd,
       );
-      
+
+      if (!mounted) return;
+      HapticFeedback.mediumImpact();
+
+      if (needsSetup) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const FacultySetupWizard()),
+        );
+      } else {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const FacultyHomePage()),
+          (_) => false,
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       AppDialogs.showError(
         context: context,
         title: 'Authentication Failed',
-        message: e.toString(),
+        message: e.toString().replaceAll('Exception: ', ''),
       );
     } finally {
       if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _finishLogin(String uid, String name, String email, {Map<String, dynamic>? profileData}) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('has_logged_in', true);
-    
-    HapticFeedback.mediumImpact();
-    await AppSettings.saveRole(UserRole.faculty);
-    
-    final assignedDivisions = List<String>.from(profileData?['assignedDivisions'] ?? []);
-    final setupComplete = profileData?['setupComplete'] as bool? ?? false;
-    
-    if (setupComplete) {
-      await AppSettings.completeFacultySetup();
-    }
-
-    await AppSettings.saveFacultyDetails(
-      name: name,
-      email: email,
-      department: profileData?['department'] ?? '',
-      designation: profileData?['designation'] ?? '',
-      cabin: profileData?['cabin'] ?? '',
-      assignedDivisions: assignedDivisions,
-      id: uid,
-    );
-
-    // Explicitly re-initialize notifications so the new Faculty ID is captured
-    // Run this without awaiting to prevent Firebase Messaging from freezing the login UI on Web
-    NotificationService.reRegisterToken().catchError((e) {
-      debugPrint('Token registration error: $e');
-    });
-
-    if (!mounted) return;
-
-    if (!setupComplete) {
-      // First time setup
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const FacultySetupWizard()),
-      );
-    } else {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const FacultyHomePage()),
-        (_) => false,
-      );
     }
   }
 
@@ -241,25 +132,25 @@ class _FacultyAuthBottomSheetState extends State<FacultyAuthBottomSheet> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.x2l),
           const Text(
             'Faculty Portal',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             'Access your combined timetable and manage classes',
             style: TextStyle(fontSize: 15, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: AppSpacing.x3l),
           
           StaggeredListItem(index: 1, child: _buildFeatureRow(Icons.event_available_rounded, 'Consolidated Timetable', 'View classes across multiple divisions')),
           StaggeredListItem(index: 2, child: _buildFeatureRow(Icons.cancel_schedule_send_rounded, 'Manage Lectures', 'Cancel or add extra lectures')),
           StaggeredListItem(index: 3, child: _buildFeatureRow(Icons.campaign_rounded, 'Announcements', 'Send updates to your assigned divisions')),
           
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.x2l),
           StaggeredListItem(
             index: 4,
             child: AnimatedButton(
@@ -287,7 +178,7 @@ class _FacultyAuthBottomSheetState extends State<FacultyAuthBottomSheet> {
             ),
             child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 24),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: AppSpacing.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,7 +217,7 @@ class _FacultyAuthBottomSheetState extends State<FacultyAuthBottomSheet> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.x2l),
           Row(
             children: [
               AnimatedIconButton(
@@ -334,7 +225,7 @@ class _FacultyAuthBottomSheetState extends State<FacultyAuthBottomSheet> {
                 icon: const Icon(Icons.arrow_back_rounded),
                 padding: 0,
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: AppSpacing.lg),
               Container(
                 padding: EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
@@ -343,7 +234,7 @@ class _FacultyAuthBottomSheetState extends State<FacultyAuthBottomSheet> {
                 ),
                 child: Icon(Icons.school_rounded, color: Theme.of(context).colorScheme.primary),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: AppSpacing.lg),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -368,7 +259,7 @@ class _FacultyAuthBottomSheetState extends State<FacultyAuthBottomSheet> {
               decoration: _modernDecoration('Full Name', Icons.person_rounded),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           
           StaggeredListItem(
             index: 2,
@@ -378,7 +269,7 @@ class _FacultyAuthBottomSheetState extends State<FacultyAuthBottomSheet> {
               decoration: _modernDecoration('Master Password', Icons.admin_panel_settings_rounded),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.x2l),
 
           StaggeredListItem(
             index: 3,

@@ -145,7 +145,6 @@ async function dispatchNotification(payload) {
     logger_1.logger.info(`[FCM] Sending payload to topic ${topic}: ${JSON.stringify(message)}`);
     try {
         const messageId = await admin.messaging().send(message);
-        logger_1.logger.info(`[FCM_SEND] SUCCESS | Topic: ${topic} | Message ID: ${messageId} | Payload: ${JSON.stringify(message)}`);
     }
     catch (error) {
         logger_1.logger.error(`[FCM_SEND] FAILURE | Topic: ${topic} | Error Code: ${error.code} | Message: ${error.message}`);

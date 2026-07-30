@@ -5,9 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'services/pdf_timetable_import_service.dart';
+import 'services/network_service.dart';
 import 'pdf_import_preview_page.dart';
 import 'models/event_category.dart';
 import 'widgets/app_dialogs.dart';
+import 'services/crash_reporting_service.dart';
+import 'theme/theme.dart';
 
 class UploadTimetablePdfPage
     extends StatefulWidget {
@@ -32,6 +35,18 @@ class _UploadTimetablePdfPageState
   String? room;
 
   Future<void> _pickPdf() async {
+    final isOnline = await NetworkService.isOnline();
+    if (!isOnline) {
+      if (mounted) {
+        AppDialogs.showError(
+          context: context,
+          title: 'Network Required',
+          message: 'You must be online to import and process a timetable PDF.',
+        );
+      }
+      return;
+    }
+
     setState(() {
       loading = true;
     });
@@ -90,7 +105,10 @@ class _UploadTimetablePdfPageState
           ),
         ),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      if (!mounted) return;
+      CrashReportingService.logError(e, stackTrace, reason: 'PDF Import Failure');
+      
       setState(() {
         loading = false;
       });
@@ -105,100 +123,119 @@ class _UploadTimetablePdfPageState
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Upload Timetable (BETA)'),
         scrolledUnderElevation: 0,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.x2l),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
               'Import PDF (BETA)',
-              style: TextStyle(
+              style: TextStyle(fontFamily: 'Outfit', 
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: colorScheme.onSurface,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               'Upload the official college timetable PDF. We will automatically parse subjects, timings, and rooms.',
-              style: TextStyle(fontSize: 16, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7), height: 1.5),
+              style: TextStyle(fontFamily: 'Inter', 
+                fontSize: 16,
+                color: sem.onSurfaceMuted,
+                height: 1.5,
+              ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: AppSpacing.x3l),
             Expanded(
               child: Semantics(
                 button: true,
                 label: 'Upload Timetable PDF',
                 child: GestureDetector(
                   onTap: loading ? null : _pickPdf,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: loading ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(32),
-                    border: Border.all(
-                      color: loading ? Theme.of(context).dividerColor.withValues(alpha: 0.1) : Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
-                      width: 2,
-                      strokeAlign: BorderSide.strokeAlignOutside,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: loading ? (isDark ? sem.surfaceElevated : colorScheme.surface) : sem.surfaceTinted,
+                      borderRadius: BorderRadius.circular(AppRadius.x2l),
+                      border: Border.all(
+                        color: loading ? sem.borderSubtle : colorScheme.primary.withValues(alpha: 0.3),
+                        width: 2,
+                        strokeAlign: BorderSide.strokeAlignOutside,
+                      ),
                     ),
-                  ),
-                  child: Center(
-                    child: loading
-                        ? Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
-                              const SizedBox(height: 24),
-                              Text('Extracting data...', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600, fontSize: 16)),
-                            ],
-                          )
-                        : Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
+                    child: Center(
+                      child: loading
+                          ? Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircularProgressIndicator(color: colorScheme.primary),
+                                const SizedBox(height: AppSpacing.x2l),
+                                Text(
+                                  'Extracting data...',
+                                  style: TextStyle(fontFamily: 'Inter', 
+                                    color: colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
                                 Container(
-                                  padding: const EdgeInsets.all(24),
+                                  padding: const EdgeInsets.all(AppSpacing.x2l),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.surface,
+                                    color: isDark ? sem.surfaceElevated2 : colorScheme.surface,
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                                        color: colorScheme.primary.withValues(alpha: 0.15),
                                         blurRadius: 24,
                                         offset: const Offset(0, 8),
                                       )
                                     ],
                                   ),
-                                  child: Icon(Icons.cloud_upload_rounded, size: 64, color: Theme.of(context).colorScheme.primary),
+                                  child: Icon(
+                                    Icons.cloud_upload_rounded,
+                                    size: 64,
+                                    color: colorScheme.primary,
+                                  ),
                                 ),
-                              const SizedBox(height: 24),
-                              Text(
-                                'Tap to select PDF',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w700,
-                                  color: Theme.of(context).colorScheme.primary,
+                                const SizedBox(height: AppSpacing.x2l),
+                                Text(
+                                  'Tap to select PDF',
+                                  style: TextStyle(fontFamily: 'Outfit', 
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                    color: colorScheme.primary,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Supports standard NMIMS format',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
-                                  fontWeight: FontWeight.w500,
+                                const SizedBox(height: AppSpacing.sm),
+                                Text(
+                                  'Supports standard NMIMS format',
+                                  style: TextStyle(fontFamily: 'Inter', 
+                                    fontSize: 14,
+                                    color: colorScheme.primary.withValues(alpha: 0.7),
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
+                              ],
+                            ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
         ),
       ),
     );

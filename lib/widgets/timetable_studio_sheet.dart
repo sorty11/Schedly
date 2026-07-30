@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../theme/theme.dart';
@@ -12,6 +11,8 @@ import '../user_roles.dart';
 import '../services/history_service.dart';
 import '../services/timetable_event_service.dart';
 import 'app_dialogs.dart';
+import 'schedly_text_field.dart';
+import 'schedly_bottom_sheet.dart';
 
 class TimetableStudioSheet extends StatefulWidget {
   final String division;
@@ -308,7 +309,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Text(
         label.toUpperCase(),
-        style: GoogleFonts.inter(
+        style: TextStyle(fontFamily: 'Inter', 
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: 1.0,
@@ -328,327 +329,260 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? sem.surfaceElevated : colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.x2l)),
-        ),
+      child: SchedlyBottomSheet(
+        title: isEditing ? 'Edit Lecture' : 'Add Lecture',
+        subtitle: isEditing ? widget.existingEntry!.displaySubject : null,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.lg),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Drag handle ────────────────────────────────────────────────
+            // ── Section: Day ─────────────────────────────────────────
+            _buildSectionLabel('Day'),
+            _DayPillSelector(
+              days: _days,
+              selected: _selectedDay,
+              onSelected: (d) => setState(() => _selectedDay = d),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+
+            // ── Section: Lecture Details ──────────────────────────────
+            _buildSectionLabel('Lecture Details'),
+
+            // Subject autocomplete
+            Autocomplete<String>(
+              optionsBuilder: (textEditingValue) {
+                if (textEditingValue.text.isEmpty) return _availableSubjects;
+                return _availableSubjects.where((option) =>
+                    option.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+              },
+              fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                if (controller.text.isEmpty && _subjectController.text.isNotEmpty) {
+                  controller.text = _subjectController.text;
+                }
+                controller.addListener(() => _subjectController.text = controller.text);
+                _subjectFocusNode = focusNode;
+                return SchedlyTextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  labelText: 'Subject / Course Code',
+                  prefixIcon: Icons.book_rounded,
+                );
+              },
+            ),
             const SizedBox(height: AppSpacing.md),
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: sem.borderSubtle,
-                  borderRadius: BorderRadius.circular(AppRadius.full),
+
+            // Batch + Room
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _batch,
+                    decoration: InputDecoration(
+                      labelText: 'Batch',
+                      prefixIcon: Icon(Icons.groups_rounded, size: 20, color: sem.onSurfaceMuted),
+                      fillColor: sem.surfaceElevated2,
+                      filled: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(color: sem.borderFocus, width: 1.5),
+                      ),
+                    ),
+                    isExpanded: true,
+                    items: _batchOptions.map((b) => DropdownMenuItem(value: b, child: Text(b, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (val) => setState(() => _batch = val!),
+                  ),
                 ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Autocomplete<String>(
+                    optionsBuilder: (tv) {
+                      if (tv.text.isEmpty) return _availableRooms;
+                      return _availableRooms.where((option) =>
+                          option.toLowerCase().contains(tv.text.toLowerCase()));
+                    },
+                    fieldViewBuilder: (context, controller, focusNode, _) {
+                      if (controller.text.isEmpty && _roomController.text.isNotEmpty) {
+                        controller.text = _roomController.text;
+                      }
+                      controller.addListener(() => _roomController.text = controller.text);
+                      return SchedlyTextField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        labelText: 'Room',
+                        prefixIcon: Icons.room_rounded,
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+
+            // Lecture type chips
+            Text(
+              'Type',
+              style: TextStyle(fontFamily: 'Inter', 
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: sem.onSurfaceMuted,
               ),
             ),
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                _buildTypeChip('Theory', EventCategory.academic, Icons.auto_stories_rounded),
+                _buildTypeChip('Lab', EventCategory.academic, Icons.science_rounded),
+                _buildTypeChip('Tutorial', EventCategory.academic, Icons.school_rounded),
+                _buildTypeChip('Event', EventCategory.event, Icons.celebration_rounded),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
 
-            // ── Header ─────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
-              child: Row(
+            // ── Section: Timing ────────────────────────────────────────
+            _buildSectionLabel('Timing'),
+            Row(
+              children: [
+                Expanded(
+                  child: _TimePicker(
+                    label: 'Start',
+                    time: _formatTime(_startTime),
+                    onTap: _selectStartTime,
+                    isDark: isDark,
+                    sem: sem,
+                    colorScheme: colorScheme,
+                    isStart: true,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                  child: Column(
+                    children: [
+                      Icon(Icons.arrow_forward_rounded, size: 18, color: sem.onSurfaceMuted),
+                      if (_durationLabel.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          _durationLabel,
+                          style: TextStyle(fontFamily: 'Inter', 
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: sem.onSurfaceMuted,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: _TimePicker(
+                    label: 'End',
+                    time: _formatTime(_endTime),
+                    onTap: _selectEndTime,
+                    isDark: isDark,
+                    sem: sem,
+                    colorScheme: colorScheme,
+                    isStart: false,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
+
+            // ── Section: Options ──────────────────────────────────────
+            _buildSectionLabel('Options'),
+            Container(
+              decoration: BoxDecoration(
+                color: sem.surfaceElevated2,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                border: Border.all(color: sem.borderSubtle),
+              ),
+              child: SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.xs,
+                ),
+                title: Text(
+                  'Repeat weekly',
+                  style: TextStyle(fontFamily: 'Inter', 
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: Text(
+                  'Lecture appears every week on this day',
+                  style: TextStyle(fontFamily: 'Inter', 
+                    fontSize: 12,
+                    color: sem.onSurfaceMuted,
+                  ),
+                ),
+                value: _repeatWeekly,
+                onChanged: (val) => setState(() => _repeatWeekly = val),
+                activeColor: colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x2l),
+
+            // ── Action Buttons ────────────────────────────────────────
+            if (isEditing && isCR)
+              Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                    ),
-                    child: Icon(
-                      isEditing ? Icons.edit_calendar_rounded : Icons.add_box_rounded,
-                      color: colorScheme.primary,
-                      size: 20,
+                  // Delete button (icon only, outlined)
+                  SizedBox(
+                    height: 52,
+                    child: OutlinedButton(
+                      onPressed: _isLoading ? null : _confirmDelete,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: colorScheme.error,
+                        side: BorderSide(color: colorScheme.error.withValues(alpha: 0.5)),
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                        ),
+                      ),
+                      child: const Icon(Icons.delete_rounded, size: 20),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          isEditing ? 'Edit Lecture' : 'Add Lecture',
-                          style: GoogleFonts.outfit(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        if (isEditing)
-                          Text(
-                            widget.existingEntry!.displaySubject,
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              color: sem.onSurfaceMuted,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                      ],
+                    child: _ActionButton(
+                      label: 'Save Changes',
+                      isLoading: _isLoading,
+                      onPressed: () => _save(keepOpen: false),
+                    ),
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: _ActionButton(
+                      label: 'Save & Add Next',
+                      isLoading: _isLoading,
+                      isFilled: false,
+                      onPressed: () => _save(keepOpen: true),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: _ActionButton(
+                      label: 'Save & Close',
+                      isLoading: _isLoading,
+                      onPressed: () => _save(keepOpen: false),
                     ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-
-            // ── Scrollable body ────────────────────────────────────────────
-            Flexible(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // ── Section: Day ─────────────────────────────────────────
-                    _buildSectionLabel('Day'),
-                    _DayPillSelector(
-                      days: _days,
-                      selected: _selectedDay,
-                      onSelected: (d) => setState(() => _selectedDay = d),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // ── Section: Lecture Details ──────────────────────────────
-                    _buildSectionLabel('Lecture Details'),
-
-                    // Subject autocomplete
-                    Autocomplete<String>(
-                      optionsBuilder: (textEditingValue) {
-                        if (textEditingValue.text.isEmpty) return _availableSubjects;
-                        return _availableSubjects.where((option) =>
-                            option.toLowerCase().contains(textEditingValue.text.toLowerCase()));
-                      },
-                      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-                        if (controller.text.isEmpty && _subjectController.text.isNotEmpty) {
-                          controller.text = _subjectController.text;
-                        }
-                        controller.addListener(() => _subjectController.text = controller.text);
-                        _subjectFocusNode = focusNode;
-                        return TextFormField(
-                          controller: controller,
-                          focusNode: focusNode,
-                          decoration: InputDecoration(
-                            labelText: 'Subject / Course Code',
-                            prefixIcon: Icon(Icons.book_rounded, size: 20, color: sem.onSurfaceMuted),
-                            fillColor: isDark ? sem.surfaceElevated2 : const Color(0xFFF8F8FC),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    // Batch + Room
-                    Row(
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: _batch,
-                            decoration: InputDecoration(
-                              labelText: 'Batch',
-                              prefixIcon: Icon(Icons.groups_rounded, size: 20, color: sem.onSurfaceMuted),
-                              fillColor: isDark ? sem.surfaceElevated2 : const Color(0xFFF8F8FC),
-                            ),
-                            isExpanded: true,
-                            items: _batchOptions.map((b) => DropdownMenuItem(value: b, child: Text(b, overflow: TextOverflow.ellipsis))).toList(),
-                            onChanged: (val) => setState(() => _batch = val!),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: Autocomplete<String>(
-                            optionsBuilder: (tv) {
-                              if (tv.text.isEmpty) return _availableRooms;
-                              return _availableRooms.where((option) =>
-                                  option.toLowerCase().contains(tv.text.toLowerCase()));
-                            },
-                            fieldViewBuilder: (context, controller, focusNode, _) {
-                              if (controller.text.isEmpty && _roomController.text.isNotEmpty) {
-                                controller.text = _roomController.text;
-                              }
-                              controller.addListener(() => _roomController.text = controller.text);
-                              return TextFormField(
-                                controller: controller,
-                                focusNode: focusNode,
-                                decoration: InputDecoration(
-                                  labelText: 'Room',
-                                  prefixIcon: Icon(Icons.room_rounded, size: 20, color: sem.onSurfaceMuted),
-                                  fillColor: isDark ? sem.surfaceElevated2 : const Color(0xFFF8F8FC),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    // Lecture type chips
-                    Text(
-                      'Type',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: sem.onSurfaceMuted,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.sm,
-                      children: [
-                        _buildTypeChip('Theory', EventCategory.academic, Icons.auto_stories_rounded),
-                        _buildTypeChip('Lab', EventCategory.academic, Icons.science_rounded),
-                        _buildTypeChip('Tutorial', EventCategory.academic, Icons.school_rounded),
-                        _buildTypeChip('Event', EventCategory.event, Icons.celebration_rounded),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // ── Section: Timing ────────────────────────────────────────
-                    _buildSectionLabel('Timing'),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _TimePicker(
-                            label: 'Start',
-                            time: _formatTime(_startTime),
-                            onTap: _selectStartTime,
-                            isDark: isDark,
-                            sem: sem,
-                            colorScheme: colorScheme,
-                            isStart: true,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                          child: Column(
-                            children: [
-                              Icon(Icons.arrow_forward_rounded, size: 18, color: sem.onSurfaceMuted),
-                              if (_durationLabel.isNotEmpty) ...[
-                                const SizedBox(height: AppSpacing.xs),
-                                Text(
-                                  _durationLabel,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: sem.onSurfaceMuted,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: _TimePicker(
-                            label: 'End',
-                            time: _formatTime(_endTime),
-                            onTap: _selectEndTime,
-                            isDark: isDark,
-                            sem: sem,
-                            colorScheme: colorScheme,
-                            isStart: false,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // ── Section: Options ──────────────────────────────────────
-                    _buildSectionLabel('Options'),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: isDark ? sem.surfaceElevated2 : const Color(0xFFF8F8FC),
-                        borderRadius: BorderRadius.circular(AppRadius.lg),
-                        border: Border.all(color: sem.borderSubtle),
-                      ),
-                      child: SwitchListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
-                          vertical: AppSpacing.xs,
-                        ),
-                        title: Text(
-                          'Repeat weekly',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        subtitle: Text(
-                          'Lecture appears every week on this day',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: sem.onSurfaceMuted,
-                          ),
-                        ),
-                        value: _repeatWeekly,
-                        onChanged: (val) => setState(() => _repeatWeekly = val),
-                        activeColor: colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.x2l),
-
-                    // ── Action Buttons ────────────────────────────────────────
-                    if (isEditing && isCR)
-                      Row(
-                        children: [
-                          // Delete button (icon only, outlined)
-                          SizedBox(
-                            height: 52,
-                            child: OutlinedButton(
-                              onPressed: _isLoading ? null : _confirmDelete,
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: colorScheme.error,
-                                side: BorderSide(color: colorScheme.error.withValues(alpha: 0.5)),
-                                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                                ),
-                              ),
-                              child: const Icon(Icons.delete_rounded, size: 20),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: _ActionButton(
-                              label: 'Save Changes',
-                              isLoading: _isLoading,
-                              onPressed: () => _save(keepOpen: false),
-                            ),
-                          ),
-                        ],
-                      )
-                    else
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _ActionButton(
-                              label: 'Save & Add Next',
-                              isLoading: _isLoading,
-                              isFilled: false,
-                              onPressed: () => _save(keepOpen: true),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: _ActionButton(
-                              label: 'Save & Close',
-                              isLoading: _isLoading,
-                              onPressed: () => _save(keepOpen: false),
-                            ),
-                          ),
-                        ],
-                      ),
-                    const SizedBox(height: AppSpacing.x2l),
-                  ],
-                ),
-              ),
-            ),
+            const SizedBox(height: AppSpacing.x2l),
           ],
         ),
       ),
@@ -672,24 +606,24 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
           ),
           title: Text(
             'Delete Lecture?',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+            style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700),
             textAlign: TextAlign.center,
           ),
           content: Text(
             'This will permanently remove the lecture. Students and faculty will be notified.',
-            style: GoogleFonts.inter(fontSize: 14, height: 1.5),
+            style: TextStyle(fontFamily: 'Inter', fontSize: 14, height: 1.5),
             textAlign: TextAlign.center,
           ),
           actionsAlignment: MainAxisAlignment.center,
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              child: Text('Cancel', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
               style: FilledButton.styleFrom(backgroundColor: colorScheme.error),
-              child: Text('Delete', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+              child: Text('Delete', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700)),
             ),
           ],
         );
@@ -749,7 +683,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
         decoration: BoxDecoration(
           color: isSelected
               ? colorScheme.primary
-              : isDark ? sem.surfaceElevated2 : const Color(0xFFF0F0F8),
+              : sem.surfaceElevated2,
           borderRadius: BorderRadius.circular(AppRadius.full),
           border: Border.all(
             color: isSelected ? colorScheme.primary : sem.borderSubtle,
@@ -767,7 +701,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
             const SizedBox(width: AppSpacing.xs),
             Text(
               component,
-              style: GoogleFonts.inter(
+              style: TextStyle(fontFamily: 'Inter', 
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: isSelected ? Colors.white : colorScheme.onSurface,
@@ -825,7 +759,7 @@ class _DayPillSelector extends StatelessWidget {
                 ),
                 child: Text(
                   day.substring(0, 3),
-                  style: GoogleFonts.inter(
+                  style: TextStyle(fontFamily: 'Inter', 
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: isSelected ? Colors.white : colorScheme.onSurface,
@@ -890,7 +824,7 @@ class _TimePicker extends StatelessWidget {
                   const SizedBox(width: 4),
                   Text(
                     label,
-                    style: GoogleFonts.inter(
+                    style: TextStyle(fontFamily: 'Inter', 
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: sem.onSurfaceMuted,
@@ -901,7 +835,7 @@ class _TimePicker extends StatelessWidget {
               const SizedBox(height: AppSpacing.xs),
               Text(
                 time,
-                style: GoogleFonts.outfit(
+                style: TextStyle(fontFamily: 'Outfit', 
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                   color: colorScheme.onSurface,
@@ -910,7 +844,7 @@ class _TimePicker extends StatelessWidget {
               const SizedBox(height: AppSpacing.xs),
               Text(
                 'Tap to change',
-                style: GoogleFonts.inter(
+                style: TextStyle(fontFamily: 'Inter', 
                   fontSize: 10,
                   color: colorScheme.primary.withValues(alpha: 0.7),
                   fontWeight: FontWeight.w500,
@@ -952,7 +886,7 @@ class _ActionButton extends StatelessWidget {
           )
         : Text(
             label,
-            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+            style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w700),
           );
 
     final style = ButtonStyle(

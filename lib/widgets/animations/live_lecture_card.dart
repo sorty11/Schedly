@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../theme/theme.dart';
 
-/// A premium card for the currently active lecture.
-/// Shows a pulsing live dot, subject name, time, room,
-/// and a real-time elapsed progress bar.
+/// The currently-active lecture card.
+/// Clean, emphasized surface — not a gradient hero.
+/// Inspired by Google Calendar's current event presentation.
 class LiveLectureCard extends StatefulWidget {
   final String subject;
   final String time;
@@ -28,42 +27,13 @@ class LiveLectureCard extends StatefulWidget {
   State<LiveLectureCard> createState() => _LiveLectureCardState();
 }
 
-class _LiveLectureCardState extends State<LiveLectureCard>
-    with TickerProviderStateMixin {
-  late AnimationController _pulseController;
-  late AnimationController _hoverController;
-  late Animation<double> _pulseAnimation;
-  late Animation<double> _hoverScale;
-  late Animation<double> _hoverY;
-
+class _LiveLectureCardState extends State<LiveLectureCard> {
   Timer? _progressTimer;
   double _progressValue = 0.0;
 
   @override
   void initState() {
     super.initState();
-
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1600),
-    )..repeat(reverse: true);
-
-    _pulseAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOutSine),
-    );
-
-    _hoverController = AnimationController(
-      vsync: this,
-      duration: AppDuration.standard,
-    );
-
-    _hoverScale = Tween<double>(begin: 1.0, end: 1.015).animate(
-      CurvedAnimation(parent: _hoverController, curve: AppCurves.standard),
-    );
-    _hoverY = Tween<double>(begin: 0.0, end: -3.0).animate(
-      CurvedAnimation(parent: _hoverController, curve: AppCurves.standard),
-    );
-
     _updateProgress();
     _progressTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted) _updateProgress();
@@ -72,8 +42,6 @@ class _LiveLectureCardState extends State<LiveLectureCard>
 
   @override
   void dispose() {
-    _pulseController.dispose();
-    _hoverController.dispose();
     _progressTimer?.cancel();
     super.dispose();
   }
@@ -123,263 +91,201 @@ class _LiveLectureCardState extends State<LiveLectureCard>
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return MouseRegion(
-      cursor: widget.onTap != null
-          ? SystemMouseCursors.click
-          : SystemMouseCursors.basic,
-      onEnter: (_) => _hoverController.forward(),
-      onExit: (_) => _hoverController.reverse(),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedBuilder(
-          animation: Listenable.merge([_pulseController, _hoverController]),
-          builder: (context, child) {
-            return Transform(
-              transform: Matrix4.translationValues(0.0, _hoverY.value, 0.0)
-                ..multiply(Matrix4.diagonal3Values(_hoverScale.value, _hoverScale.value, 1.0)),
-              alignment: Alignment.center,
-              child: Container(
+    final cardBg = isDark ? colorScheme.surfaceContainerHighest : Colors.white;
+    final borderColor = isDark ? const Color(0xFF2E2E2E) : const Color(0xFFE5E7EB);
+
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: borderColor, width: 1),
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Left color strip (Google Calendar style)
+              Container(
+                width: 4,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppRadius.xl),
-                  gradient: LinearGradient(
-                    colors: isDark
-                        ? [
-                            const Color(0xFF2D2B6B),
-                            const Color(0xFF1E1B4B),
-                          ]
-                        : [
-                            colorScheme.primary,
-                            colorScheme.secondary,
-                          ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                  color: colorScheme.primary,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(AppRadius.lg),
+                    bottomLeft: Radius.circular(AppRadius.lg),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colorScheme.primary.withValues(
-                        alpha: isDark ? 0.3 : 0.35 + _hoverController.value * 0.1,
-                      ),
-                      blurRadius: 24 + _hoverController.value * 12,
-                      offset: const Offset(0, 8),
-                      spreadRadius: -2,
-                    ),
-                  ],
                 ),
-                child: Stack(
-                  children: [
-                    // Background decoration circle
-                    Positioned(
-                      right: -20,
-                      top: -20,
-                      child: Container(
-                        width: 160,
-                        height: 160,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.05),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      right: 60,
-                      bottom: -30,
-                      child: Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.04),
-                        ),
-                      ),
-                    ),
-
-                    Padding(
-                      padding: EdgeInsets.all(AppSpacing.x2l),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Status row — LIVE pill + time
+                      Row(
                         children: [
-                          // LIVE pill
-                          Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.md,
-                                  vertical: AppSpacing.xs + 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(AppRadius.full),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    AnimatedBuilder(
-                                      animation: _pulseAnimation,
-                                      builder: (context, child) => Opacity(
-                                        opacity: _pulseAnimation.value,
-                                        child: Container(
-                                          width: 7,
-                                          height: 7,
-                                          decoration: const BoxDecoration(
-                                            color: Color(0xFF4ADE80),
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: AppSpacing.sm - 2),
-                                    Text(
-                                      'IN PROGRESS',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 1.2,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: AppSpacing.lg),
-
-                          // Subject name
-                          Text(
-                            widget.subject,
-                            style: GoogleFonts.outfit(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              height: 1.1,
-                              letterSpacing: -0.5,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                              vertical: 2,
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-
-                          const SizedBox(height: AppSpacing.md),
-
-                          // Time + Room + Faculty
-                          Wrap(
-                            spacing: AppSpacing.sm,
-                            runSpacing: AppSpacing.sm,
-                            children: [
-                              _buildInfoChip(
-                                Icons.access_time_rounded,
-                                widget.time,
+                            decoration: BoxDecoration(
+                              color: sem.success.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                              border: Border.all(
+                                color: sem.success.withValues(alpha: 0.2),
+                                width: 1,
                               ),
-                              _buildInfoChip(
-                                Icons.room_rounded,
-                                'Room ${widget.room}',
-                              ),
-                              if (widget.facultyName != null && widget.facultyName!.isNotEmpty)
-                                GestureDetector(
-                                  onTap: widget.onFacultyTap,
-                                  child: _buildInfoChip(
-                                    Icons.person_rounded,
-                                    widget.facultyName!,
-                                    highlight: true,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    color: sem.success,
+                                    shape: BoxShape.circle,
                                   ),
                                 ),
-                            ],
+                                const SizedBox(width: 4),
+                                Text(
+                                  'LIVE',
+                                  style: TextStyle(fontFamily: 'Inter', 
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: sem.success,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-
-                          const SizedBox(height: AppSpacing.lg),
-
-                          // Progress bar
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          const Spacer(),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Lecture Progress',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white.withValues(alpha: 0.65),
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${(_progressValue * 100).round()}%',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
+                              Icon(
+                                Icons.access_time_rounded,
+                                size: 14,
+                                color: sem.onSurfaceMuted,
                               ),
-                              const SizedBox(height: AppSpacing.sm - 2),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(AppRadius.full),
-                                child: TweenAnimationBuilder<double>(
-                                  tween: Tween(begin: 0, end: _progressValue),
-                                  duration: const Duration(milliseconds: 800),
-                                  curve: AppCurves.standard,
-                                  builder: (context, value, child) {
-                                    return LinearProgressIndicator(
-                                      value: value,
-                                      minHeight: 6,
-                                      backgroundColor:
-                                          Colors.white.withValues(alpha: 0.2),
-                                      valueColor:
-                                          const AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
-                                      ),
-                                    );
-                                  },
+                              const SizedBox(width: 4),
+                              Text(
+                                widget.time,
+                                style: TextStyle(fontFamily: 'Inter', 
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: sem.onSurfaceMuted,
                                 ),
                               ),
                             ],
                           ),
                         ],
                       ),
-                    ),
-                  ],
+                      
+                      const SizedBox(height: AppSpacing.md),
+                      
+                      Text(
+                        widget.subject,
+                        style: TextStyle(fontFamily: 'Inter',  // Inter instead of Outfit for high density clarity
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface,
+                          height: 1.2,
+                          letterSpacing: -0.4,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      
+                      const SizedBox(height: AppSpacing.md),
+                      
+                      Row(
+                        children: [
+                          _MetaText(
+                            icon: Icons.room_rounded,
+                            label: widget.room,
+                            sem: sem,
+                          ),
+                          if (widget.facultyName != null && widget.facultyName!.isNotEmpty) ...[
+                            const SizedBox(width: AppSpacing.md),
+                            GestureDetector(
+                              onTap: widget.onFacultyTap,
+                              child: _MetaText(
+                                icon: Icons.person_outline_rounded,
+                                label: widget.facultyName!,
+                                sem: sem,
+                                isAccent: true,
+                                colorScheme: colorScheme,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      
+                      const SizedBox(height: AppSpacing.lg),
+                      
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(AppRadius.full),
+                        child: LinearProgressIndicator(
+                          value: _progressValue,
+                          minHeight: 4,
+                          backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
+                          valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            );
-          },
+            ],
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildInfoChip(IconData icon, String label, {bool highlight = false}) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm - 2,
-      ),
-      decoration: BoxDecoration(
-        color: highlight ? Colors.white.withValues(alpha: 0.25) : Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(AppRadius.full),
-        border: highlight ? Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1) : null,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: Colors.white.withValues(alpha: 0.85)),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-              decoration: highlight ? TextDecoration.underline : null,
-              decorationColor: Colors.white.withValues(alpha: 0.5),
-            ),
+class _MetaText extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final AppSemanticColors sem;
+  final bool isAccent;
+  final ColorScheme? colorScheme;
+
+  const _MetaText({
+    required this.icon,
+    required this.label,
+    required this.sem,
+    this.isAccent = false,
+    this.colorScheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final fgColor = isAccent && colorScheme != null
+        ? colorScheme!.primary
+        : sem.onSurfaceMuted;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: fgColor),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(fontFamily: 'Inter', 
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: fgColor,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

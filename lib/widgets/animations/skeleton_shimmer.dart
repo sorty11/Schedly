@@ -18,7 +18,7 @@ class _SkeletonShimmerState extends State<SkeletonShimmer>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 2500), // Slower, more elegant sweep
     )..repeat();
   }
 
@@ -39,12 +39,12 @@ class _SkeletonShimmerState extends State<SkeletonShimmer>
             return LinearGradient(
               colors: [
                 Colors.white.withOpacity(0.0),
-                Colors.white.withOpacity(0.2),
+                Colors.white.withOpacity(0.12), // Softer peak
                 Colors.white.withOpacity(0.0),
               ],
               stops: const [0.0, 0.5, 1.0],
-              begin: Alignment(-1.0 + (_controller.value * 3), 0),
-              end: Alignment(0.0 + (_controller.value * 3), 0),
+              begin: Alignment(-1.5 + (_controller.value * 3.5), 0),
+              end: Alignment(-0.5 + (_controller.value * 3.5), 0),
             ).createShader(bounds);
           },
           child: child,

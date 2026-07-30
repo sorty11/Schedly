@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:schedly/theme/theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'nmims_structure.dart';
 import 'cr_setup_wizard.dart';
@@ -16,6 +17,8 @@ import 'widgets/animations/staggered_list_item.dart';
 import 'widgets/animations/animated_button.dart';
 import 'widgets/animations/animated_icon_button.dart';
 import 'widgets/app_dialogs.dart';
+import 'package:schedly/exceptions.dart';
+import '../services/network_service.dart';
 
 class CRAuthBottomSheet extends StatefulWidget {
   final String? initialYear;
@@ -68,7 +71,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
     
     try {
       _branch = NMIMSStructure.getBranchForDivision(_selectedDivision!);
-      if (_branch == null) throw Exception('Invalid division mapped');
+      if (_branch == null) throw AppException('Invalid division mapped');
       
       _sectionId = '${_selectedYear!.replaceAll(' ', '')}_${_branch!.replaceAll(' ', '')}_$_selectedDivision';
       
@@ -110,6 +113,18 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
   }
 
   Future<void> _authenticate() async {
+    final isOnline = await NetworkService.isOnline();
+    if (!isOnline) {
+      if (mounted) {
+        AppDialogs.showError(
+          context: context,
+          title: 'Network Required',
+          message: 'You must be online to authenticate as a CR.',
+        );
+      }
+      return;
+    }
+
     final pwd = _passwordController.text.trim();
     if (pwd.isEmpty) {
       AppDialogs.showError(
@@ -124,19 +139,19 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
 
     try {
       if (_sectionExists) {
-        // Authenticate against existing section's CR password
-        final docSnap = await FirebaseFirestore.instance.collection('sections').doc(_sectionId).get();
-        final storedPassword = docSnap.data()?['crPassword'] as String?;
-        
-        if (storedPassword != pwd) {
-          throw Exception('Incorrect CR Password for this section');
-        }
+        // Authenticate using Cloud Function
+        final callable = FirebaseFunctions.instance.httpsCallable('verifyCRRole');
+        await callable.call({
+          'sectionId': _sectionId,
+          'password': pwd,
+        });
         
         if (!mounted) return;
         
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('has_logged_in', true);
-        await prefs.setString('selected_division', _sectionId!); await NotificationService.updateDivisionSubscription(_sectionId!);
+        await prefs.setString('selected_division', _sectionId!); 
+        await NotificationService.updateDivisionSubscription(_sectionId!);
         HapticFeedback.mediumImpact();
         
         await AppSettings.saveRole(UserRole.cr);
@@ -149,15 +164,6 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
           secId: _sectionId!,
         );
 
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-            'role': 'CR',
-            'division': _sectionId,
-            'updatedAt': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
-        }
-
         if (!mounted) return;
         Navigator.pushAndRemoveUntil(
           context,
@@ -168,8 +174,8 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
         );
       } else {
         // Master password to create a new section
-        if (pwd != 'ADMIN123') {
-          throw Exception('Incorrect Master Password. You are not authorized to create new sections.');
+        if (pwd != 'schedly11') {
+          throw AppException('Incorrect Master Password. You are not authorized to create new sections.');
         }
         
         if (!mounted) return;
@@ -187,6 +193,13 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
           ),
         );
       }
+    } on FirebaseFunctionsException catch (e) {
+      if (!mounted) return;
+      AppDialogs.showError(
+        context: context,
+        title: 'Authentication Failed',
+        message: e.message ?? 'An error occurred.',
+      );
     } catch (e) {
       if (!mounted) return;
       AppDialogs.showError(
@@ -214,7 +227,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
             ),
             child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 24),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: AppSpacing.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -253,19 +266,19 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.x2l),
           const Text(
             'Representative Portal',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             'Setup and manage your academic section',
             style: TextStyle(fontSize: 15, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: AppSpacing.x3l),
           
           StaggeredListItem(index: 1, child: _buildFeatureRow(Icons.add_business_rounded, 'Create Academic Section', 'Initialize your class space')),
           StaggeredListItem(index: 2, child: _buildFeatureRow(Icons.picture_as_pdf_rounded, 'Upload Official Timetable', 'Auto-parse college PDF')),
@@ -273,7 +286,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
           StaggeredListItem(index: 4, child: _buildFeatureRow(Icons.campaign_rounded, 'Publish Announcements', 'Broadcast updates instantly')),
           StaggeredListItem(index: 5, child: _buildFeatureRow(Icons.analytics_rounded, 'View Analytics', 'Monitor lecture conduct stats')),
           
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.x2l),
           StaggeredListItem(
             index: 6,
             child: AnimatedButton(
@@ -323,7 +336,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.x2l),
           Row(
             children: [
               AnimatedIconButton(
@@ -331,7 +344,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
                 icon: const Icon(Icons.arrow_back_rounded),
                 padding: 0,
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: AppSpacing.lg),
               Container(
                 padding: EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
@@ -340,7 +353,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
                 ),
                 child: Icon(Icons.admin_panel_settings_rounded, color: Theme.of(context).colorScheme.primary),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: AppSpacing.lg),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -358,7 +371,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.x2l),
           
           StaggeredListItem(
             index: 1,
@@ -378,7 +391,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
               },
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           
           StaggeredListItem(
             index: 2,
@@ -403,7 +416,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
               },
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           
           if (_checkingSection)
             const Center(child: CircularProgressIndicator())
@@ -424,7 +437,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
                       _sectionExists ? Icons.check_circle_rounded : Icons.add_circle_rounded,
                       color: _sectionExists ? Colors.green : Colors.orange,
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Text(
                         _sectionExists 
@@ -440,7 +453,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             StaggeredListItem(
               index: 4,
               child: TextField(
@@ -452,7 +465,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.x2l),
             StaggeredListItem(
               index: 5,
               child: AnimatedButton(

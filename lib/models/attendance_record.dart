@@ -26,19 +26,20 @@ class AttendanceRecord {
   int get total => present + absent; // cancelled doesn't count toward total
   double get percentage => total == 0 ? 0 : present / total;
 
-  // How many more lectures can be missed while staying ≥75%
+  // How many more lectures can be missed while staying ≥80%
   int get canMiss {
-    // present / (total + x) >= 0.75  →  x <= (present/0.75) - total
-    final maxTotal = (present / 0.75).floor();
+    if (percentage < 0.80) return 0;
+    // present / (total + x) >= 0.80  →  x <= (present/0.80) - total
+    final maxTotal = (present / 0.80).floor();
     final canMissVal = maxTotal - total;
     return canMissVal < 0 ? 0 : canMissVal;
   }
 
-  // How many must be attended to recover to ≥75%
+  // How many must be attended to recover to ≥80%
   int get needToAttend {
-    if (percentage >= 0.75) return 0;
-    // (present + x) / (total + x) >= 0.75  →  x >= (0.75*total - present) / 0.25
-    final need = ((0.75 * total - present) / 0.25).ceil();
+    if (percentage >= 0.80) return 0;
+    // (present + x) / (total + x) >= 0.80  →  x >= (0.80*total - present) / 0.20
+    final need = ((0.80 * total - present) / 0.20).ceil();
     return need < 0 ? 0 : need;
   }
 
