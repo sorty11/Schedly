@@ -10,6 +10,7 @@ import '../app_settings.dart';
 import '../theme/theme.dart';
 import '../onboarding_flow.dart';
 import '../widgets/animations/animated_button.dart';
+import '../widgets/skeleton_loader.dart';
 import '../timetable_manager.dart';
 import '../main.dart';
 import '../services/notification_service.dart';
@@ -725,7 +726,14 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? ListView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              children: [
+                SkeletonLoader(width: double.infinity, height: 200, borderRadius: AppRadius.xl, margin: const EdgeInsets.only(bottom: AppSpacing.lg)),
+                SkeletonLoader(width: double.infinity, height: 80, borderRadius: AppRadius.xl, margin: const EdgeInsets.only(bottom: AppSpacing.lg)),
+                SkeletonLoader(width: double.infinity, height: 80, borderRadius: AppRadius.xl),
+              ],
+            )
           : Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 800),
@@ -1304,7 +1312,16 @@ class _AddDivisionSheetState extends State<_AddDivisionSheet> {
           ),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: 5,
+                    itemBuilder: (ctx, i) => SkeletonLoader(
+                      width: double.infinity,
+                      height: 56,
+                      borderRadius: AppRadius.md,
+                      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    ),
+                  )
                 : filtered.isEmpty
                     ? Center(child: Text('No divisions found.', style: TextStyle(color: sem.onSurfaceMuted)))
                     : ListView.builder(
@@ -1442,7 +1459,16 @@ class _ManageSubjectsSheetState extends State<_ManageSubjectsSheet> {
           ),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: 5,
+                    itemBuilder: (ctx, i) => SkeletonLoader(
+                      width: double.infinity,
+                      height: 56,
+                      borderRadius: AppRadius.md,
+                      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    ),
+                  )
                 : filtered.isEmpty
                     ? Center(child: Text('No subjects found in timetable.', style: TextStyle(color: sem.onSurfaceMuted)))
                     : ListView.builder(

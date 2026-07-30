@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -19,6 +20,7 @@ import 'services/pdf_attendance_import_service.dart';
 import 'pdf_attendance_preview_page.dart';
 import 'models/attendance_log.dart';
 import 'widgets/app_dialogs.dart';
+import 'widgets/skeleton_loader.dart';
 
 class AttendancePage extends StatefulWidget {
   final String division;
@@ -46,6 +48,27 @@ class _AttendancePageState extends State<AttendancePage> {
   }
 
   Future<void> _handlePdfImport() async {
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Beta Feature Warning'),
+        content: const Text('PDF Import is currently in Beta. It may extract incorrect subjects (like "CE C" instead of the actual subject name). We recommend NOT using this feature until it is fully stable.\n\nAre you sure you want to proceed?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(c, true),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+            child: const Text('Proceed Anyway'),
+          ),
+        ],
+      ),
+    );
+
+    if (proceed != true) return;
+
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -71,16 +94,15 @@ class _AttendancePageState extends State<AttendancePage> {
         builder: (c) => const Center(child: CircularProgressIndicator()),
       );
 
-      final logs = await PdfAttendanceImportService.parseAttendancePdf(
+      final importResult = await PdfAttendanceImportService.parseAttendancePdf(
         pdfBytes: bytes,
         division: widget.division,
-        analytics: widget.allAnalytics,
       );
 
       if (!mounted) return;
       Navigator.pop(context); // hide loading
 
-      if (logs.isEmpty) {
+      if (importResult.logs.isEmpty) {
         AppDialogs.showError(context: context, title: 'No Data', message: 'Could not find any readable attendance logs in this PDF.');
         return;
       }
@@ -88,13 +110,64 @@ class _AttendancePageState extends State<AttendancePage> {
       await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PdfAttendancePreviewPage(logs: logs, division: widget.division),
+          builder: (context) => PdfAttendancePreviewPage(importResult: importResult, division: widget.division),
         ),
       );
     } catch (e) {
       if (mounted) {
         Navigator.pop(context); // hide loading
         AppDialogs.showError(context: context, title: 'Import Failed', message: e.toString());
+      }
+    }
+  }
+
+  Future<void> _undoImport() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Undo PDF Import'),
+        content: const Text('This will delete all attendance records that were imported via PDF. Your manually marked attendance will not be affected.\n\nProceed?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(c, true),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+            child: const Text('Undo'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (c) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('sections')
+          .doc(widget.division)
+          .collection('attendance_logs')
+          .where('source', isEqualTo: 'pdf_import')
+          .get();
+
+      final batch = FirebaseFirestore.instance.batch();
+      for (final doc in snap.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+
+      if (mounted) {
+        Navigator.pop(context);
+        AppDialogs.showSnackBar(context: context, message: 'Successfully undid PDF imports.');
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        AppDialogs.showError(context: context, title: 'Error', message: 'Could not undo import: $e');
       }
     }
   }
@@ -121,25 +194,43 @@ class _AttendancePageState extends State<AttendancePage> {
 
             // Build one entry per unique subject+component from analytics
             final subjects = <_SubjectEntry>[];
+            final mappedKeys = <String>{};
+            
             for (final sa in widget.allAnalytics) {
               final byComponent = <String, List<BatchAnalytics>>{};
               for (final b in sa.batches) {
                 byComponent.putIfAbsent(b.component, () => []).add(b);
               }
               if (byComponent.isEmpty) {
+                final key = '${sa.subject}_Theory';
+                mappedKeys.add(key);
                 subjects.add(_SubjectEntry(
                   subjectCode: sa.subject,
                   component: 'Theory',
-                  record: records['${sa.subject}_Theory'],
+                  record: records[key],
                 ));
               } else {
                 for (final comp in byComponent.keys) {
+                  final key = '${sa.subject}_$comp';
+                  mappedKeys.add(key);
                   subjects.add(_SubjectEntry(
                     subjectCode: sa.subject,
                     component: comp,
-                    record: records['${sa.subject}_$comp'],
+                    record: records[key],
                   ));
                 }
+              }
+            }
+            
+            // Add imported attendance records that are not in the timetable
+            for (final key in records.keys) {
+              if (!mappedKeys.contains(key)) {
+                final r = records[key]!;
+                subjects.add(_SubjectEntry(
+                  subjectCode: r.subjectCode,
+                  component: r.component,
+                  record: r,
+                ));
               }
             }
 
@@ -165,6 +256,11 @@ class _AttendancePageState extends State<AttendancePage> {
                     style: Theme.of(context).appBarTheme.titleTextStyle,
                   ),
                   actions: [
+                    IconButton(
+                      icon: const Icon(Icons.undo_rounded),
+                      tooltip: 'Undo PDF Import',
+                      onPressed: _undoImport,
+                    ),
                     IconButton(
                       icon: const Icon(Icons.picture_as_pdf_rounded),
                       tooltip: 'Import PDF',
@@ -205,7 +301,17 @@ class _AttendancePageState extends State<AttendancePage> {
                     future: _todayLecturesFuture,
                     builder: (context, todaySnap) {
                       if (todaySnap.connectionState == ConnectionState.waiting) {
-                        return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
+                          child: Column(
+                            children: List.generate(2, (i) => SkeletonLoader(
+                              width: double.infinity,
+                              height: 100,
+                              borderRadius: AppRadius.lg,
+                              margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                            )),
+                          ),
+                        );
                       }
                       
                       final entries = todaySnap.data ?? [];
@@ -292,7 +398,17 @@ class _AttendancePageState extends State<AttendancePage> {
                     stream: AttendanceService.streamLogs(),
                     builder: (context, logsSnap) {
                       if (logsSnap.connectionState == ConnectionState.waiting) {
-                        return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
+                          child: Column(
+                            children: List.generate(3, (i) => SkeletonLoader(
+                              width: double.infinity,
+                              height: 60,
+                              borderRadius: AppRadius.lg,
+                              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                            )),
+                          ),
+                        );
                       }
                       final logs = logsSnap.data ?? [];
                       if (logs.isEmpty) {
@@ -322,7 +438,7 @@ class _AttendancePageState extends State<AttendancePage> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 class _TodayLectureMarkCard extends StatefulWidget {
   final TimetableEntry entry;
   final String division;
@@ -471,7 +587,7 @@ class _TodayLectureMarkCardState extends State<_TodayLectureMarkCard> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 class _SubjectEntry {
   final String subjectCode;
   final String component;
@@ -484,7 +600,7 @@ class _SubjectEntry {
   });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 class _OverallCard extends StatelessWidget {
   final double percentage;
   final int present;
@@ -577,10 +693,10 @@ class _OverallCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Text(
               pct >= 75
-                  ? 'You\'re on track ✓'
+                  ? 'You\'re on track ?'
                   : pct >= 65
-                      ? 'Borderline — attend consistently'
-                      : 'Below threshold — needs recovery',
+                      ? 'Borderline � attend consistently'
+                      : 'Below threshold � needs recovery',
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -594,7 +710,7 @@ class _OverallCard extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 class _SubjectAttendanceCard extends StatelessWidget {
   final _SubjectEntry entry;
   final String division;
@@ -662,7 +778,7 @@ class _SubjectAttendanceCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppRadius.full),
                 ),
                 child: Text(
-                  total == 0 ? '—' : '${(pct * 100).round()}%',
+                  total == 0 ? '�' : '${(pct * 100).round()}%',
                   style: GoogleFonts.outfit(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
@@ -703,7 +819,7 @@ class _SubjectAttendanceCard extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 class _Chip extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -727,7 +843,7 @@ class _Chip extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 class _AlertBadge extends StatelessWidget {
   final AttendanceRecord record;
 
@@ -794,7 +910,7 @@ class _MarkButton extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 class _TimelineLogCard extends StatelessWidget {
   final AttendanceLog log;
 
@@ -826,19 +942,19 @@ class _TimelineLogCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  log.component == 'Theory' ? log.subjectCode : '\${log.subjectCode} \${log.component}',
+                  log.component == 'Theory' ? log.subjectCode : '${log.subjectCode} ${log.component}',
                   style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '\${log.date.day}/\${log.date.month}/\${log.date.year} • \${TimetableManager.formatTime(log.startTime, log.endTime)}',
+                  '${log.date.day}/${log.date.month}/${log.date.year} � ${TimetableManager.formatTime(log.startTime, log.endTime)}',
                   style: GoogleFonts.inter(fontSize: 11, color: sem.onSurfaceMuted),
                 ),
               ],
             ),
           ),
-          if (log.confidence != MatchConfidence.perfect && log.confidence != MatchConfidence.normalized)
+          if (log.confidence != MatchConfidence.exact && log.confidence != MatchConfidence.normalized)
             Icon(Icons.warning_amber_rounded, color: sem.warning, size: 16),
         ],
       ),

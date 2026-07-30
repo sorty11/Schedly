@@ -1,9 +1,11 @@
 import '../services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'widgets/animations/floating_empty_state.dart';
+import 'widgets/schedly_card.dart';
 
 import 'home_page.dart';
 import 'app_settings.dart';
@@ -61,35 +63,34 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
     setState(() => loading = true);
 
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('sections')
-          .doc(widget.division)
-          .get();
-
+      final doc = await FirebaseFirestore.instance.collection('sections').doc(widget.division).get();
       if (!doc.exists) {
         throw AppException('Role configuration not found');
       }
-
       final data = doc.data()!;
       final savedPassword = widget.role == 'CR' ? data['crPassword'] : data['srPassword'];
-
-      if (passwordController.text != savedPassword) {
+      if (passwordController.text.trim() != savedPassword) {
         throw AppException('Incorrect password');
       }
 
       if (widget.role == 'CR') {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('selected_division', widget.division); await NotificationService.updateDivisionSubscription(widget.division);
-        await AppSettings.saveRole(UserRole.cr);
-
+        debugPrint('Writing to: users/uid directly from client');
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
           await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
             'role': 'CR',
             'division': widget.division,
-            'updatedAt': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
         }
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('selected_division', widget.division); 
+        
+        NotificationService.updateDivisionSubscription(widget.division).catchError((e) {
+          debugPrint('Notification error (ignored): $e');
+        });
+        
+        await AppSettings.saveRole(UserRole.cr);
 
         if (!mounted) return;
         Navigator.pushAndRemoveUntil(
@@ -98,7 +99,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
           (_) => false,
         );
       } else {
-        // SR: Fetch unique root subjects from timetable
+        // SR: Password verified locally for UI flow. Final verification happens during _performClaim.
         final subjects = await TimetableManager.getUniqueSubjects(division: widget.division);
 
         if (!mounted) return;
@@ -114,7 +115,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
       AppDialogs.showError(
         context: context,
         title: 'Verification Failed',
-        message: e.toString().replaceAll('Exception: ', ''),
+        message: e.toString().replaceAll('Exception: ', '').replaceAll('FirebaseFunctionsException', ''),
       );
     }
 
@@ -204,24 +205,28 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
   Future<void> _performClaim(String subject, List<dynamic> activeSRs, String? userToReplace) async {
     setState(() => loading = true);
     try {
+      final studentName = AppSettings.studentName ?? 'Unknown SR';
+      final studentRoll = AppSettings.studentRollNo ?? '';
+      final myIdentity = '$studentName ($studentRoll)';
+      
+      debugPrint('Writing to: users/uid directly from client');
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'role': 'SR',
+          'division': widget.division,
+        }, SetOptions(merge: true));
+      }
+
       final assignmentId = subject.toLowerCase().replaceAll(' ', '_');
       final assignmentRef = FirebaseFirestore.instance
           .collection('sections')
           .doc(widget.division)
           .collection('sr_assignments')
           .doc(assignmentId);
-
-      final studentName = AppSettings.studentName ?? 'Unknown SR';
-      final studentRoll = AppSettings.studentRollNo ?? '';
-      final myIdentity = '$studentName ($studentRoll)';
-
-      if (userToReplace != null) {
-        activeSRs.remove(userToReplace);
-      }
       
-      if (!activeSRs.contains(myIdentity)) {
-        activeSRs.add(myIdentity);
-      }
+      if (userToReplace != null) activeSRs.remove(userToReplace);
+      if (!activeSRs.contains(myIdentity)) activeSRs.add(myIdentity);
       
       await assignmentRef.set({
         'srs': activeSRs,
@@ -229,19 +234,14 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
       });
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('selected_division', widget.division); await NotificationService.updateDivisionSubscription(widget.division);
+      await prefs.setString('selected_division', widget.division); 
+      
+      NotificationService.updateDivisionSubscription(widget.division).catchError((e) {
+        debugPrint('Notification error (ignored): $e');
+      });
+      
       await AppSettings.saveRole(UserRole.sr);
       await AppSettings.saveSRSection(sectionId: widget.division);
-
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-          'role': 'SR',
-          'division': widget.division,
-          'subject': subject,
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-      }
       
       // We pass null for component and batch because the SR now manages the entire root subject
       await AppSettings.saveSRDetails(
@@ -262,12 +262,11 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
       AppDialogs.showError(
         context: context,
         title: 'Failed to assign SR',
-        message: e.toString().replaceAll('Exception: ', ''),
+        message: e.toString().replaceAll('Exception: ', '').replaceAll('FirebaseFunctionsException', ''),
       );
       setState(() => loading = false);
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return AnimatedAuthBackground(
@@ -277,14 +276,21 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          title: Text('${widget.role} Verification'),
+          title: Text('${widget.role} Verification', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
-        body: _passwordVerified && widget.role == 'SR'
-            ? _buildSubjectPicker()
-            : Padding(
-                padding: EdgeInsets.all(AppSpacing.lg),
-                child: _buildPasswordStep(),
-              ),
+        body: Center(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(AppSpacing.lg),
+            child: SchedlyCard(
+              variant: SchedlyCardVariant.elevated,
+              padding: EdgeInsets.all(AppSpacing.xl),
+              child: _passwordVerified && widget.role == 'SR'
+                  ? _buildSubjectPicker()
+                  : _buildPasswordStep(),
+            ),
+          ),
+        ),
       ),
     );
   }

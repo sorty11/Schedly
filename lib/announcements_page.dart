@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'theme/theme.dart';
+import 'widgets/skeleton_loader.dart';
 import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/staggered_list_item.dart';
 import 'widgets/animations/floating_empty_state.dart';
@@ -65,7 +66,16 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                 .snapshots(),
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
+                return ListView.builder(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  itemCount: 4,
+                  itemBuilder: (context, i) => SkeletonLoader(
+                    width: double.infinity,
+                    height: 120,
+                    borderRadius: AppRadius.lg,
+                    margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                  ),
+                );
               }
               final docs = snapshot.data!.docs;
               if (docs.isEmpty) {

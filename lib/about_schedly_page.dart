@@ -6,7 +6,6 @@ import 'theme/theme.dart';
 import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/staggered_list_item.dart';
 import 'widgets/animations/animated_list_tile.dart';
-import 'debug_diagnostics_page.dart';
 
 class AboutSchedlyPage extends StatefulWidget {
   const AboutSchedlyPage({super.key});
@@ -22,52 +21,6 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
 
   late final AnimationController _logoController;
   late final Animation<double> _logoFloatAnimation;
-
-  int _versionTapCount = 0;
-  Timer? _longPressTimer;
-
-  void _openDiagnostics() {
-    final TextEditingController codeController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Developer Access'),
-        content: TextField(
-          controller: codeController,
-          obscureText: true,
-          decoration: const InputDecoration(
-            hintText: 'Enter Passcode',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              if (codeController.text == 'SCHEDLY2026') {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Developer Diagnostics Unlocked', style: TextStyle(color: Colors.green))),
-                );
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const DebugDiagnosticsPage()),
-                );
-              } else {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Invalid Passcode', style: TextStyle(color: Colors.red))),
-                );
-              }
-            },
-            child: const Text('Unlock'),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   void initState() {
@@ -294,18 +247,6 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
                       Expanded(
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            _versionTapCount++;
-                            if (_versionTapCount >= 7) {
-                              _versionTapCount = 0;
-                              _openDiagnostics();
-                            }
-                          },
-                          onLongPressStart: (_) {
-                            _longPressTimer = Timer(const Duration(seconds: 5), _openDiagnostics);
-                          },
-                          onLongPressEnd: (_) => _longPressTimer?.cancel(),
-                          onLongPressCancel: () => _longPressTimer?.cancel(),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [

@@ -94,7 +94,7 @@ Future<void> main() async {
   NotificationService.initialize();
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   LocalNotificationService.initialize();
-
+  
   runApp(const SchedlyApp());
 }
 

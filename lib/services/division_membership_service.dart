@@ -132,7 +132,7 @@ class DivisionMembershipService {
       
       return roster;
     } catch (e) {
-      debugPrint('Error fetching roster: \$e');
+      debugPrint('Error fetching roster: $e');
       return [];
     }
   }

@@ -115,6 +115,21 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
   }
 
   Future<void> _publish() async {
+    if (_draft.hasAnyEmptyPeriods()) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text('Empty Periods Detected', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          content: Text('This timetable contains empty periods.\nThey will be treated as Free Periods.\n\nPublish anyway?', style: GoogleFonts.inter()),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Publish')),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+    }
+
     setState(() => _isPublishing = true);
     try {
       final facultyMap = await TimetableManager.getSubjectToFacultyIdMap(widget.division);

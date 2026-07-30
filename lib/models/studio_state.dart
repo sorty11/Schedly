@@ -248,8 +248,20 @@ class StudioDraftConfig {
   /// Total academic (non-break) periods.
   int get academicPeriodCount => periods.where((p) => !p.isBreak).length;
 
-  bool isDayComplete(String day) =>
-      academicPeriodCount > 0 && filledCount(day) >= academicPeriodCount;
+  bool isDayComplete(String day) => filledCount(day) > 0;
+  
+  /// Checks if a day has any empty academic periods
+  bool hasEmptyPeriods(String day) {
+    return filledCount(day) < academicPeriodCount;
+  }
+  
+  /// Checks if any selected day has empty periods
+  bool hasAnyEmptyPeriods() {
+    for (final day in selectedDays) {
+      if (hasEmptyPeriods(day)) return true;
+    }
+    return false;
+  }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

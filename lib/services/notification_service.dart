@@ -103,7 +103,7 @@ class NotificationService {
 
       if (token != null) {
         final tokenPrefix = token.length > 20 ? token.substring(0, 20) : token;
-        debugPrint('[TOKEN_SYNC] token=\$tokenPrefix...');
+        debugPrint('[TOKEN_SYNC] token=$tokenPrefix...');
         await _saveTokenToFirestore(token);
       } else {
         debugPrint('[TOKEN_SYNC] token=null');
@@ -214,7 +214,7 @@ class NotificationService {
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       } catch (e) {
-        debugPrint('[FS_ERROR]\ncollection: users/\${user.uid}/fcm_tokens\ndocument: \$token\noperation: WRITE\nexception: \$e');
+        debugPrint('[FS_ERROR]\ncollection: users/${user.uid}/fcm_tokens\ndocument: $token\noperation: WRITE\nexception: $e');
         rethrow;
       }
 

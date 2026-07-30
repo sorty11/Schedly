@@ -119,11 +119,7 @@ class _UpdatesPageState extends State<UpdatesPage>
                 future: _getDivision(),
                 builder: (context, divSnap) {
                   if (!divSnap.hasData) {
-                    return Center(
-                      child: CircularProgressIndicator(
-                        color: colorScheme.primary,
-                      ),
-                    );
+                    return const UpdatesSkeleton();
                   }
                   final division = divSnap.data;
                   if (division == null) {

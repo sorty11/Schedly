@@ -19,6 +19,8 @@ import 'services/subject_metadata_service.dart';
 import 'attendance_page.dart';
 import 'services/attendance_service.dart';
 import 'models/attendance_record.dart';
+import 'attendance_simulator_sheet.dart';
+import 'services/attendance_intelligence_service.dart';
 
 class AnalyticsPage extends StatefulWidget {
   final String division;
@@ -964,7 +966,7 @@ class _AttendanceMiniRow extends StatelessWidget {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final division = AppSettings.sectionId ?? AppSettings.division ?? '';
 
-    return StreamBuilder(
+    return StreamBuilder<AttendanceRecord?>(
       stream: AttendanceService.streamRecord(division, subject, 'Theory'),
       builder: (context, snap) {
         final record = snap.data;
@@ -989,37 +991,55 @@ class _AttendanceMiniRow extends StatelessWidget {
             : pct >= 0.65
                 ? sem.warning
                 : sem.cancelled;
-        return Row(
-          children: [
-            Icon(Icons.fact_check_rounded, size: 13, color: color),
-            const SizedBox(width: 5),
-            Text(
-              'Attendance: ${(pct * 100).round()}%  (${record.present}/${record.total})',
-              style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: color,
-                  fontWeight: FontWeight.w700),
-            ),
-            if (pct < 0.75) ...[
-              const SizedBox(width: AppSpacing.sm),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppRadius.full),
-                ),
-                child: Text(
-                  pct >= 0.65
-                      ? 'Miss ${record.canMiss} max'
-                      : 'Need ${record.needToAttend}',
-                  style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: color),
-                ),
+        
+        return GestureDetector(
+          onTap: () {
+            final intelligence = AttendanceIntelligenceService.evaluateSubject(record);
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => AttendanceSimulatorSheet(
+                record: record,
+                intelligence: intelligence,
               ),
+            );
+          },
+          behavior: HitTestBehavior.opaque,
+          child: Row(
+            children: [
+              Icon(Icons.fact_check_rounded, size: 13, color: color),
+              const SizedBox(width: 5),
+              Text(
+                'Attendance: ${(pct * 100).round()}%  (${record.present}/${record.total})',
+                style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: color,
+                    fontWeight: FontWeight.w700),
+              ),
+              if (pct < 0.75) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                  ),
+                  child: Text(
+                    pct >= 0.65
+                        ? 'Miss ${record.canMiss} max'
+                        : 'Need ${record.needToAttend}',
+                    style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: color),
+                  ),
+                ),
+              ],
+              const Spacer(),
+              Icon(Icons.calculate_outlined, size: 16, color: sem.onSurfaceMuted),
             ],
-          ],
+          ),
         );
       },
     );

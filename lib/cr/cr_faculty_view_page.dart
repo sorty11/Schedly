@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/theme.dart';
 import '../app_settings.dart';
+import '../widgets/skeleton_loader.dart';
 import '../user_roles.dart';
 import '../widgets/app_dialogs.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -27,7 +29,16 @@ class CRFacultyViewPage extends StatelessWidget {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return ListView.builder(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              itemCount: 4,
+              itemBuilder: (context, i) => SkeletonLoader(
+                width: double.infinity,
+                height: 100,
+                borderRadius: AppRadius.lg,
+                margin: const EdgeInsets.only(bottom: AppSpacing.md),
+              ),
+            );
           }
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));

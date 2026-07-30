@@ -10,8 +10,9 @@ class AnnouncementListener {
   static void start(String division) {
     // Listen to Announcements
     FirebaseFirestore.instance
+        .collection('sections')
+        .doc(division)
         .collection('announcements')
-        .where('division', isEqualTo: division)
         .snapshots()
         .listen((snapshot) {
       if (_isFirstAnnouncementSnapshot) {
@@ -33,8 +34,9 @@ class AnnouncementListener {
 
     // Listen to Timetable Notifications
     FirebaseFirestore.instance
+        .collection('sections')
+        .doc(division)
         .collection('notifications')
-        .where('division', isEqualTo: division)
         .snapshots()
         .listen((snapshot) {
       if (_isFirstNotificationSnapshot) {

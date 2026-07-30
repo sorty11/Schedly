@@ -5,11 +5,9 @@ class NotificationCountService {
     String division,
   ) {
     return FirebaseFirestore.instance
+        .collection('sections')
+        .doc(division)
         .collection('notifications')
-        .where(
-          'division',
-          isEqualTo: division,
-        )
         .snapshots()
         .map(
       (snapshot) =>

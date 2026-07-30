@@ -11,6 +11,8 @@ import '../models/timetable_entry.dart';
 import '../timetable_manager.dart';
 import '../widgets/animations/staggered_list_item.dart';
 import '../widgets/animations/animated_card.dart';
+import '../widgets/skeleton_loader.dart';
+import '../models/faculty_lecture_context.dart';
 
 class FacultyTimetablePage extends StatefulWidget {
   const FacultyTimetablePage({super.key});
@@ -268,7 +270,16 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
                 stream: _timetableStream,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                      itemCount: 4,
+                      itemBuilder: (ctx, i) => SkeletonLoader(
+                        width: double.infinity,
+                        height: 120,
+                        borderRadius: AppRadius.lg,
+                        margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                      ),
+                    );
                   }
                   
                   final _lectures = snapshot.data ?? [];

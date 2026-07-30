@@ -91,7 +91,7 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
       try {
         await FirebaseFirestore.instance.collection('faculty_profiles').doc(uid).set(profileData, SetOptions(merge: true));
       } catch (e) {
-        debugPrint('[FS_ERROR]\ncollection: faculty_profiles\ndocument: \$uid\noperation: WRITE\nexception: \$e');
+        debugPrint('[FS_ERROR]\ncollection: faculty_profiles\ndocument: $uid\noperation: WRITE\nexception: $e');
         rethrow;
       }
 
@@ -99,7 +99,7 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
       try {
         profileSnap = await FirebaseFirestore.instance.collection('faculty_profiles').doc(uid).get();
       } catch (e) {
-        debugPrint('[FS_ERROR]\ncollection: faculty_profiles\ndocument: \$uid\noperation: READ\nexception: \$e');
+        debugPrint('[FS_ERROR]\ncollection: faculty_profiles\ndocument: $uid\noperation: READ\nexception: $e');
         rethrow;
       }
       final data = profileSnap.data()!;

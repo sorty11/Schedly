@@ -26,6 +26,7 @@ import 'services/subject_metadata_service.dart';
 import 'course_details_setup_page.dart';
 import 'cr/cr_faculty_requests_page.dart';
 import 'cr/cr_faculty_view_page.dart';
+import 'cr/cr_password_management_page.dart';
 
 class CRPanelPage extends StatefulWidget {
   const CRPanelPage({super.key});
@@ -415,12 +416,34 @@ class _CRPanelPageState extends State<CRPanelPage> {
               ),
             ],
 
-            // ── Roster section (CR only) ─────────────────────────────────────
+            // ── Settings section (CR only) ─────────────────────────────
             if (isCR) ...[
-              _buildSectionLabel('Roster', staggerIndex: 7),
+              _buildSectionLabel('Settings', staggerIndex: 6),
 
               _buildActionCard(
-                staggerIndex: 8,
+                staggerIndex: 7,
+                targetId: 'role_password_management_btn',
+                icon: Icons.lock_outline_rounded,
+                title: 'Role Password Management',
+                subtitle: 'Manage CR and SR passwords securely',
+                color: colorScheme.error,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CRPasswordManagementPage(division: sectionId),
+                    ),
+                  );
+                },
+              ),
+            ],
+
+            // ── Roster section (CR only) ─────────────────────────────────────
+            if (isCR) ...[
+              _buildSectionLabel('Roster', staggerIndex: 8),
+
+              _buildActionCard(
+                staggerIndex: 9,
                 icon: Icons.group_rounded,
                 title: 'Class Roster',
                 subtitle: 'View and manage registered students',

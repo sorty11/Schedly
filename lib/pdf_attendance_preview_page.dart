@@ -5,14 +5,15 @@ import 'services/attendance_service.dart';
 import 'theme/theme.dart';
 import 'widgets/animations/animated_button.dart';
 import 'widgets/app_dialogs.dart';
+import 'services/pdf_attendance_import_service.dart';
 
 class PdfAttendancePreviewPage extends StatefulWidget {
-  final List<AttendanceLog> logs;
+  final PdfImportResult importResult;
   final String division;
 
   const PdfAttendancePreviewPage({
     super.key,
-    required this.logs,
+    required this.importResult,
     required this.division,
   });
 
@@ -22,19 +23,6 @@ class PdfAttendancePreviewPage extends StatefulWidget {
 
 class _PdfAttendancePreviewPageState extends State<PdfAttendancePreviewPage> {
   bool _isImporting = false;
-  late final int _perfectMatches;
-  late final int _normalizedMatches;
-  late final int _fuzzyMatches;
-  late final int _unmatched;
-
-  @override
-  void initState() {
-    super.initState();
-    _perfectMatches = widget.logs.where((l) => l.confidence == MatchConfidence.perfect).length;
-    _normalizedMatches = widget.logs.where((l) => l.confidence == MatchConfidence.normalized).length;
-    _fuzzyMatches = widget.logs.where((l) => l.confidence == MatchConfidence.fuzzy).length;
-    _unmatched = widget.logs.where((l) => l.confidence == MatchConfidence.unmatched).length;
-  }
 
   Future<void> _importAttendance() async {
     if (_isImporting) return;
@@ -43,14 +31,14 @@ class _PdfAttendancePreviewPageState extends State<PdfAttendancePreviewPage> {
     try {
       final result = await AttendanceService.batchImportAttendance(
         division: widget.division,
-        logs: widget.logs,
+        logs: widget.importResult.logs,
       );
 
       if (!mounted) return;
 
       AppDialogs.showSnackBar(
         context: context,
-        message: "Imported \${result['new']} new records. (\${result['duplicates']} duplicates ignored)",
+        message: "Imported ${result['new']} new records. (${result['duplicates']} duplicates ignored)",
       );
 
       Navigator.pop(context, true);
@@ -68,8 +56,9 @@ class _PdfAttendancePreviewPageState extends State<PdfAttendancePreviewPage> {
   @override
   Widget build(BuildContext context) {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
-    final total = widget.logs.length;
-    final hasWarnings = _fuzzyMatches > 0 || _unmatched > 0;
+    final total = widget.importResult.logs.length;
+    final skipped = widget.importResult.skippedCount;
+    final warnings = widget.importResult.warnings;
 
     return Scaffold(
       appBar: AppBar(
@@ -79,6 +68,39 @@ class _PdfAttendancePreviewPageState extends State<PdfAttendancePreviewPage> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.x2l),
         children: [
+          // BETA Warning Label
+          Container(
+            margin: const EdgeInsets.only(bottom: AppSpacing.xl),
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: sem.warning.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: sem.warning.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.science, color: sem.warning, size: 24),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'BETA FEATURE',
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: sem.warning),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'PDF Import is in Beta. Please verify imported attendance before relying on analytics.',
+                        style: GoogleFonts.inter(fontSize: 13, color: Theme.of(context).colorScheme.onSurface),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           Container(
             padding: const EdgeInsets.all(AppSpacing.x2l),
             decoration: BoxDecoration(
@@ -97,50 +119,76 @@ class _PdfAttendancePreviewPageState extends State<PdfAttendancePreviewPage> {
                 Icon(Icons.analytics_rounded, size: 48, color: sem.conducted),
                 const SizedBox(height: AppSpacing.md),
                 Text(
-                  '\$total Lectures Found',
-                  style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w700),
+                  '$total Lectures Found',
+                  style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
                 ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Target Division: \${widget.division}',
-                  style: TextStyle(color: sem.onSurfaceMuted, fontSize: 14),
-                ),
+                if (skipped > 0) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    '$skipped Malformed Rows Skipped',
+                    style: GoogleFonts.inter(fontSize: 14, color: sem.warning, fontWeight: FontWeight.w600),
+                  ),
+                ],
               ],
             ),
           ),
           const SizedBox(height: AppSpacing.x2l),
-          
-          Text('Confidence Engine Report', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: AppSpacing.md),
-          
-          _StatRow(label: 'Perfect Matches', count: _perfectMatches, color: sem.conducted, icon: Icons.check_circle_rounded),
-          _StatRow(label: 'Normalized Matches', count: _normalizedMatches, color: sem.conducted, icon: Icons.auto_fix_high_rounded),
-          _StatRow(label: 'Fuzzy Matches (Review recommended)', count: _fuzzyMatches, color: sem.warning, icon: Icons.warning_rounded),
-          _StatRow(label: 'Unmatched (Will be recorded as new)', count: _unmatched, color: sem.cancelled, icon: Icons.error_rounded),
-          
-          if (hasWarnings) ...[
-            const SizedBox(height: AppSpacing.x2l),
+
+          if (widget.importResult.studentInfo != null) ...[
+            Text('Student Identity Found', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: AppSpacing.md),
             Container(
               padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
-                color: sem.warning.withValues(alpha: 0.1),
+                border: Border.all(color: sem.borderSubtle),
                 borderRadius: BorderRadius.circular(AppRadius.lg),
-                border: Border.all(color: sem.warning.withValues(alpha: 0.3)),
               ),
-              child: Row(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline_rounded, color: sem.warning, size: 20),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Text(
-                      'Some subjects were not perfectly matched. They will still be imported, but you should verify their names match your timetable exactly to get full analytics.',
-                      style: TextStyle(color: sem.warning, fontSize: 13, fontWeight: FontWeight.w600),
-                    ),
-                  ),
+                  _InfoRow(label: 'Name', value: widget.importResult.studentInfo!.name),
+                  const SizedBox(height: AppSpacing.sm),
+                  _InfoRow(label: 'Roll No', value: widget.importResult.studentInfo!.rollNumber),
+                  const SizedBox(height: AppSpacing.sm),
+                  _InfoRow(label: 'Program', value: widget.importResult.studentInfo!.program),
                 ],
               ),
             ),
+            const SizedBox(height: AppSpacing.x2l),
+          ],
+
+          if (warnings.isNotEmpty) ...[
+            Text('Parsing Warnings', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                border: Border.all(color: sem.warning.withValues(alpha: 0.3)),
+                color: sem.warning.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: warnings.take(5).map((w) => Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.warning_amber_rounded, size: 16, color: sem.warning),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(child: Text(w, style: GoogleFonts.inter(fontSize: 13, color: sem.onSurfaceMuted))),
+                    ],
+                  ),
+                )).toList()
+                ..addAll(warnings.length > 5 ? [
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.xs),
+                    child: Text('...and ${warnings.length - 5} more warnings.', style: GoogleFonts.inter(fontSize: 12, fontStyle: FontStyle.italic, color: sem.onSurfaceMuted)),
+                  )
+                ] : []),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x2l),
           ],
         ],
       ),
@@ -148,20 +196,9 @@ class _PdfAttendancePreviewPageState extends State<PdfAttendancePreviewPage> {
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.x2l),
           child: AnimatedButton(
-            onPressed: _isImporting ? () {} : _importAttendance,
-            backgroundColor: sem.conducted,
-            foregroundColor: Colors.white,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (_isImporting)
-                  const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                else
-                  const Icon(Icons.cloud_upload_rounded),
-                const SizedBox(width: 8),
-                Text(_isImporting ? 'Merging Data...' : 'Confirm & Merge Attendance', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-              ],
-            ),
+            onPressed: _importAttendance,
+            isLoading: _isImporting,
+            child: const Text('Confirm Import'),
           ),
         ),
       ),
@@ -169,40 +206,20 @@ class _PdfAttendancePreviewPageState extends State<PdfAttendancePreviewPage> {
   }
 }
 
-class _StatRow extends StatelessWidget {
+class _InfoRow extends StatelessWidget {
   final String label;
-  final int count;
-  final Color color;
-  final IconData icon;
-
-  const _StatRow({required this.label, required this.count, required this.color, required this.icon});
-
+  final String value;
+  const _InfoRow({required this.label, required this.value});
+  
   @override
   Widget build(BuildContext context) {
-    if (count == 0) return const SizedBox.shrink();
-    
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppRadius.full),
-            ),
-            child: Text(
-              count.toString(),
-              style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 14),
-            ),
-          ),
-        ],
-      ),
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: GoogleFonts.inter(color: sem.onSurfaceMuted, fontSize: 14)),
+        Text(value, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w600)),
+      ],
     );
   }
 }

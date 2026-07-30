@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum MatchConfidence {
-  perfect(90, 'Perfect match'),
+  exact(100, 'Exact match'),
+  alias(90, 'Matched via alias'),
   normalized(80, 'Matched after normalization'),
   fuzzy(60, 'Fuzzy match'),
-  unmatched(0, 'Unmatched');
+  unknown(0, 'Unknown subject');
 
   final int score;
   final String description;
@@ -13,9 +14,11 @@ enum MatchConfidence {
 
 class AttendanceLog {
   final String id; // format: {division}_{dateStr}_{startTime}_{endTime}
-  final String subjectCode; // Extracted or matched subject code
+  final String subjectCode; // Extracted or matched subject code (this might be the canonical id or the raw fallback)
   final String component; // Extracted or matched component
   final String rawSubjectText; // What was actually in the PDF
+  final String? normalizedSubject; // Stripped string
+  final String? canonicalSubjectId; // The resolved canonical ID
   final DateTime date;
   final int startTime; // minutes from midnight
   final int endTime;
@@ -30,6 +33,8 @@ class AttendanceLog {
     required this.subjectCode,
     required this.component,
     required this.rawSubjectText,
+    this.normalizedSubject,
+    this.canonicalSubjectId,
     required this.date,
     required this.startTime,
     required this.endTime,
@@ -45,8 +50,9 @@ class AttendanceLog {
     
     // Fallback parsing for confidence
     final score = data['confidenceScore'] as int? ?? 0;
-    MatchConfidence conf = MatchConfidence.unmatched;
-    if (score >= 90) conf = MatchConfidence.perfect;
+    MatchConfidence conf = MatchConfidence.unknown;
+    if (score >= 100) conf = MatchConfidence.exact;
+    else if (score >= 90) conf = MatchConfidence.alias;
     else if (score >= 80) conf = MatchConfidence.normalized;
     else if (score >= 60) conf = MatchConfidence.fuzzy;
 
@@ -55,6 +61,8 @@ class AttendanceLog {
       subjectCode: data['subjectCode'] ?? '',
       component: data['component'] ?? 'Theory',
       rawSubjectText: data['rawSubjectText'] ?? '',
+      normalizedSubject: data['normalizedSubject'],
+      canonicalSubjectId: data['canonicalSubjectId'],
       date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
       startTime: data['startTime'] ?? 0,
       endTime: data['endTime'] ?? 0,
@@ -71,6 +79,8 @@ class AttendanceLog {
       'subjectCode': subjectCode,
       'component': component,
       'rawSubjectText': rawSubjectText,
+      'normalizedSubject': normalizedSubject,
+      'canonicalSubjectId': canonicalSubjectId,
       'date': Timestamp.fromDate(date),
       'startTime': startTime,
       'endTime': endTime,
@@ -83,5 +93,5 @@ class AttendanceLog {
   }
 
   // Idempotent key for deduplication
-  String get deduplicationKey => '\${date.year}-\${date.month}-\${date.day}_\${startTime}_\${subjectCode}_\$component';
+  String get deduplicationKey => '${date.year}-${date.month}-${date.day}_${startTime}_${subjectCode}_$component';
 }

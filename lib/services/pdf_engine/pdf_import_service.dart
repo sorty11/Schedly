@@ -177,9 +177,9 @@ Future<PdfImportResult> _parsePdfInIsolate(_IsolateArgs args) async {
       source: 'PDF',
       component: 'Theory',
       status: statusNorm,
-      confidence: row.confidence >= 90 ? MatchConfidence.perfect 
+      confidence: row.confidence >= 90 ? MatchConfidence.exact 
                 : row.confidence >= 70 ? MatchConfidence.normalized
-                : matchedSub == null ? MatchConfidence.unmatched
+                : matchedSub == null ? MatchConfidence.unknown
                 : MatchConfidence.fuzzy,
       startTime: 0,
       endTime: 0,

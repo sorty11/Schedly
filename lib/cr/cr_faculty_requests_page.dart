@@ -10,6 +10,7 @@ import '../models/event_category.dart';
 import '../services/timetable_event_service.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/animations/floating_empty_state.dart';
+import '../widgets/skeleton_loader.dart';
 
 class CRFacultyRequestsPage extends StatefulWidget {
   final String division;
@@ -260,8 +261,17 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
             .snapshots(),
         builder: (context, snapshot) {
           // Loading state
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return ListView.builder(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              itemCount: 4,
+              itemBuilder: (context, i) => SkeletonLoader(
+                width: double.infinity,
+                height: 140,
+                borderRadius: AppRadius.lg,
+                margin: const EdgeInsets.only(bottom: AppSpacing.md),
+              ),
+            );
           }
           
           final docs = snapshot.data!.docs;

@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:rxdart/rxdart.dart';
-
 import '../app_settings.dart';
 import '../theme/theme.dart';
 import '../models/timetable_entry.dart';
@@ -12,6 +11,7 @@ import '../models/faculty_request.dart';
 import '../timetable_manager.dart';
 import '../widgets/animations/staggered_list_item.dart';
 import '../widgets/animations/animated_button.dart';
+import '../widgets/skeleton_loader.dart';
 import 'faculty_request_sheet.dart';
 import '../create_announcement_page.dart';
 import '../models/faculty_lecture_context.dart';
@@ -274,9 +274,17 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
                       stream: _todayLecturesStream,
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: AppSpacing.x4l),
-                            child: Center(child: CircularProgressIndicator()),
+                          return ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
+                            itemCount: 3,
+                            itemBuilder: (ctx, i) => SkeletonLoader(
+                              width: double.infinity,
+                              height: 120,
+                              borderRadius: AppRadius.lg,
+                              margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                            ),
                           );
                         }
                         if (snapshot.hasError) {
