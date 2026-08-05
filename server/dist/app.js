@@ -15,6 +15,7 @@ const outbox_worker_1 = require("./worker/outbox.worker");
 const token_worker_1 = require("./worker/token.worker");
 const env_config_1 = require("./config/env.config");
 const api_v1_routes_1 = __importDefault(require("./routes/api.v1.routes"));
+const feedback_1 = __importDefault(require("./routes/feedback"));
 dotenv_1.default.config();
 require("./config/firebase"); // Ensure firebase is initialized
 const app = (0, express_1.default)();
@@ -33,6 +34,7 @@ app.get('/', (req, res) => {
     });
 });
 app.use('/api/v1', api_v1_routes_1.default);
+app.use('/api/feedback', feedback_1.default);
 // Global Error Handler
 app.use((err, req, res, next) => {
     logger_1.logger.error(JSON.stringify({

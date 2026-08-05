@@ -20,7 +20,15 @@ import 'onboarding/widgets/tutorial_target.dart';
 import 'onboarding/services/tutorial_storage_service.dart';
 import 'onboarding/services/onboarding_service.dart';
 import 'onboarding/services/tutorial_controller.dart';
+
 import 'about_schedly_page.dart';
+import 'widgets/support/bug_report_sheet.dart';
+import 'widgets/support/feature_request_sheet.dart';
+import 'admin/admin_session.dart';
+import 'admin/admin_auth_sheet.dart';
+import 'admin/student_management_page.dart';
+import 'admin/faculty_management_page.dart';
+import 'admin/section_management_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final String division;
@@ -569,10 +577,81 @@ class _ProfilePageState extends State<ProfilePage> {
               ]),
             ),
 
+            // ── Support ───────────────────────────────────────────────────
+            _sectionHeader('Support'),
+            StaggeredListItem(
+              index: 4,
+              child: _buildTileGroup([
+                _buildRoleTile(
+                  icon: Icons.bug_report_outlined,
+                  title: 'Report a Bug',
+                  subtitle: 'Let us know if something is broken',
+                  iconColor: semanticColors.error,
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => const BugReportSheet(),
+                    );
+                  },
+                ),
+                _buildRoleTile(
+                  icon: Icons.lightbulb_outline_rounded,
+                  title: 'Suggest a Feature',
+                  subtitle: 'Have an idea for Schedly?',
+                  iconColor: semanticColors.warning,
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => const FeatureRequestSheet(),
+                    );
+                  },
+                ),
+              ]),
+            ),
+
+            // ── Administration section ────────────────────────────────────
+            _sectionHeader('Administration'),
+            StaggeredListItem(
+              index: 5,
+              child: _buildTileGroup([
+                _buildRoleTile(
+                  icon: Icons.school_rounded,
+                  title: 'Student',
+                  subtitle: 'Manage student profiles',
+                  iconColor: colorScheme.primary,
+                  onTap: () => _executeAdminAction(() {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentManagementPage()));
+                  }),
+                ),
+                _buildRoleTile(
+                  icon: Icons.person_search_rounded,
+                  title: 'Faculty',
+                  subtitle: 'Manage faculty profiles',
+                  iconColor: colorScheme.primary,
+                  onTap: () => _executeAdminAction(() {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const FacultyManagementPage()));
+                  }),
+                ),
+                _buildRoleTile(
+                  icon: Icons.meeting_room_rounded,
+                  title: 'Create Section',
+                  subtitle: 'Create, edit, clone and archive sections',
+                  iconColor: colorScheme.primary,
+                  onTap: () => _executeAdminAction(() {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const SectionManagementPage()));
+                  }),
+                ),
+              ]),
+            ),
+
             // ── About Schedly section ─────────────────────────────────────
             _sectionHeader('About'),
             StaggeredListItem(
-              index: 4,
+              index: 5,
               child: _buildTileGroup([
                 _buildRoleTile(
                   icon: Icons.info_outline_rounded,
@@ -592,7 +671,7 @@ class _ProfilePageState extends State<ProfilePage> {
             // ── Account section (destructive) ─────────────────────────────
             _sectionHeader('Account'),
             StaggeredListItem(
-              index: 5,
+              index: 6,
               child: Container(
                 decoration: BoxDecoration(
                   color: semanticColors.surfaceElevated,
@@ -707,5 +786,21 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
     );
+  }
+
+  void _executeAdminAction(VoidCallback action) {
+    if (AdminSession.isAuthenticated) {
+      action();
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (ctx) => AdminAuthSheet(onSuccess: action),
+      );
+    }
   }
 }

@@ -21,6 +21,7 @@ import 'user_roles.dart';
 import 'email_verification_page.dart';
 import 'account_migration_page.dart';
 import 'onboarding_wizard_page.dart';
+import 'utils/responsive_utils.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -113,6 +114,23 @@ class SchedlyApp extends StatelessWidget {
           themeMode: themeController.themeMode,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
+          builder: (context, child) {
+            // Apply a global responsive constraint to the entire application.
+            // On wide screens (desktop/web), the app will be centered with a max width,
+            // preventing awkward stretching of bottom navigation and lists.
+            return Container(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF0F172A) // Slate 900
+                  : const Color(0xFFF8FAFC), // Slate 50
+              child: Center(
+                child: ResponsiveUtils.constrainedFormBox(
+                  context,
+                  maxWidth: ResponsiveUtils.desktopBreakpoint,
+                  child: ClipRect(child: child!),
+                ),
+              ),
+            );
+          },
           home: const StartupRouter(),
         );
       }
@@ -163,7 +181,11 @@ class _StartupRouterState
     }
 
     // Force reload to get the latest emailVerified status
-    await user.reload();
+    try {
+      await user.reload();
+    } catch (e) {
+      debugPrint('Failed to reload user, proceeding with cached session: $e');
+    }
     final updatedUser = FirebaseAuth.instance.currentUser;
 
     if (updatedUser != null && !updatedUser.emailVerified) {
@@ -173,9 +195,9 @@ class _StartupRouterState
 
     if (AppSettings.studentName != null || AppSettings.facultyName != null) {
       // Fast path: use cached session
-      final userType = AppSettings.facultyName != null ? 'Faculty' : 'Student';
+      final role = AppSettings.facultyName != null ? 'Faculty' : 'Student';
       
-      if (userType == 'Faculty') {
+      if (role == 'Faculty') {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FacultyHomePage()));
       } else {
         final div = AppSettings.sectionId ?? '';
@@ -192,8 +214,8 @@ class _StartupRouterState
       if (userDoc.exists) {
         final data = userDoc.data()!;
         if (data['onboardingCompleted'] == true) {
-          final userType = data['userType'];
-          if (userType == 'Faculty') {
+          final role = data['role'];
+          if (role == 'Faculty') {
             Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FacultyHomePage()));
           } else {
             // Student
@@ -238,14 +260,67 @@ class _StartupRouterState
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       if (userDoc.exists) {
         final data = userDoc.data()!;
-        if (data['userType'] != 'Faculty') {
-           final roleStr = data['role'] as String?;
+        bool needsUpdate = false;
+        final updates = <String, dynamic>{};
+
+        if (data.containsKey('userType') && !data.containsKey('role')) {
+          updates['role'] = data['userType'];
+          updates['userType'] = FieldValue.delete();
+          needsUpdate = true;
+        } else if (data.containsKey('userType')) {
+          updates['userType'] = FieldValue.delete();
+          needsUpdate = true;
+        }
+
+        if (data.containsKey('draftProfile')) {
+          final dp = data['draftProfile'] as Map<String, dynamic>;
+          if (dp.containsKey('name') && !data.containsKey('name')) updates['name'] = dp['name'];
+          if (dp.containsKey('rollNo') && !data.containsKey('rollNo')) updates['rollNo'] = dp['rollNo'];
+          updates['draftProfile'] = FieldValue.delete();
+          needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+          await FirebaseFirestore.instance.collection('users').doc(user.uid).update(updates);
+          debugPrint('Normalized user document for schema consistency.');
+        }
+
+        final roleToUse = updates.containsKey('role') ? updates['role'] : data['role'];
+        final div = data['division'] as String?;
+        final secId = data['sectionId'] ?? div ?? '';
+        
+        if (roleToUse == 'Faculty') {
+           await AppSettings.saveRole(UserRole.faculty);
+           if (data.containsKey('facultyProfileId')) {
+             final facDoc = await FirebaseFirestore.instance.collection('faculty_profiles').doc(data['facultyProfileId']).get();
+             if (facDoc.exists) {
+               final fData = facDoc.data()!;
+               await AppSettings.saveFacultyDetails(
+                 name: fData['name'] ?? '',
+                 email: fData['email'] ?? '',
+                 department: fData['department'] ?? '',
+                 designation: fData['designation'] ?? '',
+                 cabin: fData['cabin'] ?? '',
+                 id: facDoc.id,
+               );
+             }
+           }
+        } else {
+           final roleStr = roleToUse as String?;
            if (roleStr == 'CR') {
              await AppSettings.saveRole(UserRole.cr);
            } else if (roleStr == 'SR') {
              await AppSettings.saveRole(UserRole.sr);
            } else {
              await AppSettings.saveRole(UserRole.student);
+           }
+
+           if (div != null && div.isNotEmpty) {
+             await AppSettings.saveStudentDetails(
+                name: data['name'] ?? AppSettings.studentName ?? 'Student',
+                rollNo: data['rollNo'] ?? AppSettings.studentRollNo ?? 'Unknown',
+                acYear: '', br: '', div: div, secId: secId
+             );
            }
         }
       }

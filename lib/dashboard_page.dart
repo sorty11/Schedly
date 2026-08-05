@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:schedly/services/attendance_service.dart';
+import 'package:schedly/models/attendance_record.dart';
 
 import 'widgets/beta_badge.dart';
 
@@ -45,6 +47,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   bool _isLoadingTimetableCheck = true;
   bool _hasTimetable = true;
+  late Stream<List<AttendanceRecord>> _recordsStream;
 
   @override
   void initState() {
@@ -55,6 +58,7 @@ class _DashboardPageState extends State<DashboardPage> {
         .doc(widget.division)
         .collection(currentDay)
         .snapshots();
+    _recordsStream = AttendanceService.streamAll(widget.division);
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkCROnboarding());
   }
 
@@ -649,9 +653,63 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return Scaffold(
       body: SafeArea(
-        child: StreamBuilder<QuerySnapshot>(
-          stream: _lecturesStream,
-          builder: (context, snapshot) {
+        child: StreamBuilder<List<AttendanceRecord>>(
+          stream: _recordsStream,
+          builder: (context, recordsSnap) {
+            final rawRecords = recordsSnap.data ?? [];
+            final Map<String, AttendanceRecord> attendanceRecords = {};
+            
+            final List<String> mergedSubjects = ['DM', 'Discrete Mathematics', 'PnS', 'SnS', 'Python', 'PROGRAMMING WITH PYTHON', 'Signals and Systems', 'Principles of Economics and Managemen'];
+            
+            for (final r in rawRecords) {
+              String subjectName = r.subjectCode;
+              String componentName = r.component;
+              
+              if (subjectName.toUpperCase().contains('DATA STRUCTURES') || subjectName.trim().toUpperCase() == 'DSA') {
+                subjectName = 'DSA';
+                if (componentName.toUpperCase().contains('LAB') || componentName.toUpperCase().contains('PRACTICAL')) {
+                  componentName = 'Lab';
+                } else {
+                  componentName = 'Theory';
+                }
+              }
+
+              if (mergedSubjects.contains(subjectName)) {
+                final key = '${subjectName}_Merged';
+                if (attendanceRecords.containsKey(key)) {
+                  final existing = attendanceRecords[key]!;
+                  attendanceRecords[key] = AttendanceRecord(
+                    id: existing.id,
+                    division: existing.division,
+                    subjectCode: subjectName,
+                    component: 'Merged',
+                    present: existing.present + r.present,
+                    absent: existing.absent + r.absent,
+                    cancelled: existing.cancelled + r.cancelled,
+                  );
+                } else {
+                  attendanceRecords[key] = AttendanceRecord(
+                    id: r.id,
+                    division: r.division,
+                    subjectCode: subjectName,
+                    component: 'Merged',
+                    present: r.present,
+                    absent: r.absent,
+                    cancelled: r.cancelled,
+                  );
+                }
+              } else {
+                String normComponent = componentName;
+                if (normComponent.isEmpty || normComponent == 'Lecture') normComponent = 'Theory';
+                else if (normComponent == 'Practical') normComponent = 'Lab';
+                
+                attendanceRecords['${subjectName}_$normComponent'] = r;
+              }
+            }
+
+            return StreamBuilder<QuerySnapshot>(
+              stream: _lecturesStream,
+              builder: (context, snapshot) {
             final isLoading = snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData;
 
             final docs = snapshot.data?.docs ?? [];
@@ -977,6 +1035,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               isLast: isLast,
                               canEdit: _canEditLecture,
                               onEdit: _editLecture,
+                              attendanceRecords: attendanceRecords,
                             ),
                           );
                         },
@@ -991,6 +1050,8 @@ class _DashboardPageState extends State<DashboardPage> {
               ],
             );
           },
+        );
+          },
         ),
       ),
     );
@@ -1004,6 +1065,8 @@ class _TimelineLectureItem extends StatelessWidget {
   final bool isLast;
   final bool Function(TimetableEntry) canEdit;
   final void Function(TimetableEntry) onEdit;
+  final Map<String, String>? batchNames;
+  final Map<String, AttendanceRecord>? attendanceRecords;
 
   const _TimelineLectureItem({
     required this.entries,
@@ -1012,6 +1075,8 @@ class _TimelineLectureItem extends StatelessWidget {
     required this.isLast,
     required this.canEdit,
     required this.onEdit,
+    this.batchNames,
+    this.attendanceRecords,
   });
 
   Color _subjectColor(String subject, BuildContext context) {
@@ -1167,6 +1232,47 @@ class _TimelineLectureItem extends StatelessWidget {
                                         ),
                                       ),
                                     ),
+                                  Builder(builder: (context) {
+                                    if (attendanceRecords == null) return const SizedBox.shrink();
+                                    
+                                    String subj = entry.subject;
+                                    String comp = entry.component;
+                                    if (subj.toUpperCase().contains('DATA STRUCTURES') || subj.trim().toUpperCase() == 'DSA') {
+                                      subj = 'DSA';
+                                      if (comp.toUpperCase().contains('LAB') || comp.toUpperCase().contains('PRACTICAL')) comp = 'Lab';
+                                      else comp = 'Theory';
+                                    }
+                                    
+                                    final merged = ['DM', 'Discrete Mathematics', 'PnS', 'SnS', 'Python', 'PROGRAMMING WITH PYTHON', 'Signals and Systems', 'Principles of Economics and Managemen'];
+                                    String key = merged.contains(subj) ? '${subj}_Merged' : '${subj}_$comp';
+                                    
+                                    final record = attendanceRecords![key];
+                                    if (record == null) return const SizedBox.shrink();
+                                    
+                                    int p = record.present;
+                                    int a = record.absent;
+                                    double attendPct = (p + 1) / (p + a + 1) * 100;
+                                    double skipPct = p / (p + a + 1) * 100;
+                                    
+                                    return Padding(
+                                      padding: const EdgeInsets.only(top: 8.0),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: isDark ? sem.surfaceElevated2 : sem.borderSubtle.withValues(alpha: 0.5),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          '🟢 If attend: ${attendPct.toStringAsFixed(1)}%  |  🔴 If skip: ${skipPct.toStringAsFixed(1)}%',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: isDark ? Colors.white70 : sem.onSurfaceMuted,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }),
                                 ],
                               ),
                             ),

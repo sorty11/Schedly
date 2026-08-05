@@ -4,6 +4,8 @@ import '../models/batch_analytics.dart';
 import '../models/conduct_log.dart';
 import '../models/event_category.dart';
 import '../models/timetable_entry.dart';
+import '../models/conduct_adjustment.dart';
+import 'package:rxdart/rxdart.dart';
 
 class AnalyticsService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -13,16 +15,92 @@ class AnalyticsService {
   }
 
   static Stream<List<BatchAnalytics>> streamAnalytics(String division) {
-    return _db
+    final analyticsStream = _db
         .collection('sections')
         .doc(division)
         .collection('analytics')
+        .snapshots();
+
+    final adjustmentsStream = _db
+        .collection('sections')
+        .doc(division)
+        .collection('conduct_adjustments')
+        .snapshots();
+
+    return Rx.combineLatest2(
+      analyticsStream,
+      adjustmentsStream,
+      (QuerySnapshot analyticsSnap, QuerySnapshot adjSnap) {
+        
+        final Map<String, int> adjustmentMap = {};
+        for (var doc in adjSnap.docs) {
+          final adj = ConductAdjustment.fromFirestore(doc);
+          final key = getAnalyticsDocId(adj.subject, adj.component, adj.batch);
+          adjustmentMap[key] = (adjustmentMap[key] ?? 0) + adj.adjustmentHours;
+        }
+
+        return analyticsSnap.docs.map((doc) {
+          final analytics = BatchAnalytics.fromFirestore(doc);
+          final extraHours = adjustmentMap[analytics.id] ?? 0;
+          return BatchAnalytics(
+            id: analytics.id,
+            subject: analytics.subject,
+            component: analytics.component,
+            batch: analytics.batch,
+            category: analytics.category,
+            targetLectures: analytics.targetLectures,
+            overrideTarget: analytics.overrideTarget,
+            completedLectures: analytics.completedLectures,
+            pendingLectures: analytics.pendingLectures,
+            cancelledLectures: analytics.cancelledLectures,
+            adjustedLectures: extraHours,
+          );
+        }).toList();
+      },
+    );
+  }
+
+  static Future<void> addConductAdjustment({
+    required String division,
+    required String subject,
+    required String component,
+    required String batch,
+    required int adjustmentHours,
+    required String reason,
+    required String createdBy,
+    required String createdByUid,
+  }) async {
+    final docRef = _db.collection('sections').doc(division).collection('conduct_adjustments').doc();
+    final adj = ConductAdjustment(
+      id: docRef.id,
+      subject: subject,
+      component: component,
+      batch: batch,
+      adjustmentHours: adjustmentHours,
+      reason: reason,
+      createdBy: createdBy,
+      createdByUid: createdByUid,
+      createdAt: DateTime.now(),
+    );
+    await docRef.set(adj.toFirestore());
+  }
+
+  static Stream<List<ConductAdjustment>> streamAdjustmentsForSubject({
+    required String division,
+    required String subject,
+    required String component,
+    required String batch,
+  }) {
+    return _db
+        .collection('sections')
+        .doc(division)
+        .collection('conduct_adjustments')
+        .where('subject', isEqualTo: subject)
+        .where('component', isEqualTo: component)
+        .where('batch', isEqualTo: batch)
+        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) {
-          return snapshot.docs
-            .map((doc) => BatchAnalytics.fromFirestore(doc))
-            .toList();
-        });
+        .map((snap) => snap.docs.map((d) => ConductAdjustment.fromFirestore(d)).toList());
   }
 
   static Future<void> initializeSubjectAnalytics(String division) async {

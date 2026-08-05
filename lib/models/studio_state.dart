@@ -230,9 +230,22 @@ class StudioDraftConfig {
     }
   }
 
-  /// Count filled (has a lecture) academic periods for a day.
-  /// A period is filled if it contains at least one lecture.
-  int filledCount(String day) {
+  /// Count total lecture hours for a day (sum of duration of all filled slots)
+  int lectureHourCount(String day) {
+    final daySlots = slots[day] ?? {};
+    final academicPeriods = periods.where((p) => !p.isBreak).map((p) => p.id).toSet();
+    int count = 0;
+    for (final pid in academicPeriods) {
+      final periodList = daySlots[pid] ?? [];
+      for (final sl in periodList) {
+        if (sl.isFilled) count += sl.durationPeriods;
+      }
+    }
+    return count;
+  }
+
+  /// Count filled (has at least one lecture) academic periods for a day.
+  int filledPeriodCount(String day) {
     final daySlots = slots[day] ?? {};
     final academicPeriods = periods.where((p) => !p.isBreak).map((p) => p.id).toSet();
     int count = 0;
@@ -248,11 +261,16 @@ class StudioDraftConfig {
   /// Total academic (non-break) periods.
   int get academicPeriodCount => periods.where((p) => !p.isBreak).length;
 
-  bool isDayComplete(String day) => filledCount(day) > 0;
+  bool isDayComplete(String day) {
+    if ((day == 'Saturday' || day == 'Sunday') && lectureHourCount(day) == 0) {
+      return true;
+    }
+    return lectureHourCount(day) > 0;
+  }
   
   /// Checks if a day has any empty academic periods
   bool hasEmptyPeriods(String day) {
-    return filledCount(day) < academicPeriodCount;
+    return filledPeriodCount(day) < academicPeriodCount;
   }
   
   /// Checks if any selected day has empty periods

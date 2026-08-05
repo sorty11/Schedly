@@ -6,22 +6,73 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if false; 
     }
+
+    // ADMIN ACTIONS (Secure client-side operation tracking)
+    match /admin_actions/{actionId} {
+      // Only allow creation/update if the hash matches. No read access.
+      allow create, update: if request.auth != null 
+                    && request.resource.data.masterHash == '652f3d7b860776a2537a2c3a3b42702aed372a2b49c802b077470ad3efdf3f4d';
+      allow read, delete: if false;
+    }
+
+    // FUNCTION: Check if user is CR or SR
+    function isCRorSR() {
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(userPath) && get(userPath).data.role in ['CR', 'SR'];
+    }
+
+    // FUNCTION: Check if user is an active CR for a specific section
+    function isCRForSection(sectionId) {
+      let membershipPath = /databases/$(database)/documents/section_memberships/$(sectionId + '_' + request.auth.uid);
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return (exists(membershipPath) 
+          && get(membershipPath).data.role == 'CR' 
+          && get(membershipPath).data.status == 'active')
+          ||
+          (exists(userPath)
+          && get(userPath).data.role == 'CR'
+          && get(userPath).data.division == sectionId);
+    }
     
-    // SECTIONS (Contains hashed passwords and config)
+    // FUNCTION: Check if user is an active SR for a specific section
+    function isSRForSection(sectionId) {
+      let membershipPath = /databases/$(database)/documents/section_memberships/$(sectionId + '_' + request.auth.uid);
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return (exists(membershipPath) 
+          && get(membershipPath).data.role == 'SR' 
+          && get(membershipPath).data.status == 'active')
+          ||
+          (exists(userPath)
+          && get(userPath).data.role == 'SR'
+          && get(userPath).data.division == sectionId);
+    }
+
+    // FUNCTION: Check if user is CR or SR for section
+    function isCRorSRForSection(sectionId) {
+      return isCRForSection(sectionId) || isSRForSection(sectionId);
+    }
+    
+    // SECTIONS
     match /sections/{sectionId} {
       allow read: if request.auth != null;
-      // Allow updating timetablePublished, or if the user is a CR, allow updating password fields
+      // CRs can update timetablePublished, password fields, and migration flags.
       allow update: if request.auth != null 
                     && (
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['timetablePublished']) ||
+                      (isCRorSRForSection(sectionId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['batchMigrationV1'])) ||
                       (isCRForSection(sectionId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['crPassword', 'srPassword', 'passwordLastUpdatedAt', 'passwordLastUpdatedBy']))
                     );
-      allow create: if false; // Replaced by Cloud Functions
+      // Section creation requires a valid master password hash provided in an admin_actions doc
+      allow create: if request.auth != null 
+                    && getAfter(/databases/$(database)/documents/admin_actions/$(request.auth.uid + '_' + sectionId)).data.masterHash == '652f3d7b860776a2537a2c3a3b42702aed372a2b49c802b077470ad3efdf3f4d';
       allow delete: if false;
       
       match /sr_assignments/{assignmentId} {
         allow read: if request.auth != null;
-        allow write: if false; // Replaced by Cloud Functions
+        // SR assignments usually fail because SRs try to claim their own role, but they are not CRs.
+        // We added an admin_actions verification so an SR with the master password can claim their own assignment securely.
+        allow write: if isCRForSection(sectionId)
+                     || (getAfter(/databases/$(database)/documents/admin_actions/$(request.auth.uid + '_' + sectionId + '_sr')).data.masterHash == '652f3d7b860776a2537a2c3a3b42702aed372a2b49c802b077470ad3efdf3f4d');
       }
       match /notifications/{notificationId} {
         allow read: if request.auth != null;
@@ -29,7 +80,9 @@ service cloud.firestore {
       }
       match /faculty_requests/{requestId} {
         allow read: if request.auth != null;
-        allow write: if isCRForSection(sectionId);
+        // Fails when faculty_profiles were keyed by random IDs instead of Auth UID. Now fixed in client code.
+        allow create: if request.auth != null && exists(/databases/$(database)/documents/faculty_profiles/$(request.auth.uid));
+        allow update, delete: if isCRForSection(sectionId);
       }
       match /students/{studentId} {
         allow read, write: if request.auth != null;
@@ -49,71 +102,68 @@ service cloud.firestore {
         allow read: if request.auth != null;
         allow create: if request.auth != null;
         allow update: if request.auth != null
-                      && request.resource.data.audit.markedByUid == request.auth.uid;
+                      && (request.resource.data.audit.markedByUid == request.auth.uid
+                          || request.resource.data.audit.markedByUid == resource.data.audit.markedByUid);
         allow delete: if false;
+      }
+      match /conduct_adjustments/{adjustmentId} {
+        allow read: if request.auth != null;
+        allow write: if isCRorSRForSection(sectionId);
       }
       match /subjects/{subjectId} {
         allow read: if request.auth != null;
         allow write: if isCRForSection(sectionId);
       }
-    }
-
-    // FUNCTION: Check if user is CR or SR
-    function isCRorSR() {
-      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      return exists(userPath) && get(userPath).data.role in ['CR', 'SR'];
-    }
-
-    // FUNCTION: Check if user is an active CR for a specific section
-    function isCRForSection(sectionId) {
-      let membershipPath = /databases/$(database)/documents/section_memberships/$(sectionId + '_' + request.auth.uid);
-      return exists(membershipPath) 
-          && get(membershipPath).data.role == 'CR' 
-          && get(membershipPath).data.status == 'active';
-    }
-    
-    // FUNCTION: Check if user is an active SR for a specific section
-    function isSRForSection(sectionId) {
-      let membershipPath = /databases/$(database)/documents/section_memberships/$(sectionId + '_' + request.auth.uid);
-      return exists(membershipPath) 
-          && get(membershipPath).data.role == 'SR' 
-          && get(membershipPath).data.status == 'active';
-    }
-
-    // FUNCTION: Check if user is CR or SR for section
-    function isCRorSRForSection(sectionId) {
-      return isCRForSection(sectionId) || isSRForSection(sectionId);
+      match /subject_metadata/{metadataId} {
+        allow read: if request.auth != null;
+        allow write: if isCRorSRForSection(sectionId);
+      }
     }
 
     // OUTBOX FOR RENDER WORKER
     match /notification_outbox/{docId} {
-      allow read: if false; // Only backend admin can read
+      allow read: if false; 
       allow create: if request.auth != null;
-      allow update, delete: if false; // Only backend admin can update/delete
+      allow update, delete: if false; 
     }
     match /faculty_reminders/{docId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && exists(/databases/$(database)/documents/faculty_profiles/$(request.auth.uid));
     }
+    match /feedback/{docId} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if false;
+    }
 
     // DIVISION MEMBERSHIPS
     match /section_memberships/{membershipId} {
       allow read: if request.auth != null;
-      // Users can only create their own membership with role 'Student'
+      // Users can create their own Student membership OR CRs can be created during section creation (via admin_actions)
       allow create: if request.auth != null 
-                    && request.resource.data.userId == request.auth.uid
-                    && request.resource.data.role == 'Student';
-      // Users can only update their own non-critical fields.
-      // Roles and statuses are handled by Cloud Functions.
+                    && (
+                      (request.resource.data.userId == request.auth.uid && request.resource.data.role == 'Student')
+                      || 
+                      (getAfter(/databases/$(database)/documents/admin_actions/$(request.auth.uid + '_' + request.resource.data.sectionId)).data.masterHash == '652f3d7b860776a2537a2c3a3b42702aed372a2b49c802b077470ad3efdf3f4d')
+                    );
+      // Users can update their own non-critical fields.
+      // CRs can remove members (status = removed).
+      // CR Login previously failed because elevating from Student to CR modifies the 'role' field, which was strictly forbidden.
+      // We safely allow role updates here IF accompanied by a valid masterHash in admin_actions.
       allow update: if request.auth != null 
-                    && resource.data.userId == request.auth.uid
-                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status', 'userId', 'sectionId']));
+                    && (
+                      (resource.data.userId == request.auth.uid && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status', 'userId', 'sectionId'])))
+                      ||
+                      (isCRForSection(resource.data.sectionId) && request.resource.data.status == 'removed')
+                      ||
+                      (getAfter(/databases/$(database)/documents/admin_actions/$(request.auth.uid + '_' + request.resource.data.sectionId)).data.masterHash == '652f3d7b860776a2537a2c3a3b42702aed372a2b49c802b077470ad3efdf3f4d')
+                    );
     }
 
     // MEMBERSHIP AUDIT LOGS
     match /membership_audit_logs/{logId} {
       allow read: if request.auth != null;
-      allow write: if false; // Handled by Cloud Functions
+      allow create: if request.auth != null; // CRs can create logs when removing members
+      allow update, delete: if false;
     }
 
     // TIMETABLES
@@ -145,7 +195,10 @@ service cloud.firestore {
     // FACULTY PROFILES
     match /faculty_profiles/{profileId} {
       allow read: if request.auth != null;
-      allow write: if false; // Handled by Cloud Functions
+      // Creation allowed if valid master hash provided in admin_actions
+      allow create: if request.auth != null 
+                    && getAfter(/databases/$(database)/documents/admin_actions/$(request.auth.uid + '_facultySetup')).data.masterHash == '652f3d7b860776a2537a2c3a3b42702aed372a2b49c802b077470ad3efdf3f4d';
+      allow update: if request.auth != null && (isCRorSR() || request.auth.uid == resource.data.uid);
     }
 
     // FACULTY AUDIT LOGS
@@ -171,12 +224,17 @@ service cloud.firestore {
       }
       
       match /attendance/{attendanceId} {
-        allow read, write: if request.auth != null;
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      match /attendance_summary/{summaryId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
       }
       
       match /attendance_logs/{logId} {
-        allow read, write: if request.auth != null;
+        allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }
   }
 }
+

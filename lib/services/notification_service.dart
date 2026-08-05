@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'topic_subscription_service.dart';
 import 'local_notification_service.dart';
 import '../app_settings.dart';
-import 'diagnostic_logger.dart';
 
 class NotificationService {
   static final FirebaseMessaging messaging = FirebaseMessaging.instance;
@@ -195,7 +194,6 @@ class NotificationService {
         finalDivision = division;
       }
 
-      DiagnosticLogger.logFCM('[FCM_TRACE] Preparing Token Registration -> Current Role: ${AppSettings.currentRole.name} | Routing Role: $role | Routing ID: $finalDivision');
 
       try {
         await FirebaseFirestore.instance

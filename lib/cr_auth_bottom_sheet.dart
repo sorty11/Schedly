@@ -1,10 +1,11 @@
 import '../services/notification_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:schedly/theme/theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
+import '../utils/security_utils.dart';
 import 'nmims_structure.dart';
 import 'cr_setup_wizard.dart';
 
@@ -12,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app_settings.dart';
 import 'user_roles.dart';
 import 'dart:ui';
+import 'utils/responsive_utils.dart';
 import 'home_page.dart';
 
 class CRAuthBottomSheet extends StatefulWidget {
@@ -30,23 +32,33 @@ class CRAuthBottomSheet extends StatefulWidget {
 
 class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
   String? _selectedYear;
+  String? _selectedBranch;
   String? _selectedDivision;
-  final _passwordController = TextEditingController();
+  String? _sectionId;
   
+  bool _sectionExists = false;
   bool _isLoading = false;
   bool _checkingSection = false;
-  bool _sectionExists = false;
-  String? _sectionId;
-  String? _branch;
+  
+  List<DocumentSnapshot> _activeSections = [];
+  final _passwordController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _selectedYear = widget.initialYear;
-    _selectedDivision = widget.initialDivision;
-    
-    if (_selectedYear != null && _selectedDivision != null) {
-      _checkSectionStatus();
+    _fetchSections();
+  }
+  
+  Future<void> _fetchSections() async {
+    try {
+      final snap = await FirebaseFirestore.instance.collection('sections').where('active', isEqualTo: true).get();
+      if (mounted) {
+        setState(() {
+          _activeSections = snap.docs;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching sections: $e');
     }
   }
 
@@ -56,29 +68,14 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
     super.dispose();
   }
 
-  Future<void> _checkSectionStatus() async {
-    if (_selectedYear == null || _selectedDivision == null) return;
+  void _checkSectionStatus() {
+    if (_selectedYear == null || _selectedBranch == null || _selectedDivision == null) return;
     
-    setState(() => _checkingSection = true);
+    _sectionId = '${_selectedYear!.replaceAll(' ', '')}_${_selectedBranch!.replaceAll(' ', '')}_$_selectedDivision';
     
-    try {
-      _branch = NMIMSStructure.getBranchForDivision(_selectedDivision!);
-      if (_branch == null) return;
-      
-      _sectionId = '${_selectedYear!.replaceAll(' ', '')}_${_branch!.replaceAll(' ', '')}_$_selectedDivision';
-      
-      final docSnap = await FirebaseFirestore.instance.collection('sections').doc(_sectionId).get();
-      
-      setState(() {
-        _sectionExists = docSnap.exists;
-      });
-    } catch (e) {
-      // Ignored for UI simplicity
-    } finally {
-      if (mounted) {
-        setState(() => _checkingSection = false);
-      }
-    }
+    setState(() {
+      _sectionExists = _activeSections.any((doc) => doc.id == _sectionId);
+    });
   }
 
   Future<void> _authenticate() async {
@@ -104,10 +101,31 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
         debugPrint('CR_VERIFY: Password verified locally. Updating Firestore role...');
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
-          await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          final batch = FirebaseFirestore.instance.batch();
+          
+          final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+          batch.set(userRef, {
             'role': 'CR',
             'division': _sectionId,
           }, SetOptions(merge: true));
+
+          final actionRef = FirebaseFirestore.instance.collection('admin_actions').doc('${user.uid}_$_sectionId');
+          batch.set(actionRef, {
+            'masterHash': SecurityUtils.masterHash,
+            'action': 'claimCR',
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+
+          final membershipRef = FirebaseFirestore.instance.collection('section_memberships').doc('${_sectionId}_${user.uid}');
+          batch.set(membershipRef, {
+            'userId': user.uid,
+            'sectionId': _sectionId,
+            'role': 'CR',
+            'status': 'active',
+            'joinedAt': FieldValue.serverTimestamp(),
+          });
+
+          await batch.commit();
         }
         
         debugPrint('CR_VERIFY: Role updated successfully.');
@@ -131,7 +149,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
           name: 'Class Representative', 
           rollNo: 'ADMIN',
           acYear: _selectedYear!,
-          br: _branch!,
+          br: _selectedBranch!,
           div: _selectedDivision!,
           secId: _sectionId!,
         );
@@ -155,21 +173,20 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
         Navigator.pop(context);
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => CRSetupWizard(initialYear: _selectedYear, initialBranch: _branch, initialDivision: _selectedDivision)),
+          MaterialPageRoute(builder: (_) => CRSetupWizard(initialYear: _selectedYear, initialBranch: _selectedBranch, initialDivision: _selectedDivision)),
         );
       }
-    } on FirebaseFunctionsException catch (e, s) {
-      debugPrint('CR_VERIFY ERROR: $e\n$s');
+    } catch (e) {
+      debugPrint('CR_VERIFY ERROR: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.code == 'not-found' || e.code == 'unauthenticated' || e.message?.contains('Incorrect') == true ? 'Incorrect CR password' : 'Unable to contact server'),
+            content: Text(e.toString().contains('Incorrect') ? 'Incorrect CR password' : 'Unable to contact server'),
             backgroundColor: Colors.red,
           ),
         );
       }
-    } catch (e, s) {
-      debugPrint('CR_VERIFY ERROR: $e\n$s');
+      debugPrint('CR_VERIFY ERROR: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -204,13 +221,27 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    List<String> allDivisions = [];
+    final activeYears = _activeSections.map((d) => d['academicYear'] as String).toSet().toList()..sort();
+    if (_selectedYear != null && !activeYears.contains(_selectedYear)) {
+      _selectedYear = null;
+      _selectedBranch = null;
+      _selectedDivision = null;
+    }
+
+    List<String> activeBranches = [];
     if (_selectedYear != null) {
-      for (var b in NMIMSStructure.branches) {
-        allDivisions.addAll(NMIMSStructure.getDivisionsForBranch(b));
+      activeBranches = _activeSections.where((d) => d['academicYear'] == _selectedYear).map((d) => d['branch'] as String).toSet().toList()..sort();
+      if (_selectedBranch != null && !activeBranches.contains(_selectedBranch)) {
+        _selectedBranch = null;
+        _selectedDivision = null;
       }
-      allDivisions.sort();
-      if (_selectedDivision != null && !allDivisions.contains(_selectedDivision)) {
+    }
+
+    List<String> activeDivisions = [];
+    if (_selectedYear != null && _selectedBranch != null) {
+      activeDivisions = _activeSections.where((d) => d['academicYear'] == _selectedYear && d['branch'] == _selectedBranch)
+                            .map((d) => d['division'] as String).toSet().toList()..sort();
+      if (_selectedDivision != null && !activeDivisions.contains(_selectedDivision)) {
         _selectedDivision = null;
       }
     }
@@ -221,15 +252,18 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
       ),
       child: Center(
         child: SingleChildScrollView(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 24),
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
+          child: ResponsiveUtils.constrainedFormBox(
+            context,
+            maxWidth: 500,
+            child: Container(
+              margin: ResponsiveUtils.getBottomSheetMargin(context),
+              padding: EdgeInsets.all(ResponsiveUtils.getCardPadding(context)),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
                   blurRadius: 30,
                   offset: const Offset(0, 10),
                 ),
@@ -265,10 +299,11 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
                 DropdownButtonFormField<String>(
                   value: _selectedYear,
                   decoration: _compactDecoration('Academic Year', Icons.school_rounded),
-                  items: NMIMSStructure.academicYears.map((y) => DropdownMenuItem(value: y, child: Text(y))).toList(),
+                  items: activeYears.map((y) => DropdownMenuItem(value: y, child: Text(y))).toList(),
                   onChanged: (val) {
                     setState(() {
                       _selectedYear = val;
+                      _selectedBranch = null;
                       _selectedDivision = null;
                       _sectionExists = false;
                       _passwordController.clear();
@@ -276,25 +311,48 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
                   },
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: _selectedDivision,
-                  decoration: _compactDecoration('Division', Icons.class_rounded),
-                  items: allDivisions.map((d) {
-                    final br = NMIMSStructure.getBranchForDivision(d) ?? '';
-                    return DropdownMenuItem(value: d, child: Text('Division $d ($br)'));
-                  }).toList(),
-                  onChanged: _selectedYear == null ? null : (val) {
-                    setState(() {
-                      _selectedDivision = val;
-                      _passwordController.clear();
-                    });
-                    _checkSectionStatus();
-                  },
-                ),
-                const SizedBox(height: 12),
+                if (_selectedYear != null) ...[
+                  DropdownButtonFormField<String>(
+                    value: _selectedBranch,
+                    decoration: _compactDecoration('Branch', Icons.account_tree_rounded),
+                    items: activeBranches.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedBranch = val;
+                        _selectedDivision = null;
+                        _sectionExists = false;
+                        _passwordController.clear();
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (_selectedBranch != null) ...[
+                  if (activeDivisions.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text('No sections available.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
+                    )
+                  else
+                    DropdownButtonFormField<String>(
+                      value: _selectedDivision,
+                      decoration: _compactDecoration('Division', Icons.class_rounded),
+                      items: activeDivisions.map((d) {
+                        return DropdownMenuItem(value: d, child: Text('Division $d'));
+                      }).toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedDivision = val;
+                          _passwordController.clear();
+                        });
+                        _checkSectionStatus();
+                      },
+                    ),
+                  const SizedBox(height: 12),
+                ],
                 if (_checkingSection)
                   const Center(child: Padding(padding: EdgeInsets.all(16), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))))
-                else if (_selectedYear != null && _selectedDivision != null) ...[
+                else if (_selectedYear != null && _selectedBranch != null && _selectedDivision != null) ...[
                   TextField(
                     controller: _passwordController,
                     obscureText: true,
@@ -322,6 +380,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

@@ -9,6 +9,7 @@ import 'services/authentication_service.dart';
 import 'services/crash_reporting_service.dart';
 import 'widgets/app_dialogs.dart';
 import 'forgot_password_page.dart';
+import 'utils/responsive_utils.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PROJECT PHOENIX: Onboarding & Auth Flow
@@ -313,98 +314,112 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
           borderRadius: BorderRadius.circular(24),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-            child: Container(
-              width: 400,
-              padding: const EdgeInsets.all(40),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 0.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 40, spreadRadius: -10, offset: const Offset(0, 20),
-                  ),
-                ],
-              ),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(_isLogin ? 'Welcome back' : 'Create account',
-                        style: const TextStyle(fontFamily: 'Outfit', fontSize: 28,
-                            fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.5)),
-                    const SizedBox(height: 6),
-                    Text(_isLogin ? 'Sign in to continue to Schedly.' : 'Create your Schedly account.',
-                        style: const TextStyle(fontFamily: 'Inter', fontSize: 14, color: Color(0xFF9CA3AF))),
-                    const SizedBox(height: 32),
-                    _glassField(
-                      controller: _emailCtrl, focusNode: _emailFocus,
-                      hint: 'Email address', icon: Icons.mail_outline_rounded,
-                      keyboard: TextInputType.emailAddress,
-                      validator: (v) => v == null || !v.contains('@') ? 'Enter a valid email' : null,
+            child: ResponsiveUtils.constrainedFormBox(
+              ctx,
+              maxWidth: 400,
+              child: Container(
+                padding: EdgeInsets.all(ResponsiveUtils.getCardPadding(ctx)),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 0.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 40, spreadRadius: -10, offset: const Offset(0, 20),
                     ),
-                    const SizedBox(height: 16),
-                    _glassField(
-                      controller: _passCtrl, hint: 'Password',
-                      icon: Icons.lock_outline_rounded, obscure: _obscure,
-                      suffix: MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          onTap: () => setState(() => _obscure = !_obscure),
-                          child: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                              color: const Color(0xFF9CA3AF), size: 18),
+                  ],
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_isLogin ? 'Welcome back' : 'Create account',
+                            style: const TextStyle(fontFamily: 'Outfit', fontSize: 28,
+                                fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.5)),
+                        const SizedBox(height: 6),
+                        Text(_isLogin ? 'Sign in to continue to Schedly.' : 'Create your Schedly account.',
+                            style: const TextStyle(fontFamily: 'Inter', fontSize: 14, color: Color(0xFF9CA3AF))),
+                        const SizedBox(height: 32),
+                        _glassField(
+                          controller: _emailCtrl, focusNode: _emailFocus,
+                          hint: 'Email address', icon: Icons.mail_outline_rounded,
+                          keyboard: TextInputType.emailAddress,
+                          validator: (v) => v == null || !v.contains('@') ? 'Enter a valid email' : null,
                         ),
-                      ),
-                      validator: (v) {
-                        if (v == null || v.isEmpty) return 'Required';
-                        if (!_isLogin && v.length < 8) return 'Min 8 characters';
-                        return null;
-                      },
-                    ),
-                    if (_isLogin) ...[
-                      const SizedBox(height: 16),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: GestureDetector(
-                            onTap: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const ForgotPasswordPage())),
-                            child: const Text('Forgot password?',
-                                style: TextStyle(fontFamily: 'Inter', fontSize: 13,
-                                    fontWeight: FontWeight.w500, color: Color(0xFF9CA3AF))),
-                          ),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 32),
-                    _primaryButton(
-                      label: _isLogin ? 'Sign In' : 'Continue',
-                      onPressed: _loading ? null : _submit,
-                      isLoading: _loading,
-                    ),
-                    const SizedBox(height: 24),
-                    Center(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(_isLogin ? "Don't have an account? " : 'Already have an account? ',
-                              style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF9CA3AF))),
-                          MouseRegion(
+                        const SizedBox(height: 16),
+                        _glassField(
+                          controller: _passCtrl, hint: 'Password',
+                          icon: Icons.lock_outline_rounded, obscure: _obscure,
+                          suffix: MouseRegion(
                             cursor: SystemMouseCursors.click,
                             child: GestureDetector(
-                              onTap: () { HapticFeedback.selectionClick(); setState(() => _isLogin = !_isLogin); },
-                              child: Text(_isLogin ? 'Sign Up' : 'Sign In',
-                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 13,
-                                      fontWeight: FontWeight.w600, color: Colors.white)),
+                              onTap: () => setState(() => _obscure = !_obscure),
+                              child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                color: const Color(0xFF9CA3AF), size: 18),
+                          ),
+                            ),
+                          ),
+                          validator: (v) {
+                            if (v == null || v.isEmpty) return 'Required';
+                            if (!_isLogin && v.length < 8) return 'Min 8 characters';
+                            return null;
+                          },
+                        ),
+                        if (_isLogin) ...[
+                          const SizedBox(height: 16),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                                onTap: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const ForgotPasswordPage())),
+                                child: const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                                child: Text('Forgot password?',
+                                    style: TextStyle(fontFamily: 'Inter', fontSize: 13,
+                                        fontWeight: FontWeight.w500, color: Color(0xFF9CA3AF))),
+                              ),
+                              ),
                             ),
                           ),
                         ],
-                      ),
+                        const SizedBox(height: 32),
+                        _primaryButton(
+                          label: _isLogin ? 'Sign In' : 'Continue',
+                          onPressed: _loading ? null : _submit,
+                          isLoading: _loading,
+                        ),
+                        const SizedBox(height: 24),
+                        Center(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(_isLogin ? "Don't have an account? " : 'Already have an account? ',
+                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF9CA3AF))),
+                              MouseRegion(
+                                cursor: SystemMouseCursors.click,
+                                child: GestureDetector(
+                                  onTap: () { HapticFeedback.selectionClick(); setState(() => _isLogin = !_isLogin); },
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Text(_isLogin ? 'Sign Up' : 'Sign In',
+                                        style: const TextStyle(fontFamily: 'Inter', fontSize: 13,
+                                            fontWeight: FontWeight.w600, color: Colors.white)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),

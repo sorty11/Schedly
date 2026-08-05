@@ -14,6 +14,7 @@ import 'widgets/studio/weekly_builder_step.dart';
 import 'widgets/app_dialogs.dart';
 import 'widgets/studio/working_days_step.dart';
 import 'timetable_manager.dart';
+import 'widgets/animations/skeleton_components.dart';
 
 class ManualTimetableStudio extends StatefulWidget {
   final String division;
@@ -164,7 +165,7 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
               
               final ref = FirebaseFirestore.instance
                   .collection('timetables')
-                  .doc(widget.division)
+                  .doc(AppSettings.sectionId ?? widget.division)
                   .collection(day)
                   .doc(); // Auto ID
 
@@ -195,7 +196,7 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
         }
       }
 
-      final sectionRef = FirebaseFirestore.instance.collection('sections').doc(widget.division);
+      final sectionRef = FirebaseFirestore.instance.collection('sections').doc(AppSettings.sectionId ?? widget.division);
       batch.set(sectionRef, {'timetablePublished': true}, SetOptions(merge: true));
 
       await batch.commit();
@@ -234,7 +235,11 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: SafeArea(
+          child: TimetableSkeleton(),
+        ),
+      );
     }
     
 

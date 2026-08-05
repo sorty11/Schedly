@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'models/subject_metadata.dart';
+import 'models/course_component.dart';
+import 'models/course.dart';
 import 'models/timetable_entry.dart';
-import 'services/subject_metadata_service.dart';
+import 'services/course_configuration_service.dart';
 import 'theme/theme.dart';
 import 'app_settings.dart';
 import 'widgets/app_dialogs.dart';
@@ -11,6 +12,7 @@ import 'widgets/schedly_card.dart';
 import 'widgets/schedly_text_field.dart';
 import 'widgets/dashboard_layout.dart';
 import 'widgets/section_header.dart';
+
 class CourseDetailsSetupPage extends StatefulWidget {
   final String division;
   final bool isFromPublish;
@@ -29,18 +31,10 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
   bool _isLoading = true;
   bool _isSaving = false;
   
-  final List<String> _subjects = [];
-  final Map<String, SubjectMetadata> _metadataMap = {};
-  final Map<String, int> _recommendedHours = {};
+  // courseName -> List of Component states
+  final Map<String, List<_ComponentSetupState>> _courses = {};
+  final Map<String, TextEditingController> _courseCodeControllers = {};
   
-  final Map<String, TextEditingController> _hoursControllers = {};
-  final Map<String, TextEditingController> _codeControllers = {};
-  final Map<String, TextEditingController> _creditsControllers = {};
-  final Map<String, TextEditingController> _facultyControllers = {};
-  final Map<String, bool> _isLabMap = {};
-  
-  final Map<String, FocusNode> _hoursFocusNodes = {};
-
   @override
   void initState() {
     super.initState();
@@ -52,9 +46,11 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
     
     try {
       final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      final Map<String, int> weeklyOccurrences = {};
       
-      // Load occurrences from timetable
+      // Timetable occurrences: componentId -> count
+      final Map<String, int> componentOccurrences = {};
+      final Set<String> allComponentIds = {};
+      
       for (final day in days) {
         final snap = await FirebaseFirestore.instance
             .collection('timetables')
@@ -66,37 +62,59 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
         for (final doc in snap.docs) {
           final entry = TimetableEntry.fromFirestore(doc);
           if (entry.isAcademic) {
-            weeklyOccurrences[entry.subject] = (weeklyOccurrences[entry.subject] ?? 0) + 1;
-            if (!_subjects.contains(entry.subject)) {
-              _subjects.add(entry.subject);
-            }
+            componentOccurrences[entry.subject] = (componentOccurrences[entry.subject] ?? 0) + 1;
+            allComponentIds.add(entry.subject);
           }
         }
       }
       
-      // Load existing metadata if any
-      final existing = await SubjectMetadataService.getMetadata(widget.division, forceRefresh: true);
-      for (var m in existing) {
-        _metadataMap[m.subjectName] = m;
+      // Load existing metadata
+      final existingComps = await CourseConfigurationService.getMetadata(widget.division, forceRefresh: true);
+      final Map<String, CourseComponent> existingMap = {
+        for (var c in existingComps) c.componentId: c
+      };
+      
+      // Group by Course Name
+      for (final compId in allComponentIds) {
+        final existing = existingMap[compId];
+        final courseName = existing?.courseName ?? TimetableEntry.stripComponentSuffix(compId);
+        
+        if (!_courses.containsKey(courseName)) {
+          _courses[courseName] = [];
+          _courseCodeControllers[courseName] = TextEditingController(text: existing?.courseCode ?? '');
+        }
+        
+        // Determine type
+        String compType = existing?.componentType ?? 'Theory';
+        if (existing == null) {
+          final lowerId = compId.toLowerCase();
+          if (lowerId.endsWith(' lab')) compType = 'Lab';
+          else if (lowerId.endsWith(' tutorial')) compType = 'Tutorial';
+          else if (lowerId.endsWith(' project')) compType = 'Project';
+          else if (lowerId.endsWith(' seminar')) compType = 'Seminar';
+          else if (lowerId.endsWith(' workshop')) compType = 'Workshop';
+          else if (lowerId.endsWith(' viva')) compType = 'Viva';
+          else if (courseName == compId.trim()) compType = 'Combined';
+        }
+        
+        final recHours = (componentOccurrences[compId] ?? 1) * 16;
+        
+        _courses[courseName]!.add(_ComponentSetupState(
+          componentId: compId,
+          componentType: compType,
+          targetHours: existing?.targetHours ?? 0,
+          credits: existing?.credits ?? 0,
+          facultyId: existing?.facultyId ?? '',
+          recommendedHours: recHours,
+          createdAt: existing?.createdAt ?? DateTime.now(),
+        ));
       }
       
-      // Setup controllers
-      for (final sub in _subjects) {
-        final occurrences = weeklyOccurrences[sub] ?? 1;
-        _recommendedHours[sub] = occurrences * 16; // 16 weeks
-        
-        final m = _metadataMap[sub];
-        
-        _hoursControllers[sub] = TextEditingController(text: m != null && m.totalHours > 0 ? m.totalHours.toString() : '');
-        _codeControllers[sub] = TextEditingController(text: m?.courseCode ?? '');
-        _creditsControllers[sub] = TextEditingController(text: m != null && m.credits > 0 ? m.credits.toString() : '');
-        _facultyControllers[sub] = TextEditingController(text: m?.faculty ?? '');
-        _isLabMap[sub] = m?.isLab ?? false;
-        
-        _hoursFocusNodes[sub] = FocusNode();
-        
-        // Listen to hours changes for live summary update
-        _hoursControllers[sub]!.addListener(() => setState(() {}));
+      // Attach listeners for dynamic sum updates
+      for (final list in _courses.values) {
+        for (final comp in list) {
+          comp.hoursController.addListener(() => setState(() {}));
+        }
       }
       
     } catch (e) {
@@ -108,19 +126,19 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
   
   @override
   void dispose() {
-    for (var c in _hoursControllers.values) { c.dispose(); }
-    for (var c in _codeControllers.values) { c.dispose(); }
-    for (var c in _creditsControllers.values) { c.dispose(); }
-    for (var c in _facultyControllers.values) { c.dispose(); }
-    for (var f in _hoursFocusNodes.values) { f.dispose(); }
+    for (var c in _courseCodeControllers.values) { c.dispose(); }
+    for (var list in _courses.values) {
+      for (var comp in list) { comp.dispose(); }
+    }
     super.dispose();
   }
 
   int get _totalSemesterHours {
     int total = 0;
-    for (var sub in _subjects) {
-      final text = _hoursControllers[sub]!.text;
-      total += int.tryParse(text) ?? 0;
+    for (var list in _courses.values) {
+      for (var comp in list) {
+        total += int.tryParse(comp.hoursController.text) ?? 0;
+      }
     }
     return total;
   }
@@ -145,48 +163,52 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
 
   Future<void> _save() async {
     // Validate
-    String? invalidSubject;
-    for (var sub in _subjects) {
-      final hoursStr = _hoursControllers[sub]!.text;
-      final hours = int.tryParse(hoursStr);
-      if (hours == null || hours <= 0) {
-        invalidSubject = sub;
-        break;
+    String? invalidComp;
+    for (var list in _courses.values) {
+      for (var comp in list) {
+        final hours = int.tryParse(comp.hoursController.text);
+        if (hours == null || hours <= 0) {
+          invalidComp = comp.componentId;
+          comp.focusNode.requestFocus();
+          break;
+        }
       }
+      if (invalidComp != null) break;
     }
     
-    if (invalidSubject != null) {
-      _hoursFocusNodes[invalidSubject]?.requestFocus();
-      _showErrorDialog('Validation Error', 'Total Teaching Hours for "$invalidSubject" must be greater than zero.');
+    if (invalidComp != null) {
+      _showErrorDialog('Validation Error', 'Target Hours for "$invalidComp" must be greater than zero.');
       return;
     }
     
     setState(() => _isSaving = true);
     
     try {
-      List<SubjectMetadata> metaList = [];
-      for (var sub in _subjects) {
-        metaList.add(SubjectMetadata(
-          id: _metadataMap[sub]?.id ?? '',
-          subjectName: sub,
-          courseCode: _codeControllers[sub]!.text.trim(),
-          totalHours: int.parse(_hoursControllers[sub]!.text),
-          credits: int.tryParse(_creditsControllers[sub]!.text) ?? 0,
-          faculty: _facultyControllers[sub]!.text.trim(),
-          isLab: _isLabMap[sub] ?? false,
-          createdAt: _metadataMap[sub]?.createdAt ?? DateTime.now(),
-          sectionId: widget.division,
-          semesterId: AppSettings.sectionId,
-        ));
+      List<CourseComponent> metaList = [];
+      for (var entry in _courses.entries) {
+        final courseName = entry.key;
+        final courseCode = _courseCodeControllers[courseName]!.text.trim();
+        
+        for (var comp in entry.value) {
+          metaList.add(CourseComponent(
+            componentId: comp.componentId,
+            componentType: comp.componentType,
+            courseName: courseName,
+            courseCode: courseCode,
+            targetHours: int.parse(comp.hoursController.text),
+            credits: int.tryParse(comp.creditsController.text) ?? 0,
+            facultyId: comp.facultyController.text.trim(),
+            createdAt: comp.createdAt,
+            sectionId: widget.division,
+            semesterId: AppSettings.sectionId,
+          ));
+        }
       }
       
-      await SubjectMetadataService.saveMetadata(widget.division, metaList);
+      await CourseConfigurationService.saveMetadata(widget.division, metaList);
       
       if (!mounted) return;
-      AppDialogs.showSnackBar(
-        context: context,
-        message: 'Course details saved!',
-      );
+      AppDialogs.showSnackBar(context: context, message: 'Course details saved!');
       Navigator.pop(context);
     } catch (e) {
       _showErrorDialog('Save Error', 'Failed to save course details. Please try again.');
@@ -201,41 +223,44 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
 
-    return Workspace(
-      children: [
-        SectionHeader(
-          title: 'Course Details Setup',
-          trailing: widget.isFromPublish
-              ? TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Skip', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
-                )
-              : null,
-        ),
-        if (_subjects.isEmpty)
-          Center(
-            child: FloatingEmptyState(
-              icon: Icons.book_rounded,
-              title: 'No Subjects Found',
-              subtitle: 'We could not find any subjects in your timetable.',
+    return Scaffold(
+      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
+      body: SafeArea(
+        child: Workspace(
+          children: [
+            SectionHeader(
+              title: 'Course Details Setup',
+              trailing: widget.isFromPublish
+                  ? TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Skip', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+                    )
+                  : null,
             ),
-          )
-        else ...[
-          for (var sub in _subjects)
-            _buildSubjectCard(sub, sem, colorScheme, isDark),
-          const SizedBox(height: AppSpacing.xl),
-          _buildSummaryAndSave(sem, colorScheme, isDark),
-        ],
-      ],
+            if (_courses.isEmpty)
+              const Center(
+                child: FloatingEmptyState(
+                  icon: Icons.book_rounded,
+                  title: 'No Subjects Found',
+                  subtitle: 'We could not find any subjects in your timetable.',
+                ),
+              )
+            else ...[
+              for (var courseName in _courses.keys)
+                _buildCourseCard(courseName, sem, colorScheme, isDark),
+              const SizedBox(height: AppSpacing.xl),
+              _buildSummaryAndSave(sem, colorScheme, isDark),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildSubjectCard(String sub, AppSemanticColors sem, ColorScheme cs, bool isDark) {
-    final recHours = _recommendedHours[sub] ?? 0;
+  Widget _buildCourseCard(String courseName, AppSemanticColors sem, ColorScheme cs, bool isDark) {
+    final components = _courses[courseName]!;
     
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -243,104 +268,92 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
         variant: SchedlyCardVariant.elevated,
         padding: EdgeInsets.zero,
         child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          initiallyExpanded: _hoursControllers[sub]!.text.isEmpty,
-          title: Text(sub, style: TextStyle(fontFamily: 'Outfit', fontSize: 16, fontWeight: FontWeight.w700)),
-          subtitle: Text('Recommended: $recHours Hours', style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: cs.primary, fontWeight: FontWeight.w600)),
-          childrenPadding: EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
-          children: [
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildTextField(
-                    controller: _codeControllers[sub]!,
-                    label: 'Course Code (optional)',
-                    icon: Icons.tag_rounded,
-                    sem: sem,
-                    cs: cs,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: _buildTextField(
-                    controller: _creditsControllers[sub]!,
-                    label: 'Credits (optional)',
-                    icon: Icons.star_outline_rounded,
-                    keyboardType: TextInputType.number,
-                    sem: sem,
-                    cs: cs,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _buildTextField(
-              controller: _hoursControllers[sub]!,
-              focusNode: _hoursFocusNodes[sub],
-              label: 'Total Teaching Hours *',
-              icon: Icons.access_time_rounded,
-              keyboardType: TextInputType.number,
-              sem: sem,
-              cs: cs,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _buildTextField(
-              controller: _facultyControllers[sub]!,
-              label: 'Faculty Name (optional)',
-              icon: Icons.person_outline_rounded,
-              sem: sem,
-              cs: cs,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-              decoration: BoxDecoration(
-                color: isDark ? cs.surfaceContainerHighest.withValues(alpha: 0.3) : cs.surfaceContainerHighest.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                border: Border.all(color: sem.borderSubtle),
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            initiallyExpanded: components.any((c) => c.hoursController.text.isEmpty),
+            title: Text(courseName, style: const TextStyle(fontFamily: 'Outfit', fontSize: 16, fontWeight: FontWeight.w700)),
+            subtitle: Text('${components.length} Component${components.length > 1 ? 's' : ''}', 
+              style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: cs.primary, fontWeight: FontWeight.w600)),
+            childrenPadding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
+            children: [
+              const SizedBox(height: AppSpacing.sm),
+              SchedlyTextField(
+                controller: _courseCodeControllers[courseName]!,
+                labelText: 'Course Code (optional)',
+                prefixIcon: Icons.tag_rounded,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.science_outlined, size: 18, color: sem.onSurfaceMuted),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text('Lab Subject', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                  Switch(
-                    value: _isLabMap[sub] ?? false,
-                    onChanged: (val) => setState(() => _isLabMap[sub] = val),
-                    activeColor: cs.primary,
-                  ),
-                ],
-              ),
-            ),
-          ],
+              const SizedBox(height: AppSpacing.md),
+              ...components.map((comp) => _buildComponentEditor(comp, sem, cs, isDark)),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    FocusNode? focusNode,
-    required String label,
-    required IconData icon,
-    TextInputType? keyboardType,
-    required AppSemanticColors sem,
-    required ColorScheme cs,
-  }) {
-    return SchedlyTextField(
-      controller: controller,
-      focusNode: focusNode,
-      keyboardType: keyboardType,
-      labelText: label,
-      prefixIcon: icon,
+  Widget _buildComponentEditor(_ComponentSetupState comp, AppSemanticColors sem, ColorScheme cs, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: isDark ? cs.surfaceContainerHighest.withValues(alpha: 0.2) : cs.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: sem.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(comp.componentId, style: const TextStyle(fontFamily: 'Outfit', fontSize: 15, fontWeight: FontWeight.w600)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(comp.componentType, style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w600, color: cs.onPrimaryContainer)),
+              ),
+            ],
+          ),
+          if (comp.recommendedHours > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 8),
+              child: Text('Recommended: ${comp.recommendedHours} Hours', 
+                style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: cs.primary, fontWeight: FontWeight.w500)),
+            ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: SchedlyTextField(
+                  controller: comp.hoursController,
+                  focusNode: comp.focusNode,
+                  labelText: 'Target Hours *',
+                  prefixIcon: Icons.access_time_rounded,
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: SchedlyTextField(
+                  controller: comp.creditsController,
+                  labelText: 'Credits',
+                  prefixIcon: Icons.star_outline_rounded,
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          SchedlyTextField(
+            controller: comp.facultyController,
+            labelText: 'Faculty Name',
+            prefixIcon: Icons.person_outline_rounded,
+          ),
+        ],
+      ),
     );
   }
 
@@ -353,8 +366,8 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Total Subjects', style: TextStyle(fontFamily: 'Inter', fontSize: 14, color: sem.onSurfaceMuted, fontWeight: FontWeight.w600)),
-              Text('${_subjects.length}', style: TextStyle(fontFamily: 'Outfit', fontSize: 16, fontWeight: FontWeight.w700)),
+              Text('Total Courses', style: TextStyle(fontFamily: 'Inter', fontSize: 14, color: sem.onSurfaceMuted, fontWeight: FontWeight.w600)),
+              Text('${_courses.length}', style: const TextStyle(fontFamily: 'Outfit', fontSize: 16, fontWeight: FontWeight.w700)),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -363,28 +376,26 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
             child: Text('Total Semester Hours', style: TextStyle(fontFamily: 'Inter', fontSize: 14, color: sem.onSurfaceMuted, fontWeight: FontWeight.w600)),
           ),
           const SizedBox(height: AppSpacing.sm),
-          ..._subjects.map((sub) {
-            final text = _hoursControllers[sub]!.text;
-            final hrs = int.tryParse(text) ?? 0;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(sub, style: TextStyle(fontFamily: 'Inter', fontSize: 14)),
-                  Text('$hrs', style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w600)),
-                ],
+          for (var list in _courses.values)
+            for (var comp in list)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(comp.componentId, style: const TextStyle(fontFamily: 'Inter', fontSize: 14)),
+                    Text('${int.tryParse(comp.hoursController.text) ?? 0}', style: const TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w600)),
+                  ],
+                ),
               ),
-            );
-          }),
           Padding(
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
             child: Divider(color: sem.borderSubtle, height: 1),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('TOTAL', style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w700)),
+              const Text('TOTAL', style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w700)),
               Text('$_totalSemesterHours Hours', style: TextStyle(fontFamily: 'Outfit', fontSize: 16, fontWeight: FontWeight.w800, color: cs.primary)),
             ],
           ),
@@ -399,11 +410,42 @@ class _CourseDetailsSetupPageState extends State<CourseDetailsSetupPage> {
               ),
               child: _isSaving 
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : Text('Configure Now', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w700)),
+                  : const Text('Configure Now', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w700)),
             ),
           ),
         ],
       ),
     );
+  }
+}
+
+class _ComponentSetupState {
+  final String componentId;
+  final String componentType;
+  final int recommendedHours;
+  final DateTime createdAt;
+  
+  final TextEditingController hoursController;
+  final TextEditingController creditsController;
+  final TextEditingController facultyController;
+  final FocusNode focusNode = FocusNode();
+
+  _ComponentSetupState({
+    required this.componentId,
+    required this.componentType,
+    required this.recommendedHours,
+    required int targetHours,
+    required int credits,
+    required String facultyId,
+    required this.createdAt,
+  }) : hoursController = TextEditingController(text: targetHours > 0 ? targetHours.toString() : ''),
+       creditsController = TextEditingController(text: credits > 0 ? credits.toString() : ''),
+       facultyController = TextEditingController(text: facultyId);
+
+  void dispose() {
+    hoursController.dispose();
+    creditsController.dispose();
+    facultyController.dispose();
+    focusNode.dispose();
   }
 }

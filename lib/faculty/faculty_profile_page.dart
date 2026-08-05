@@ -14,6 +14,11 @@ import '../widgets/skeleton_loader.dart';
 import '../timetable_manager.dart';
 import '../main.dart';
 import '../services/notification_service.dart';
+import '../admin/admin_session.dart';
+import '../admin/admin_auth_sheet.dart';
+import '../admin/student_management_page.dart';
+import '../admin/faculty_management_page.dart';
+import '../admin/section_management_page.dart';
 import '../services/local_notification_service.dart';
 import '../models/faculty_lecture_context.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -1082,6 +1087,41 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                     ]),
                   ),
 
+                  // ── Administration ──────────────────────────────────────────────
+                  _sectionHeader('Administration'),
+                  StaggeredListItem(
+                    index: staggerIndex++,
+                    child: _buildTileGroup([
+                      _buildRoleTile(
+                        icon: Icons.school_rounded,
+                        title: 'Student',
+                        subtitle: 'Manage student profiles',
+                        iconColor: sem.conducted,
+                        onTap: () => _executeAdminAction(() {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentManagementPage()));
+                        }),
+                      ),
+                      _buildRoleTile(
+                        icon: Icons.person_outline_rounded,
+                        title: 'Faculty',
+                        subtitle: 'Manage faculty profiles',
+                        iconColor: colorScheme.primary,
+                        onTap: () => _executeAdminAction(() {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const FacultyManagementPage()));
+                        }),
+                      ),
+                      _buildRoleTile(
+                        icon: Icons.layers_outlined,
+                        title: 'Sections',
+                        subtitle: 'Create, edit, clone and archive sections',
+                        iconColor: sem.accent,
+                        onTap: () => _executeAdminAction(() {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const SectionManagementPage()));
+                        }),
+                      ),
+                    ]),
+                  ),
+
                   // ── About Schedly section ─────────────────────────────────────
                   _sectionHeader('About'),
                   StaggeredListItem(
@@ -1220,6 +1260,22 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
               ),
             ),
     );
+  }
+
+  void _executeAdminAction(VoidCallback action) {
+    if (AdminSession.isAuthenticated) {
+      action();
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (ctx) => AdminAuthSheet(onSuccess: action),
+      );
+    }
   }
 }
 

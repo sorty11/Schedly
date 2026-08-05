@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'diagnostic_service.dart';
 
 import 'upload_timetable_pdf_page.dart';
 import 'app_settings.dart';
@@ -22,11 +23,12 @@ import 'widgets/animations/staggered_list_item.dart';
 import 'widgets/app_dialogs.dart';
 
 import 'onboarding/widgets/tutorial_target.dart';
-import 'services/subject_metadata_service.dart';
+import 'services/course_configuration_service.dart';
 import 'course_details_setup_page.dart';
 import 'cr/cr_faculty_requests_page.dart';
 import 'cr/cr_faculty_view_page.dart';
 import 'cr/cr_password_management_page.dart';
+import 'settings/batch_management_page.dart';
 
 class CRPanelPage extends StatefulWidget {
   const CRPanelPage({super.key});
@@ -52,7 +54,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
       return;
     }
     try {
-      final complete = await SubjectMetadataService.isSetupComplete(sectionId);
+      final complete = await CourseConfigurationService.isSetupComplete(sectionId);
       if (mounted) setState(() { _setupComplete = complete; _isCheckingSetup = false; });
     } catch (_) {
       if (mounted) setState(() => _isCheckingSetup = false);
@@ -70,8 +72,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
   }
 
   Future<void> _addLecture() async {
-    final prefs = await SharedPreferences.getInstance();
-    final division = prefs.getString('selected_division');
+    final division = AppSettings.sectionId ?? AppSettings.division;
     if (division == null) return;
 
     if (!mounted) return;
@@ -352,8 +353,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
                   : 'Edit your subject lectures',
               color: colorScheme.primary,
               onTap: () async {
-                final prefs = await SharedPreferences.getInstance();
-                final division = prefs.getString('selected_division');
+                final division = AppSettings.sectionId ?? AppSettings.division;
                 if (!context.mounted || division == null) return;
                 Navigator.push(
                   context,
@@ -419,7 +419,6 @@ class _CRPanelPageState extends State<CRPanelPage> {
             // ── Settings section (CR only) ─────────────────────────────
             if (isCR) ...[
               _buildSectionLabel('Settings', staggerIndex: 6),
-
               _buildActionCard(
                 staggerIndex: 7,
                 targetId: 'role_password_management_btn',
@@ -432,6 +431,22 @@ class _CRPanelPageState extends State<CRPanelPage> {
                     context,
                     MaterialPageRoute(
                       builder: (_) => CRPasswordManagementPage(division: sectionId),
+                    ),
+                  );
+                },
+              ),
+              _buildActionCard(
+                staggerIndex: 8,
+                targetId: 'batch_management_btn',
+                icon: Icons.group_rounded,
+                title: 'Batch Management',
+                subtitle: 'Rename batches (e.g., ${(AppSettings.division ?? 'A').split('_').last}1 → Batch Alpha)',
+                color: colorScheme.primary,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const BatchManagementPage(),
                     ),
                   );
                 },
@@ -450,8 +465,8 @@ class _CRPanelPageState extends State<CRPanelPage> {
                 color: semanticColors.pending,
                 targetId: 'student_roster_btn',
                 onTap: () async {
-                  final prefs = await SharedPreferences.getInstance();
-                  final division = prefs.getString('selected_division');
+                  final division = AppSettings.sectionId ?? AppSettings.division;
+                  await DiagnosticService.logNavigation('StudentRosterPage', division);
                   if (!context.mounted || division == null) return;
                   Navigator.push(
                     context,
@@ -470,8 +485,8 @@ class _CRPanelPageState extends State<CRPanelPage> {
                 targetId: 'faculty_roster_btn',
                 color: semanticColors.pending,
                 onTap: () async {
-                  final prefs = await SharedPreferences.getInstance();
-                  final division = prefs.getString('selected_division');
+                  final division = AppSettings.sectionId ?? AppSettings.division;
+                  await DiagnosticService.logNavigation('CRFacultyViewPage', division);
                   if (!context.mounted || division == null) return;
                   Navigator.push(
                     context,
@@ -490,8 +505,8 @@ class _CRPanelPageState extends State<CRPanelPage> {
                 targetId: 'faculty_requests_btn',
                 color: semanticColors.pending,
                 onTap: () async {
-                  final prefs = await SharedPreferences.getInstance();
-                  final division = prefs.getString('selected_division');
+                  final division = AppSettings.sectionId ?? AppSettings.division;
+                  await DiagnosticService.logNavigation('CRFacultyRequestsPage', division);
                   if (!context.mounted || division == null) return;
                   Navigator.push(
                     context,
@@ -577,6 +592,30 @@ class _CRPanelPageState extends State<CRPanelPage> {
             const SizedBox(height: AppSpacing.x4l),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          showDialog(context: context, builder: (_) => const AlertDialog(content: CircularProgressIndicator()));
+          
+          final result = await DiagnosticService.runDiagnostics();
+          
+          if (!context.mounted) return;
+          Navigator.pop(context); // pop loading
+          
+          showDialog(
+            context: context, 
+            builder: (_) => AlertDialog(
+              title: const Text('Diagnostics'),
+              content: SingleChildScrollView(
+                child: SelectableText(result),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))
+              ],
+            )
+          );
+        },
+        child: const Icon(Icons.bug_report),
       ),
     );
   }

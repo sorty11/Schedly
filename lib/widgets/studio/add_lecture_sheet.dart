@@ -195,7 +195,7 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: ['Theory', 'Lab', 'Tutorial', 'Event'].map((c) {
+                children: ['Theory', 'Lab', 'Tutorial', 'Project', 'Seminar', 'Viva', 'Event'].map((c) {
                   final selected = _component == c;
                   return ChoiceChip(
                     label: Text(c, style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),

@@ -1,7 +1,6 @@
 import '../services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'widgets/animations/floating_empty_state.dart';
@@ -17,6 +16,7 @@ import 'widgets/animations/animated_card.dart';
 import 'widgets/app_dialogs.dart';
 import 'package:schedly/exceptions.dart';
 import '../services/network_service.dart';
+import 'utils/security_utils.dart';
 import 'widgets/animations/animated_auth_background.dart';
 
 class RoleVerificationPage extends StatefulWidget {
@@ -115,7 +115,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
       AppDialogs.showError(
         context: context,
         title: 'Verification Failed',
-        message: e.toString().replaceAll('Exception: ', '').replaceAll('FirebaseFunctionsException', ''),
+        message: e.toString().replaceAll('Exception: ', ''),
       );
     }
 
@@ -211,11 +211,20 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
       
       debugPrint('Writing to: users/uid directly from client');
       final user = FirebaseAuth.instance.currentUser;
+      final batch = FirebaseFirestore.instance.batch();
+
       if (user != null) {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        batch.set(FirebaseFirestore.instance.collection('users').doc(user.uid), {
           'role': 'SR',
           'division': widget.division,
         }, SetOptions(merge: true));
+
+        final actionRef = FirebaseFirestore.instance.collection('admin_actions').doc('${user.uid}_${widget.division}_sr');
+        batch.set(actionRef, {
+          'masterHash': SecurityUtils.masterHash,
+          'action': 'claimSR',
+          'timestamp': FieldValue.serverTimestamp(),
+        });
       }
 
       final assignmentId = subject.toLowerCase().replaceAll(' ', '_');
@@ -228,10 +237,12 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
       if (userToReplace != null) activeSRs.remove(userToReplace);
       if (!activeSRs.contains(myIdentity)) activeSRs.add(myIdentity);
       
-      await assignmentRef.set({
+      batch.set(assignmentRef, {
         'srs': activeSRs,
         'timestamp': FieldValue.serverTimestamp(),
       });
+
+      await batch.commit();
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('selected_division', widget.division); 
@@ -262,7 +273,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
       AppDialogs.showError(
         context: context,
         title: 'Failed to assign SR',
-        message: e.toString().replaceAll('Exception: ', '').replaceAll('FirebaseFunctionsException', ''),
+        message: e.toString().replaceAll('Exception: ', ''),
       );
       setState(() => loading = false);
     }
@@ -355,6 +366,8 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
         }
 
         return CustomScrollView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
           slivers: [
             SliverPadding(
               padding: EdgeInsets.all(AppSpacing.x2l),

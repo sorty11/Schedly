@@ -53,9 +53,11 @@ dependencies:
   rxdart: ^0.28.0
   animations: ^2.2.0
   flutter_animate: ^4.5.2
-  cloud_functions: ^6.3.5
   firebase_crashlytics: ^5.2.6
   video_player: ^2.13.0
+  crypto: ^3.0.3
+  url_launcher: ^6.3.2
+  device_info_plus: ^12.4.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -100,9 +102,6 @@ flutter:
   # list giving the asset and other descriptors for the font. For
   # example:
   fonts:
-    - family: Inter
-      fonts:
-        - asset: assets/fonts/Inter-Variable.ttf
     - family: Outfit
       fonts:
         - asset: assets/fonts/Outfit-Variable.ttf

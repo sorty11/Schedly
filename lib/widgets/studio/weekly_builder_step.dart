@@ -244,7 +244,7 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${_draft.filledCount(day)} / ${_draft.academicPeriodCount}',
+                              '${_draft.lectureHourCount(day)} Hours',
                               style: TextStyle(fontFamily: 'Inter', 
                                 fontSize: 11,
                                 color: isComplete ? Colors.green : sem.onSurfaceMuted,
@@ -301,7 +301,7 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
           ),
         ),
 
-        // Publish Button
+        // Publish Summary & Button
         Container(
           padding: EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.lg, AppSpacing.x2l, MediaQuery.of(context).padding.bottom + 16),
           decoration: BoxDecoration(
@@ -311,17 +311,48 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
           ),
           child: SafeArea(
             top: false,
-            child: FilledButton.icon(
-              onPressed: _allDaysComplete() && !widget.isPublishing ? widget.onPublish : null,
-              icon: widget.isPublishing 
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Icon(Icons.publish_rounded, size: 18),
-              label: Text(widget.isPublishing ? 'Publishing...' : 'Publish Timetable', 
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w700)),
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(double.infinity, 56),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_allDaysComplete()) ...[
+                  Text('Publishing Summary', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, fontSize: 14, color: sem.onSurfaceMuted)),
+                  const SizedBox(height: AppSpacing.sm),
+                  Wrap(
+                    spacing: AppSpacing.md,
+                    runSpacing: AppSpacing.xs,
+                    children: _draft.selectedDays.map((day) {
+                      final hours = _draft.lectureHourCount(day);
+                      final isOptional = (day == 'Saturday' || day == 'Sunday') && hours == 0;
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(isOptional ? Icons.radio_button_unchecked_rounded : Icons.check_circle_rounded, 
+                            size: 14, color: isOptional ? sem.onSurfaceMuted : Colors.green),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$day ${isOptional ? '(Optional 0h)' : '(${hours}h)'}',
+                            style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: isOptional ? sem.onSurfaceMuted : cs.onSurface),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                ],
+                FilledButton.icon(
+                  onPressed: _allDaysComplete() && !widget.isPublishing ? widget.onPublish : null,
+                  icon: widget.isPublishing 
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Icon(Icons.publish_rounded, size: 18),
+                  label: Text(widget.isPublishing ? 'Publishing...' : 'Publish Timetable', 
+                      style: const TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w700)),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 56),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

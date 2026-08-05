@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -133,6 +134,83 @@ class MigrationService {
     }
   }
 
+  /// Migrates legacy batch names (e.g., "Batch1") to dynamic division batch names (e.g., "C1")
+  static Future<void> migrateBatchNames(String division) async {
+    final l = _getDivLetter(division);
+    if (l.isEmpty) return; // Cannot determine letter for dynamic batches
+
+    final batch1New = '${l}1';
+    final batch2New = '${l}2';
+
+    final batch = _db.batch();
+    int ops = 0;
+
+    Future<void> commitBatch() async {
+      if (ops > 0) {
+        await batch.commit();
+        ops = 0;
+      }
+    }
+
+    String? _remapBatch(String? oldBatch) {
+      if (oldBatch == null) return null;
+      final trimmed = oldBatch.trim().toLowerCase().replaceAll(' ', '');
+      if (trimmed == 'batch1') return batch1New;
+      if (trimmed == 'batch2') return batch2New;
+      return null;
+    }
+
+    // 1. Migrate Timetables
+    for (final day in _days) {
+      final snapshot = await _db.collection('timetables').doc(division).collection(day).get();
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final mapped = _remapBatch(data['batch'] as String?);
+        if (mapped != null) {
+          batch.update(doc.reference, {'batch': mapped});
+          ops++;
+          if (ops >= 400) await commitBatch();
+        }
+      }
+    }
+
+    // 2. Migrate Analytics
+    final analyticsSnapshot = await _db.collection('sections').doc(division).collection('analytics').get();
+    for (final doc in analyticsSnapshot.docs) {
+      final data = doc.data();
+      final mapped = _remapBatch(data['batch'] as String?);
+      if (mapped != null) {
+        batch.update(doc.reference, {'batch': mapped});
+        ops++;
+        if (ops >= 400) await commitBatch();
+      }
+    }
+
+    // 3. Migrate Conduct Logs
+    final logsSnapshot = await _db.collection('sections').doc(division).collection('conduct_logs').get();
+    for (final doc in logsSnapshot.docs) {
+      final data = doc.data();
+      final originalSlot = data['originalSlot'] as Map<String, dynamic>?;
+      if (originalSlot != null) {
+        final mapped = _remapBatch(originalSlot['batch'] as String?);
+        if (mapped != null) {
+          originalSlot['batch'] = mapped;
+          batch.update(doc.reference, {'originalSlot': originalSlot});
+          ops++;
+          if (ops >= 400) await commitBatch();
+        }
+      }
+    }
+
+    await commitBatch();
+  }
+
+  static String _getDivLetter(String division) {
+    if (division.isEmpty) return '';
+    final last = division.trim().characters.last.toUpperCase();
+    return RegExp(r'[A-Z]').hasMatch(last) ? last : '';
+  }
+
   /// Fixes corrupted subject names (e.g., "CTPS Theory Theory") across timetables, analytics, and conduct_logs.
   static Future<void> sanitizeSubjectNames(String division) async {
     final batch = _db.batch();
@@ -217,5 +295,69 @@ class MigrationService {
     }
 
     await commitBatch();
+  }
+
+  /// Migrates legacy SubjectMetadata models to the new CourseComponent architecture.
+  /// Derives courseName and componentType from the document ID exactly once.
+  static Future<void> migrateToCourseArchitecture(String division) async {
+    final prefs = await SharedPreferences.getInstance();
+    final cacheKey = 'course_architecture_migrated_$division';
+    if (prefs.getBool(cacheKey) == true) return;
+
+    final batch = _db.batch();
+    int ops = 0;
+
+    Future<void> commitBatch() async {
+      if (ops > 0) {
+        await batch.commit();
+        ops = 0;
+      }
+    }
+
+    final snapshot = await _db.collection('sections').doc(division).collection('subjects').get();
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      
+      // If already migrated (has componentType explicitly set), skip
+      if (data.containsKey('componentType') && data.containsKey('courseName')) {
+        continue;
+      }
+
+      final docId = doc.id;
+      final subjectName = data['subjectName'] as String? ?? docId;
+      
+      // Derive from subjectName (which is often the same as docId, but subjectName is safer)
+      final courseName = TimetableEntry.stripComponentSuffix(subjectName);
+      
+      // Determine type
+      String componentType = 'Theory';
+      final lowerName = subjectName.toLowerCase();
+      if (data['isLab'] == true || lowerName.endsWith(' lab')) {
+        componentType = 'Lab';
+      } else if (lowerName.endsWith(' tutorial')) {
+        componentType = 'Tutorial';
+      } else if (lowerName.endsWith(' project')) {
+        componentType = 'Project';
+      } else if (lowerName.endsWith(' seminar')) {
+        componentType = 'Seminar';
+      } else if (lowerName.endsWith(' workshop')) {
+        componentType = 'Workshop';
+      } else if (lowerName.endsWith(' viva')) {
+        componentType = 'Viva';
+      } else if (courseName == subjectName.trim()) {
+        // If stripping didn't change it and it's not marked as lab, it's combined
+        componentType = 'Combined';
+      }
+
+      batch.update(doc.reference, {
+        'courseName': courseName,
+        'componentType': componentType,
+      });
+      ops++;
+      if (ops >= 400) await commitBatch();
+    }
+
+    await commitBatch();
+    await prefs.setBool(cacheKey, true);
   }
 }

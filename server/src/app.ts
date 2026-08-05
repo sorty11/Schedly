@@ -9,6 +9,7 @@ import { OutboxWorker } from './worker/outbox.worker';
 import { TokenWorker } from './worker/token.worker';
 import { AppConfig } from './config/env.config';
 import apiV1Routes from './routes/api.v1.routes';
+import feedbackRoutes from './routes/feedback';
 
 dotenv.config();
 import './config/firebase'; // Ensure firebase is initialized
@@ -33,6 +34,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/v1', apiV1Routes);
+app.use('/api/feedback', feedbackRoutes);
 
 // Global Error Handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

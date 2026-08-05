@@ -14,6 +14,7 @@ import 'theme/theme.dart';
 import 'widgets/animations/animated_card.dart';
 import 'widgets/app_dialogs.dart';
 import 'widgets/animations/floating_empty_state.dart';
+import 'widgets/animations/skeleton_components.dart';
 
 class DraftStudioPage extends StatefulWidget {
   final String division;
@@ -70,7 +71,11 @@ class _DraftStudioPageState extends State<DraftStudioPage> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: SafeArea(
+          child: TimetableSkeleton(),
+        ),
+      );
     }
 
     if (_config == null || _config!.workingDays.isEmpty) {
@@ -170,8 +175,8 @@ class _DayView extends StatelessWidget {
           .collection(day) // Fallback to live timetable for now to keep things visual while we migrate
           .snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          return const TimetableSkeleton();
         }
 
         final lectures = snapshot.data!.docs.map((d) => TimetableEntry.fromFirestore(d)).toList();

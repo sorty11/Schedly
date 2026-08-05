@@ -7,7 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'dashboard_page.dart';
 import 'weekly_timetable_page.dart';
-import 'analytics_page.dart';
+
 import 'updates_page.dart';
 import 'profile_page.dart';
 import 'services/announcement_listener.dart';
@@ -15,10 +15,13 @@ import 'services/conduct_sync_service.dart';
 import 'services/migration_service.dart';
 import 'theme/theme.dart';
 import 'app_settings.dart';
+import 'user_roles.dart';
 import 'onboarding/services/onboarding_service.dart';
 import 'onboarding/services/feature_discovery_service.dart';
 import 'onboarding/widgets/tutorial_target.dart';
 import 'onboarding/services/tutorial_controller.dart';
+import 'cr_panel_page.dart';
+import 'attendance_page.dart';
 
 class HomePage extends StatefulWidget {
   final String division;
@@ -42,7 +45,9 @@ class _HomePageState extends State<HomePage>
   void initState() {
     super.initState();
     AnnouncementListener.start(widget.division);
-    ConductSyncService.syncPendingLectures(widget.division);
+    if (AppSettings.currentRole == UserRole.cr || AppSettings.currentRole == UserRole.sr) {
+      ConductSyncService.syncPendingLectures(widget.division);
+    }
     _loadUnreadCount();
 
     _notificationsSubscription = FirebaseFirestore.instance
@@ -80,6 +85,21 @@ class _HomePageState extends State<HomePage>
         debugPrint('Subject sanitization completed for ${widget.division}');
       } catch (e) {
         debugPrint('Subject sanitization failed: $e');
+      }
+    }
+
+    // Run Batch Migration only for CRs/SRs using a centralized flag
+    if (AppSettings.currentRole == UserRole.cr || AppSettings.currentRole == UserRole.sr) {
+      try {
+        final sectionRef = FirebaseFirestore.instance.collection('sections').doc(widget.division);
+        final sectionDoc = await sectionRef.get();
+        if (sectionDoc.exists && !(sectionDoc.data()?['batchMigrationV1'] ?? false)) {
+          await MigrationService.migrateBatchNames(widget.division);
+          await sectionRef.update({'batchMigrationV1': true});
+          debugPrint('Batch migration V1 completed for ${widget.division}');
+        }
+      } catch (e) {
+        debugPrint('Batch migration failed: $e');
       }
     }
   }
@@ -121,7 +141,6 @@ class _HomePageState extends State<HomePage>
   }
 
   @override
-  @override
   void dispose() {
     _notificationsSubscription?.cancel();
     super.dispose();
@@ -132,8 +151,12 @@ class _HomePageState extends State<HomePage>
     final pages = [
       DashboardPage(division: widget.division),
       WeeklyTimetablePage(division: widget.division),
-      AnalyticsPage(division: widget.division),
-      const UpdatesPage(),
+        AttendancePage(division: widget.division),
+
+      if (AppSettings.currentRole == UserRole.cr || AppSettings.currentRole == UserRole.sr)
+        const CRPanelPage()
+      else
+        const UpdatesPage(),
       ProfilePage(division: widget.division),
     ];
 
@@ -163,7 +186,7 @@ class _HomePageState extends State<HomePage>
         selectedIndex: _currentIndex,
         unreadCount: _unreadCount,
         onTap: (index) async {
-          if (index == 3) await _markNotificationsRead();
+          if (pages[index] is UpdatesPage) await _markNotificationsRead();
           setState(() => _currentIndex = index);
           TutorialController.instance.completeStep();
         },
@@ -190,17 +213,23 @@ class _SchedlyNavBar extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final items = [
-      _NavItem(Icons.home_outlined, Icons.home_rounded, 'Home', targetId: 'dashboard_tab'),
-      _NavItem(Icons.view_week_outlined, Icons.view_week_rounded, 'Timetable', targetId: 'timetable_tab'),
-      _NavItem(Icons.insights_outlined, Icons.insights_rounded, 'Analytics', targetId: 'analytics_tab'),
-      _NavItem(
-        Icons.notifications_outlined,
-        Icons.notifications_rounded,
-        'Updates',
-        badge: unreadCount,
-        targetId: 'announcements_tab',
-      ),
-      _NavItem(Icons.account_circle_outlined, Icons.account_circle_rounded, 'Profile', targetId: 'profile_tab'),
+      const _NavItem(Icons.home_outlined, Icons.home_rounded, 'Home', targetId: 'dashboard_tab'),
+      const _NavItem(Icons.view_week_outlined, Icons.view_week_rounded, 'Timetable', targetId: 'timetable_tab'),
+      const _NavItem(Icons.fact_check_outlined, Icons.fact_check_rounded, 'Attendance', targetId: 'attendance_tab'),
+
+      if (AppSettings.currentRole == UserRole.cr)
+        const _NavItem(Icons.admin_panel_settings_outlined, Icons.admin_panel_settings_rounded, 'CR Panel', targetId: 'admin_tab')
+      else if (AppSettings.currentRole == UserRole.sr)
+        const _NavItem(Icons.admin_panel_settings_outlined, Icons.admin_panel_settings_rounded, 'SR Panel', targetId: 'admin_tab')
+      else
+        _NavItem(
+          Icons.notifications_outlined,
+          Icons.notifications_rounded,
+          'Updates',
+          badge: unreadCount,
+          targetId: 'announcements_tab',
+        ),
+      const _NavItem(Icons.account_circle_outlined, Icons.account_circle_rounded, 'Profile', targetId: 'profile_tab'),
     ];
 
     return ClipRect(

@@ -468,9 +468,9 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                       key: ValueKey(selectedDay),
                       physics: const BouncingScrollPhysics(),
                       padding: EdgeInsets.fromLTRB(
-                        AppSpacing.x2l,
                         AppSpacing.lg,
-                        AppSpacing.x2l,
+                        AppSpacing.lg,
+                        AppSpacing.lg,
                         AppSpacing.x6l,
                       ),
                       itemCount: groupedLectures.length,

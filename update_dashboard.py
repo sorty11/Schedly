@@ -1,145 +1,179 @@
 import re
 
-file_path = r'c:\Users\ACER\Desktop\schedly\lib\dashboard_page.dart'
-with open(file_path, 'r', encoding='utf-8') as f:
-    content = f.read()
+def main():
+    with open('lib/dashboard_page.dart', 'r', encoding='utf-8') as f:
+        content = f.read()
 
-# Add import
-content = content.replace(
-    "import 'widgets/animations/floating_empty_state.dart';",
-    "import 'widgets/animations/floating_empty_state.dart';\nimport 'widgets/animations/skeleton_components.dart';"
-)
+    # 1. Add imports
+    imports = """import 'package:shared_preferences/shared_preferences.dart';
+import 'package:schedly/services/sync_service.dart';
+import 'package:schedly/services/attendance_service.dart';
+import 'package:schedly/models/attendance_record.dart';"""
+    content = content.replace("import 'package:shared_preferences/shared_preferences.dart';", imports)
 
-# Remove the early return for CircularProgressIndicator and add isLoading
-content = re.sub(
-    r'if \(snapshot\.connectionState == ConnectionState\.waiting &&\s+!snapshot\.hasData\) \{\s+return const Center\(child: CircularProgressIndicator\(\)\);\s+\}',
-    r'final isLoading = snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData;',
-    content
-)
+    # 2. Add properties
+    props = """  Map<String, String> _batchNames = {};
+  late Future<ProgressCalculatorService?> _calculatorFuture;
+  late Stream<List<AttendanceRecord>> _recordsStream;"""
+    content = content.replace("  Map<String, String> _batchNames = {};\n  late Future<ProgressCalculatorService?> _calculatorFuture;", props)
 
-# Inject skeleton for HeroCard
-content = content.replace(
-    'if (!_hasTimetable && !_hasDraft && AppSettings.currentRole == UserRole.cr && !_isLoadingTimetableCheck)',
-    'if (isLoading)\n                  const SliverToBoxAdapter(child: HeroCardSkeleton()),\n\n                if (!isLoading && !_hasTimetable && !_hasDraft && AppSettings.currentRole == UserRole.cr && !_isLoadingTimetableCheck)'
-)
+    # 3. Init state stream
+    initState = """    _lecturesStream = FirebaseFirestore.instance
+        .collection('timetables')
+        .doc(widget.division)
+        .collection(currentDay)
+        .snapshots();
+    _recordsStream = AttendanceService.streamAll(widget.division);"""
+    content = content.replace("""    _lecturesStream = FirebaseFirestore.instance
+        .collection('timetables')
+        .doc(widget.division)
+        .collection(currentDay)
+        .snapshots();""", initState)
 
-# Fix other conditions to check for !isLoading so they don't break
-content = content.replace(
-    'if (_hasDraft)',
-    'if (!isLoading && _hasDraft)'
-)
+    # 4. Wrap build body with StreamBuilder
+    build_start = """    return Scaffold(
+      body: SafeArea(
+        child: StreamBuilder<QuerySnapshot>(
+          stream: _lecturesStream,
+          builder: (context, snapshot) {"""
+    
+    build_start_replacement = """    return Scaffold(
+      body: SafeArea(
+        child: StreamBuilder<List<AttendanceRecord>>(
+          stream: _recordsStream,
+          builder: (context, recordsSnap) {
+            final rawRecords = recordsSnap.data ?? [];
+            final Map<String, AttendanceRecord> attendanceRecords = {};
+            
+            final List<String> mergedSubjects = ['DM', 'Discrete Mathematics', 'PnS', 'SnS', 'Python', 'PROGRAMMING WITH PYTHON', 'Signals and Systems', 'Principles of Economics and Managemen'];
+            
+            for (final r in rawRecords) {
+              String subjectName = r.subjectCode;
+              String componentName = r.component;
+              
+              if (subjectName.toUpperCase().contains('DATA STRUCTURES') || subjectName == 'DSA') {
+                subjectName = 'DSA';
+                if (componentName.toUpperCase().contains('LAB') || componentName.toUpperCase().contains('PRACTICAL')) {
+                  componentName = 'Lab';
+                } else {
+                  componentName = 'Theory';
+                }
+              }
 
-# LiveLectureCard (Hero)
-content = content.replace(
-    'if (currentGroup != null)',
-    'if (!isLoading && currentGroup != null)'
-)
-
-# QuickStatsRow
-content = content.replace(
-    'if (groupedLectures.isNotEmpty)',
-    'if (!isLoading && groupedLectures.isNotEmpty)'
-)
-
-# FloatingEmptyState
-content = content.replace(
-    'if (groupedLectures.isEmpty)',
-    'if (!isLoading && groupedLectures.isEmpty)'
-)
-
-# Today's Schedule Text replacement
-old_text_block = '''SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                      left: AppSpacing.x2l,
-                      right: AppSpacing.x2l,
-                      bottom: AppSpacing.md,
-                    ),
-                    child: StaggeredListItem(
-                      index: 4,
-                      child: Row(
-                        children: [
-                          Text(
-                            "Today's Schedule",
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const Spacer(),
-                          if (groupedLectures.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md,
-                                vertical: AppSpacing.xs,
-                              ),
-                              decoration: BoxDecoration(
-                                color: colorScheme.primary.withValues(alpha: 0.1),
-                                borderRadius:
-                                    BorderRadius.circular(AppRadius.full),
-                              ),
-                              child: Text(
-                                '${groupedLectures.length} block${groupedLectures.length == 1 ? '' : 's'}',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: colorScheme.primary,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),'''
-
-new_text_block = '''SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                      left: AppSpacing.x2l,
-                      right: AppSpacing.x2l,
-                      bottom: AppSpacing.md,
-                    ),
-                    child: StaggeredListItem(
-                      index: 4,
-                      child: Row(
-                        children: [
-                          Text(
-                            "Today's Schedule",
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const Spacer(),
-                          if (!isLoading && groupedLectures.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md,
-                                vertical: AppSpacing.xs,
-                              ),
-                              decoration: BoxDecoration(
-                                color: colorScheme.primary.withValues(alpha: 0.1),
-                                borderRadius:
-                                    BorderRadius.circular(AppRadius.full),
-                              ),
-                              child: Text(
-                                '${groupedLectures.length} block${groupedLectures.length == 1 ? '' : 's'}',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: colorScheme.primary,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+              if (mergedSubjects.contains(subjectName)) {
+                final key = '${subjectName}_Merged';
+                if (attendanceRecords.containsKey(key)) {
+                  final existing = attendanceRecords[key]!;
+                  attendanceRecords[key] = AttendanceRecord(
+                    id: existing.id,
+                    division: existing.division,
+                    subjectCode: subjectName,
+                    component: 'Merged',
+                    present: existing.present + r.present,
+                    absent: existing.absent + r.absent,
+                    cancelled: existing.cancelled + r.cancelled,
+                  );
+                } else {
+                  attendanceRecords[key] = AttendanceRecord(
+                    id: r.id,
+                    division: r.division,
+                    subjectCode: subjectName,
+                    component: 'Merged',
+                    present: r.present,
+                    absent: r.absent,
+                    cancelled: r.cancelled,
+                  );
+                }
+              } else {
+                String normComponent = componentName;
+                if (normComponent.isEmpty || normComponent == 'Lecture') normComponent = 'Theory';
+                else if (normComponent == 'Practical') normComponent = 'Lab';
                 
-                if (isLoading) ...[
-                  const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l), child: LectureCardSkeleton(includeTime: true))),
-                  const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l), child: LectureCardSkeleton(includeTime: true))),
-                  const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l), child: LectureCardSkeleton(includeTime: true))),
-                ],'''
+                attendanceRecords['${subjectName}_$normComponent'] = r;
+              }
+            }
 
-content = content.replace(old_text_block, new_text_block)
+            return StreamBuilder<QuerySnapshot>(
+              stream: _lecturesStream,
+              builder: (context, snapshot) {"""
+    content = content.replace(build_start, build_start_replacement)
 
-with open(file_path, 'w', encoding='utf-8') as f:
-    f.write(content)
-print("Updated dashboard_page.dart")
+    # 5. Add two closing braces at the end of build body
+    build_end = """                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.x6l),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }"""
+    build_end_replacement = """                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.x6l),
+                ),
+              ],
+            );
+          },
+        );
+          },
+        ),
+      ),
+    );
+  }"""
+    content = content.replace(build_end, build_end_replacement)
+
+    # 6. Update TimelineLectureItem params
+    item_params = """  final bool isLast;
+  final bool Function(TimetableEntry) canEdit;
+  final void Function(TimetableEntry) onEdit;
+  final Map<String, String>? batchNames;
+  final Map<String, AttendanceRecord>? attendanceRecords;
+
+  const _TimelineLectureItem({
+    required this.entries,
+    required this.isCurrent,
+    required this.isNext,
+    required this.isLast,
+    required this.canEdit,
+    required this.onEdit,
+    this.batchNames,
+    this.attendanceRecords,
+  });"""
+    content = content.replace("""  final bool isLast;
+  final bool Function(TimetableEntry) canEdit;
+  final void Function(TimetableEntry) onEdit;
+
+  const _TimelineLectureItem({
+    required this.entries,
+    required this.isCurrent,
+    required this.isNext,
+    required this.isLast,
+    required this.canEdit,
+    required this.onEdit,
+  });""", item_params)
+
+    # 7. Pass attendanceRecords from sliver list
+    item_call = """                            child: _TimelineLectureItem(
+                              entries: entries,
+                              isCurrent: isCurrent,
+                              isNext: isNext,
+                              isLast: isLast,
+                              canEdit: _canEditLecture,
+                              onEdit: _editLecture,
+                              attendanceRecords: attendanceRecords,
+                            ),"""
+    content = content.replace("""                            child: _TimelineLectureItem(
+                              entries: entries,
+                              isCurrent: isCurrent,
+                              isNext: isNext,
+                              isLast: isLast,
+                              canEdit: _canEditLecture,
+                              onEdit: _editLecture,
+                            ),""", item_call)
+
+    with open('lib/dashboard_page.dart', 'w', encoding='utf-8') as f:
+        f.write(content)
+
+if __name__ == '__main__':
+    main()

@@ -220,10 +220,18 @@ class OutboxWorker {
                 logger_1.logger.info(`[AUTH] Bypassing auth check for internal backend job: ${type}`);
             }
             else if (uid) {
-                const userDoc = await db.collection('users').doc(uid).get();
+                let userDoc = await db.collection('users').doc(uid).get();
+                if (!userDoc.exists) {
+                    // Faculty profiles are stored in a separate collection
+                    userDoc = await db.collection('faculty_profiles').doc(uid).get();
+                }
                 logger_1.logger.info(`[AUTH] Firestore document exists=${userDoc.exists}`);
                 if (userDoc.exists) {
                     role = userDoc.data()?.role || 'unknown';
+                    // For legacy faculty_profiles that might not have a 'role' field, assume FACULTY
+                    if (role === 'unknown' && userDoc.ref.path.includes('faculty_profiles')) {
+                        role = 'FACULTY';
+                    }
                     logger_1.logger.info(`[AUTH] role=${role}`);
                     const normalizedRole = role.toUpperCase();
                     if (normalizedRole === 'CR' || normalizedRole === 'SR' || normalizedRole === 'FACULTY') {

@@ -15,6 +15,9 @@ import 'home_page.dart';
 import 'faculty/faculty_home_page.dart';
 import 'app_settings.dart';
 import 'user_roles.dart';
+import 'admin/admin_auth_sheet.dart';
+import 'admin/section_management_page.dart';
+import 'utils/responsive_utils.dart';
 
 class OnboardingWizardPage extends StatefulWidget {
   const OnboardingWizardPage({super.key});
@@ -46,6 +49,7 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
   
   // Section Selection (Student)
   String? _selectedYear;
+  String? _selectedBranch;
   String? _selectedDivision;
   
   final _profileFormKey = GlobalKey<FormState>();
@@ -75,13 +79,15 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
       final doc = await _firestore.collection('users').doc(user!.uid).get();
       if (doc.exists) {
         final data = doc.data()!;
-        if (data['onboardingCompleted'] == true) {
-          _routeToDashboard(data['userType']);
+        if (data['profileCompleted'] == true) {
+          _routeToDashboard(data['role']);
           return;
         }
         
+        if (data['role'] != null) {
+          _selectedRole = data['role'];
+        }
         setState(() {
-          _selectedRole = data['userType'];
           _currentStep = data['onboardingStep'] ?? 0;
           
           if (data['draftProfile'] != null) {
@@ -110,7 +116,7 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
     
     try {
       await _firestore.collection('users').doc(user!.uid).set({
-        'userType': _selectedRole,
+        'role': _selectedRole,
         'onboardingStep': nextStep,
         'draftProfile': {
           'name': _nameController.text.trim(),
@@ -142,15 +148,14 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
   }
 
   Future<void> _completeStudentOnboarding() async {
-    if (_selectedYear == null || _selectedDivision == null) {
+    if (_selectedYear == null || _selectedBranch == null || _selectedDivision == null) {
       AppDialogs.showError(context: context, title: 'Missing Info', message: 'Please select a section.');
       return;
     }
     
     setState(() => _loading = true);
     try {
-      final branch = NMIMSStructure.getBranchForDivision(_selectedDivision!);
-      final sectionId = '${_selectedYear!.replaceAll(' ', '')}_${branch?.replaceAll(' ', '')}_$_selectedDivision';
+      final sectionId = '${_selectedYear!.replaceAll(' ', '')}_${_selectedBranch!.replaceAll(' ', '')}_$_selectedDivision';
       
       await DivisionMembershipService.joinDivision(
         uid: user!.uid,
@@ -165,7 +170,7 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
         name: _nameController.text.trim(),
         rollNo: _rollNoController.text.trim().toUpperCase(),
         acYear: _selectedYear!,
-        br: branch ?? '',
+        br: _selectedBranch!,
         div: _selectedDivision!,
         secId: sectionId,
       );
@@ -268,12 +273,39 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
             isSelected: _selectedRole == 'Faculty',
             onTap: () => setState(() => _selectedRole = 'Faculty'),
           ),
+          const SizedBox(height: AppSpacing.lg),
+          _RoleCard(
+            title: 'Admin Setup',
+            description: 'Create and manage class sections (CRs/Admins only).',
+            icon: Icons.layers_outlined,
+            isSelected: false,
+            onTap: _showAdminSetupAuth,
+          ),
           const SizedBox(height: AppSpacing.x3l),
           AnimatedButton(
             onPressed: _selectedRole == null ? null : () => _saveDraftAndProceed(1),
             child: const Text('Continue'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showAdminSetupAuth() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => AdminAuthSheet(
+        onSuccess: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SectionManagementPage()),
+          );
+        },
       ),
     );
   }
@@ -333,7 +365,7 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
   Widget _buildStudentSectionPage() {
     return _WizardPageContainer(
       title: 'Join Section',
-      subtitle: 'Select your academic year and division.',
+      subtitle: 'Select your academic year, branch, and division.',
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('sections').where('active', isEqualTo: true).snapshots(),
         builder: (context, snapshot) {
@@ -343,16 +375,27 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
           }
 
           final docs = snapshot.data!.docs;
+          
           final activeYears = docs.map((d) => d['academicYear'] as String).toSet().toList()..sort();
-
           if (_selectedYear != null && !activeYears.contains(_selectedYear)) {
             _selectedYear = null;
+            _selectedBranch = null;
             _selectedDivision = null;
           }
 
-          List<String> activeDivisions = [];
+          List<String> activeBranches = [];
           if (_selectedYear != null) {
-            activeDivisions = docs.where((d) => d['academicYear'] == _selectedYear).map((d) => d['division'] as String).toSet().toList()..sort();
+            activeBranches = docs.where((d) => d['academicYear'] == _selectedYear).map((d) => d['branch'] as String).toSet().toList()..sort();
+            if (_selectedBranch != null && !activeBranches.contains(_selectedBranch)) {
+              _selectedBranch = null;
+              _selectedDivision = null;
+            }
+          }
+
+          List<String> activeDivisions = [];
+          if (_selectedYear != null && _selectedBranch != null) {
+            activeDivisions = docs.where((d) => d['academicYear'] == _selectedYear && d['branch'] == _selectedBranch)
+                                  .map((d) => d['division'] as String).toSet().toList()..sort();
             if (_selectedDivision != null && !activeDivisions.contains(_selectedDivision)) _selectedDivision = null;
           }
 
@@ -361,20 +404,38 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
             children: [
               DropdownButtonFormField<String>(
                 value: _selectedYear,
-                decoration: const InputDecoration(labelText: 'Academic Year', border: OutlineInputBorder()),
+                decoration: InputDecoration(labelText: 'Academic Year', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                 items: activeYears.map((y) => DropdownMenuItem(value: y, child: Text(y))).toList(),
-                onChanged: (val) => setState(() { _selectedYear = val; _selectedDivision = null; }),
+                onChanged: (val) => setState(() { _selectedYear = val; _selectedBranch = null; _selectedDivision = null; }),
               ),
               const SizedBox(height: AppSpacing.lg),
-              DropdownButtonFormField<String>(
-                value: _selectedDivision,
-                decoration: const InputDecoration(labelText: 'Division', border: OutlineInputBorder()),
-                items: activeDivisions.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
-                onChanged: (val) => setState(() => _selectedDivision = val),
-              ),
-              const SizedBox(height: AppSpacing.x3l),
+              if (_selectedYear != null) ...[
+                DropdownButtonFormField<String>(
+                  value: _selectedBranch,
+                  decoration: InputDecoration(labelText: 'Branch', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                  items: activeBranches.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+                  onChanged: (val) => setState(() { _selectedBranch = val; _selectedDivision = null; }),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+              ],
+              if (_selectedBranch != null) ...[
+                if (activeDivisions.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                    child: Text('No sections available for this Year and Branch.', 
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                  )
+                else
+                  DropdownButtonFormField<String>(
+                    value: _selectedDivision,
+                    decoration: InputDecoration(labelText: 'Division', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                    items: activeDivisions.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
+                    onChanged: (val) => setState(() => _selectedDivision = val),
+                  ),
+                const SizedBox(height: AppSpacing.x3l),
+              ],
               AnimatedButton(
-                onPressed: _loading ? null : _completeStudentOnboarding,
+                onPressed: (_loading || _selectedYear == null || _selectedBranch == null || _selectedDivision == null) ? null : _completeStudentOnboarding,
                 isLoading: _loading,
                 child: const Text('Complete Setup'),
               ),
@@ -424,10 +485,10 @@ class _WizardPageContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: EdgeInsets.all(AppSpacing.x3l),
+      padding: EdgeInsets.all(ResponsiveUtils.getPagePadding(context)),
       child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 500),
+        child: ResponsiveUtils.constrainedFormBox(
+          context,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -437,7 +498,7 @@ class _WizardPageContainer extends StatelessWidget {
               const SizedBox(height: AppSpacing.x3l),
               SchedlyCard(
                 variant: SchedlyCardVariant.elevated,
-                padding: EdgeInsets.all(AppSpacing.x2l),
+                padding: EdgeInsets.all(ResponsiveUtils.getCardPadding(context)),
                 child: child,
               ),
             ],
@@ -462,30 +523,49 @@ class _RoleCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.all(AppSpacing.x2l),
-        decoration: BoxDecoration(
-          color: isSelected ? colorScheme.primary.withValues(alpha: 0.1) : Theme.of(context).colorScheme.surface,
-          border: Border.all(color: isSelected ? colorScheme.primary : Theme.of(context).dividerColor, width: isSelected ? 2 : 1),
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 40, color: isSelected ? colorScheme.primary : Colors.grey),
-            const SizedBox(width: AppSpacing.lg),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                  const SizedBox(height: 4),
-                  Text(description, style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6))),
-                ],
-              ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isVertical = ResponsiveUtils.shouldUseVerticalLayout(context, availableWidth: constraints.maxWidth, minRequiredWidth: 200);
+          
+          final content = isVertical
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: 40, color: isSelected ? colorScheme.primary : Colors.grey),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18), textAlign: TextAlign.center),
+                    const SizedBox(height: 4),
+                    Text(description, style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6)), textAlign: TextAlign.center),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Icon(icon, size: 40, color: isSelected ? colorScheme.primary : Colors.grey),
+                    const SizedBox(width: AppSpacing.lg),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                          const SizedBox(height: 4),
+                          Text(description, style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6))),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: EdgeInsets.all(ResponsiveUtils.getCardPadding(context)),
+            decoration: BoxDecoration(
+              color: isSelected ? colorScheme.primary.withValues(alpha: 0.1) : Theme.of(context).colorScheme.surface,
+              border: Border.all(color: isSelected ? colorScheme.primary : Theme.of(context).dividerColor, width: isSelected ? 2 : 1),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
             ),
-          ],
-        ),
+            child: content,
+          );
+        },
       ),
     );
   }

@@ -46,6 +46,9 @@ class TimetableEntry {
           .replaceAll(RegExp(r'\s+Theory$', caseSensitive: false), '')
           .replaceAll(RegExp(r'\s+Lab$', caseSensitive: false), '')
           .replaceAll(RegExp(r'\s+Tutorial$', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\s+Project$', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\s+Seminar$', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\s+Viva$', caseSensitive: false), '')
           .trim();
       if (cleaned == before) break;
     }

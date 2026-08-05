@@ -279,7 +279,7 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: ['Theory', 'Lab', 'Tutorial', 'Event'].map((c) {
+            children: ['Theory', 'Lab', 'Tutorial', 'Project', 'Seminar', 'Viva', 'Event'].map((c) {
               return ChoiceChip(
                 label: Text(c, style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
                 selected: _wcComponent == c,
@@ -367,13 +367,12 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
               children: [
                 Row(
                   children: [
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-                      decoration: BoxDecoration(
-                        color: cs.primaryContainer,
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                    Expanded(
+                      child: TextFormField(
+                        initialValue: _splitBatches[i],
+                        decoration: const InputDecoration(labelText: 'Batch Name (e.g. A1)', isDense: true),
+                        onChanged: (val) => _splitBatches[i] = val.trim(),
                       ),
-                      child: Text(_splitBatches[i], style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, color: cs.onPrimaryContainer)),
                     ),
                   ],
                 ),
@@ -396,7 +395,7 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
                       child: DropdownButtonFormField<String>(
                         value: _splitComponents[i],
                         decoration: const InputDecoration(labelText: 'Type', isDense: true),
-                        items: ['Theory', 'Lab', 'Tutorial', 'Event'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                        items: ['Theory', 'Lab', 'Tutorial', 'Project', 'Seminar', 'Viva', 'Event'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                         onChanged: (v) {
                           if (v != null) setState(() => _splitComponents[i] = v);
                         },

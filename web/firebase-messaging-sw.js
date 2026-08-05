@@ -1,5 +1,6 @@
 importScripts("https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js");
 
 firebase.initializeApp({
   apiKey: "AIzaSyCvHene63scD_yzJiR0HHWHBKTad-n-sSI",
@@ -12,10 +13,26 @@ firebase.initializeApp({
 });
 
 const messaging = firebase.messaging();
+const db = firebase.firestore();
+
+const DEBUG_MODE = true; // Set to false to disable telemetry
+
+function logDiagnostic(stage, data) {
+  if (!DEBUG_MODE) return;
+  try {
+    db.collection('diagnostic_logs').add({
+      stage: stage,
+      data: JSON.stringify(data),
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      source: 'service-worker'
+    });
+  } catch (e) { console.error('Diag Error', e); }
+}
 
 // ── Background message handler (FCM SDK fires this) ────────────────────────
 messaging.onBackgroundMessage((payload) => {
   console.log('[SW] onBackgroundMessage:', payload);
+  logDiagnostic('SW_ON_BACKGROUND_MESSAGE', payload);
   const title = payload.notification?.title || payload.data?.title || 'Schedly';
   const body  = payload.notification?.body  || payload.data?.body  || '';
   const link  = payload.data?.deepLink || payload.fcmOptions?.link || '/';
@@ -36,6 +53,7 @@ messaging.onBackgroundMessage((payload) => {
 // This handles cases where the FCM SDK onBackgroundMessage doesn't fire
 // (e.g. some browsers, or when data-only messages arrive)
 self.addEventListener('push', (event) => {
+  logDiagnostic('SW_RAW_PUSH_EVENT_RECEIVED', { hasData: !!event.data });
   // If Firebase messaging already handled it, skip
   if (!event.data) return;
 
@@ -46,6 +64,8 @@ self.addEventListener('push', (event) => {
     // Some browsers send text
     payload = { notification: { title: 'Schedly', body: event.data.text() } };
   }
+  
+  logDiagnostic('SW_RAW_PUSH_PARSED', payload);
 
   // Firebase wraps the payload under notification or data
   const notification = payload.notification || {};
@@ -63,13 +83,15 @@ self.addEventListener('push', (event) => {
     tag: data.notificationId || 'schedly-push',
     data: { link },
     vibrate: [200, 100, 200],
-  });
+  }).then(() => logDiagnostic('SW_RAW_PUSH_SHOW_NOTIFICATION_SUCCESS', { title }))
+    .catch(err => logDiagnostic('SW_RAW_PUSH_SHOW_NOTIFICATION_ERROR', { error: err.toString() }));
 
   event.waitUntil(showPromise);
 });
 
 // ── Notification click handler ─────────────────────────────────────────────
 self.addEventListener('notificationclick', (event) => {
+  logDiagnostic('SW_NOTIFICATION_CLICK', { action: event.action, tag: event.notification.tag });
   event.notification.close();
 
   const link = event.notification.data?.link || '/';
@@ -93,9 +115,11 @@ self.addEventListener('notificationclick', (event) => {
 
 // ── Service Worker lifecycle ────────────────────────────────────────────────
 self.addEventListener('install', (event) => {
+  logDiagnostic('SW_INSTALL', {});
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
+  logDiagnostic('SW_ACTIVATE', {});
   event.waitUntil(clients.claim());
 });

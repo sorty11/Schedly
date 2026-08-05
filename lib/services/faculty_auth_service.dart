@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -7,6 +7,7 @@ import '../app_settings.dart';
 import '../user_roles.dart';
 import 'notification_service.dart';
 import 'package:schedly/exceptions.dart';
+import '../utils/security_utils.dart';
 
 class FacultyAuthService {
   /// Verifies the master password and elevates the current user to Faculty.
@@ -51,25 +52,80 @@ class FacultyAuthService {
         profileData = querySnap.docs.first.data();
       } else {
         // 3. Completely new profile
-        uidToUse = FirebaseFirestore.instance.collection('faculty_profiles').doc().id;
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          throw AppException('You must be logged in to create a faculty profile');
+        }
+        uidToUse = user.uid;
         isNew = true;
       }
     }
 
     try {
-      final callable = FirebaseFunctions.instance.httpsCallable('verifyFacultyRole');
-      await callable.call({
-        'name': name,
-        'masterPassword': masterPassword,
+      // 1. Verify Master Password locally
+      if (!SecurityUtils.verifyMasterPassword(masterPassword)) {
+        throw Exception('Incorrect Master Password');
+      }
+
+      // 2. Perform client-side update
+      final batch = FirebaseFirestore.instance.batch();
+      
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw AppException('You must be logged in to verify');
+      }
+      
+      if (uidToUse != user.uid && uidToUse.startsWith('fac_')) {
+        // This is a legacy ID migration on the fly
+        final legacyData = profileData;
+        final legacyId = uidToUse;
+        uidToUse = user.uid; // Force new uid
+        
+        batch.set(FirebaseFirestore.instance.collection('faculty_profiles').doc(uidToUse), legacyData);
+        batch.delete(FirebaseFirestore.instance.collection('faculty_profiles').doc(legacyId));
+        batch.delete(FirebaseFirestore.instance.collection('users').doc(legacyId));
+      } else if (uidToUse != user.uid && !isNew) {
+        // It's a migrated profile with a random ID, let's fix it.
+        final legacyData = profileData;
+        final legacyId = uidToUse;
+        uidToUse = user.uid;
+        batch.set(FirebaseFirestore.instance.collection('faculty_profiles').doc(uidToUse), legacyData);
+        batch.delete(FirebaseFirestore.instance.collection('faculty_profiles').doc(legacyId));
+      }
+
+      final actionRef = FirebaseFirestore.instance.collection('admin_actions').doc('${user.uid}_facultySetup');
+      batch.set(actionRef, {
+        'masterHash': SecurityUtils.masterHash,
+        'action': 'verifyFaculty',
+        'timestamp': FieldValue.serverTimestamp(),
       });
       
+      final profileRef = FirebaseFirestore.instance.collection('faculty_profiles').doc(uidToUse);
+      if (isNew) {
+        batch.set(profileRef, {
+          'name': name,
+          'uid': uidToUse,
+          'assignedDivisions': [],
+          'setupComplete': false,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      batch.set(userRef, {
+        'role': 'Faculty',
+        'facultyProfileId': uidToUse,
+      }, SetOptions(merge: true));
+
+      await batch.commit();
+
       // Re-fetch profile data in case it was just created
       if (isNew) {
         final newSnap = await FirebaseFirestore.instance.collection('faculty_profiles').doc(uidToUse).get();
         if (newSnap.exists) profileData = newSnap.data()!;
       }
     } catch (e) {
-      debugPrint('[FS_ERROR] Cloud Function exception: $e');
+      debugPrint('[FS_ERROR] Faculty verification exception: $e');
       rethrow;
     }
 

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../theme/theme.dart';
 import '../app_settings.dart';
 import '../widgets/skeleton_loader.dart';
 import '../user_roles.dart';
 import '../widgets/app_dialogs.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 class CRFacultyViewPage extends StatelessWidget {
   final String division;
 
@@ -110,23 +110,38 @@ class _FacultyCardState extends State<_FacultyCard> {
     setState(() => _isLoading = true);
 
     try {
-      await FirebaseFunctions.instance.httpsCallable('removeFaculty').call({
-        'targetUid': widget.facultyId,
-        'sectionId': widget.division,
+      final batch = FirebaseFirestore.instance.batch();
+
+      // 1. Mark membership as removed
+      final membershipRef = FirebaseFirestore.instance.collection('section_memberships').doc('${widget.division}_${widget.facultyId}');
+      batch.update(membershipRef, {
+        'status': 'removed',
+        'removedAt': FieldValue.serverTimestamp(),
+        'removedBy': FirebaseAuth.instance.currentUser!.uid,
       });
+
+      // 2. Remove the section from the faculty's assignedDivisions
+      final profileRef = FirebaseFirestore.instance.collection('faculty_profiles').doc(widget.facultyId);
+      batch.update(profileRef, {
+        'assignedDivisions': FieldValue.arrayRemove([widget.division])
+      });
+
+      // 3. Log the audit event
+      final logRef = FirebaseFirestore.instance.collection('membership_audit_logs').doc();
+      batch.set(logRef, {
+        'sectionId': widget.division,
+        'targetUserId': widget.facultyId,
+        'actorUserId': FirebaseAuth.instance.currentUser!.uid,
+        'action': 'removeFaculty',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      await batch.commit();
 
       if (mounted) {
         AppDialogs.showSnackBar(
           context: context,
           message: 'Faculty removed successfully.',
-        );
-      }
-    } on FirebaseFunctionsException catch (e) {
-      if (mounted) {
-        AppDialogs.showError(
-          context: context,
-          title: 'Remove Failed',
-          message: e.message ?? 'An unknown error occurred.',
         );
       }
     } catch (e) {

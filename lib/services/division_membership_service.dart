@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 
 class DivisionMembershipService {
@@ -70,12 +69,37 @@ class DivisionMembershipService {
     required String crName,
     String? reason,
   }) async {
-    final callable = FirebaseFunctions.instance.httpsCallable('removeStudent');
-    await callable.call({
-      'targetUserId': targetUid,
-      'sectionId': sectionId,
-      'reason': reason,
+    final batch = _db.batch();
+
+    // 1. Mark membership as removed
+    final membershipRef = _db.collection('section_memberships').doc('${sectionId}_$targetUid');
+    batch.update(membershipRef, {
+      'status': 'removed',
+      'removedAt': FieldValue.serverTimestamp(),
+      'removedBy': crUid,
     });
+
+    // 2. Clear student's user profile division if it matches
+    final userRef = _db.collection('users').doc(targetUid);
+    final userSnap = await userRef.get();
+    if (userSnap.exists && userSnap.data()?['division'] == sectionId) {
+      batch.update(userRef, {
+        'division': FieldValue.delete(),
+      });
+    }
+
+    // 3. Log the audit event
+    final logRef = _db.collection('membership_audit_logs').doc();
+    batch.set(logRef, {
+      'sectionId': sectionId,
+      'targetUserId': targetUid,
+      'actorUserId': crUid,
+      'action': 'removeStudent',
+      'reason': reason,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
   }
 
   /// Listens to the current membership status of a user in a specific section.
@@ -134,6 +158,23 @@ class DivisionMembershipService {
     } catch (e) {
       debugPrint('Error fetching roster: $e');
       return [];
+    }
+  }
+
+  /// Gets the count of active members with a specific role in a section
+  static Future<int> getSectionRoleCount(String sectionId, String role) async {
+    try {
+      final snapshot = await _db
+          .collection('section_memberships')
+          .where('sectionId', isEqualTo: sectionId)
+          .where('status', isEqualTo: 'active')
+          .where('role', isEqualTo: role)
+          .count()
+          .get();
+      return snapshot.count ?? 0;
+    } catch (e) {
+      debugPrint('Error getting count: $e');
+      return 0;
     }
   }
 }

@@ -1,7 +1,6 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'diagnostic_logger.dart';
 
 class TopicSubscriptionService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
@@ -14,7 +13,6 @@ class TopicSubscriptionService {
     if (kIsWeb) return; // FCM topics are not supported natively on Flutter Web
     
     try {
-      DiagnosticLogger.logSession('[SESSION_TRANSITION] Updating Subscriptions -> Role: $role | Div: $division');
       
       if (role == 'faculty') {
         // Faculty ONLY subscribe to their faculty topic, they do not subscribe to division/batch topics
@@ -67,14 +65,12 @@ class TopicSubscriptionService {
       
       final oldTopic = prefs.getString('current_fcm_topic');
       if (oldTopic != null) {
-        DiagnosticLogger.logSession('[SESSION_TRANSITION] Purged legacy division topic: $oldTopic');
         await unsubscribeDivision(oldTopic);
         await prefs.remove('current_fcm_topic');
       }
 
       final oldBatchTopic = prefs.getString('current_fcm_batch_topic');
       if (oldBatchTopic != null) {
-        DiagnosticLogger.logSession('[SESSION_TRANSITION] Purged legacy batch topic: $oldBatchTopic');
         await unsubscribeBatch(oldBatchTopic);
         await prefs.remove('current_fcm_batch_topic');
       }
@@ -93,7 +89,6 @@ class TopicSubscriptionService {
     }
 
     if (oldTopic != newTopic) {
-      DiagnosticLogger.logFCM('[FCM_TRACE] Subscribing to division topic: $newTopic');
       await subscribeToDivision(newTopic);
       await prefs.setString('current_fcm_topic', newTopic);
     }
@@ -113,13 +108,11 @@ class TopicSubscriptionService {
       final facultyId = division;
       if (facultyId.isNotEmpty) {
         final newRoleTopic = 'faculty_${sanitizeTopic(facultyId)}';
-        DiagnosticLogger.logFCM('[FCM_TRACE] Current Role: $role | Routing Role: faculty | Routing ID: $facultyId | Final Topic: $newRoleTopic');
         await subscribeRole(newRoleTopic);
         await prefs.setString('current_fcm_role_topic', newRoleTopic);
       }
     } else if (role != 'student') {
       final newRoleTopic = 'role_${role}_${sanitizeTopic(division)}';
-      DiagnosticLogger.logFCM('[FCM_TRACE] Current Role: $role | Routing Role: $role | Routing ID: $division | Final Topic: $newRoleTopic');
       await subscribeRole(newRoleTopic);
       await prefs.setString('current_fcm_role_topic', newRoleTopic);
     }

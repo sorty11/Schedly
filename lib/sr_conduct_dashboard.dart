@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'widgets/animations/floating_empty_state.dart';
@@ -30,9 +31,16 @@ class SrConductDashboard extends StatefulWidget {
 }
 
 class _SrConductDashboardState extends State<SrConductDashboard> {
-  final _dateFormat = DateFormat('EEEE, MMM d, yyyy');
+  final DateFormat _dateFormat = DateFormat('EEE, MMM d');
+  late Stream<List<ConductLog>> _pendingLogsStream;
 
-  void _showMarkingSheet(ConductLog log) {
+  @override
+  void initState() {
+    super.initState();
+    _pendingLogsStream = AnalyticsService.streamPendingLogs(widget.division, widget.subject, null, null);
+  }
+
+  void _showMarkingSheet(ConductLog log, Map<String, String> batchNames) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -58,7 +66,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  '${log.originalSlot.displaySubject} (${log.originalSlot.batch})\n${log.date} at ${TimetableManager.formatTime(log.originalSlot.startTime, log.originalSlot.endTime)}',
+                  '${log.originalSlot.displaySubject} (${batchNames[log.originalSlot.batch] ?? log.originalSlot.batch})\n${log.date} at ${TimetableManager.formatTime(log.originalSlot.startTime, log.originalSlot.endTime)}',
                   style: TextStyle(
                     fontSize: 14,
                     color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
@@ -66,11 +74,11 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: AppSpacing.x2l),
-                _buildOptionBtn(context, log, 'conducted', 'Conducted', Icons.check_circle_rounded, Theme.of(context).extension<AppSemanticColors>()!.conducted),
+                _buildOptionBtn(context, log, 'conducted', 'Conducted', Icons.check_circle_rounded, Theme.of(context).extension<AppSemanticColors>()!.conducted, batchNames),
                 const SizedBox(height: AppSpacing.md),
-                _buildOptionBtn(context, log, 'cancelled', 'Cancelled', Icons.cancel_rounded, Theme.of(context).extension<AppSemanticColors>()!.cancelled),
+                _buildOptionBtn(context, log, 'cancelled', 'Cancelled', Icons.cancel_rounded, Theme.of(context).extension<AppSemanticColors>()!.cancelled, batchNames),
                 const SizedBox(height: AppSpacing.md),
-                _buildOptionBtn(context, log, 'rescheduled', 'Rescheduled', Icons.schedule_rounded, Theme.of(context).extension<AppSemanticColors>()!.rescheduled),
+                _buildOptionBtn(context, log, 'rescheduled', 'Rescheduled', Icons.schedule_rounded, Theme.of(context).extension<AppSemanticColors>()!.rescheduled, batchNames),
               ],
             ),
           ),
@@ -79,13 +87,13 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
     );
   }
 
-  Widget _buildOptionBtn(BuildContext context, ConductLog log, String statusCode, String statusLabel, IconData icon, Color color) {
+  Widget _buildOptionBtn(BuildContext context, ConductLog log, String statusCode, String statusLabel, IconData icon, Color color, Map<String, String> batchNames) {
     return AnimatedButton(
       onPressed: () async {
         Navigator.pop(context);
         
         if (statusCode == 'rescheduled') {
-          _showSubjectSelectionSheet(log);
+          _showSubjectSelectionSheet(log, batchNames);
           return;
         }
 
@@ -124,7 +132,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
     );
   }
 
-  void _showSubjectSelectionSheet(ConductLog log) {
+  void _showSubjectSelectionSheet(ConductLog log, Map<String, String> batchNames) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -227,7 +235,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                                 backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                                 foregroundColor: Theme.of(context).colorScheme.primary,
                                 padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                                child: Text('${subj.subject} ${subj.component} (${subj.batch})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                child: Text('${subj.subject} ${subj.component} (${batchNames[subj.batch] ?? subj.batch})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                               ),
                             );
                           },
@@ -250,8 +258,19 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
         title: Text('${widget.subject} Dashboard'),
         scrolledUnderElevation: 0,
       ),
-      body: StreamBuilder<List<ConductLog>>(
-        stream: AnalyticsService.streamPendingLogs(widget.division, widget.subject, null, null),
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance.collection('sections').doc(widget.division).snapshots(),
+        builder: (context, sectionSnapshot) {
+          Map<String, String> batchNames = {};
+          if (sectionSnapshot.hasData && sectionSnapshot.data!.exists) {
+            final data = sectionSnapshot.data!.data() as Map<String, dynamic>?;
+            if (data != null && data.containsKey('batchNames')) {
+              batchNames = Map<String, String>.from(data['batchNames'] as Map);
+            }
+          }
+
+          return StreamBuilder<List<ConductLog>>(
+            stream: _pendingLogsStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
             return Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary));
@@ -338,18 +357,20 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                       ),
                     ),
                   ),
-                  ...dateLogs.asMap().entries.map((e) => _buildLogCard(e.value, isFirst: index == 0 && e.key == 0)),
+                  ...dateLogs.asMap().entries.map((e) => _buildLogCard(e.value, batchNames, isFirst: index == 0 && e.key == 0)),
                   const SizedBox(height: AppSpacing.lg),
                 ],
               );
             },
           );
         },
+      );
+      },
       ),
     );
   }
 
-  Widget _buildLogCard(ConductLog log, {bool isFirst = false}) {
+  Widget _buildLogCard(ConductLog log, Map<String, String> batchNames, {bool isFirst = false}) {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final colorScheme = Theme.of(context).colorScheme;
     
@@ -365,7 +386,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
     Widget card = SchedlyCard(
       variant: isWarning ? SchedlyCardVariant.tinted : SchedlyCardVariant.elevated,
       padding: EdgeInsets.zero,
-      onTap: () => _showMarkingSheet(log),
+      onTap: () => _showMarkingSheet(log, batchNames),
       child: Container(
         decoration: isWarning 
             ? BoxDecoration(
@@ -394,7 +415,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${log.originalSlot.displaySubject} (${log.originalSlot.batch})',
+                    '${log.originalSlot.displaySubject} (${batchNames[log.originalSlot.batch] ?? log.originalSlot.batch})',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,

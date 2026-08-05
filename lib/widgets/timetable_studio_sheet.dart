@@ -76,8 +76,16 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
 
   List<String> get _batchOptions {
     final l = _divLetter;
-    if (l.isEmpty) return ['Whole Class', 'Batch 1', 'Batch 2'];
-    return ['Whole Class', '${l}1', '${l}2'];
+    final baseOptions = l.isEmpty 
+      ? ['Whole Class', 'Batch 1', 'Batch 2'] 
+      : ['Whole Class', '${l}1', '${l}2'];
+    
+    // Inject current _batch if it's a legacy name not in the generated list
+    // This prevents DropdownButton assertions during migration edge cases.
+    if (_batch.isNotEmpty && !baseOptions.contains(_batch)) {
+      baseOptions.add(_batch);
+    }
+    return baseOptions.toSet().toList(); // Ensure unique values
   }
 
   String get _divLetter {
@@ -443,6 +451,9 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                 _buildTypeChip('Theory', EventCategory.academic, Icons.auto_stories_rounded),
                 _buildTypeChip('Lab', EventCategory.academic, Icons.science_rounded),
                 _buildTypeChip('Tutorial', EventCategory.academic, Icons.school_rounded),
+                _buildTypeChip('Project', EventCategory.academic, Icons.assignment_rounded),
+                _buildTypeChip('Seminar', EventCategory.academic, Icons.record_voice_over_rounded),
+                _buildTypeChip('Viva', EventCategory.academic, Icons.mic_rounded),
                 _buildTypeChip('Event', EventCategory.event, Icons.celebration_rounded),
               ],
             ),

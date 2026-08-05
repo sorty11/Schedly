@@ -100,11 +100,11 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
     );
   }
 
-  Widget _buildLegalTile(String title, IconData icon) {
+  Widget _buildLegalTile(String title, IconData icon, VoidCallback onTap) {
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
     return AnimatedListTile(
       contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-      onTap: () {}, // Placeholder
+      onTap: onTap,
       leading: Container(
         width: 40,
         height: 40,
@@ -126,6 +126,69 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
         Icons.chevron_right_rounded,
         size: 20,
         color: semanticColors.onSurfaceMuted,
+      ),
+    );
+  }
+
+  void _showPrivacyPolicy() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _LegalDocumentSheet(
+        title: 'Privacy Policy',
+        content: '''
+What Information Schedly Stores
+We store minimal personal data to make the app function properly, including your basic profile information (name, roll number, division) and academic choices (selected subjects and batches).
+
+Why It Is Stored
+This information is stored to provide you with a personalized timetable, accurate attendance analytics, and role-based permissions based on your section.
+
+Firebase Authentication & Firestore
+We use Firebase Authentication to securely verify your identity. Your data is stored in Cloud Firestore. We do not store passwords locally; session tokens are handled securely by Firebase.
+
+Notification Tokens
+We collect device notification tokens via Firebase Cloud Messaging to send you real-time alerts about cancelled or rescheduled lectures.
+
+Role Information
+Your assigned role (Student, Class Representative, Subject Representative, or Faculty) is stored to manage app permissions and capabilities.
+
+Data Privacy & Deletion
+We do not share your data with third parties. You can request deletion of your account and associated personal data at any time from the app settings.
+''',
+      ),
+    );
+  }
+
+  void _showTerms() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _LegalDocumentSheet(
+        title: 'Terms & Conditions',
+        content: '''
+Educational Use Only
+Schedly is strictly an educational tool designed to assist with timetable management. It is not an official university record.
+
+Responsibilities of Students
+Students are responsible for maintaining their personal attendance accuracy and respecting the privacy of their peers.
+
+Responsibilities of Class Representatives (CR)
+CRs are entrusted with editing the timetable and sending announcements responsibly. Any misuse of this power may lead to role revocation.
+
+Responsibilities of Subject Representatives (SR)
+SRs must accurately track lecture conduct and coordinate with faculty.
+
+Responsibilities of Faculty
+Faculty members are responsible for reviewing requests and ensuring their schedules are accurately reflected.
+
+Proper Use of Features
+Timetable editing and conduct tracking features must be used with integrity. Deliberate falsification of academic records is prohibited.
+
+Account Misuse Policy
+Any account found abusing the system, exploiting vulnerabilities, or harassing other users will be terminated immediately.
+''',
       ),
     );
   }
@@ -292,15 +355,15 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
                     children: [
                       _buildCheckItem('Smart Timetable'),
                       _buildCheckItem('Offline Support'),
-                      _buildCheckItem('Analytics Dashboard'),
+                      _buildCheckItem('Attendance Analytics'),
                       _buildCheckItem('SR Conduct Tracker'),
                       _buildCheckItem('CR Management'),
-                      _buildCheckItem('Lecture Replacement System'),
+                      _buildCheckItem('Faculty Portal'),
+                      _buildCheckItem('Lecture Replacement'),
                       _buildCheckItem('PDF Timetable Import'),
                       _buildCheckItem('Announcements'),
-                      _buildCheckItem('Interactive Tutorials'),
-                      _buildCheckItem('Campus Companion (CC)'),
-                      _buildCheckItem('Premium Animations'),
+                      _buildCheckItem('Push Notifications'),
+                      _buildCheckItem('Secure Role-Based Access'),
                     ],
                   ),
                 ),
@@ -345,11 +408,18 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
                 clipBehavior: Clip.antiAlias,
                 child: Column(
                   children: [
-                    _buildLegalTile('Privacy Policy', Icons.privacy_tip_outlined),
+                    _buildLegalTile('Privacy Policy', Icons.privacy_tip_outlined, _showPrivacyPolicy),
                     Divider(height: 1, color: semanticColors.borderSubtle, indent: 64),
-                    _buildLegalTile('Terms & Conditions', Icons.gavel_rounded),
+                    _buildLegalTile('Terms & Conditions', Icons.gavel_rounded, _showTerms),
                     Divider(height: 1, color: semanticColors.borderSubtle, indent: 64),
-                    _buildLegalTile('Open Source Licenses', Icons.code_rounded),
+                    _buildLegalTile('Open Source Licenses', Icons.code_rounded, () {
+                      showLicensePage(
+                        context: context,
+                        applicationName: _appName,
+                        applicationVersion: _version,
+                        applicationLegalese: '© 2026 $_appName',
+                      );
+                    }),
                   ],
                 ),
               ),
@@ -388,6 +458,116 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
                     ),
                   ),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LegalDocumentSheet extends StatelessWidget {
+  final String title;
+  final String content;
+
+  const _LegalDocumentSheet({required this.title, required this.content});
+
+  @override
+  Widget build(BuildContext context) {
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final paragraphs = content.trim().split('\n\n');
+
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
+      padding: EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.lg, AppSpacing.x2l, AppSpacing.x4l),
+      decoration: BoxDecoration(
+        color: isDark ? sem.surfaceElevated2 : colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.x2l)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: sem.borderSubtle,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(fontFamily: 'Inter', 
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(Icons.close_rounded, color: sem.onSurfaceMuted),
+                  style: IconButton.styleFrom(
+                    backgroundColor: sem.surfaceElevated,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Divider(color: sem.borderSubtle),
+            const SizedBox(height: AppSpacing.md),
+            Expanded(
+              child: ListView.separated(
+                padding: EdgeInsets.zero,
+                itemCount: paragraphs.length,
+                separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.lg),
+                itemBuilder: (context, index) {
+                  final lines = paragraphs[index].trim().split('\n');
+                  if (lines.isEmpty) return const SizedBox();
+                  
+                  final sectionTitle = lines.first;
+                  final sectionBody = lines.length > 1 ? lines.sublist(1).join('\n') : '';
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        sectionTitle,
+                        style: TextStyle(fontFamily: 'Inter', 
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                      if (sectionBody.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          sectionBody,
+                          style: TextStyle(fontFamily: 'Inter', 
+                            fontSize: 14,
+                            height: 1.6,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ],
+                  );
+                },
               ),
             ),
           ],

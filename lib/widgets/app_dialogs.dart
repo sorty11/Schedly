@@ -61,7 +61,9 @@ class AppDialogs {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final result = await showModal<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
         contentPadding: const EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.lg, AppSpacing.x2l, AppSpacing.x2l),
         titlePadding: const EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.x2l, AppSpacing.x2l, AppSpacing.sm),
@@ -109,6 +111,7 @@ class AppDialogs {
           ),
         ],
       ),
+      ),
     );
     return result ?? false;
   }
@@ -123,7 +126,9 @@ class AppDialogs {
   }) {
     return showModal(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
         contentPadding: const EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.sm, AppSpacing.x2l, AppSpacing.x2l),
         icon: Container(
@@ -193,6 +198,7 @@ class AppDialogs {
             child: Text('Got it', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
           ),
         ],
+      ),
       ),
     );
   }

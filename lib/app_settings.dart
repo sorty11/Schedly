@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'user_roles.dart';
 import 'services/topic_subscription_service.dart';
 import 'services/notification_service.dart';
-import 'services/diagnostic_logger.dart';
 
 class AppSettings {
   static UserRole currentRole =
@@ -279,7 +278,6 @@ class AppSettings {
     final prefs =
         await SharedPreferences.getInstance();
 
-    DiagnosticLogger.logSession('[SESSION_TRANSITION] Purging legacy subscriptions before role reset');
     await TopicSubscriptionService.clearAllSubscriptions();
 
     await prefs.remove('user_role');
@@ -317,7 +315,6 @@ class AppSettings {
     facultySetupCompleted = false;
     facultyAssignedDivisions = [];
 
-    DiagnosticLogger.logSession('[SESSION_TRANSITION] Re-registering fresh token for fallback Student role');
     NotificationService.reRegisterToken();
   }
 }
