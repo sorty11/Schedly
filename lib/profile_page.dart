@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'services/notification_service.dart';
 
@@ -20,6 +22,7 @@ import 'onboarding/widgets/tutorial_target.dart';
 import 'onboarding/services/tutorial_storage_service.dart';
 import 'onboarding/services/onboarding_service.dart';
 import 'onboarding/services/tutorial_controller.dart';
+import 'widgets/app_dialogs.dart';
 
 import 'about_schedly_page.dart';
 import 'widgets/support/bug_report_sheet.dart';
@@ -67,7 +70,7 @@ class _ProfilePageState extends State<ProfilePage> {
       padding: const EdgeInsets.only(
         left: AppSpacing.xs,
         bottom: AppSpacing.sm,
-        top: 28,
+        top: AppSpacing.x2l,
       ),
       child: Text(
         label.toUpperCase(),
@@ -107,7 +110,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 colorScheme: colorScheme,
                 semanticColors: semanticColors,
               ),
-              const SizedBox(width: AppSpacing.xs),
+              const SizedBox(width: AppSpacing.sm),
               _appearancePill(
                 label: 'System',
                 icon: Icons.language_rounded,
@@ -116,7 +119,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 colorScheme: colorScheme,
                 semanticColors: semanticColors,
               ),
-              const SizedBox(width: AppSpacing.xs),
+              const SizedBox(width: AppSpacing.sm),
               _appearancePill(
                 label: 'Dark',
                 icon: Icons.nightlight_round,
@@ -445,6 +448,23 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
 
+            // 🎓 Academic Profile 🎓
+            if (!isCR && !isSR && AppSettings.currentRole == UserRole.student) ...[
+              _sectionHeader('Academic Profile'),
+              StaggeredListItem(
+                index: 1, // reuse index for animation
+                child: _buildTileGroup([
+                  _buildRoleTile(
+                    icon: Icons.group_work_rounded,
+                    title: 'My Batch',
+                    subtitle: AppSettings.studentBatch ?? 'Tap to select your batch (e.g., C1)',
+                    iconColor: colorScheme.primary,
+                    onTap: () => _showBatchSelector(context),
+                  ),
+                ]),
+              ),
+            ],
+
             // ── Appearance section ────────────────────────────────────────
             _sectionHeader('Appearance'),
             StaggeredListItem(
@@ -549,8 +569,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     onTap: () async {
                       await NotificationService.promptWebPermission();
                       if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Notification settings updated')),
+                      AppDialogs.showSnackBar(
+                        context: context,
+                        message: 'Notification settings updated',
                       );
                     },
                   ),
@@ -689,42 +710,15 @@ class _ProfilePageState extends State<ProfilePage> {
                   iconColor: semanticColors.cancelled,
                   isDestructive: true,
                   onTap: () async {
-                    final confirmed = await showDialog<bool>(
+                    final confirmed = await AppDialogs.showConfirm(
                       context: context,
-                      builder: (ctx) => AlertDialog(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.xl),
-                        ),
-                        title: Text(
-                          'Logout?',
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-                        ),
-                        content: Text(
-                          'Are you sure you want to logout?',
-                          style: GoogleFonts.inter(fontSize: 14),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            style: TextButton.styleFrom(
-                              foregroundColor: semanticColors.cancelled,
-                            ),
-                            child: Text(
-                              'Logout',
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                      title: 'Reset App & Logout',
+                      message: 'Are you sure you want to clear all local data and sign out?',
+                      confirmText: 'Logout',
+                      isDestructive: true,
                     );
 
-                    if (confirmed != true) return;
+                    if (!confirmed) return;
 
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.clear();
@@ -797,10 +791,69 @@ class _ProfilePageState extends State<ProfilePage> {
         isScrollControlled: true,
         backgroundColor: Theme.of(context).colorScheme.surface,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
         ),
         builder: (ctx) => AdminAuthSheet(onSuccess: action),
       );
     }
   }
+
+  Future<void> _showBatchSelector(BuildContext context) async {
+    final batchCtrl = TextEditingController(text: AppSettings.studentBatch);
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('My Batch', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: batchCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Batch (e.g. C1)',
+              hintText: 'Enter your batch',
+            ),
+            textCapitalization: TextCapitalization.characters,
+            validator: (val) {
+              if (val == null || val.trim().isEmpty) return 'Batch is required';
+              if (val.trim().length > 5) return 'Batch too long';
+              return null;
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.pop(ctx, batchCtrl.text.trim().toUpperCase());
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result.isNotEmpty) {
+      await AppSettings.saveStudentBatch(result);
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        await FirebaseFirestore.instance.collection('users').doc(uid).update({
+          'batch': result,
+        });
+      }
+      if (mounted) setState(() {});
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Batch updated to $result')),
+        );
+      }
+    }
+  }
 }
+

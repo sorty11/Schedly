@@ -86,128 +86,194 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
       ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit_rounded),
-              title: const Text('Edit Lecture'),
-              onTap: () {
-                Navigator.pop(ctx);
-                TimetableStudioSheet.show(
-                  context,
-                  division: widget.division,
-                  initialDay: selectedDay,
-                  existingEntry: entry,
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.find_replace_rounded),
-              title: const Text('Replace Lecture'),
-              onTap: () {
-                Navigator.pop(ctx);
-                // "Replace" does the same as "Edit" since it allows changing all fields without deleting
-                TimetableStudioSheet.show(
-                  context,
-                  division: widget.division,
-                  initialDay: selectedDay,
-                  existingEntry: entry,
-                );
-              },
-            ),
-            if (entry.isActive)
+      builder: (ctx) {
+        final sem = Theme.of(ctx).extension<AppSemanticColors>()!;
+        final cs = Theme.of(ctx).colorScheme;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag handle
+              Padding(
+                padding: EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.sm),
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: sem.borderSubtle,
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.sm),
+                child: Text(
+                  entry.displaySubject,
+                  style: Theme.of(ctx).textTheme.titleMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
               ListTile(
-                leading: Icon(Icons.cancel_outlined, color: Theme.of(context).extension<AppSemanticColors>()!.cancelled),
-                title: Text('Cancel Lecture', style: TextStyle(color: Theme.of(context).extension<AppSemanticColors>()!.cancelled)),
-                onTap: () async {
+                leading: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: cs.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  child: Icon(Icons.edit_rounded, size: 18, color: cs.primary),
+                ),
+                title: const Text('Edit Lecture'),
+                onTap: () {
                   Navigator.pop(ctx);
-                  await FirebaseFirestore.instance
-                      .collection('timetables')
-                      .doc(widget.division)
-                      .collection(selectedDay)
-                      .doc(entry.id)
-                      .update({'status': 'cancelled', 'isActive': false});
-                  
-                  final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
-                  
-                  await HistoryService.logOperation(
+                  TimetableStudioSheet.show(
+                    context,
                     division: widget.division,
-                    operation: 'Lecture Cancelled',
-                    details: '${entry.displaySubject} on $selectedDay at $timeStr',
-                    role: AppSettings.currentRole.name,
-                  );
-
-                  await TimetableEventService.handleModification(
-                    division: widget.division,
-                    day: selectedDay,
-                    oldEntry: entry,
-                    isCancel: true,
-                  );
-                },
-              )
-            else
-              ListTile(
-                leading: Icon(Icons.check_circle_outline, color: Theme.of(context).extension<AppSemanticColors>()!.conducted),
-                title: Text('Restore Lecture', style: TextStyle(color: Theme.of(context).extension<AppSemanticColors>()!.conducted)),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await FirebaseFirestore.instance
-                      .collection('timetables')
-                      .doc(widget.division)
-                      .collection(selectedDay)
-                      .doc(entry.id)
-                      .update({'status': 'active', 'isActive': true});
-                  
-                  final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
-                  await HistoryService.logOperation(
-                    division: widget.division,
-                    operation: 'Lecture Restored',
-                    details: '${entry.displaySubject} on $selectedDay at $timeStr',
-                    role: AppSettings.currentRole.name,
-                  );
-
-                  await TimetableEventService.handleModification(
-                    division: widget.division,
-                    day: selectedDay,
-                    oldEntry: entry,
-                    isRestore: true,
+                    initialDay: selectedDay,
+                    existingEntry: entry,
                   );
                 },
               ),
-            if (isCR)
               ListTile(
-                leading: Icon(Icons.delete_rounded, color: Theme.of(context).extension<AppSemanticColors>()!.error),
-                title: Text('Delete Lecture', style: TextStyle(color: Theme.of(context).extension<AppSemanticColors>()!.error)),
-                onTap: () async {
+                leading: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: cs.secondary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  child: Icon(Icons.find_replace_rounded, size: 18, color: cs.secondary),
+                ),
+                title: const Text('Replace Lecture'),
+                onTap: () {
                   Navigator.pop(ctx);
-                  await FirebaseFirestore.instance
-                      .collection('timetables')
-                      .doc(widget.division)
-                      .collection(selectedDay)
-                      .doc(entry.id)
-                      .delete();
-                  
-                  final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
-                  await HistoryService.logOperation(
+                  // "Replace" does the same as "Edit" since it allows changing all fields without deleting
+                  TimetableStudioSheet.show(
+                    context,
                     division: widget.division,
-                    operation: 'Lecture Deleted',
-                    details: '${entry.displaySubject} on $selectedDay at $timeStr',
-                    role: AppSettings.currentRole.name,
-                  );
-
-                  await TimetableEventService.handleModification(
-                    division: widget.division,
-                    day: selectedDay,
-                    oldEntry: entry,
-                    isDelete: true,
+                    initialDay: selectedDay,
+                    existingEntry: entry,
                   );
                 },
               ),
-          ],
-        ),
-      ),
+              if (entry.isActive)
+                ListTile(
+                  leading: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: sem.cancelled.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: Icon(Icons.cancel_outlined, size: 18, color: sem.cancelled),
+                  ),
+                  title: Text('Cancel Lecture', style: TextStyle(color: sem.cancelled)),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await FirebaseFirestore.instance
+                        .collection('timetables')
+                        .doc(widget.division)
+                        .collection(selectedDay)
+                        .doc(entry.id)
+                        .update({'status': 'cancelled', 'isActive': false});
+                    
+                    final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
+                    
+                    await HistoryService.logOperation(
+                      division: widget.division,
+                      operation: 'Lecture Cancelled',
+                      details: '${entry.displaySubject} on $selectedDay at $timeStr',
+                      role: AppSettings.currentRole.name,
+                    );
+
+                    await TimetableEventService.handleModification(
+                      division: widget.division,
+                      day: selectedDay,
+                      oldEntry: entry,
+                      isCancel: true,
+                    );
+                  },
+                )
+              else
+                ListTile(
+                  leading: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: sem.conducted.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: Icon(Icons.check_circle_outline, size: 18, color: sem.conducted),
+                  ),
+                  title: Text('Restore Lecture', style: TextStyle(color: sem.conducted)),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await FirebaseFirestore.instance
+                        .collection('timetables')
+                        .doc(widget.division)
+                        .collection(selectedDay)
+                        .doc(entry.id)
+                        .update({'status': 'active', 'isActive': true});
+                    
+                    final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
+                    await HistoryService.logOperation(
+                      division: widget.division,
+                      operation: 'Lecture Restored',
+                      details: '${entry.displaySubject} on $selectedDay at $timeStr',
+                      role: AppSettings.currentRole.name,
+                    );
+
+                    await TimetableEventService.handleModification(
+                      division: widget.division,
+                      day: selectedDay,
+                      oldEntry: entry,
+                      isRestore: true,
+                    );
+                  },
+                ),
+              if (isCR)
+                ListTile(
+                  leading: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: sem.error.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: Icon(Icons.delete_rounded, size: 18, color: sem.error),
+                  ),
+                  title: Text('Delete Lecture', style: TextStyle(color: sem.error)),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await FirebaseFirestore.instance
+                        .collection('timetables')
+                        .doc(widget.division)
+                        .collection(selectedDay)
+                        .doc(entry.id)
+                        .delete();
+                    
+                    final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
+                    await HistoryService.logOperation(
+                      division: widget.division,
+                      operation: 'Lecture Deleted',
+                      details: '${entry.displaySubject} on $selectedDay at $timeStr',
+                      role: AppSettings.currentRole.name,
+                    );
+
+                    await TimetableEventService.handleModification(
+                      division: widget.division,
+                      day: selectedDay,
+                      oldEntry: entry,
+                      isDelete: true,
+                    );
+                  },
+                ),
+              SizedBox(height: AppSpacing.md),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -439,6 +505,13 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
 
                   final rawLectures = snapshot.data!.docs
                       .map((doc) => TimetableEntry.fromFirestore(doc))
+                      .where((e) {
+                        if (widget.isEditMode) return true;
+                        if (AppSettings.currentRole == UserRole.student) {
+                          return e.shouldIncludeForUserBatch(AppSettings.studentBatch);
+                        }
+                        return true;
+                      })
                       .toList();
 
                   final Map<int, List<TimetableEntry>> grouped = {};

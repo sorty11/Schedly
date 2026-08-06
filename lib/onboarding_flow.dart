@@ -147,13 +147,13 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
               Row(
                 children: [
                   Expanded(
-                    flex: 5,
+                    flex: 55,
                     child: Center(
                       child: _buildBranding(context, true),
                     ),
                   ),
                   Expanded(
-                    flex: 4,
+                    flex: 45,
                     child: Center(
                       child: AnimatedBuilder(
                         animation: _timeline,
@@ -164,7 +164,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
                       ),
                     ),
                   ),
-                  const Spacer(flex: 1),
                 ],
               )
             else

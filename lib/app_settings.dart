@@ -201,6 +201,12 @@ class AppSettings {
     await prefs.setString('section_id', secId);
   }
 
+  static Future<void> saveStudentBatch(String batch) async {
+    final prefs = await SharedPreferences.getInstance();
+    studentBatch = batch;
+    await prefs.setString('student_batch', batch);
+  }
+
   static Future<void> saveFacultyDetails({
     required String name,
     required String email,

@@ -154,9 +154,8 @@ class _HomePageState extends State<HomePage>
         AttendancePage(division: widget.division),
 
       if (AppSettings.currentRole == UserRole.cr || AppSettings.currentRole == UserRole.sr)
-        const CRPanelPage()
-      else
-        const UpdatesPage(),
+        const CRPanelPage(),
+      const UpdatesPage(),
       ProfilePage(division: widget.division),
     ];
 
@@ -220,15 +219,15 @@ class _SchedlyNavBar extends StatelessWidget {
       if (AppSettings.currentRole == UserRole.cr)
         const _NavItem(Icons.admin_panel_settings_outlined, Icons.admin_panel_settings_rounded, 'CR Panel', targetId: 'admin_tab')
       else if (AppSettings.currentRole == UserRole.sr)
-        const _NavItem(Icons.admin_panel_settings_outlined, Icons.admin_panel_settings_rounded, 'SR Panel', targetId: 'admin_tab')
-      else
-        _NavItem(
-          Icons.notifications_outlined,
-          Icons.notifications_rounded,
-          'Updates',
-          badge: unreadCount,
-          targetId: 'announcements_tab',
-        ),
+        const _NavItem(Icons.admin_panel_settings_outlined, Icons.admin_panel_settings_rounded, 'SR Panel', targetId: 'admin_tab'),
+
+      _NavItem(
+        Icons.notifications_outlined,
+        Icons.notifications_rounded,
+        'Updates',
+        badge: unreadCount,
+        targetId: 'announcements_tab',
+      ),
       const _NavItem(Icons.account_circle_outlined, Icons.account_circle_rounded, 'Profile', targetId: 'profile_tab'),
     ];
 

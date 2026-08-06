@@ -21,7 +21,7 @@ import 'user_roles.dart';
 import 'email_verification_page.dart';
 import 'account_migration_page.dart';
 import 'onboarding_wizard_page.dart';
-import 'utils/responsive_utils.dart';
+
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -115,21 +115,9 @@ class SchedlyApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           builder: (context, child) {
-            // Apply a global responsive constraint to the entire application.
-            // On wide screens (desktop/web), the app will be centered with a max width,
-            // preventing awkward stretching of bottom navigation and lists.
-            return Container(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? const Color(0xFF0F172A) // Slate 900
-                  : const Color(0xFFF8FAFC), // Slate 50
-              child: Center(
-                child: ResponsiveUtils.constrainedFormBox(
-                  context,
-                  maxWidth: ResponsiveUtils.desktopBreakpoint,
-                  child: ClipRect(child: child!),
-                ),
-              ),
-            );
+            // Pass-through: no global width constraint.
+            // Each screen is responsible for its own responsive layout.
+            return child!;
           },
           home: const StartupRouter(),
         );

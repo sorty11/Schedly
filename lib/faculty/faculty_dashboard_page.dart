@@ -129,10 +129,7 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async => _refresh(),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 800),
-              child: CustomScrollView(
+          child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                 slivers: [
                   // ── Greeting header ──────────────────────────────────────────
@@ -322,9 +319,7 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
               ),
             ),
           ),
-        ),
-      ),
-    );
+        );
   }
 
   void _showLectureOptions(BuildContext context, FacultyLectureContext item) {

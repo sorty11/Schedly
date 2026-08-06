@@ -3,6 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/timetable_entry.dart';
 import '../models/course_component.dart';
 
+import '../app_settings.dart';
+import '../user_roles.dart';
+
 class ProgressCalculatorService {
   final Map<int, List<TimetableEntry>> weeklyTimetable;
   final DateTime semesterStartDate;
@@ -37,7 +40,15 @@ class ProgressCalculatorService {
           .collection(days[i])
           .where('isActive', isEqualTo: true)
           .get();
-      weeklyTimetable[i + 1] = snap.docs.map((d) => TimetableEntry.fromFirestore(d)).toList();
+      weeklyTimetable[i + 1] = snap.docs
+          .map((d) => TimetableEntry.fromFirestore(d))
+          .where((e) {
+            if (AppSettings.currentRole == UserRole.student) {
+              return e.shouldIncludeForUserBatch(AppSettings.studentBatch);
+            }
+            return true;
+          })
+          .toList();
     }
 
     // 3. Fetch course components (subject config)

@@ -29,6 +29,19 @@ class TimetableEntry {
     this.status = 'active',
   });
 
+  bool shouldIncludeForUserBatch(String? userBatch) {
+    String entryBatch = batch;
+    
+    // 1. Whole class lectures apply to everyone
+    if (entryBatch.isEmpty || entryBatch == 'Whole Class') return true;
+    
+    // 2. If the user doesn't have a batch set, assume they see everything (fallback)
+    if (userBatch == null || userBatch.isEmpty) return true;
+    
+    // 3. For sub-batches, it must strictly match the user's batch
+    return entryBatch.toUpperCase() == userBatch.toUpperCase();
+  }
+
   bool get isActive => status == 'active';
   bool get isCancelled => status == 'cancelled';
   bool get isRescheduled => status == 'rescheduled';

@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:flutter/foundation.dart';
 import '../data/course_aliases.dart';
+import '../app_settings.dart';
 
 class AttendanceParserService {
   /// Allows user to pick a PDF and parses it immediately.
@@ -67,6 +68,40 @@ class AttendanceParserService {
     final rawLines = text.split('\n');
     final lines = rawLines.map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
     debugPrint('PDF PARSER: Extracted ${rawLines.length} raw lines, ${lines.length} non-empty lines from PDF');
+
+    // Auto-detect Batch from PDF text
+    String? detectedBatch;
+    final batchRegex = RegExp(r'\b(C[1-9]|T[1-9])\b', caseSensitive: false);
+    for (final line in lines) {
+      if (line.toUpperCase().contains('BATCH')) {
+        final match = batchRegex.firstMatch(line);
+        if (match != null) {
+          detectedBatch = match.group(1)?.toUpperCase();
+          break;
+        }
+      }
+    }
+    
+    // Fallback: Just look for C1/C2/T1/T2 near the top 30 lines
+    if (detectedBatch == null) {
+      for (final line in lines.take(30)) {
+        final match = batchRegex.firstMatch(line);
+        if (match != null) {
+          detectedBatch = match.group(1)?.toUpperCase();
+          break;
+        }
+      }
+    }
+
+    if (detectedBatch != null) {
+      debugPrint('PDF PARSER: Auto-detected batch -> $detectedBatch');
+      try {
+        await AppSettings.saveStudentBatch(detectedBatch);
+        await FirebaseFirestore.instance.collection('users').doc(uid).update({'batch': detectedBatch});
+      } catch (e) {
+        debugPrint('Failed to save auto-detected batch: $e');
+      }
+    }
 
     final uniqueCoursesMap = <String, Map<String, String>>{}; // Maps shortCode to {subjectCode, component}
     

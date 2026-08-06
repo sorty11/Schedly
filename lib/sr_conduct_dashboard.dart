@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'widgets/animations/floating_empty_state.dart';
+import 'widgets/animations/skeleton_components.dart';
 
 import 'models/conduct_log.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -57,11 +58,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
               children: [
                 Text(
                   'Verify Lecture',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -199,15 +196,10 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                                   
                                   if (reqDur >= 120 && log.durationMinutes < 120) {
                                       if (!context.mounted) return;
-                                      showDialog(
+                                      AppDialogs.showError(
                                         context: context,
-                                        builder: (ctx) => AlertDialog(
-                                          title: Text('Invalid Replacement', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(ctx).colorScheme.onSurface)),
-                                          content: Text('This replacement requires a 2-hour continuous slot, but the selected lecture occupies only a ${log.durationMinutes}-minute period.', style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface)),
-                                          actions: [
-                                            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))
-                                          ],
-                                        )
+                                        title: 'Invalid Replacement',
+                                        message: 'This replacement requires a 2-hour continuous slot, but the selected lecture occupies only a ${log.durationMinutes}-minute period.',
                                       );
                                       return;
                                   }
@@ -273,7 +265,17 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
             stream: _pendingLogsStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-            return Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary));
+            return ListView(
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.all(AppSpacing.x2l),
+              children: const [
+                LectureCardSkeleton(),
+                SizedBox(height: AppSpacing.md),
+                LectureCardSkeleton(),
+                SizedBox(height: AppSpacing.md),
+                LectureCardSkeleton(),
+              ],
+            );
           }
 
           final logs = snapshot.data ?? [];
@@ -283,41 +285,10 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
           });
 
           if (logs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(AppSpacing.x2l),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).extension<AppSemanticColors>()!.conducted.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.done_all_rounded,
-                      size: 48,
-                      color: Theme.of(context).extension<AppSemanticColors>()!.conducted,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.x2l),
-                  Text(
-                    'All Caught Up!',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'No pending lectures to verify.',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ],
-              ),
+            return const FloatingEmptyState(
+              icon: Icons.done_all_rounded,
+              title: 'All Caught Up!',
+              subtitle: 'No pending lectures to verify.',
             );
           }
 
@@ -350,11 +321,7 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
                     padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                     child: Text(
                       displayDate,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
                   ...dateLogs.asMap().entries.map((e) => _buildLogCard(e.value, batchNames, isFirst: index == 0 && e.key == 0)),

@@ -739,16 +739,13 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                 SkeletonLoader(width: double.infinity, height: 80, borderRadius: AppRadius.xl),
               ],
             )
-          : Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 800),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                    vertical: AppSpacing.md,
-                  ),
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
+          : SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.md,
+              ),
+              physics: const BouncingScrollPhysics(),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // ── Hero header card ──────────────────────────────────────────
@@ -1170,8 +1167,6 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                 ],
               ),
             ),
-            ),
-          ),
     );
   }
 

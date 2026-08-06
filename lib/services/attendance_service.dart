@@ -133,6 +133,38 @@ class AttendanceService {
     return snap.docs.map((d) => AttendanceLog.fromFirestore(d)).toList();
   }
 
+  static Future<void> markLog({
+    required String subjectCode,
+    required String component,
+    required DateTime date,
+    required int startTime,
+    required int endTime,
+    required String status, // 'present', 'absent', 'cancelled', 'delete'
+    required String? entryId,
+  }) async {
+    final dateStr = '${date.year}_${date.month.toString().padLeft(2, '0')}_${date.day.toString().padLeft(2, '0')}';
+    final id = '${subjectCode}_${component}_${dateStr}_${startTime}_$endTime'.replaceAll(RegExp(r'\s+'), '_');
+    
+    if (status == 'delete') {
+      await _logsCol().doc(id).delete();
+      return;
+    }
+
+    await _logsCol().doc(id).set({
+      'subjectCode': subjectCode,
+      'component': component,
+      'rawSubjectText': subjectCode,
+      'date': Timestamp.fromDate(date),
+      'startTime': startTime,
+      'endTime': endTime,
+      'status': status,
+      'source': 'manual',
+      'confidence': 'exact',
+      'timetableEntryId': entryId,
+      'importedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
   /// Atomically batches new imported logs and updates aggregate counts
   static Future<Map<String, int>> batchImportAttendance({
     required String division,

@@ -715,6 +715,12 @@ class _DashboardPageState extends State<DashboardPage> {
             final docs = snapshot.data?.docs ?? [];
             final rawLectures = docs
                 .map((doc) => TimetableEntry.fromFirestore(doc))
+                .where((e) {
+                  if (AppSettings.currentRole == UserRole.student) {
+                    return e.shouldIncludeForUserBatch(AppSettings.studentBatch);
+                  }
+                  return true;
+                })
                 .toList();
 
             final Map<int, List<TimetableEntry>> grouped = {};
@@ -872,7 +878,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               ),
                               child: Icon(Icons.edit_calendar_rounded, color: Theme.of(context).colorScheme.primary),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: AppSpacing.lg),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
