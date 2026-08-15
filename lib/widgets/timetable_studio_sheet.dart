@@ -506,40 +506,6 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.xl),
-
-            // ── Section: Options ──────────────────────────────────────
-            _buildSectionLabel('Options'),
-            Container(
-              decoration: BoxDecoration(
-                color: sem.surfaceElevated2,
-                borderRadius: BorderRadius.circular(AppRadius.lg),
-                border: Border.all(color: sem.borderSubtle),
-              ),
-              child: SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.xs,
-                ),
-                title: Text(
-                  'Repeat weekly',
-                  style: TextStyle(fontFamily: 'Inter', 
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                subtitle: Text(
-                  'Lecture appears every week on this day',
-                  style: TextStyle(fontFamily: 'Inter', 
-                    fontSize: 12,
-                    color: sem.onSurfaceMuted,
-                  ),
-                ),
-                value: _repeatWeekly,
-                onChanged: (val) => setState(() => _repeatWeekly = val),
-                activeColor: colorScheme.primary,
-              ),
-            ),
             const SizedBox(height: AppSpacing.x2l),
 
             // ── Action Buttons ────────────────────────────────────────

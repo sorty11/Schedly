@@ -113,6 +113,10 @@ class _DeleteLecturePageState
         title: 'Delete Failed',
         message: e.toString().replaceAll('Exception: ', ''),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _isDeleting = false);
+      }
     }
   }
 

@@ -21,6 +21,7 @@ import 'user_roles.dart';
 import 'email_verification_page.dart';
 import 'account_migration_page.dart';
 import 'onboarding_wizard_page.dart';
+import 'widgets/animations/skeleton_components.dart';
 
 
 @pragma('vm:entry-point')
@@ -320,10 +321,7 @@ class _StartupRouterState
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: Center(
-        child:
-            CircularProgressIndicator(),
-      ),
+      body: DashboardSkeleton(),
     );
   }
 }

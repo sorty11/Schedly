@@ -327,8 +327,10 @@ class _AttendancePageState extends State<AttendancePage> {
                       tooltip: 'Open SVKM Portal',
                       onPressed: () async {
                         final uri = Uri.parse('https://sdc-sppap1.svkm.ac.in:50001/irj/portal');
-                        if (await canLaunchUrl(uri)) {
+                        try {
                           await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        } catch (e) {
+                          debugPrint('Could not launch $uri');
                         }
                       },
                     ),

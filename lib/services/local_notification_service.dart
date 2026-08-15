@@ -34,6 +34,16 @@ class LocalNotificationService {
     await androidImplementation?.requestNotificationsPermission();
     await androidImplementation?.requestExactAlarmsPermission();
 
+    // Create high importance channel for FCM background notifications
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'high_importance_channel', // id
+      'High Importance Notifications', // title
+      description: 'This channel is used for important notifications.',
+      importance: Importance.max,
+    );
+
+    await androidImplementation?.createNotificationChannel(channel);
+
     // Initialize Timezone
     tz.initializeTimeZones();
     try {
