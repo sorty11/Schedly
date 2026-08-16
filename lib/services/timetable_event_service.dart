@@ -90,7 +90,7 @@ class TimetableEventService {
     } else if (oldEntry == null && newEntry != null) {
       if (newEntry.isHoliday) {
         title = 'Holiday Declared';
-        message = '${newEntry.holidayName ?? "Holiday"}\n$dateContext';
+        message = '${newEntry.displaySubject}\n$dateContext';
         type = 'announcement';
         makeAnnouncement = true;
       } else {
