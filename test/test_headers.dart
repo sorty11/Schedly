@@ -8,11 +8,16 @@ void main() {
     final bytes = await file.readAsBytes();
     final document = PdfDocument(inputBytes: bytes);
     final extractor = PdfTextExtractor(document);
-    final words = extractor.extractTextLines(startPageIndex: 0).expand((l) => l.wordCollection).toList();
-    
+    final words = extractor
+        .extractTextLines(startPageIndex: 0)
+        .expand((l) => l.wordCollection)
+        .toList();
+
     for (final w in words) {
       if (w.bounds.center.dy > 250 && w.bounds.center.dy < 400) {
-        print('WORD: ${w.text} at cx=${w.bounds.center.dx}, dy=${w.bounds.center.dy}');
+        print(
+          'WORD: ${w.text} at cx=${w.bounds.center.dx}, dy=${w.bounds.center.dy}',
+        );
       }
     }
   });

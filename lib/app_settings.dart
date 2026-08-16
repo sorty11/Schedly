@@ -6,19 +6,19 @@ import 'services/topic_subscription_service.dart';
 import 'services/notification_service.dart';
 
 class AppSettings {
-  static UserRole currentRole =
-      UserRole.student;
+  static UserRole currentRole = UserRole.student;
 
   static String? srSubject;
   static String? srComponent;
-  static String? srDivision; // Will be migrated to srSectionId eventually, but let's keep it simple for now or change to srSectionId
+  static String?
+  srDivision; // Will be migrated to srSectionId eventually, but let's keep it simple for now or change to srSectionId
   static String? srSectionId;
   static String? srBatch;
-  
+
   static String? studentName;
   static String? studentRollNo;
   static String? studentBatch;
-  
+
   static String? academicYear;
   static String? branch;
   static String? division;
@@ -39,11 +39,9 @@ class AppSettings {
   // We'll store basic identifiers.
 
   static Future<void> loadRole() async {
-    final prefs =
-        await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
 
-    final role =
-        prefs.getString('user_role');
+    final role = prefs.getString('user_role');
 
     switch (role) {
       case 'cr':
@@ -64,23 +62,17 @@ class AppSettings {
   }
 
   static Future<void> loadSRDetails() async {
-    final prefs =
-        await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
 
-    srDivision =
-        prefs.getString('sr_division');
+    srDivision = prefs.getString('sr_division');
 
-    srSubject =
-        prefs.getString('sr_subject');
+    srSubject = prefs.getString('sr_subject');
 
-    srComponent =
-        prefs.getString('sr_component');
-        
-    srSectionId =
-        prefs.getString('sr_section_id');
+    srComponent = prefs.getString('sr_component');
 
-    srBatch =
-        prefs.getString('sr_batch');
+    srSectionId = prefs.getString('sr_section_id');
+
+    srBatch = prefs.getString('sr_batch');
   }
 
   static Future<void> loadStudentDetails() async {
@@ -88,7 +80,7 @@ class AppSettings {
     studentName = prefs.getString('student_name');
     studentRollNo = prefs.getString('student_roll_no');
     studentBatch = prefs.getString('student_batch');
-    
+
     academicYear = prefs.getString('academic_year');
     branch = prefs.getString('branch');
     division = prefs.getString('division');
@@ -98,7 +90,8 @@ class AppSettings {
   static Future<void> loadFacultyDetails() async {
     final prefs = await SharedPreferences.getInstance();
     facultyId = prefs.getString('faculty_id');
-    facultyIdMigrationVersion = prefs.getInt('faculty_id_migration_version') ?? 0;
+    facultyIdMigrationVersion =
+        prefs.getInt('faculty_id_migration_version') ?? 0;
     facultyName = prefs.getString('faculty_name');
     facultyEmail = prefs.getString('faculty_email');
     facultyDepartment = prefs.getString('faculty_department');
@@ -106,21 +99,17 @@ class AppSettings {
     facultyCabin = prefs.getString('faculty_cabin');
     facultySetupCompleted = prefs.getBool('faculty_setup_completed') ?? false;
     facultyReminderTime = prefs.getInt('faculty_reminder_time') ?? 5;
-    facultyAssignedDivisions = prefs.getStringList('faculty_assigned_divisions');
+    facultyAssignedDivisions = prefs.getStringList(
+      'faculty_assigned_divisions',
+    );
   }
 
-  static Future<void> saveRole(
-    UserRole role,
-  ) async {
-    final prefs =
-        await SharedPreferences.getInstance();
+  static Future<void> saveRole(UserRole role) async {
+    final prefs = await SharedPreferences.getInstance();
 
     currentRole = role;
 
-    await prefs.setString(
-      'user_role',
-      role.name,
-    );
+    await prefs.setString('user_role', role.name);
   }
 
   static Future<void> saveSRDetails({
@@ -129,32 +118,25 @@ class AppSettings {
     String? component,
     String? batch,
   }) async {
-    final prefs =
-        await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
 
     srDivision = division;
     srSubject = subject;
     srComponent = component;
     srBatch = batch;
-    srSectionId = '${academicYear}_${branch}_$division'.replaceAll(' ', ''); // basic fallback if needed, but we'll pass sectionId explicitly later
+    srSectionId = '${academicYear}_${branch}_$division'.replaceAll(
+      ' ',
+      '',
+    ); // basic fallback if needed, but we'll pass sectionId explicitly later
 
-    await prefs.setString(
-      'sr_division',
-      division,
-    );
+    await prefs.setString('sr_division', division);
 
-    await prefs.setString(
-      'sr_subject',
-      subject,
-    );
+    await prefs.setString('sr_subject', subject);
 
     if (component != null) {
-      await prefs.setString(
-        'sr_component',
-        component,
-      );
+      await prefs.setString('sr_component', component);
     }
-    
+
     if (batch != null) {
       await prefs.setString('sr_batch', batch);
     } else {
@@ -162,9 +144,7 @@ class AppSettings {
     }
   }
 
-  static Future<void> saveSRSection({
-    required String sectionId,
-  }) async {
+  static Future<void> saveSRSection({required String sectionId}) async {
     final prefs = await SharedPreferences.getInstance();
     srSectionId = sectionId;
     await prefs.setString('sr_section_id', sectionId);
@@ -187,7 +167,7 @@ class AppSettings {
     branch = br;
     division = div;
     sectionId = secId;
-    
+
     await prefs.setString('student_name', name);
     await prefs.setString('student_roll_no', rollNo);
     if (batch != null) {
@@ -218,12 +198,12 @@ class AppSettings {
     int? migrationVersion,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     if (id != null) {
       facultyId = id;
       await prefs.setString('faculty_id', id);
     }
-    
+
     if (migrationVersion != null) {
       facultyIdMigrationVersion = migrationVersion;
       await prefs.setInt('faculty_id_migration_version', migrationVersion);
@@ -244,7 +224,7 @@ class AppSettings {
     await prefs.setBool('faculty_setup_completed', facultySetupCompleted);
     await prefs.setStringList('faculty_assigned_divisions', assignedDivisions);
   }
-  
+
   static Future<void> completeFacultySetup() async {
     final prefs = await SharedPreferences.getInstance();
     facultySetupCompleted = true;
@@ -281,8 +261,7 @@ class AppSettings {
   }
 
   static Future<void> resetRole() async {
-    final prefs =
-        await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
 
     await TopicSubscriptionService.clearAllSubscriptions();
 

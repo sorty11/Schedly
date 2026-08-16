@@ -1,6 +1,1 @@
-enum UserRole {
-  student,
-  cr,
-  sr,
-  faculty,
-}
+enum UserRole { student, cr, sr, faculty }

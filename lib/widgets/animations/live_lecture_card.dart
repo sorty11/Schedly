@@ -95,7 +95,9 @@ class _LiveLectureCardState extends State<LiveLectureCard> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final cardBg = isDark ? colorScheme.surfaceContainerHighest : Colors.white;
-    final borderColor = isDark ? const Color(0xFF2E2E2E) : const Color(0xFFE5E7EB);
+    final borderColor = isDark
+        ? const Color(0xFF2E2E2E)
+        : const Color(0xFFE5E7EB);
 
     return GestureDetector(
       onTap: widget.onTap,
@@ -156,7 +158,8 @@ class _LiveLectureCardState extends State<LiveLectureCard> {
                                 const SizedBox(width: 4),
                                 Text(
                                   'LIVE',
-                                  style: TextStyle(fontFamily: 'Inter', 
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
                                     color: sem.success,
@@ -177,7 +180,8 @@ class _LiveLectureCardState extends State<LiveLectureCard> {
                               const SizedBox(width: 4),
                               Text(
                                 widget.time,
-                                style: TextStyle(fontFamily: 'Inter', 
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                   color: sem.onSurfaceMuted,
@@ -187,12 +191,14 @@ class _LiveLectureCardState extends State<LiveLectureCard> {
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: AppSpacing.md),
-                      
+
                       Text(
                         widget.subject,
-                        style: TextStyle(fontFamily: 'Inter',  // Inter instead of Outfit for high density clarity
+                        style: TextStyle(
+                          fontFamily:
+                              'Inter', // Inter instead of Outfit for high density clarity
                           fontSize: 20,
                           fontWeight: FontWeight.w600,
                           color: colorScheme.onSurface,
@@ -202,9 +208,9 @@ class _LiveLectureCardState extends State<LiveLectureCard> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      
+
                       const SizedBox(height: AppSpacing.md),
-                      
+
                       Row(
                         children: [
                           _MetaText(
@@ -212,7 +218,8 @@ class _LiveLectureCardState extends State<LiveLectureCard> {
                             label: widget.room,
                             sem: sem,
                           ),
-                          if (widget.facultyName != null && widget.facultyName!.isNotEmpty) ...[
+                          if (widget.facultyName != null &&
+                              widget.facultyName!.isNotEmpty) ...[
                             const SizedBox(width: AppSpacing.md),
                             GestureDetector(
                               onTap: widget.onFacultyTap,
@@ -227,16 +234,20 @@ class _LiveLectureCardState extends State<LiveLectureCard> {
                           ],
                         ],
                       ),
-                      
+
                       const SizedBox(height: AppSpacing.lg),
-                      
+
                       ClipRRect(
                         borderRadius: BorderRadius.circular(AppRadius.full),
                         child: LinearProgressIndicator(
                           value: _progressValue,
                           minHeight: 4,
-                          backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
-                          valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                          backgroundColor: colorScheme.primary.withValues(
+                            alpha: 0.1,
+                          ),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            colorScheme.primary,
+                          ),
                         ),
                       ),
                     ],
@@ -279,7 +290,8 @@ class _MetaText extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           label,
-          style: TextStyle(fontFamily: 'Inter', 
+          style: TextStyle(
+            fontFamily: 'Inter',
             fontSize: 13,
             fontWeight: FontWeight.w500,
             color: fgColor,

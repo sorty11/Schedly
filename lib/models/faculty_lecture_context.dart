@@ -4,8 +4,5 @@ class FacultyLectureContext {
   final String division;
   final TimetableEntry entry;
 
-  FacultyLectureContext({
-    required this.division,
-    required this.entry,
-  });
+  FacultyLectureContext({required this.division, required this.entry});
 }

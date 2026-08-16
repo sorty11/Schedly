@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/conduct_log.dart';
 import '../models/timetable_entry.dart';
+import 'timetable_resolver_service.dart';
 import '../models/event_category.dart';
 import 'analytics_service.dart';
 
@@ -8,21 +10,37 @@ class ConductSyncService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   static const List<String> _weekdays = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
   ];
 
-  static Future<void> syncPendingLectures(String division, {bool forceToday = false}) async {
-    debugPrint('ConductSyncService.syncPendingLectures() called for division: $division');
+  static Future<void> syncPendingLectures(
+    String division, {
+    bool forceToday = false,
+  }) async {
+    debugPrint(
+      'ConductSyncService.syncPendingLectures() called for division: $division',
+    );
     try {
       final now = DateTime.now();
       // Scan last 3 days + today
-      final startDate = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 3));
+      final startDate = DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).subtract(const Duration(days: 3));
       final endDate = DateTime(now.year, now.month, now.day);
       DateTime currentDate = startDate;
-      
+
       while (!currentDate.isAfter(endDate)) {
         final dayName = _weekdays[currentDate.weekday - 1];
-        final dateStr = '${currentDate.year}-${currentDate.month.toString().padLeft(2, '0')}-${currentDate.day.toString().padLeft(2, '0')}';
+        final dateStr =
+            '${currentDate.year}-${currentDate.month.toString().padLeft(2, '0')}-${currentDate.day.toString().padLeft(2, '0')}';
 
         debugPrint('Checking date: $dateStr ($dayName)');
 
@@ -34,8 +52,10 @@ class ConductSyncService {
             .where('date', isEqualTo: dateStr)
             .get();
         final existingLogIds = existingLogsSnap.docs.map((d) => d.id).toSet();
-        
-        debugPrint('Found ${existingLogIds.length} existing conduct_logs for $dateStr in division $division');
+
+        debugPrint(
+          'Found ${existingLogIds.length} existing conduct_logs for $dateStr in division $division',
+        );
 
         final timetableSnapshot = await _db
             .collection('timetables')
@@ -44,17 +64,40 @@ class ConductSyncService {
             .where('isActive', isEqualTo: true)
             .get();
 
-        debugPrint('Found ${timetableSnapshot.docs.length} active timetable entries for $dayName');
+        debugPrint(
+          'Found ${timetableSnapshot.docs.length} active timetable entries for $dayName',
+        );
 
         if (timetableSnapshot.docs.isNotEmpty) {
           final batchWriter = _db.batch();
           bool hasWrites = false;
 
-          for (var doc in timetableSnapshot.docs) {
-            final entry = TimetableEntry.fromFirestore(doc);
-            
-            debugPrint('Processing entry: ${entry.id}, Subject: ${entry.subject}, isAcademic: ${entry.isAcademic}');
-            
+          final rawEntries = timetableSnapshot.docs
+              .map((doc) => TimetableEntry.fromFirestore(doc))
+              .toList();
+          final resolved = TimetableResolverService.resolve(
+            rawEntries: rawEntries,
+            targetDateStr: dateStr,
+            userBatch: null, // Conduct sync evaluates all batches
+          );
+
+          if (resolved.isHoliday) {
+            debugPrint(
+              'Skipping date $dateStr because it is a holiday: ${resolved.holidayName}',
+            );
+            continue;
+          }
+
+          for (final entry in resolved.lectures) {
+            if (entry.isCancelled) {
+              debugPrint('Skipping ${entry.id} because it is cancelled');
+              continue;
+            }
+
+            debugPrint(
+              'Processing entry: ${entry.id}, Subject: ${entry.subject}, isAcademic: ${entry.isAcademic}',
+            );
+
             // Only create conduct logs for academic entries
             if (!entry.isAcademic) {
               debugPrint('Skipping ${entry.id} because it is not academic');
@@ -62,10 +105,12 @@ class ConductSyncService {
             }
 
             final logId = '${dateStr}_${entry.id}';
-            
+
             // Skip if it already exists
             if (existingLogIds.contains(logId)) {
-              debugPrint('Skipping ${entry.id} because conduct log $logId already exists');
+              debugPrint(
+                'Skipping ${entry.id} because conduct log $logId already exists',
+              );
               continue;
             }
 
@@ -87,7 +132,7 @@ class ConductSyncService {
                 'markedByUid': 'system',
                 'clientTimestamp': DateTime.now().toIso8601String(),
                 'serverTimestamp': FieldValue.serverTimestamp(),
-              }
+              },
             });
             hasWrites = true;
 
@@ -95,13 +140,17 @@ class ConductSyncService {
             int weight = (entry.durationMinutes / 60).round();
             if (weight < 1) weight = 1;
 
-            final analyticsId = AnalyticsService.getAnalyticsDocId(entry.subject, entry.component, entry.batch);
+            final analyticsId = AnalyticsService.getAnalyticsDocId(
+              entry.subject,
+              entry.component,
+              entry.batch,
+            );
             final analyticsRef = _db
                 .collection('sections')
                 .doc(division)
                 .collection('analytics')
                 .doc(analyticsId);
-                
+
             batchWriter.set(analyticsRef, {
               'subject': entry.subject,
               'component': entry.component,

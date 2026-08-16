@@ -22,7 +22,8 @@ class OnboardingFlow extends StatefulWidget {
   State<OnboardingFlow> createState() => _OnboardingFlowState();
 }
 
-class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStateMixin {
+class _OnboardingFlowState extends State<OnboardingFlow>
+    with TickerProviderStateMixin {
   late AnimationController _timeline;
   late AnimationController _loginCtrl;
   late AnimationController _bgCtrl;
@@ -54,9 +55,18 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
   @override
   void initState() {
     super.initState();
-    _timeline = AnimationController(vsync: this, duration: const Duration(milliseconds: 3000));
-    _loginCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
-    _bgCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 20))..repeat();
+    _timeline = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3000),
+    );
+    _loginCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _bgCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 20),
+    )..repeat();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _timeline.forward();
@@ -93,13 +103,22 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
       final email = _emailCtrl.text.trim();
       final pass = _passCtrl.text.trim();
       if (_isLogin) {
-        await AuthenticationService.signInWithEmailAndPassword(email: email, password: pass);
+        await AuthenticationService.signInWithEmailAndPassword(
+          email: email,
+          password: pass,
+        );
       } else {
-        await AuthenticationService.registerWithEmailAndPassword(email: email, password: pass);
+        await AuthenticationService.registerWithEmailAndPassword(
+          email: email,
+          password: pass,
+        );
       }
       HapticFeedback.mediumImpact();
       if (!mounted) return;
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const StartupRouter()));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const StartupRouter()),
+      );
     } catch (e, st) {
       if (!mounted) return;
       CrashReportingService.logError(e, st, reason: 'Auth');
@@ -115,10 +134,12 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarBrightness: Brightness.dark,
-      statusBarIconBrightness: Brightness.light,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.light,
+      ),
+    );
 
     final isDesktop = MediaQuery.of(context).size.width > 800;
 
@@ -139,7 +160,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
                 animation: Listenable.merge([_bgCtrl, _timeline]),
                 builder: (ctx, _) {
                   final starOpacity = _kf(_timeline.value, _kStars0, _kStars1);
-                  return CustomPaint(painter: _StarAndWavePainter(_bgCtrl.value, starOpacity));
+                  return CustomPaint(
+                    painter: _StarAndWavePainter(_bgCtrl.value, starOpacity),
+                  );
                 },
               ),
             ),
@@ -148,9 +171,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
                 children: [
                   Expanded(
                     flex: 55,
-                    child: Center(
-                      child: _buildBranding(context, true),
-                    ),
+                    child: Center(child: _buildBranding(context, true)),
                   ),
                   Expanded(
                     flex: 45,
@@ -170,22 +191,28 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
               Stack(
                 fit: StackFit.expand,
                 children: [
-                  Center(
-                    child: _buildBranding(context, false),
-                  ),
+                  Center(child: _buildBranding(context, false)),
                   if (_showMobileLogin)
                     AnimatedBuilder(
                       animation: _loginCtrl,
                       builder: (ctx, _) {
-                        final loginT = Curves.easeInOutCubic.transform(_loginCtrl.value);
+                        final loginT = Curves.easeInOutCubic.transform(
+                          _loginCtrl.value,
+                        );
                         return Positioned(
-                          left: 0, right: 0, bottom: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
                           child: Opacity(
                             opacity: loginT,
                             child: Transform.translate(
                               offset: Offset(0, 60 * (1 - loginT)),
                               child: Padding(
-                                padding: const EdgeInsets.only(left: 20, right: 20, bottom: 40),
+                                padding: const EdgeInsets.only(
+                                  left: 20,
+                                  right: 20,
+                                  bottom: 40,
+                                ),
                                 child: _buildLoginCard(context, 1.0),
                               ),
                             ),
@@ -221,7 +248,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
         final moveUpOffset = isDesktop ? 0.0 : -loginT * 180.0;
         final opacityOut = isDesktop ? 1.0 : (1.0 - loginT);
 
-        final tracking = dart_ui.lerpDouble(1.0, -0.5, Curves.easeOutCubic.transform(settleProg))!;
+        final tracking = dart_ui.lerpDouble(
+          1.0,
+          -0.5,
+          Curves.easeOutCubic.transform(settleProg),
+        )!;
 
         return Transform.translate(
           offset: Offset(0, moveUpOffset),
@@ -234,7 +265,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   SizedBox(
-                    width: 42, height: 56,
+                    width: 42,
+                    height: 56,
                     child: RepaintBoundary(
                       child: CustomPaint(
                         painter: _SRevealPainter(
@@ -269,11 +301,16 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
                 opacity: subProg,
                 child: Transform.translate(
                   offset: Offset(0, 10 * (1 - subProg)),
-                  child: Text('Your Academic Companion',
-                      style: TextStyle(
-                          fontFamily: 'Inter', fontSize: 15,
-                          fontWeight: FontWeight.w400, color: const Color(0xFF9CA3AF),
-                          letterSpacing: 0.5)),
+                  child: Text(
+                    'Your Academic Companion',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFF9CA3AF),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
                 ),
               ),
               if (!isDesktop) ...[
@@ -285,7 +322,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 40),
                       child: SizedBox(
-                        width: double.infinity, height: 52,
+                        width: double.infinity,
+                        height: 52,
                         child: _primaryButton(
                           label: 'Get Started',
                           onPressed: ctaProg > 0.8 ? _goToLogin : null,
@@ -294,7 +332,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
                     ),
                   ),
                 ),
-              ]
+              ],
             ],
           ),
         );
@@ -321,11 +359,16 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
                 decoration: BoxDecoration(
                   color: const Color(0xFF0F172A).withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 0.5),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    width: 0.5,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 40, spreadRadius: -10, offset: const Offset(0, 20),
+                      blurRadius: 40,
+                      spreadRadius: -10,
+                      offset: const Offset(0, 20),
                     ),
                   ],
                 ),
@@ -336,37 +379,64 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(_isLogin ? 'Welcome back' : 'Create account',
-                            style: const TextStyle(fontFamily: 'Outfit', fontSize: 28,
-                                fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.5)),
+                        Text(
+                          _isLogin ? 'Welcome back' : 'Create account',
+                          style: const TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
                         const SizedBox(height: 6),
-                        Text(_isLogin ? 'Sign in to continue to Schedly.' : 'Create your Schedly account.',
-                            style: const TextStyle(fontFamily: 'Inter', fontSize: 14, color: Color(0xFF9CA3AF))),
+                        Text(
+                          _isLogin
+                              ? 'Sign in to continue to Schedly.'
+                              : 'Create your Schedly account.',
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 14,
+                            color: Color(0xFF9CA3AF),
+                          ),
+                        ),
                         const SizedBox(height: 32),
                         _glassField(
-                          controller: _emailCtrl, focusNode: _emailFocus,
-                          hint: 'Email address', icon: Icons.mail_outline_rounded,
+                          controller: _emailCtrl,
+                          focusNode: _emailFocus,
+                          hint: 'Email address',
+                          icon: Icons.mail_outline_rounded,
                           keyboard: TextInputType.emailAddress,
-                          validator: (v) => v == null || !v.contains('@') ? 'Enter a valid email' : null,
+                          validator: (v) => v == null || !v.contains('@')
+                              ? 'Enter a valid email'
+                              : null,
                         ),
                         const SizedBox(height: 16),
                         _glassField(
-                          controller: _passCtrl, hint: 'Password',
-                          icon: Icons.lock_outline_rounded, obscure: _obscure,
+                          controller: _passCtrl,
+                          hint: 'Password',
+                          icon: Icons.lock_outline_rounded,
+                          obscure: _obscure,
                           suffix: MouseRegion(
                             cursor: SystemMouseCursors.click,
                             child: GestureDetector(
                               onTap: () => setState(() => _obscure = !_obscure),
                               child: Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                                color: const Color(0xFF9CA3AF), size: 18),
-                          ),
+                                padding: const EdgeInsets.all(12.0),
+                                child: Icon(
+                                  _obscure
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                  color: const Color(0xFF9CA3AF),
+                                  size: 18,
+                                ),
+                              ),
                             ),
                           ),
                           validator: (v) {
                             if (v == null || v.isEmpty) return 'Required';
-                            if (!_isLogin && v.length < 8) return 'Min 8 characters';
+                            if (!_isLogin && v.length < 8)
+                              return 'Min 8 characters';
                             return null;
                           },
                         ),
@@ -377,13 +447,27 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
                             child: MouseRegion(
                               cursor: SystemMouseCursors.click,
                               child: GestureDetector(
-                                onTap: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const ForgotPasswordPage())),
+                                onTap: () => Navigator.push(
+                                  ctx,
+                                  MaterialPageRoute(
+                                    builder: (_) => const ForgotPasswordPage(),
+                                  ),
+                                ),
                                 child: const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-                                child: Text('Forgot password?',
-                                    style: TextStyle(fontFamily: 'Inter', fontSize: 13,
-                                        fontWeight: FontWeight.w500, color: Color(0xFF9CA3AF))),
-                              ),
+                                  padding: EdgeInsets.symmetric(
+                                    vertical: 8.0,
+                                    horizontal: 4.0,
+                                  ),
+                                  child: Text(
+                                    'Forgot password?',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                      color: Color(0xFF9CA3AF),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -399,17 +483,34 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(_isLogin ? "Don't have an account? " : 'Already have an account? ',
-                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF9CA3AF))),
+                              Text(
+                                _isLogin
+                                    ? "Don't have an account? "
+                                    : 'Already have an account? ',
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 13,
+                                  color: Color(0xFF9CA3AF),
+                                ),
+                              ),
                               MouseRegion(
                                 cursor: SystemMouseCursors.click,
                                 child: GestureDetector(
-                                  onTap: () { HapticFeedback.selectionClick(); setState(() => _isLogin = !_isLogin); },
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    setState(() => _isLogin = !_isLogin);
+                                  },
                                   child: Padding(
                                     padding: const EdgeInsets.all(8.0),
-                                    child: Text(_isLogin ? 'Sign Up' : 'Sign In',
-                                        style: const TextStyle(fontFamily: 'Inter', fontSize: 13,
-                                            fontWeight: FontWeight.w600, color: Colors.white)),
+                                    child: Text(
+                                      _isLogin ? 'Sign Up' : 'Sign In',
+                                      style: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -428,31 +529,58 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
     );
   }
 
-  Widget _primaryButton({required String label, required VoidCallback? onPressed, bool isLoading = false}) {
+  Widget _primaryButton({
+    required String label,
+    required VoidCallback? onPressed,
+    bool isLoading = false,
+  }) {
     return MouseRegion(
-      cursor: onPressed == null ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      cursor: onPressed == null
+          ? SystemMouseCursors.basic
+          : SystemMouseCursors.click,
       child: GestureDetector(
         onTap: onPressed,
         child: Container(
-          width: double.infinity, height: 52,
+          width: double.infinity,
+          height: 52,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             gradient: const LinearGradient(
               colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
-              begin: Alignment.topCenter, end: Alignment.bottomCenter,
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF2563EB).withValues(alpha: 0.3),
-                blurRadius: 20, offset: const Offset(0, 8),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
               ),
             ],
-            border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 0.5),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.15),
+              width: 0.5,
+            ),
           ),
           child: Center(
             child: isLoading
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : Text(label, style: const TextStyle(fontFamily: 'Inter', fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : Text(
+                    label,
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
           ),
         ),
       ),
@@ -461,30 +589,72 @@ class _OnboardingFlowState extends State<OnboardingFlow> with TickerProviderStat
 
   Widget _glassField({
     required TextEditingController controller,
-    required String hint, required IconData icon,
-    FocusNode? focusNode, bool obscure = false,
-    Widget? suffix, String? Function(String?)? validator,
+    required String hint,
+    required IconData icon,
+    FocusNode? focusNode,
+    bool obscure = false,
+    Widget? suffix,
+    String? Function(String?)? validator,
     TextInputType? keyboard,
   }) {
     return TextFormField(
-      controller: controller, focusNode: focusNode,
-      obscureText: obscure, validator: validator, keyboardType: keyboard,
+      controller: controller,
+      focusNode: focusNode,
+      obscureText: obscure,
+      validator: validator,
+      keyboardType: keyboard,
       cursorColor: const Color(0xFF2563EB),
-      style: const TextStyle(color: Colors.white, fontFamily: 'Inter', fontSize: 14),
+      style: const TextStyle(
+        color: Colors.white,
+        fontFamily: 'Inter',
+        fontSize: 14,
+      ),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: TextStyle(fontFamily: 'Inter', fontSize: 14, color: const Color(0xFF9CA3AF).withValues(alpha: 0.6)),
+        hintStyle: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 14,
+          color: const Color(0xFF9CA3AF).withValues(alpha: 0.6),
+        ),
         prefixIcon: Icon(icon, color: const Color(0xFF9CA3AF), size: 20),
         suffixIcon: suffix,
         filled: true,
         fillColor: const Color(0xFF030712).withValues(alpha: 0.4),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08), width: 0.5)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1)),
-        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.red.withValues(alpha: 0.4), width: 0.5)),
-        focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.red, width: 1)),
-        errorStyle: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Colors.redAccent),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: Colors.white.withValues(alpha: 0.08),
+            width: 0.5,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: Colors.red.withValues(alpha: 0.4),
+            width: 0.5,
+          ),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red, width: 1),
+        ),
+        errorStyle: const TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 11,
+          color: Colors.redAccent,
+        ),
       ),
     );
   }
@@ -524,9 +694,13 @@ class _SRevealPainter extends CustomPainter {
 
     // Glow
     if (glowOpacity > 0) {
-      canvas.drawCircle(Offset.zero, size.height * 0.5, Paint()
-        ..color = const Color(0xFF2563EB).withValues(alpha: glowOpacity * 0.5)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 35));
+      canvas.drawCircle(
+        Offset.zero,
+        size.height * 0.5,
+        Paint()
+          ..color = const Color(0xFF2563EB).withValues(alpha: glowOpacity * 0.5)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 35),
+      );
     }
 
     final strokePaint = Paint()
@@ -538,7 +712,10 @@ class _SRevealPainter extends CustomPainter {
 
     if (strokeProgress < 1.0) {
       for (final m in sPath.computeMetrics()) {
-        canvas.drawPath(m.extractPath(0, m.length * strokeProgress), strokePaint);
+        canvas.drawPath(
+          m.extractPath(0, m.length * strokeProgress),
+          strokePaint,
+        );
       }
     } else {
       canvas.drawPath(sPath, strokePaint);
@@ -570,17 +747,20 @@ class _StarAndWavePainter extends CustomPainter {
       final amp = 30.0 + i * 20.0;
       final yBase = size.height * 0.85 + i * 20;
       final phase = t * math.pi * 2 + i * math.pi;
-      
+
       path.moveTo(0, yBase);
       for (double x = 0; x <= size.width; x += 10) {
-        final y = yBase + math.sin((x / size.width) * math.pi * 2 + phase) * amp;
+        final y =
+            yBase + math.sin((x / size.width) * math.pi * 2 + phase) * amp;
         path.lineTo(x, y);
       }
-      wavePaint.color = const Color(0xFF2563EB).withValues(alpha: (0.05 - i * 0.02) * globalOpacity);
+      wavePaint.color = const Color(
+        0xFF2563EB,
+      ).withValues(alpha: (0.05 - i * 0.02) * globalOpacity);
       wavePaint.strokeWidth = 2.0 + i;
       canvas.drawPath(path, wavePaint);
     }
-    
+
     // 2. Slow drifting stars
     final rng = math.Random(42);
     final starPaint = Paint();
@@ -589,19 +769,34 @@ class _StarAndWavePainter extends CustomPainter {
       final sy = rng.nextDouble() * size.height;
       final sizeStar = 0.5 + rng.nextDouble();
       final phase = rng.nextDouble() * math.pi * 2;
-      
+
       final dx = math.sin(t * math.pi * 2 + phase) * 15;
       final dy = math.cos(t * math.pi * 2 + phase) * 15;
-      final opacity = 0.1 + 0.4 * (0.5 + 0.5 * math.sin(t * math.pi * 4 + phase));
-      
+      final opacity =
+          0.1 + 0.4 * (0.5 + 0.5 * math.sin(t * math.pi * 4 + phase));
+
       starPaint.color = Colors.white.withValues(alpha: opacity * globalOpacity);
       canvas.drawCircle(Offset(sx + dx, sy + dy), sizeStar, starPaint);
     }
-    
+
     // 3. Occasional shooting stars
     final tracks = [
-      _Track(0.1, 0.15, size.width * 0.2, -50, size.width * 1.2, size.height * 0.4),
-      _Track(0.6, 0.12, -50, size.height * 0.2, size.width * 0.8, size.height * 0.6),
+      _Track(
+        0.1,
+        0.15,
+        size.width * 0.2,
+        -50,
+        size.width * 1.2,
+        size.height * 0.4,
+      ),
+      _Track(
+        0.6,
+        0.12,
+        -50,
+        size.height * 0.2,
+        size.width * 0.8,
+        size.height * 0.6,
+      ),
     ];
     for (final tr in tracks) {
       final phase = (t - tr.start) % 1.0;
@@ -611,19 +806,34 @@ class _StarAndWavePainter extends CustomPainter {
         final y = tr.sy + (tr.ey - tr.sy) * p;
         final tailX = tr.sx + (tr.ex - tr.sx) * math.max(0, p - 0.2);
         final tailY = tr.sy + (tr.ey - tr.sy) * math.max(0, p - 0.2);
-        
+
         final grad = dart_ui.Gradient.linear(
-          Offset(tailX, tailY), Offset(x, y),
-          [Colors.transparent, Colors.white.withValues(alpha: 0.8 * globalOpacity)]
+          Offset(tailX, tailY),
+          Offset(x, y),
+          [
+            Colors.transparent,
+            Colors.white.withValues(alpha: 0.8 * globalOpacity),
+          ],
         );
-        canvas.drawLine(Offset(tailX, tailY), Offset(x, y), Paint()..shader = grad..strokeWidth = 2);
-        canvas.drawCircle(Offset(x,y), 2, Paint()..color = Colors.white.withValues(alpha: globalOpacity));
+        canvas.drawLine(
+          Offset(tailX, tailY),
+          Offset(x, y),
+          Paint()
+            ..shader = grad
+            ..strokeWidth = 2,
+        );
+        canvas.drawCircle(
+          Offset(x, y),
+          2,
+          Paint()..color = Colors.white.withValues(alpha: globalOpacity),
+        );
       }
     }
   }
 
   @override
-  bool shouldRepaint(covariant _StarAndWavePainter oldDelegate) => oldDelegate.t != t;
+  bool shouldRepaint(covariant _StarAndWavePainter oldDelegate) =>
+      oldDelegate.t != t;
 }
 
 class _Track {

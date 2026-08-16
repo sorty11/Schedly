@@ -16,7 +16,10 @@ class FeedbackService {
   // Make sure this matches the deployed Render backend URL or test endpoint.
   // Using localhost for Android emulator testing, fallback to generic Render URL.
   // In production, this should come from AppSettings.
-  final String _backendUrl = const String.fromEnvironment('BACKEND_URL', defaultValue: 'https://schedly-backend.onrender.com');
+  final String _backendUrl = const String.fromEnvironment(
+    'BACKEND_URL',
+    defaultValue: 'https://schedly-backend.onrender.com',
+  );
 
   Future<Map<String, dynamic>> _gatherMetadata() async {
     final user = _auth.currentUser;
@@ -33,7 +36,7 @@ class FeedbackService {
     // Get Device Info
     String deviceModel = 'Unknown Device';
     String platform = kIsWeb ? 'Web' : Platform.operatingSystem;
-    
+
     try {
       if (kIsWeb) {
         final webInfo = await _deviceInfo.webBrowserInfo;
@@ -70,7 +73,8 @@ class FeedbackService {
       final metadata = await _gatherMetadata();
       final data = {
         ...metadata,
-        'type': 'bug_report', // using 'type' field since we are saving to a shared 'feedback' collection
+        'type':
+            'bug_report', // using 'type' field since we are saving to a shared 'feedback' collection
         'category': category,
         'title': title,
         'description': description,
@@ -83,7 +87,8 @@ class FeedbackService {
       // 2. Trigger Email via Backend
       await _triggerBackendEmail('bug_report', docRef.id, {
         ...data,
-        'timestamp': DateTime.now().toIso8601String(), // replace FieldValue for JSON serialization
+        'timestamp': DateTime.now()
+            .toIso8601String(), // replace FieldValue for JSON serialization
       });
     } catch (e) {
       developer.log('Error submitting bug report: $e');
@@ -100,7 +105,8 @@ class FeedbackService {
       final metadata = await _gatherMetadata();
       final data = {
         ...metadata,
-        'type': 'feature_request', // using 'type' field since we are saving to a shared 'feedback' collection
+        'type':
+            'feature_request', // using 'type' field since we are saving to a shared 'feedback' collection
         'category': category,
         'title': title,
         'description': description,
@@ -121,29 +127,31 @@ class FeedbackService {
     }
   }
 
-  Future<void> _triggerBackendEmail(String type, String reportId, Map<String, dynamic> data) async {
+  Future<void> _triggerBackendEmail(
+    String type,
+    String reportId,
+    Map<String, dynamic> data,
+  ) async {
     try {
       final user = _auth.currentUser;
       if (user == null) return;
-      
+
       final idToken = await user.getIdToken();
       final url = Uri.parse('$_backendUrl/api/feedback/email');
-      
+
       final response = await http.post(
         url,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $idToken',
         },
-        body: jsonEncode({
-          'type': type,
-          'reportId': reportId,
-          'data': data,
-        }),
+        body: jsonEncode({'type': type, 'reportId': reportId, 'data': data}),
       );
-      
+
       if (response.statusCode != 200) {
-        developer.log('Backend email error: ${response.statusCode} - ${response.body}');
+        developer.log(
+          'Backend email error: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       // Don't rethrow here so that offline submission still succeeds in saving to Firestore

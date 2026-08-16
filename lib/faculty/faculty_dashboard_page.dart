@@ -34,7 +34,7 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
     _todayLecturesStream = _streamTodayLectures();
     _pendingRequestsStream = _streamPendingRequests();
   }
-  
+
   void _refresh() {
     setState(() {
       _todayLecturesStream = _streamTodayLectures();
@@ -44,31 +44,38 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
   Stream<List<FacultyRequest>> _streamPendingRequests() {
     final uid = AppSettings.facultyId ?? '';
     if (uid.isEmpty) return Stream.value([]);
-    
+
     final divisions = AppSettings.facultyAssignedDivisions ?? [];
     if (divisions.isEmpty) return Stream.value([]);
-    
+
     return FirebaseFirestore.instance
         .collectionGroup('faculty_requests')
         .where('facultyId', isEqualTo: uid)
         .where('status', isEqualTo: 'pending')
         .snapshots()
-        .map((snap) => snap.docs.map((d) => FacultyRequest.fromFirestore(d)).toList());
+        .map(
+          (snap) =>
+              snap.docs.map((d) => FacultyRequest.fromFirestore(d)).toList(),
+        );
   }
 
   Stream<List<FacultyLectureContext>> _streamTodayLectures() async* {
     final divisions = AppSettings.facultyAssignedDivisions ?? [];
     final String today = DateFormat('EEEE').format(DateTime.now());
-    
+
     final uid = AppSettings.facultyId;
     if (uid == null) {
       yield [];
       return;
     }
 
-    final profileSnap = await FirebaseFirestore.instance.collection('faculty_profiles').doc(uid).get();
+    final profileSnap = await FirebaseFirestore.instance
+        .collection('faculty_profiles')
+        .doc(uid)
+        .get();
     final profileData = profileSnap.data() ?? {};
-    final subjectsMap = (profileData['subjects'] as Map<String, dynamic>?) ?? {};
+    final subjectsMap =
+        (profileData['subjects'] as Map<String, dynamic>?) ?? {};
 
     if (divisions.isEmpty) {
       yield [];
@@ -78,8 +85,11 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
     final streams = divisions.map((div) {
       final mySubjects = List<String>.from(subjectsMap[div] ?? []);
       if (mySubjects.isEmpty) return Stream.value(<FacultyLectureContext>[]);
-      
-      return TimetableManager.streamEntriesForDay(division: div, day: today).map((entries) {
+
+      return TimetableManager.streamEntriesForDay(
+        division: div,
+        day: today,
+      ).map((entries) {
         return entries
             .where((e) => mySubjects.contains(e.subjectCode))
             .map((e) => FacultyLectureContext(division: div, entry: e))
@@ -89,13 +99,15 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
 
     yield* CombineLatestStream.list(streams).map((listOfLists) {
       final allLectures = listOfLists.expand((l) => l).toList();
-      allLectures.sort((a, b) => a.entry.startTime.compareTo(b.entry.startTime));
-      
+      allLectures.sort(
+        (a, b) => a.entry.startTime.compareTo(b.entry.startTime),
+      );
+
       LocalNotificationService.scheduleFacultyReminders(
         allLectures,
         AppSettings.facultyReminderTime,
       );
-      
+
       return allLectures;
     });
   }
@@ -130,196 +142,218 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
         child: RefreshIndicator(
           onRefresh: () async => _refresh(),
           child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                slivers: [
-                  // ── Greeting header ──────────────────────────────────────────
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.x2l,
-                        AppSpacing.x2l,
-                        AppSpacing.x2l,
-                        AppSpacing.md,
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            slivers: [
+              // ── Greeting header ──────────────────────────────────────────
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.x2l,
+                    AppSpacing.x2l,
+                    AppSpacing.x2l,
+                    AppSpacing.md,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${_getGreeting()}, $firstName 👋',
+                              style: Theme.of(context).textTheme.headlineMedium,
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              today,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
                       ),
-                      child: Row(
+                      // Quick actions cluster
+                      Row(
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${_getGreeting()}, $firstName 👋',
-                                  style: Theme.of(context).textTheme.headlineMedium,
-                                ),
-                                const SizedBox(height: AppSpacing.xs),
-                                Text(
-                                  today,
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                              ],
+                          _HeaderAction(
+                            icon: Icons.add_circle_outline_rounded,
+                            label: 'Extra Class',
+                            color: colorScheme.primary,
+                            onTap: () => showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (_) => const FacultyRequestSheet(
+                                requestType: FacultyRequestType.addExtra,
+                              ),
                             ),
                           ),
-                          // Quick actions cluster
-                          Row(
-                            children: [
-                              _HeaderAction(
-                                icon: Icons.add_circle_outline_rounded,
-                                label: 'Extra Class',
-                                color: colorScheme.primary,
-                                onTap: () => showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  backgroundColor: Colors.transparent,
-                                  builder: (_) => const FacultyRequestSheet(
-                                    requestType: FacultyRequestType.addExtra,
-                                  ),
-                                ),
+                          const SizedBox(width: AppSpacing.sm),
+                          _HeaderAction(
+                            icon: Icons.campaign_outlined,
+                            label: 'Announce',
+                            color: colorScheme.secondary,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const CreateAnnouncementPage(),
                               ),
-                              const SizedBox(width: AppSpacing.sm),
-                              _HeaderAction(
-                                icon: Icons.campaign_outlined,
-                                label: 'Announce',
-                                color: colorScheme.secondary,
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => const CreateAnnouncementPage()),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ],
                       ),
-                    ),
+                    ],
                   ),
-
-                  // ── Pending requests banner ───────────────────────────────────
-                  SliverToBoxAdapter(
-                    child: StreamBuilder<List<FacultyRequest>>(
-                      stream: _pendingRequestsStream,
-                      builder: (context, snapshot) {
-                        final requests = snapshot.data ?? [];
-                        if (requests.isEmpty) return const SizedBox.shrink();
-
-                        return Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.x2l, AppSpacing.sm, AppSpacing.x2l, AppSpacing.sm,
-                          ),
-                          child: Container(
-                            padding: const EdgeInsets.all(AppSpacing.lg),
-                            decoration: BoxDecoration(
-                              color: sem.warning.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(AppRadius.lg),
-                              border: Border.all(color: sem.warning.withValues(alpha: 0.3)),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(AppSpacing.sm),
-                                  decoration: BoxDecoration(
-                                    color: sem.warning.withValues(alpha: 0.15),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(Icons.hourglass_top_rounded, color: sem.warning, size: 18),
-                                ),
-                                const SizedBox(width: AppSpacing.md),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '${requests.length} request${requests.length > 1 ? 's' : ''} pending',
-                                        style: GoogleFonts.inter(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 14,
-                                          color: sem.warning,
-                                        ),
-                                      ),
-                                      Text(
-                                        'Awaiting CR approval',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          color: sem.warning.withValues(alpha: 0.8),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-
-                  // ── Today's classes header ────────────────────────────────────
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.x2l, AppSpacing.xl, AppSpacing.x2l, AppSpacing.md,
-                      ),
-                      child: Text(
-                        "Today's Schedule",
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                    ),
-                  ),
-
-                  // ── Today's classes list ─────────────────────────────────────
-                  SliverToBoxAdapter(
-                    child: StreamBuilder<List<FacultyLectureContext>>(
-                      stream: _todayLecturesStream,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
-                            itemCount: 3,
-                            itemBuilder: (ctx, i) => SkeletonLoader(
-                              width: double.infinity,
-                              height: 120,
-                              borderRadius: AppRadius.lg,
-                              margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                            ),
-                          );
-                        }
-                        if (snapshot.hasError) {
-                          return _ErrorState(error: '${snapshot.error}');
-                        }
-                        
-                        final lectures = snapshot.data ?? [];
-                        if (lectures.isEmpty) {
-                          return const _EmptySchedule();
-                        }
-                        
-                        return ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
-                          itemCount: lectures.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
-                          itemBuilder: (context, index) {
-                            return StaggeredListItem(
-                              index: index,
-                              child: _LectureCard(
-                                item: lectures[index],
-                                formatTime: _formatTime,
-                                onOptions: () => _showLectureOptions(context, lectures[index]),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
-
-                  const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.x6l)),
-                ],
+                ),
               ),
-            ),
+
+              // ── Pending requests banner ───────────────────────────────────
+              SliverToBoxAdapter(
+                child: StreamBuilder<List<FacultyRequest>>(
+                  stream: _pendingRequestsStream,
+                  builder: (context, snapshot) {
+                    final requests = snapshot.data ?? [];
+                    if (requests.isEmpty) return const SizedBox.shrink();
+
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.x2l,
+                        AppSpacing.sm,
+                        AppSpacing.x2l,
+                        AppSpacing.sm,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        decoration: BoxDecoration(
+                          color: sem.warning.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                          border: Border.all(
+                            color: sem.warning.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(AppSpacing.sm),
+                              decoration: BoxDecoration(
+                                color: sem.warning.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.hourglass_top_rounded,
+                                color: sem.warning,
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${requests.length} request${requests.length > 1 ? 's' : ''} pending',
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
+                                      color: sem.warning,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Awaiting CR approval',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: sem.warning.withValues(alpha: 0.8),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // ── Today's classes header ────────────────────────────────────
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.x2l,
+                    AppSpacing.xl,
+                    AppSpacing.x2l,
+                    AppSpacing.md,
+                  ),
+                  child: Text(
+                    "Today's Schedule",
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+              ),
+
+              // ── Today's classes list ─────────────────────────────────────
+              SliverToBoxAdapter(
+                child: StreamBuilder<List<FacultyLectureContext>>(
+                  stream: _todayLecturesStream,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.x2l,
+                        ),
+                        itemCount: 3,
+                        itemBuilder: (ctx, i) => SkeletonLoader(
+                          width: double.infinity,
+                          height: 120,
+                          borderRadius: AppRadius.lg,
+                          margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                        ),
+                      );
+                    }
+                    if (snapshot.hasError) {
+                      return _ErrorState(error: '${snapshot.error}');
+                    }
+
+                    final lectures = snapshot.data ?? [];
+                    if (lectures.isEmpty) {
+                      return const _EmptySchedule();
+                    }
+
+                    return ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.x2l,
+                      ),
+                      itemCount: lectures.length,
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(height: AppSpacing.md),
+                      itemBuilder: (context, index) {
+                        return StaggeredListItem(
+                          index: index,
+                          child: _LectureCard(
+                            item: lectures[index],
+                            formatTime: _formatTime,
+                            onOptions: () =>
+                                _showLectureOptions(context, lectures[index]),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.x6l)),
+            ],
           ),
-        );
+        ),
+      ),
+    );
   }
 
   void _showLectureOptions(BuildContext context, FacultyLectureContext item) {
@@ -333,11 +367,16 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
       builder: (ctx) {
         return Container(
           padding: const EdgeInsets.fromLTRB(
-            AppSpacing.x2l, AppSpacing.lg, AppSpacing.x2l, AppSpacing.x2l,
+            AppSpacing.x2l,
+            AppSpacing.lg,
+            AppSpacing.x2l,
+            AppSpacing.x2l,
           ),
           decoration: BoxDecoration(
             color: isDark ? sem.surfaceElevated : colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.x2l)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppRadius.x2l),
+            ),
           ),
           child: SafeArea(
             top: false,
@@ -367,7 +406,11 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
                         color: colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
-                      child: Icon(Icons.class_rounded, color: colorScheme.primary, size: 20),
+                      child: Icon(
+                        Icons.class_rounded,
+                        color: colorScheme.primary,
+                        size: 20,
+                      ),
                     ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
@@ -403,14 +446,20 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
                 Material(
                   color: Colors.transparent,
                   child: ListTile(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
                     leading: Container(
                       padding: const EdgeInsets.all(AppSpacing.sm),
                       decoration: BoxDecoration(
                         color: sem.cancelled.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(AppRadius.sm),
                       ),
-                      child: Icon(Icons.cancel_outlined, color: sem.cancelled, size: 20),
+                      child: Icon(
+                        Icons.cancel_outlined,
+                        color: sem.cancelled,
+                        size: 20,
+                      ),
                     ),
                     title: Text(
                       'Request Cancellation',
@@ -551,7 +600,9 @@ class _LectureCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: isLive
                 ? colorScheme.primary.withValues(alpha: isDark ? 0.1 : 0.06)
-                : isDark ? sem.surfaceElevated : colorScheme.surface,
+                : isDark
+                ? sem.surfaceElevated
+                : colorScheme.surface,
             borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(
               color: isLive
@@ -574,7 +625,9 @@ class _LectureCard extends StatelessWidget {
                         formatTime(entry.startTime),
                         style: GoogleFonts.inter(
                           fontWeight: FontWeight.w700,
-                          color: isLive ? colorScheme.primary : colorScheme.onSurface,
+                          color: isLive
+                              ? colorScheme.primary
+                              : colorScheme.onSurface,
                           fontSize: 13,
                         ),
                       ),
@@ -624,7 +677,9 @@ class _LectureCard extends StatelessWidget {
                         style: GoogleFonts.outfit(
                           fontWeight: FontWeight.w700,
                           fontSize: 16,
-                          decoration: !isActive ? TextDecoration.lineThrough : null,
+                          decoration: !isActive
+                              ? TextDecoration.lineThrough
+                              : null,
                           decorationColor: sem.cancelled,
                         ),
                         maxLines: 1,
@@ -634,11 +689,20 @@ class _LectureCard extends StatelessWidget {
                       Wrap(
                         spacing: AppSpacing.sm,
                         children: [
-                          _MetaChip(icon: Icons.group_rounded, label: 'Div $divLabel'),
+                          _MetaChip(
+                            icon: Icons.group_rounded,
+                            label: 'Div $divLabel',
+                          ),
                           if (entry.room != null && entry.room!.isNotEmpty)
-                            _MetaChip(icon: Icons.room_rounded, label: entry.room!),
+                            _MetaChip(
+                              icon: Icons.room_rounded,
+                              label: entry.room!,
+                            ),
                           if (entry.batch != 'Whole Class')
-                            _MetaChip(icon: Icons.groups_2_rounded, label: entry.batch),
+                            _MetaChip(
+                              icon: Icons.groups_2_rounded,
+                              label: entry.batch,
+                            ),
                         ],
                       ),
                     ],
@@ -671,7 +735,11 @@ class _LectureCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    Icon(Icons.more_vert_rounded, size: 20, color: sem.onSurfaceMuted),
+                    Icon(
+                      Icons.more_vert_rounded,
+                      size: 20,
+                      color: sem.onSurfaceMuted,
+                    ),
                   ],
                 ),
               ],
@@ -769,7 +837,10 @@ class _ErrorState extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Text(
             'Could not load classes',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: sem.error),
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.w600,
+              color: sem.error,
+            ),
           ),
           Text(
             error,

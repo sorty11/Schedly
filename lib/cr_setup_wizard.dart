@@ -45,7 +45,7 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
 
   String? _selectedYear;
   String? _selectedBranch;
-  
+
   final _divisionController = TextEditingController();
   final _masterPasswordController = TextEditingController();
   final _crPasswordController = TextEditingController();
@@ -72,7 +72,9 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
           .where('academicYear', isEqualTo: _selectedYear)
           .where('branch', isEqualTo: _selectedBranch)
           .get();
-      final divs = snap.docs.map((d) => d.data()['division'] as String).toList();
+      final divs = snap.docs
+          .map((d) => d.data()['division'] as String)
+          .toList();
       divs.sort();
       if (mounted) {
         setState(() {
@@ -98,7 +100,11 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
     if (_currentStep == 0) {
       if (!(_formKey1.currentState?.validate() ?? false)) return;
       setState(() => _currentStep = 1);
-      _pageController.animateToPage(1, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      _pageController.animateToPage(
+        1,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     } else {
       _completeSetup();
     }
@@ -107,13 +113,17 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
   void _previousStep() {
     if (_currentStep == 1) {
       setState(() => _currentStep = 0);
-      _pageController.animateToPage(0, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      _pageController.animateToPage(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
   Future<void> _completeSetup() async {
     if (!(_formKey2.currentState?.validate() ?? false)) return;
-    
+
     setState(() => _loading = true);
 
     try {
@@ -122,18 +132,24 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
         throw Exception('Year, Branch, and Division are required');
       }
 
-      final sectionId = '${_selectedYear!.replaceAll(' ', '')}_${_selectedBranch!.replaceAll(' ', '')}_$div';
-      
-      final doc = await FirebaseFirestore.instance.collection('sections').doc(sectionId).get();
+      final sectionId =
+          '${_selectedYear!.replaceAll(' ', '')}_${_selectedBranch!.replaceAll(' ', '')}_$div';
+
+      final doc = await FirebaseFirestore.instance
+          .collection('sections')
+          .doc(sectionId)
+          .get();
       if (doc.exists) {
         throw Exception('Section $sectionId already exists.');
       }
-      
+
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw AppException('You must be authenticated to create a section');
-      
+      if (user == null)
+        throw AppException('You must be authenticated to create a section');
+
       final token = await user.getIdToken();
-      if (token == null) throw AppException('Failed to retrieve authentication token');
+      if (token == null)
+        throw AppException('Failed to retrieve authentication token');
 
       final config = SectionConfig(
         id: sectionId,
@@ -152,25 +168,32 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
       }
 
       final batch = FirebaseFirestore.instance.batch();
-      
+
       // 2. Add an admin_actions doc to satisfy Firestore rules for section creation
-      final actionRef = FirebaseFirestore.instance.collection('admin_actions').doc('${user.uid}_$sectionId');
+      final actionRef = FirebaseFirestore.instance
+          .collection('admin_actions')
+          .doc('${user.uid}_$sectionId');
       batch.set(actionRef, {
         'masterHash': SecurityUtils.masterHash,
         'action': 'createSection',
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      final sectionRef = FirebaseFirestore.instance.collection('sections').doc(sectionId);
+      final sectionRef = FirebaseFirestore.instance
+          .collection('sections')
+          .doc(sectionId);
       final sectionData = config.toJson();
       // Store hashed CR/SR passwords on the document so they can be verified client-side later
-      sectionData['crPassword'] = _crPasswordController.text; // Note: For a Spark plan without cloud functions, we either hash these too, or store plaintext. Since it's internal, let's just save it. Or better, we should hash it! Wait, we will just save them as is for now, or use SecurityUtils to hash. Let's just save as is because rules protect them.
+      sectionData['crPassword'] = _crPasswordController
+          .text; // Note: For a Spark plan without cloud functions, we either hash these too, or store plaintext. Since it's internal, let's just save it. Or better, we should hash it! Wait, we will just save them as is for now, or use SecurityUtils to hash. Let's just save as is because rules protect them.
       sectionData['srPassword'] = _srPasswordController.text;
-      
+
       batch.set(sectionRef, sectionData);
 
       // Add the creator as the first CR
-      final membershipRef = FirebaseFirestore.instance.collection('section_memberships').doc('${sectionId}_${user.uid}');
+      final membershipRef = FirebaseFirestore.instance
+          .collection('section_memberships')
+          .doc('${sectionId}_${user.uid}');
       batch.set(membershipRef, {
         'userId': user.uid,
         'sectionId': sectionId,
@@ -178,22 +201,24 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
         'status': 'active',
         'joinedAt': FieldValue.serverTimestamp(),
       });
-      
+
       // Update the user's role (use set with merge in case the document doesn't exist yet)
-      final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      final userRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid);
       batch.set(userRef, {
         'role': 'CR',
         'division': sectionId,
       }, SetOptions(merge: true));
 
       await batch.commit();
-      
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_logged_in', true);
-      
+
       await AppSettings.saveRole(UserRole.cr);
       await AppSettings.saveStudentDetails(
-        name: 'Class Representative', 
+        name: 'Class Representative',
         rollNo: 'ADMIN',
         acYear: _selectedYear!,
         br: _selectedBranch!,
@@ -202,10 +227,12 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
       );
 
       if (!mounted) return;
-      
+
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => HomePage(division: _divisionController.text)),
+        MaterialPageRoute(
+          builder: (_) => HomePage(division: _divisionController.text),
+        ),
         (route) => false,
       );
     } catch (e) {
@@ -214,7 +241,10 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
       AppDialogs.showError(
         context: context,
         title: 'Setup Failed',
-        message: e.toString().replaceAll('Exception: ', '').replaceAll('AppException: ', ''),
+        message: e
+            .toString()
+            .replaceAll('Exception: ', '')
+            .replaceAll('AppException: ', ''),
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -230,7 +260,10 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
     return Scaffold(
       backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
       appBar: AppBar(
-        title: Text('Setup Section', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700)),
+        title: Text(
+          'Setup Section',
+          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700),
+        ),
         elevation: 0,
         backgroundColor: Colors.transparent,
         leading: _currentStep == 1
@@ -244,7 +277,10 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
         children: [
           // Custom Progress Indicator
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: ResponsiveUtils.getPagePadding(context), vertical: AppSpacing.md),
+            padding: EdgeInsets.symmetric(
+              horizontal: ResponsiveUtils.getPagePadding(context),
+              vertical: AppSpacing.md,
+            ),
             child: Row(
               children: [
                 _buildStepIndicator('1', 'Details', 0, cs, sem),
@@ -258,7 +294,7 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
               ],
             ),
           ),
-          
+
           Expanded(
             child: PageView(
               controller: _pageController,
@@ -269,15 +305,24 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
               ],
             ),
           ),
-          
+
           // Bottom Action
           Container(
-            padding: EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.lg, AppSpacing.x2l, MediaQuery.of(context).padding.bottom + 16),
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.x2l,
+              AppSpacing.lg,
+              AppSpacing.x2l,
+              MediaQuery.of(context).padding.bottom + 16,
+            ),
             decoration: BoxDecoration(
               color: isDark ? sem.surfaceElevated : cs.surface,
               border: Border(top: BorderSide(color: sem.borderSubtle)),
               boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -4))
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -4),
+                ),
               ],
             ),
             child: SafeArea(
@@ -290,11 +335,24 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
                   width: double.infinity,
                   height: 56,
                   child: Center(
-                    child: _loading 
-                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    child: _loading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
                         : Text(
-                            _currentStep == 0 ? 'Continue' : 'Create Section & Proceed', 
-                            style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w700),
+                            _currentStep == 0
+                                ? 'Continue'
+                                : 'Create Section & Proceed',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                   ),
                 ),
@@ -306,10 +364,16 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
     );
   }
 
-  Widget _buildStepIndicator(String number, String title, int step, ColorScheme cs, AppSemanticColors sem) {
+  Widget _buildStepIndicator(
+    String number,
+    String title,
+    int step,
+    ColorScheme cs,
+    AppSemanticColors sem,
+  ) {
     final isActive = _currentStep >= step;
     final isCurrent = _currentStep == step;
-    
+
     return Row(
       children: [
         Container(
@@ -318,12 +382,16 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: isActive ? cs.primary : sem.surfaceElevated2,
-            border: Border.all(color: isActive ? cs.primary : sem.borderSubtle, width: 2),
+            border: Border.all(
+              color: isActive ? cs.primary : sem.borderSubtle,
+              width: 2,
+            ),
           ),
           alignment: Alignment.center,
           child: Text(
             number,
-            style: TextStyle(fontFamily: 'Outfit', 
+            style: TextStyle(
+              fontFamily: 'Outfit',
               fontWeight: FontWeight.w700,
               color: isActive ? Colors.white : sem.onSurfaceMuted,
             ),
@@ -332,7 +400,8 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
         const SizedBox(width: AppSpacing.sm),
         Text(
           title,
-          style: TextStyle(fontFamily: 'Inter', 
+          style: TextStyle(
+            fontFamily: 'Inter',
             fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
             color: isActive ? cs.onSurface : sem.onSurfaceMuted,
           ),
@@ -349,40 +418,74 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Section Details', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.w700)),
+            Text(
+              'Section Details',
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text('Select your program to initialize the workspace.', style: TextStyle(fontFamily: 'Inter', fontSize: 14, color: sem.onSurfaceMuted)),
+            Text(
+              'Select your program to initialize the workspace.',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 14,
+                color: sem.onSurfaceMuted,
+              ),
+            ),
             const SizedBox(height: AppSpacing.x2l),
-            
+
             SchedlyCard(
               variant: SchedlyCardVariant.elevated,
               padding: EdgeInsets.all(ResponsiveUtils.getCardPadding(context)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildDropdown('Academic Year', _selectedYear, NMIMSStructure.academicYears, (val) {
-                    setState(() {
-                      _selectedYear = val;
-                      _fetchExistingDivisions();
-                    });
-                  }, Icons.calendar_today_rounded),
+                  _buildDropdown(
+                    'Academic Year',
+                    _selectedYear,
+                    NMIMSStructure.academicYears,
+                    (val) {
+                      setState(() {
+                        _selectedYear = val;
+                        _fetchExistingDivisions();
+                      });
+                    },
+                    Icons.calendar_today_rounded,
+                  ),
                   const SizedBox(height: AppSpacing.lg),
-                  _buildDropdown('Branch', _selectedBranch, NMIMSStructure.branches, (val) {
-                    setState(() {
-                      _selectedBranch = val;
-                      _fetchExistingDivisions();
-                    });
-                  }, Icons.account_tree_rounded),
+                  _buildDropdown(
+                    'Branch',
+                    _selectedBranch,
+                    NMIMSStructure.branches,
+                    (val) {
+                      setState(() {
+                        _selectedBranch = val;
+                        _fetchExistingDivisions();
+                      });
+                    },
+                    Icons.account_tree_rounded,
+                  ),
                   const SizedBox(height: AppSpacing.lg),
                   if (_existingDivisions.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.sm, left: AppSpacing.xs),
-                      child: Text('Existing divisions: ${_existingDivisions.join(', ')}', 
-                        style: TextStyle(color: sem.onSurfaceMuted, fontSize: 12)),
+                      padding: const EdgeInsets.only(
+                        bottom: AppSpacing.sm,
+                        left: AppSpacing.xs,
+                      ),
+                      child: Text(
+                        'Existing divisions: ${_existingDivisions.join(', ')}',
+                        style: TextStyle(
+                          color: sem.onSurfaceMuted,
+                          fontSize: 12,
+                        ),
+                      ),
                     ),
                   SchedlyTextField(
-                    controller: _divisionController, 
-                    labelText: 'Division', 
+                    controller: _divisionController,
+                    labelText: 'Division',
                     hintText: 'e.g. A, B, C or custom name',
                     textCapitalization: TextCapitalization.characters,
                   ),
@@ -403,11 +506,25 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Security', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.w700)),
+            Text(
+              'Security',
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text('Enter the deployment master password and create secure access keys.', style: TextStyle(fontFamily: 'Inter', fontSize: 14, color: sem.onSurfaceMuted)),
+            Text(
+              'Enter the deployment master password and create secure access keys.',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 14,
+                color: sem.onSurfaceMuted,
+              ),
+            ),
             const SizedBox(height: AppSpacing.x2l),
-            
+
             SchedlyCard(
               variant: SchedlyCardVariant.elevated,
               padding: EdgeInsets.all(ResponsiveUtils.getCardPadding(context)),
@@ -418,7 +535,8 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
                     labelText: 'Master Setup Password',
                     prefixIcon: Icons.admin_panel_settings_rounded,
                     obscureText: true,
-                    validator: (val) => (val == null || val.isEmpty) ? 'Required' : null,
+                    validator: (val) =>
+                        (val == null || val.isEmpty) ? 'Required' : null,
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   SchedlyTextField(
@@ -426,7 +544,9 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
                     labelText: 'CR Password',
                     prefixIcon: Icons.shield_rounded,
                     obscureText: true,
-                    validator: (val) => (val == null || val.length < 4) ? 'Minimum 4 chars' : null,
+                    validator: (val) => (val == null || val.length < 4)
+                        ? 'Minimum 4 chars'
+                        : null,
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   SchedlyTextField(
@@ -434,7 +554,9 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
                     labelText: 'SR Password',
                     prefixIcon: Icons.security_rounded,
                     obscureText: true,
-                    validator: (val) => (val == null || val.length < 4) ? 'Minimum 4 chars' : null,
+                    validator: (val) => (val == null || val.length < 4)
+                        ? 'Minimum 4 chars'
+                        : null,
                   ),
                 ],
               ),
@@ -445,11 +567,18 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
     );
   }
 
-  Widget _buildDropdown(String label, String? value, List<String> items, ValueChanged<String?>? onChanged, IconData icon, {String prefix = ''}) {
+  Widget _buildDropdown(
+    String label,
+    String? value,
+    List<String> items,
+    ValueChanged<String?>? onChanged,
+    IconData icon, {
+    String prefix = '',
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
-    
+
     return DropdownButtonFormField<String>(
       value: value,
       decoration: InputDecoration(
@@ -457,13 +586,27 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
         prefixIcon: Icon(icon, color: sem.onSurfaceMuted, size: 20),
         fillColor: isDark ? sem.surfaceElevated2 : cs.surface,
         filled: true,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: sem.borderFocus, width: 1.5)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: BorderSide(color: sem.borderFocus, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
       ),
       icon: Icon(Icons.expand_more_rounded, color: sem.onSurfaceMuted),
-      items: items.map((e) => DropdownMenuItem(value: e, child: Text('$prefix$e'))).toList(),
+      items: items
+          .map((e) => DropdownMenuItem(value: e, child: Text('$prefix$e')))
+          .toList(),
       onChanged: onChanged,
       validator: (val) => val == null ? 'Required' : null,
       dropdownColor: isDark ? sem.surfaceElevated : cs.surface,

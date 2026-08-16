@@ -31,7 +31,6 @@ import '../onboarding/services/onboarding_service.dart';
 import '../about_schedly_page.dart';
 import '../widgets/app_dialogs.dart';
 
-
 class FacultyProfilePage extends StatefulWidget {
   const FacultyProfilePage({super.key});
 
@@ -71,7 +70,10 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
     setState(() => _isLoading = true);
     try {
       if (_facultyId.isEmpty) throw Exception('Faculty ID is missing.');
-      final snap = await FirebaseFirestore.instance.collection('faculty_profiles').doc(_facultyId).get();
+      final snap = await FirebaseFirestore.instance
+          .collection('faculty_profiles')
+          .doc(_facultyId)
+          .get();
       if (snap.exists) {
         final data = snap.data()!;
         final dynamic rawSubjects = data['subjects'];
@@ -100,15 +102,30 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
 
   Future<void> _calculateEstimates() async {
     int count = 0;
-    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    final days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
     for (final div in _subjectsMap.keys) {
       final assignedSubj = _subjectsMap[div] ?? [];
       if (assignedSubj.isEmpty) continue;
-      
+
       for (final day in days) {
-        final entries = await TimetableManager.getEntriesForDay(division: div, day: day);
+        final entries = await TimetableManager.getEntriesForDay(
+          division: div,
+          day: day,
+        );
         for (final e in entries) {
-          if (assignedSubj.any((s) => s.toLowerCase() == e.subject.toLowerCase() || s.toLowerCase() == e.subjectCode.toLowerCase() || e.subject.toLowerCase().contains(s.toLowerCase()))) {
+          if (assignedSubj.any(
+            (s) =>
+                s.toLowerCase() == e.subject.toLowerCase() ||
+                s.toLowerCase() == e.subjectCode.toLowerCase() ||
+                e.subject.toLowerCase().contains(s.toLowerCase()),
+          )) {
             count++;
           }
         }
@@ -124,13 +141,16 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
   Future<void> _saveChanges() async {
     try {
       final assignedDivs = _subjectsMap.keys.toList()..sort();
-      
-      await FirebaseFirestore.instance.collection('faculty_profiles').doc(_facultyId).set({
-        'assignedDivisions': assignedDivs,
-        'subjects': _subjectsMap,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-      
+
+      await FirebaseFirestore.instance
+          .collection('faculty_profiles')
+          .doc(_facultyId)
+          .set({
+            'assignedDivisions': assignedDivs,
+            'subjects': _subjectsMap,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+
       await AppSettings.saveFacultyDetails(
         name: AppSettings.facultyName ?? '',
         email: AppSettings.facultyEmail ?? '',
@@ -139,11 +159,15 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
         cabin: AppSettings.facultyCabin ?? '',
         assignedDivisions: assignedDivs,
       );
-      
+
       await _calculateEstimates();
     } catch (e) {
       if (mounted) {
-        AppDialogs.showSnackBar(context: context, message: 'Error saving: ${e.toString().replaceAll('Exception: ', '')}');
+        AppDialogs.showSnackBar(
+          context: context,
+          message:
+              'Error saving: ${e.toString().replaceAll('Exception: ', '')}',
+        );
       }
     }
   }
@@ -159,20 +183,20 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
       final mySubjects = List<String>.from(_subjectsMap[div] ?? []);
       if (mySubjects.isEmpty) continue;
 
-      final entries = await TimetableManager.getEntriesForDay(division: div, day: today);
+      final entries = await TimetableManager.getEntriesForDay(
+        division: div,
+        day: today,
+      );
 
       for (final entry in entries) {
         if (mySubjects.contains(entry.subjectCode)) {
-          allLectures.add(FacultyLectureContext(
-            division: div,
-            entry: entry,
-          ));
+          allLectures.add(FacultyLectureContext(division: div, entry: entry));
         }
       }
     }
 
     allLectures.sort((a, b) => a.entry.startTime.compareTo(b.entry.startTime));
-    
+
     await LocalNotificationService.scheduleFacultyReminders(
       allLectures,
       AppSettings.facultyReminderTime,
@@ -210,9 +234,7 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              style: TextButton.styleFrom(
-                foregroundColor: sem.cancelled,
-              ),
+              style: TextButton.styleFrom(foregroundColor: sem.cancelled),
               child: Text(
                 'Logout',
                 style: GoogleFonts.inter(fontWeight: FontWeight.w700),
@@ -229,7 +251,7 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
     await prefs.clear();
     await AppSettings.resetRole();
     await FirebaseAuth.instance.signOut();
-    
+
     if (!context.mounted) return;
     Navigator.pushAndRemoveUntil(
       context,
@@ -268,8 +290,13 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
-        title: Text('Remove Division?', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+        ),
+        title: Text(
+          'Remove Division?',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+        ),
         content: Text(
           'Remove $div from your profile? This will also remove its associated subjects. The CR\'s timetable is not affected.',
           style: GoogleFonts.inter(fontSize: 14, height: 1.5),
@@ -277,7 +304,10 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+            ),
           ),
           FilledButton(
             onPressed: () {
@@ -285,7 +315,10 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
               _removeDivision(div);
             },
             style: FilledButton.styleFrom(backgroundColor: sem.cancelled),
-            child: Text('Remove', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            child: Text(
+              'Remove',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -356,7 +389,9 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
       animation: themeController,
       builder: (context, _) {
         final colorScheme = Theme.of(context).colorScheme;
-        final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
+        final semanticColors = Theme.of(
+          context,
+        ).extension<AppSemanticColors>()!;
         final current = themeController.themeMode;
 
         return Container(
@@ -420,9 +455,7 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
             horizontal: AppSpacing.sm,
           ),
           decoration: BoxDecoration(
-            color: selected
-                ? colorScheme.primary
-                : Colors.transparent,
+            color: selected ? colorScheme.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(AppRadius.lg),
             boxShadow: selected
                 ? [
@@ -430,7 +463,7 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                       color: colorScheme.primary.withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
-                    )
+                    ),
                   ]
                 : null,
           ),
@@ -440,9 +473,7 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
               Icon(
                 icon,
                 size: 18,
-                color: selected
-                    ? Colors.white
-                    : semanticColors.onSurfaceMuted,
+                color: selected ? Colors.white : semanticColors.onSurfaceMuted,
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
@@ -450,7 +481,9 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: selected ? Colors.white : semanticColors.onSurfaceMuted,
+                  color: selected
+                      ? Colors.white
+                      : semanticColors.onSurfaceMuted,
                 ),
               ),
             ],
@@ -662,25 +695,35 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
             Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
-              children: subjects.map((s) => Chip(
-                label: Text(
-                  s,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                onDeleted: () {
-                  setState(() {
-                    _subjectsMap[div]?.remove(s);
-                  });
-                  _saveChanges();
-                },
-                deleteIcon: Icon(Icons.close_rounded, size: 14, color: sem.onSurfaceMuted),
-                backgroundColor: isDark ? sem.surfaceElevated2 : const Color(0xFFF0F0F8),
-                side: BorderSide(color: sem.borderSubtle, width: 1),
-              )).toList(),
+              children: subjects
+                  .map(
+                    (s) => Chip(
+                      label: Text(
+                        s,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                      onDeleted: () {
+                        setState(() {
+                          _subjectsMap[div]?.remove(s);
+                        });
+                        _saveChanges();
+                      },
+                      deleteIcon: Icon(
+                        Icons.close_rounded,
+                        size: 14,
+                        color: sem.onSurfaceMuted,
+                      ),
+                      backgroundColor: isDark
+                          ? sem.surfaceElevated2
+                          : const Color(0xFFF0F0F8),
+                      side: BorderSide(color: sem.borderSubtle, width: 1),
+                    ),
+                  )
+                  .toList(),
             ),
           ],
           const SizedBox(height: AppSpacing.lg),
@@ -689,13 +732,17 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
             child: OutlinedButton(
               onPressed: () => _showManageSubjectsBottomSheet(div),
               style: OutlinedButton.styleFrom(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.5)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                side: BorderSide(
+                  color: colorScheme.primary.withValues(alpha: 0.5),
+                ),
                 foregroundColor: colorScheme.primary,
               ),
               child: const Text('Manage Subjects'),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -714,7 +761,10 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : 'F';
 
     final int totalDivisions = _subjectsMap.keys.length;
-    final int totalSubjects = _subjectsMap.values.fold(0, (acc, list) => acc + list.length);
+    final int totalSubjects = _subjectsMap.values.fold(
+      0,
+      (acc, list) => acc + list.length,
+    );
 
     int staggerIndex = 0;
 
@@ -724,19 +774,30 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
         elevation: 0,
         title: Text(
           'Faculty Profile',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-          ),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 20),
         ),
       ),
       body: _isLoading
           ? ListView(
               padding: const EdgeInsets.all(AppSpacing.lg),
               children: [
-                SkeletonLoader(width: double.infinity, height: 200, borderRadius: AppRadius.xl, margin: const EdgeInsets.only(bottom: AppSpacing.lg)),
-                SkeletonLoader(width: double.infinity, height: 80, borderRadius: AppRadius.xl, margin: const EdgeInsets.only(bottom: AppSpacing.lg)),
-                SkeletonLoader(width: double.infinity, height: 80, borderRadius: AppRadius.xl),
+                SkeletonLoader(
+                  width: double.infinity,
+                  height: 200,
+                  borderRadius: AppRadius.xl,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                ),
+                SkeletonLoader(
+                  width: double.infinity,
+                  height: 80,
+                  borderRadius: AppRadius.xl,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                ),
+                SkeletonLoader(
+                  width: double.infinity,
+                  height: 80,
+                  borderRadius: AppRadius.xl,
+                ),
               ],
             )
           : SingleChildScrollView(
@@ -757,10 +818,7 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(AppRadius.xl),
-                          border: Border.all(
-                            color: sem.borderSubtle,
-                            width: 1,
-                          ),
+                          border: Border.all(color: sem.borderSubtle, width: 1),
                         ),
                         padding: const EdgeInsets.all(AppSpacing.x2l),
                         child: Column(
@@ -772,13 +830,18 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 gradient: const LinearGradient(
-                                  colors: [AppColors.primary, AppColors.secondary],
+                                  colors: [
+                                    AppColors.primary,
+                                    AppColors.secondary,
+                                  ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppColors.primary.withValues(alpha: 0.35),
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.35,
+                                    ),
                                     blurRadius: 20,
                                     offset: const Offset(0, 8),
                                   ),
@@ -816,7 +879,9 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                                 _infoChip(
                                   icon: Icons.school_rounded,
                                   label: 'Faculty',
-                                  bgColor: colorScheme.secondary.withValues(alpha: 0.1),
+                                  bgColor: colorScheme.secondary.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   textColor: colorScheme.secondary,
                                 ),
                                 const SizedBox(width: AppSpacing.sm),
@@ -829,15 +894,38 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                               ],
                             ),
                             const SizedBox(height: AppSpacing.md),
-                            Text(designation, style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.w600, fontSize: 14)),
-                            Text(email, style: TextStyle(color: sem.onSurfaceMuted, fontSize: 13)),
+                            Text(
+                              designation,
+                              style: TextStyle(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            Text(
+                              email,
+                              style: TextStyle(
+                                color: sem.onSurfaceMuted,
+                                fontSize: 13,
+                              ),
+                            ),
                             const SizedBox(height: AppSpacing.sm),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.meeting_room_rounded, size: 14, color: sem.onSurfaceMuted),
+                                Icon(
+                                  Icons.meeting_room_rounded,
+                                  size: 14,
+                                  color: sem.onSurfaceMuted,
+                                ),
                                 const SizedBox(width: 4),
-                                Text(cabin, style: TextStyle(color: sem.onSurfaceMuted, fontSize: 13)),
+                                Text(
+                                  cabin,
+                                  style: TextStyle(
+                                    color: sem.onSurfaceMuted,
+                                    fontSize: 13,
+                                  ),
+                                ),
                               ],
                             ),
                           ],
@@ -860,17 +948,37 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                             color: colorScheme.primary.withValues(alpha: 0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
-                          )
-                        ]
+                          ),
+                        ],
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          _buildPortfolioStat('Divisions', totalDivisions.toString(), Colors.white),
-                          Container(width: 1, height: 40, color: Colors.white.withValues(alpha: 0.3)),
-                          _buildPortfolioStat('Subjects', totalSubjects.toString(), Colors.white),
-                          Container(width: 1, height: 40, color: Colors.white.withValues(alpha: 0.3)),
-                          _buildPortfolioStat('Classes/wk', _estimatedClasses.toString(), Colors.white),
+                          _buildPortfolioStat(
+                            'Divisions',
+                            totalDivisions.toString(),
+                            Colors.white,
+                          ),
+                          Container(
+                            width: 1,
+                            height: 40,
+                            color: Colors.white.withValues(alpha: 0.3),
+                          ),
+                          _buildPortfolioStat(
+                            'Subjects',
+                            totalSubjects.toString(),
+                            Colors.white,
+                          ),
+                          Container(
+                            width: 1,
+                            height: 40,
+                            color: Colors.white.withValues(alpha: 0.3),
+                          ),
+                          _buildPortfolioStat(
+                            'Classes/wk',
+                            _estimatedClasses.toString(),
+                            Colors.white,
+                          ),
                         ],
                       ),
                     ),
@@ -878,7 +986,11 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
 
                   // ── Teaching Assignments ───────────────────────────────────────────
                   Padding(
-                    padding: const EdgeInsets.only(left: AppSpacing.xs, bottom: AppSpacing.sm, top: AppSpacing.x3l),
+                    padding: const EdgeInsets.only(
+                      left: AppSpacing.xs,
+                      bottom: AppSpacing.sm,
+                      top: AppSpacing.x3l,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -895,13 +1007,27 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                           onTap: _showAddDivisionBottomSheet,
                           borderRadius: BorderRadius.circular(AppRadius.md),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                              vertical: 4,
+                            ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.add_rounded, size: 16, color: colorScheme.primary),
+                                Icon(
+                                  Icons.add_rounded,
+                                  size: 16,
+                                  color: colorScheme.primary,
+                                ),
                                 const SizedBox(width: 4),
-                                Text('Add', style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 12)),
+                                Text(
+                                  'Add',
+                                  style: TextStyle(
+                                    color: colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -909,12 +1035,15 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                       ],
                     ),
                   ),
-                  
+
                   if (_subjectsMap.isEmpty)
                     StaggeredListItem(
                       index: staggerIndex++,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4l, horizontal: AppSpacing.x2l),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.x4l,
+                          horizontal: AppSpacing.x2l,
+                        ),
                         decoration: BoxDecoration(
                           color: sem.surfaceElevated,
                           borderRadius: BorderRadius.circular(AppRadius.xl),
@@ -942,7 +1071,9 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                               textAlign: TextAlign.center,
                               style: GoogleFonts.inter(
                                 fontSize: 13,
-                                color: sem.onSurfaceMuted.withValues(alpha: 0.7),
+                                color: sem.onSurfaceMuted.withValues(
+                                  alpha: 0.7,
+                                ),
                               ),
                             ),
                           ],
@@ -950,10 +1081,12 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                       ),
                     )
                   else
-                    ..._subjectsMap.keys.toList().map((div) => StaggeredListItem(
-                      index: staggerIndex++,
-                      child: _buildDivisionCard(div, _subjectsMap[div] ?? []),
-                    )),
+                    ..._subjectsMap.keys.toList().map(
+                      (div) => StaggeredListItem(
+                        index: staggerIndex++,
+                        child: _buildDivisionCard(div, _subjectsMap[div] ?? []),
+                      ),
+                    ),
 
                   // ── Appearance section ────────────────────────────────────────
                   _sectionHeader('Appearance'),
@@ -979,7 +1112,11 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                             color: sem.accent.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(AppRadius.md),
                           ),
-                          child: Icon(Icons.notifications_active_rounded, color: sem.accent, size: 22),
+                          child: Icon(
+                            Icons.notifications_active_rounded,
+                            color: sem.accent,
+                            size: 22,
+                          ),
                         ),
                         title: Text(
                           'Upcoming Lecture Reminder',
@@ -999,7 +1136,10 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                         trailing: DropdownButtonHideUnderline(
                           child: DropdownButton<int>(
                             value: AppSettings.facultyReminderTime,
-                            icon: Icon(Icons.expand_more_rounded, color: sem.onSurfaceMuted),
+                            icon: Icon(
+                              Icons.expand_more_rounded,
+                              color: sem.onSurfaceMuted,
+                            ),
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -1007,9 +1147,18 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                             ),
                             items: const [
                               DropdownMenuItem(value: 0, child: Text('Off')),
-                              DropdownMenuItem(value: 5, child: Text('5 Minutes')),
-                              DropdownMenuItem(value: 10, child: Text('10 Minutes')),
-                              DropdownMenuItem(value: 15, child: Text('15 Minutes')),
+                              DropdownMenuItem(
+                                value: 5,
+                                child: Text('5 Minutes'),
+                              ),
+                              DropdownMenuItem(
+                                value: 10,
+                                child: Text('10 Minutes'),
+                              ),
+                              DropdownMenuItem(
+                                value: 15,
+                                child: Text('15 Minutes'),
+                              ),
                             ],
                             onChanged: (int? newValue) async {
                               if (newValue != null) {
@@ -1018,19 +1167,28 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                                     await NotificationService.promptWebPermission();
                                     await _checkWebNotificationStatus();
                                   } else {
-                                    final plugin = LocalNotificationService.notifications.resolvePlatformSpecificImplementation<
-                                        AndroidFlutterLocalNotificationsPlugin>();
-                                    final isGranted = await plugin?.areNotificationsEnabled();
+                                    final plugin = LocalNotificationService
+                                        .notifications
+                                        .resolvePlatformSpecificImplementation<
+                                          AndroidFlutterLocalNotificationsPlugin
+                                        >();
+                                    final isGranted = await plugin
+                                        ?.areNotificationsEnabled();
                                     if (isGranted == false) {
                                       if (context.mounted) {
                                         showDialog(
                                           context: context,
                                           builder: (ctx) => AlertDialog(
-                                            title: const Text('Permissions Required'),
-                                            content: const Text('To receive reminders, please enable notifications for Schedly in your device settings.'),
+                                            title: const Text(
+                                              'Permissions Required',
+                                            ),
+                                            content: const Text(
+                                              'To receive reminders, please enable notifications for Schedly in your device settings.',
+                                            ),
                                             actions: [
                                               TextButton(
-                                                onPressed: () => Navigator.pop(ctx),
+                                                onPressed: () =>
+                                                    Navigator.pop(ctx),
                                                 child: const Text('OK'),
                                               ),
                                             ],
@@ -1041,9 +1199,11 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                                     }
                                   }
                                 }
-                                await AppSettings.setFacultyReminderTime(newValue);
+                                await AppSettings.setFacultyReminderTime(
+                                  newValue,
+                                );
                                 setState(() {});
-                                
+
                                 // Fetch today's classes and reschedule immediately
                                 _rescheduleReminders();
                               }
@@ -1059,9 +1219,7 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                     _sectionHeader('App Settings'),
                     StaggeredListItem(
                       index: staggerIndex++,
-                      child: _buildTileGroup([
-                        _buildWebNotificationTile(sem),
-                      ]),
+                      child: _buildTileGroup([_buildWebNotificationTile(sem)]),
                     ),
                   ],
 
@@ -1078,7 +1236,10 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                         onTap: () async {
                           await TutorialStorageService.resetAll();
                           if (!context.mounted) return;
-                          OnboardingService.instance.startRoleTour(context, AppSettings.currentRole);
+                          OnboardingService.instance.startRoleTour(
+                            context,
+                            AppSettings.currentRole,
+                          );
                         },
                       ),
                     ]),
@@ -1095,7 +1256,12 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                         subtitle: 'Manage student profiles',
                         iconColor: sem.conducted,
                         onTap: () => _executeAdminAction(() {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentManagementPage()));
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const StudentManagementPage(),
+                            ),
+                          );
                         }),
                       ),
                       _buildRoleTile(
@@ -1104,7 +1270,12 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                         subtitle: 'Manage faculty profiles',
                         iconColor: colorScheme.primary,
                         onTap: () => _executeAdminAction(() {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const FacultyManagementPage()));
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const FacultyManagementPage(),
+                            ),
+                          );
                         }),
                       ),
                       _buildRoleTile(
@@ -1113,7 +1284,12 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                         subtitle: 'Create, edit, clone and archive sections',
                         iconColor: sem.accent,
                         onTap: () => _executeAdminAction(() {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const SectionManagementPage()));
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SectionManagementPage(),
+                            ),
+                          );
                         }),
                       ),
                     ]),
@@ -1132,7 +1308,9 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const AboutSchedlyPage()),
+                            MaterialPageRoute(
+                              builder: (_) => const AboutSchedlyPage(),
+                            ),
                           );
                         },
                       ),
@@ -1202,7 +1380,10 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
     }
 
     return AnimatedListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
       leading: Container(
         width: 44,
         height: 44,
@@ -1222,10 +1403,7 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
       ),
       subtitle: Text(
         subtitle,
-        style: GoogleFonts.inter(
-          fontSize: 12,
-          color: sem.onSurfaceMuted,
-        ),
+        style: GoogleFonts.inter(fontSize: 12, color: sem.onSurfaceMuted),
       ),
       trailing: isEnabled || isBlocked
           ? null
@@ -1235,11 +1413,16 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                 await _checkWebNotificationStatus();
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Notification settings updated')),
+                  const SnackBar(
+                    content: Text('Notification settings updated'),
+                  ),
                 );
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -1301,7 +1484,10 @@ class _AddDivisionSheetState extends State<_AddDivisionSheet> {
 
   Future<void> _fetchDivisions() async {
     try {
-      final snap = await FirebaseFirestore.instance.collection('sections').where('active', isEqualTo: true).get();
+      final snap = await FirebaseFirestore.instance
+          .collection('sections')
+          .where('active', isEqualTo: true)
+          .get();
       final allDivs = snap.docs.map((d) => d.id).toList();
       allDivs.removeWhere((div) => widget.existingDivisions.contains(div));
       allDivs.sort();
@@ -1322,7 +1508,9 @@ class _AddDivisionSheetState extends State<_AddDivisionSheet> {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final filtered = _availableDivisions.where((d) => d.toLowerCase().contains(_searchQuery)).toList();
+    final filtered = _availableDivisions
+        .where((d) => d.toLowerCase().contains(_searchQuery))
+        .toList();
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
@@ -1342,20 +1530,36 @@ class _AddDivisionSheetState extends State<_AddDivisionSheet> {
                   children: [
                     Text(
                       'Add Divisions',
-                      style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w800, color: colorScheme.onSurface),
+                      style: GoogleFonts.outfit(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: colorScheme.onSurface,
+                      ),
                     ),
-                    IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(context)),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Navigator.pop(context),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
+                  onChanged: (val) =>
+                      setState(() => _searchQuery = val.toLowerCase()),
                   decoration: InputDecoration(
                     hintText: 'Search divisions...',
-                    prefixIcon: Icon(Icons.search_rounded, color: sem.onSurfaceMuted),
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      color: sem.onSurfaceMuted,
+                    ),
                     filled: true,
-                    fillColor: isDark ? sem.surfaceElevated : const Color(0xFFF5F5F7),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                    fillColor: isDark
+                        ? sem.surfaceElevated
+                        : const Color(0xFFF5F5F7),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
                 ),
               ],
@@ -1374,26 +1578,36 @@ class _AddDivisionSheetState extends State<_AddDivisionSheet> {
                     ),
                   )
                 : filtered.isEmpty
-                    ? Center(child: Text('No divisions found.', style: TextStyle(color: sem.onSurfaceMuted)))
-                    : ListView.builder(
-                        itemCount: filtered.length,
-                        physics: const BouncingScrollPhysics(),
-                        itemBuilder: (ctx, i) {
-                          final div = filtered[i];
-                          final isSelected = _selected.contains(div);
-                          return CheckboxListTile(
-                            title: Text(div.replaceAll('_', ' '), style: const TextStyle(fontWeight: FontWeight.w600)),
-                            value: isSelected,
-                            activeColor: colorScheme.primary,
-                            onChanged: (val) {
-                              setState(() {
-                                if (val == true) _selected.add(div);
-                                else _selected.remove(div);
-                              });
-                            },
-                          );
+                ? Center(
+                    child: Text(
+                      'No divisions found.',
+                      style: TextStyle(color: sem.onSurfaceMuted),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: filtered.length,
+                    physics: const BouncingScrollPhysics(),
+                    itemBuilder: (ctx, i) {
+                      final div = filtered[i];
+                      final isSelected = _selected.contains(div);
+                      return CheckboxListTile(
+                        title: Text(
+                          div.replaceAll('_', ' '),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        value: isSelected,
+                        activeColor: colorScheme.primary,
+                        onChanged: (val) {
+                          setState(() {
+                            if (val == true)
+                              _selected.add(div);
+                            else
+                              _selected.remove(div);
+                          });
                         },
-                      ),
+                      );
+                    },
+                  ),
           ),
           Padding(
             padding: const EdgeInsets.all(24.0),
@@ -1406,9 +1620,15 @@ class _AddDivisionSheetState extends State<_AddDivisionSheet> {
                     },
               backgroundColor: colorScheme.primary,
               foregroundColor: Colors.white,
-              child: Text('Add ${_selected.length} Divisions', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: Text(
+                'Add ${_selected.length} Divisions',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -1445,7 +1665,9 @@ class _ManageSubjectsSheetState extends State<_ManageSubjectsSheet> {
 
   Future<void> _fetchSubjects() async {
     try {
-      final unique = await TimetableManager.getUniqueSubjects(division: widget.division);
+      final unique = await TimetableManager.getUniqueSubjects(
+        division: widget.division,
+      );
       if (mounted) {
         setState(() {
           _availableSubjects = unique;
@@ -1463,7 +1685,9 @@ class _ManageSubjectsSheetState extends State<_ManageSubjectsSheet> {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final filtered = _availableSubjects.where((d) => d.toLowerCase().contains(_searchQuery)).toList();
+    final filtered = _availableSubjects
+        .where((d) => d.toLowerCase().contains(_searchQuery))
+        .toList();
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
@@ -1484,25 +1708,44 @@ class _ManageSubjectsSheetState extends State<_ManageSubjectsSheet> {
                     Expanded(
                       child: Text(
                         'Manage Subjects',
-                        style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w800, color: colorScheme.onSurface),
+                        style: GoogleFonts.outfit(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: colorScheme.onSurface,
+                        ),
                       ),
                     ),
-                    IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(context)),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Navigator.pop(context),
+                    ),
                   ],
                 ),
                 Text(
                   widget.division.replaceAll('_', ' '),
-                  style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
+                  onChanged: (val) =>
+                      setState(() => _searchQuery = val.toLowerCase()),
                   decoration: InputDecoration(
                     hintText: 'Search subjects...',
-                    prefixIcon: Icon(Icons.search_rounded, color: sem.onSurfaceMuted),
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      color: sem.onSurfaceMuted,
+                    ),
                     filled: true,
-                    fillColor: isDark ? sem.surfaceElevated : const Color(0xFFF5F5F7),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                    fillColor: isDark
+                        ? sem.surfaceElevated
+                        : const Color(0xFFF5F5F7),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
                 ),
               ],
@@ -1521,26 +1764,36 @@ class _ManageSubjectsSheetState extends State<_ManageSubjectsSheet> {
                     ),
                   )
                 : filtered.isEmpty
-                    ? Center(child: Text('No subjects found in timetable.', style: TextStyle(color: sem.onSurfaceMuted)))
-                    : ListView.builder(
-                        itemCount: filtered.length,
-                        physics: const BouncingScrollPhysics(),
-                        itemBuilder: (ctx, i) {
-                          final subj = filtered[i];
-                          final isSelected = _selected.contains(subj);
-                          return CheckboxListTile(
-                            title: Text(subj, style: const TextStyle(fontWeight: FontWeight.w600)),
-                            value: isSelected,
-                            activeColor: colorScheme.primary,
-                            onChanged: (val) {
-                              setState(() {
-                                if (val == true) _selected.add(subj);
-                                else _selected.remove(subj);
-                              });
-                            },
-                          );
+                ? Center(
+                    child: Text(
+                      'No subjects found in timetable.',
+                      style: TextStyle(color: sem.onSurfaceMuted),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: filtered.length,
+                    physics: const BouncingScrollPhysics(),
+                    itemBuilder: (ctx, i) {
+                      final subj = filtered[i];
+                      final isSelected = _selected.contains(subj);
+                      return CheckboxListTile(
+                        title: Text(
+                          subj,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        value: isSelected,
+                        activeColor: colorScheme.primary,
+                        onChanged: (val) {
+                          setState(() {
+                            if (val == true)
+                              _selected.add(subj);
+                            else
+                              _selected.remove(subj);
+                          });
                         },
-                      ),
+                      );
+                    },
+                  ),
           ),
           Padding(
             padding: const EdgeInsets.all(24.0),
@@ -1551,9 +1804,12 @@ class _ManageSubjectsSheetState extends State<_ManageSubjectsSheet> {
               },
               backgroundColor: colorScheme.primary,
               foregroundColor: Colors.white,
-              child: const Text('Save Changes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Save Changes',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
             ),
-          )
+          ),
         ],
       ),
     );

@@ -40,7 +40,10 @@ class _DraftStudioPageState extends State<DraftStudioPage> {
       final sectionId = AppSettings.sectionId;
       if (sectionId == null) throw Exception("No section attached.");
 
-      final doc = await FirebaseFirestore.instance.collection('sections').doc(sectionId).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('sections')
+          .doc(sectionId)
+          .get();
       if (doc.exists) {
         setState(() {
           _config = SectionConfig.fromJson(doc.data()!, doc.id);
@@ -71,19 +74,19 @@ class _DraftStudioPageState extends State<DraftStudioPage> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(
-        body: SafeArea(
-          child: TimetableSkeleton(),
-        ),
-      );
+      return const Scaffold(body: SafeArea(child: TimetableSkeleton()));
     }
 
     if (_config == null || _config!.workingDays.isEmpty) {
-      return Scaffold(body: Center(child: FloatingEmptyState(
-        icon: Icons.calendar_today_rounded,
-        title: 'No Working Days',
-        subtitle: 'No working days have been configured for this section.',
-      )));
+      return Scaffold(
+        body: Center(
+          child: FloatingEmptyState(
+            icon: Icons.calendar_today_rounded,
+            title: 'No Working Days',
+            subtitle: 'No working days have been configured for this section.',
+          ),
+        ),
+      );
     }
 
     final isCR = AppSettings.currentRole == UserRole.cr;
@@ -94,7 +97,10 @@ class _DraftStudioPageState extends State<DraftStudioPage> {
       length: _config!.workingDays.length,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Timetable Studio', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text(
+            'Timetable Studio',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           actions: [
             if (isCR)
               FilledButton.icon(
@@ -104,7 +110,9 @@ class _DraftStudioPageState extends State<DraftStudioPage> {
                 style: FilledButton.styleFrom(
                   backgroundColor: sem.conducted,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
             const SizedBox(width: 16),
@@ -172,14 +180,19 @@ class _DayView extends StatelessWidget {
       stream: FirebaseFirestore.instance
           .collection('timetables')
           .doc(division)
-          .collection(day) // Fallback to live timetable for now to keep things visual while we migrate
+          .collection(
+            day,
+          ) // Fallback to live timetable for now to keep things visual while we migrate
           .snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
           return const TimetableSkeleton();
         }
 
-        final lectures = snapshot.data!.docs.map((d) => TimetableEntry.fromFirestore(d)).toList();
+        final lectures = snapshot.data!.docs
+            .map((d) => TimetableEntry.fromFirestore(d))
+            .toList();
 
         return ListView.separated(
           padding: const EdgeInsets.all(16),
@@ -187,9 +200,11 @@ class _DayView extends StatelessWidget {
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final period = periods[index];
-            
+
             // Find lectures that match this period's start time
-            final periodLectures = lectures.where((l) => l.startTime == period.startTime).toList();
+            final periodLectures = lectures
+                .where((l) => l.startTime == period.startTime)
+                .toList();
 
             return _PeriodCard(
               division: division,
@@ -231,7 +246,7 @@ class _PeriodCard extends StatelessWidget {
 
   void _openStudio(BuildContext context, {TimetableEntry? entry}) {
     if (!isCR) return;
-    
+
     // In Phase 3, we will modify TimetableStudioSheet to accept PeriodConfig directly.
     // For now, we open it with the day and time pre-filled implicitly by existing entry.
     TimetableStudioSheet.show(
@@ -267,16 +282,22 @@ class _PeriodCard extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: Icon(Icons.delete_rounded, color: Theme.of(context).colorScheme.error),
-              title: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              leading: Icon(
+                Icons.delete_rounded,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: Text(
+                'Delete',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
               onTap: () {
                 Navigator.pop(ctx);
                 FirebaseFirestore.instance
-                  .collection('timetables')
-                  .doc(division)
-                  .collection(day)
-                  .doc(entry.id)
-                  .delete();
+                    .collection('timetables')
+                    .doc(division)
+                    .collection(day)
+                    .doc(entry.id)
+                    .delete();
               },
             ),
           ],
@@ -304,7 +325,11 @@ class _PeriodCard extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               '${period.name} • ${_formatTime(period.startTime)} - ${_formatTime(period.endTime)}',
-              style: TextStyle(color: sem.onSurfaceMuted, fontWeight: FontWeight.w600, fontSize: 13),
+              style: TextStyle(
+                color: sem.onSurfaceMuted,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
             ),
           ],
         ),
@@ -334,7 +359,11 @@ class _PeriodCard extends StatelessWidget {
                 child: Center(
                   child: Text(
                     period.name.replaceAll('Period ', 'P'),
-                    style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 16),
+                    style: TextStyle(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
               ),
@@ -344,7 +373,11 @@ class _PeriodCard extends StatelessWidget {
                 children: [
                   Text(
                     'Empty Period',
-                    style: TextStyle(color: sem.onSurfaceMuted, fontSize: 15, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: sem.onSurfaceMuted,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -355,7 +388,10 @@ class _PeriodCard extends StatelessWidget {
               ),
               const Spacer(),
               if (isCR)
-                Icon(Icons.add_circle_outline_rounded, color: colorScheme.primary),
+                Icon(
+                  Icons.add_circle_outline_rounded,
+                  color: colorScheme.primary,
+                ),
             ],
           ),
         ),
@@ -369,15 +405,23 @@ class _PeriodCard extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 8),
           child: AnimatedCard(
             onTap: isCR ? () => _openStudio(context, entry: entry) : null,
-            onLongPress: isCR ? () => _showLectureOptions(context, entry) : null,
+            onLongPress: isCR
+                ? () => _showLectureOptions(context, entry)
+                : null,
             backgroundColor: colorScheme.surface,
             borderRadius: AppRadius.lg,
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(AppRadius.lg),
-                border: Border(left: BorderSide(color: colorScheme.primary, width: 4)),
+                border: Border(
+                  left: BorderSide(color: colorScheme.primary, width: 4),
+                ),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
                 ],
               ),
               padding: const EdgeInsets.all(16),
@@ -393,7 +437,11 @@ class _PeriodCard extends StatelessWidget {
                     child: Center(
                       child: Text(
                         period.name.replaceAll('Period ', 'P'),
-                        style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 16),
+                        style: TextStyle(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                   ),
@@ -404,24 +452,43 @@ class _PeriodCard extends StatelessWidget {
                       children: [
                         Text(
                           entry.displaySubject,
-                          style: TextStyle(color: colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: colorScheme.onSurface,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            Icon(Icons.schedule_rounded, size: 12, color: sem.onSurfaceMuted),
+                            Icon(
+                              Icons.schedule_rounded,
+                              size: 12,
+                              color: sem.onSurfaceMuted,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               '${_formatTime(period.startTime)} - ${_formatTime(period.endTime)}',
-                              style: TextStyle(color: sem.onSurfaceMuted, fontSize: 12),
+                              style: TextStyle(
+                                color: sem.onSurfaceMuted,
+                                fontSize: 12,
+                              ),
                             ),
-                            if (entry.room != null && entry.room!.isNotEmpty) ...[
+                            if (entry.room != null &&
+                                entry.room!.isNotEmpty) ...[
                               const SizedBox(width: 12),
-                              Icon(Icons.room_rounded, size: 12, color: sem.onSurfaceMuted),
+                              Icon(
+                                Icons.room_rounded,
+                                size: 12,
+                                color: sem.onSurfaceMuted,
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 entry.room!,
-                                style: TextStyle(color: sem.onSurfaceMuted, fontSize: 12),
+                                style: TextStyle(
+                                  color: sem.onSurfaceMuted,
+                                  fontSize: 12,
+                                ),
                               ),
                             ],
                           ],
@@ -429,14 +496,24 @@ class _PeriodCard extends StatelessWidget {
                         if (entry.batch != 'Whole Class') ...[
                           const SizedBox(height: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: sem.borderSubtle.withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: Text(entry.batch, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: sem.onSurfaceMuted)),
+                            child: Text(
+                              entry.batch,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: sem.onSurfaceMuted,
+                              ),
+                            ),
                           ),
-                        ]
+                        ],
                       ],
                     ),
                   ),

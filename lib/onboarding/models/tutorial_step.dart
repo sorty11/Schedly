@@ -8,7 +8,8 @@ class TutorialStep {
   final String description;
   final String ccMessage; // What Campus Companion (CC) says
   final IconData? icon;
-  final bool requireInteraction; // If true, "Next" button is hidden. App handles progression via API.
+  final bool
+  requireInteraction; // If true, "Next" button is hidden. App handles progression via API.
   final TooltipPosition preferredPosition;
 
   const TutorialStep({

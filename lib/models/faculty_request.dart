@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum FacultyRequestType { cancel, addExtra }
+
 enum FacultyRequestStatus { pending, approved, denied }
 
 class FacultyRequest {
@@ -12,14 +13,14 @@ class FacultyRequest {
   final FacultyRequestStatus status;
   final String subject;
   final String? reason;
-  
+
   // For Add Extra
   final DateTime? date;
   final int? startTime;
   final int? endTime;
   final String? room;
   final String? batch;
-  
+
   // For Cancel
   final String? originalLectureId;
 
@@ -47,13 +48,15 @@ class FacultyRequest {
 
   factory FacultyRequest.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    
+
     return FacultyRequest(
       id: doc.id,
       facultyId: data['facultyId'] ?? '',
       facultyName: data['facultyName'] ?? 'Unknown Faculty',
       division: data['division'] ?? '',
-      type: (data['type'] == 'addExtra') ? FacultyRequestType.addExtra : FacultyRequestType.cancel,
+      type: (data['type'] == 'addExtra')
+          ? FacultyRequestType.addExtra
+          : FacultyRequestType.cancel,
       status: _parseStatus(data['status']),
       subject: data['subject'] ?? '',
       reason: data['reason'],
@@ -90,9 +93,12 @@ class FacultyRequest {
 
   static FacultyRequestStatus _parseStatus(String? statusStr) {
     switch (statusStr) {
-      case 'approved': return FacultyRequestStatus.approved;
-      case 'denied': return FacultyRequestStatus.denied;
-      default: return FacultyRequestStatus.pending;
+      case 'approved':
+        return FacultyRequestStatus.approved;
+      case 'denied':
+        return FacultyRequestStatus.denied;
+      default:
+        return FacultyRequestStatus.pending;
     }
   }
 }

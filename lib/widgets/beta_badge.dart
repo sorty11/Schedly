@@ -13,7 +13,8 @@ class BetaBadge extends StatelessWidget {
       ),
       child: Text(
         'BETA',
-        style: TextStyle(fontFamily: 'Inter', 
+        style: TextStyle(
+          fontFamily: 'Inter',
           fontSize: 10,
           fontWeight: FontWeight.w800,
           color: Colors.black87,

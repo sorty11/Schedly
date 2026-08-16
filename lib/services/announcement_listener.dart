@@ -15,22 +15,22 @@ class AnnouncementListener {
         .collection('announcements')
         .snapshots()
         .listen((snapshot) {
-      if (_isFirstAnnouncementSnapshot) {
-        _isFirstAnnouncementSnapshot = false;
-        return; // Ignore existing documents on startup
-      }
+          if (_isFirstAnnouncementSnapshot) {
+            _isFirstAnnouncementSnapshot = false;
+            return; // Ignore existing documents on startup
+          }
 
-      if (snapshot.docs.isEmpty) return;
+          if (snapshot.docs.isEmpty) return;
 
-      for (final change in snapshot.docChanges) {
-        if (change.type == DocumentChangeType.added) {
-          final data = change.doc.data();
-          if (data == null) continue;
+          for (final change in snapshot.docChanges) {
+            if (change.type == DocumentChangeType.added) {
+              final data = change.doc.data();
+              if (data == null) continue;
 
-          // Notification banner now handled by FCM foreground listener
-        }
-      }
-    });
+              // Notification banner now handled by FCM foreground listener
+            }
+          }
+        });
 
     // Listen to Timetable Notifications
     FirebaseFirestore.instance
@@ -39,21 +39,21 @@ class AnnouncementListener {
         .collection('notifications')
         .snapshots()
         .listen((snapshot) {
-      if (_isFirstNotificationSnapshot) {
-        _isFirstNotificationSnapshot = false;
-        return; // Ignore existing documents on startup
-      }
+          if (_isFirstNotificationSnapshot) {
+            _isFirstNotificationSnapshot = false;
+            return; // Ignore existing documents on startup
+          }
 
-      if (snapshot.docs.isEmpty) return;
+          if (snapshot.docs.isEmpty) return;
 
-      for (final change in snapshot.docChanges) {
-        if (change.type == DocumentChangeType.added) {
-          final data = change.doc.data();
-          if (data == null) continue;
+          for (final change in snapshot.docChanges) {
+            if (change.type == DocumentChangeType.added) {
+              final data = change.doc.data();
+              if (data == null) continue;
 
-          // Notification banner now handled by FCM foreground listener
-        }
-      }
-    });
+              // Notification banner now handled by FCM foreground listener
+            }
+          }
+        });
   }
 }

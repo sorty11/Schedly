@@ -36,8 +36,11 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
     super.initState();
     _draft = widget.draft;
     _draft.ensureSlotsInitialised();
-    
-    _tabController = TabController(length: _draft.selectedDays.length, vsync: this);
+
+    _tabController = TabController(
+      length: _draft.selectedDays.length,
+      vsync: this,
+    );
     _tabController.addListener(() => setState(() {}));
   }
 
@@ -96,11 +99,18 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
     );
   }
 
-  void _showSlotOptions(String day, String periodId, SlotState slot, int listIndex) {
+  void _showSlotOptions(
+    String day,
+    String periodId,
+    SlotState slot,
+    int listIndex,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+      ),
       builder: (ctx) {
         return SafeArea(
           child: Column(
@@ -119,13 +129,17 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                 title: const Text('Duplicate to Next Period'),
                 onTap: () {
                   Navigator.pop(ctx);
-                  final periodIndex = _draft.periods.indexWhere((p) => p.id == periodId);
+                  final periodIndex = _draft.periods.indexWhere(
+                    (p) => p.id == periodId,
+                  );
                   if (periodIndex + 1 < _draft.periods.length) {
                     final nextPeriodId = _draft.periods[periodIndex + 1].id;
                     setState(() {
                       _draft.slots[day] ??= {};
                       _draft.slots[day]![nextPeriodId] ??= [];
-                      _draft.slots[day]![nextPeriodId]!.add(slot.copyWith(periodId: nextPeriodId));
+                      _draft.slots[day]![nextPeriodId]!.add(
+                        slot.copyWith(periodId: nextPeriodId),
+                      );
                     });
                     _update();
                   } else {
@@ -139,16 +153,24 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
               ),
               ListTile(
                 leading: const Icon(Icons.clear_all_rounded, color: Colors.red),
-                title: const Text('Reset entire period', style: TextStyle(color: Colors.red)),
+                title: const Text(
+                  'Reset entire period',
+                  style: TextStyle(color: Colors.red),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   showDialog(
                     context: context,
                     builder: (dCtx) => AlertDialog(
                       title: const Text('Reset Period?'),
-                      content: const Text('This will remove all lectures from this period.'),
+                      content: const Text(
+                        'This will remove all lectures from this period.',
+                      ),
                       actions: [
-                        TextButton(onPressed: () => Navigator.pop(dCtx), child: const Text('Cancel')),
+                        TextButton(
+                          onPressed: () => Navigator.pop(dCtx),
+                          child: const Text('Cancel'),
+                        ),
                         FilledButton(
                           onPressed: () {
                             setState(() {
@@ -193,7 +215,10 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
             children: [
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.md,
+                ),
                 child: Row(
                   children: [
                     ...List.generate(_draft.selectedDays.length, (index) {
@@ -201,83 +226,132 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                       final isComplete = _draft.isDayComplete(day);
                       final isSelected = _tabController.index == index;
 
-                    return GestureDetector(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        _tabController.animateTo(index);
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        margin: EdgeInsets.only(right: AppSpacing.sm),
-                        padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-                        decoration: BoxDecoration(
-                          color: isComplete 
-                              ? Colors.green.withValues(alpha: isDark ? 0.2 : 0.1)
-                              : (isSelected ? cs.primary.withValues(alpha: 0.1) : Colors.transparent),
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          border: Border.all(
-                            color: isComplete 
-                                ? Colors.green 
-                                : (isSelected ? cs.primary : sem.borderSubtle),
-                            width: isSelected || isComplete ? 2 : 1,
+                      return GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          _tabController.animateTo(index);
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          margin: EdgeInsets.only(right: AppSpacing.sm),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg,
+                            vertical: AppSpacing.sm,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isComplete
+                                ? Colors.green.withValues(
+                                    alpha: isDark ? 0.2 : 0.1,
+                                  )
+                                : (isSelected
+                                      ? cs.primary.withValues(alpha: 0.1)
+                                      : Colors.transparent),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            border: Border.all(
+                              color: isComplete
+                                  ? Colors.green
+                                  : (isSelected
+                                        ? cs.primary
+                                        : sem.borderSubtle),
+                              width: isSelected || isComplete ? 2 : 1,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (isComplete) ...[
+                                    const Icon(
+                                      Icons.check_circle_rounded,
+                                      color: Colors.green,
+                                      size: 14,
+                                    ),
+                                    const SizedBox(width: 4),
+                                  ],
+                                  Text(
+                                    day.substring(0, 3),
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontWeight: isSelected || isComplete
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
+                                      color: isComplete
+                                          ? Colors.green
+                                          : (isSelected
+                                                ? cs.primary
+                                                : sem.onSurfaceMuted),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${_draft.lectureHourCount(day)} Hours',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 11,
+                                  color: isComplete
+                                      ? Colors.green
+                                      : sem.onSurfaceMuted,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (isComplete) ...[
-                                  const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14),
-                                  const SizedBox(width: 4),
-                                ],
-                                Text(
-                                  day.substring(0, 3),
-                                  style: TextStyle(fontFamily: 'Inter', 
-                                    fontWeight: isSelected || isComplete ? FontWeight.w700 : FontWeight.w500,
-                                    color: isComplete ? Colors.green : (isSelected ? cs.primary : sem.onSurfaceMuted),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${_draft.lectureHourCount(day)} Hours',
-                              style: TextStyle(fontFamily: 'Inter', 
-                                fontSize: 11,
-                                color: isComplete ? Colors.green : sem.onSurfaceMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
+                      );
                     }),
                     const SizedBox(width: AppSpacing.lg),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                      icon: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: Colors.red,
+                      ),
                       tooltip: 'Delete Draft',
                       onPressed: () {
                         showDialog(
                           context: context,
                           builder: (dCtx) => AlertDialog(
-                            title: Text('Delete Draft?', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700)),
-                            content: Text('This will permanently remove all unpublished timetable data.', style: TextStyle(fontFamily: 'Inter', )),
+                            title: Text(
+                              'Delete Draft?',
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            content: Text(
+                              'This will permanently remove all unpublished timetable data.',
+                              style: TextStyle(fontFamily: 'Inter'),
+                            ),
                             actions: [
-                              TextButton(onPressed: () => Navigator.pop(dCtx), child: const Text('Cancel')),
+                              TextButton(
+                                onPressed: () => Navigator.pop(dCtx),
+                                child: const Text('Cancel'),
+                              ),
                               TextButton(
                                 onPressed: () async {
                                   Navigator.pop(dCtx);
-                                  final prefs = await SharedPreferences.getInstance();
-                                  final keys = prefs.getKeys().where((k) => k.startsWith('studio_draft_'));
+                                  final prefs =
+                                      await SharedPreferences.getInstance();
+                                  final keys = prefs.getKeys().where(
+                                    (k) => k.startsWith('studio_draft_'),
+                                  );
                                   for (final k in keys) {
                                     await prefs.remove(k);
                                   }
-                                  if (context.mounted) Navigator.pop(context); // Exit studio
+                                  if (context.mounted)
+                                    Navigator.pop(context); // Exit studio
                                 },
-                                child: Text('Delete Draft', style: TextStyle(fontFamily: 'Inter', color: Colors.red, fontWeight: FontWeight.w700)),
+                                child: Text(
+                                  'Delete Draft',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -303,11 +377,22 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
 
         // Publish Summary & Button
         Container(
-          padding: EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.lg, AppSpacing.x2l, MediaQuery.of(context).padding.bottom + 16),
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.x2l,
+            AppSpacing.lg,
+            AppSpacing.x2l,
+            MediaQuery.of(context).padding.bottom + 16,
+          ),
           decoration: BoxDecoration(
             color: isDark ? sem.surfaceElevated : cs.surface,
             border: Border(top: BorderSide(color: sem.borderSubtle)),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -4))],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, -4),
+              ),
+            ],
           ),
           child: SafeArea(
             top: false,
@@ -316,23 +401,45 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (_allDaysComplete()) ...[
-                  Text('Publishing Summary', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, fontSize: 14, color: sem.onSurfaceMuted)),
+                  Text(
+                    'Publishing Summary',
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: sem.onSurfaceMuted,
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                   Wrap(
                     spacing: AppSpacing.md,
                     runSpacing: AppSpacing.xs,
                     children: _draft.selectedDays.map((day) {
                       final hours = _draft.lectureHourCount(day);
-                      final isOptional = (day == 'Saturday' || day == 'Sunday') && hours == 0;
+                      final isOptional =
+                          (day == 'Saturday' || day == 'Sunday') && hours == 0;
                       return Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(isOptional ? Icons.radio_button_unchecked_rounded : Icons.check_circle_rounded, 
-                            size: 14, color: isOptional ? sem.onSurfaceMuted : Colors.green),
+                          Icon(
+                            isOptional
+                                ? Icons.radio_button_unchecked_rounded
+                                : Icons.check_circle_rounded,
+                            size: 14,
+                            color: isOptional
+                                ? sem.onSurfaceMuted
+                                : Colors.green,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             '$day ${isOptional ? '(Optional 0h)' : '(${hours}h)'}',
-                            style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: isOptional ? sem.onSurfaceMuted : cs.onSurface),
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 12,
+                              color: isOptional
+                                  ? sem.onSurfaceMuted
+                                  : cs.onSurface,
+                            ),
                           ),
                         ],
                       );
@@ -341,15 +448,32 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                   const SizedBox(height: AppSpacing.lg),
                 ],
                 FilledButton.icon(
-                  onPressed: _allDaysComplete() && !widget.isPublishing ? widget.onPublish : null,
-                  icon: widget.isPublishing 
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  onPressed: _allDaysComplete() && !widget.isPublishing
+                      ? widget.onPublish
+                      : null,
+                  icon: widget.isPublishing
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
                       : const Icon(Icons.publish_rounded, size: 18),
-                  label: Text(widget.isPublishing ? 'Publishing...' : 'Publish Timetable', 
-                      style: const TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w700)),
+                  label: Text(
+                    widget.isPublishing ? 'Publishing...' : 'Publish Timetable',
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size(double.infinity, 56),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                    ),
                   ),
                 ),
               ],
@@ -363,7 +487,7 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
   Widget _buildDayView(String day, ColorScheme cs, AppSemanticColors sem) {
     final daySlots = _draft.slots[day] ?? {};
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     final Set<int> skippedIndices = {};
     for (int pIdx = 0; pIdx < _draft.periods.length; pIdx++) {
       if (skippedIndices.contains(pIdx)) continue;
@@ -381,29 +505,39 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
         }
       }
     }
-    
+
     return ListView.builder(
-      padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 160),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        160,
+      ),
       itemCount: _draft.periods.length,
       itemBuilder: (context, index) {
         if (skippedIndices.contains(index)) return const SizedBox.shrink();
 
         final period = _draft.periods[index];
         final periodLectures = daySlots[period.id] ?? [];
-        
+
         int maxDuration = 1;
         for (final slot in periodLectures) {
           if (slot.durationPeriods > maxDuration) {
             maxDuration = slot.durationPeriods;
           }
         }
-        
-        String timeStr = '${_formatTime(period.startMinutes)} - ${_formatTime(period.endMinutes)}';
+
+        String timeStr =
+            '${_formatTime(period.startMinutes)} - ${_formatTime(period.endMinutes)}';
         if (maxDuration > 1) {
-          final lastIdx = (index + maxDuration - 1).clamp(0, _draft.periods.length - 1);
-          timeStr = '${_formatTime(period.startMinutes)} - ${_formatTime(_draft.periods[lastIdx].endMinutes)}';
+          final lastIdx = (index + maxDuration - 1).clamp(
+            0,
+            _draft.periods.length - 1,
+          );
+          timeStr =
+              '${_formatTime(period.startMinutes)} - ${_formatTime(_draft.periods[lastIdx].endMinutes)}';
         }
-        
+
         if (period.isBreak) {
           // If it's a break slot and has custom break assignment
           if (periodLectures.isNotEmpty && periodLectures.first.isNonLecture) {
@@ -414,7 +548,10 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                 onTap: () => _openPeriodConfig(day, period.id),
                 borderRadius: BorderRadius.circular(AppRadius.lg),
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.md,
+                  ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(AppRadius.lg),
                     border: Border.all(color: sem.borderSubtle),
@@ -422,11 +559,22 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.event_available_rounded, color: sem.onSurfaceMuted, size: 20),
+                      Icon(
+                        Icons.event_available_rounded,
+                        color: sem.onSurfaceMuted,
+                        size: 20,
+                      ),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(
-                        child: Text('${slot.type.name.toUpperCase()} • $timeStr', 
-                            style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: sem.onSurfaceMuted, fontWeight: FontWeight.w600)),
+                        child: Text(
+                          '${slot.type.name.toUpperCase()} • $timeStr',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13,
+                            color: sem.onSurfaceMuted,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -442,8 +590,15 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
                 Expanded(child: Divider(color: sem.borderSubtle)),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                  child: Text('${period.name} • $timeStr', 
-                      style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: sem.onSurfaceMuted, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    '${period.name} • $timeStr',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      color: sem.onSurfaceMuted,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
                 Expanded(child: Divider(color: sem.borderSubtle)),
               ],
@@ -457,44 +612,81 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
             child: SchedlyCard(
               variant: SchedlyCardVariant.elevated,
               padding: EdgeInsets.zero,
-            child: InkWell(
-              onTap: () => _openPeriodConfig(day, period.id),
-              borderRadius: BorderRadius.circular(AppRadius.xl),
-              child: Padding(
-                padding: EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                          decoration: BoxDecoration(color: cs.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                          child: Text(period.name, style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: cs.primary)),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(timeStr, style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: sem.onSurfaceMuted, fontWeight: FontWeight.w500)),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-                      decoration: BoxDecoration(
-                        color: cs.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+              child: InkWell(
+                onTap: () => _openPeriodConfig(day, period.id),
+                borderRadius: BorderRadius.circular(AppRadius.xl),
+                child: Padding(
+                  padding: EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    children: [
+                      Row(
                         children: [
-                          Icon(Icons.add_rounded, color: cs.primary, size: 20),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                              vertical: AppSpacing.xs,
+                            ),
+                            decoration: BoxDecoration(
+                              color: cs.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              period.name,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: cs.primary,
+                              ),
+                            ),
+                          ),
                           const SizedBox(width: AppSpacing.sm),
-                          Text('Configure Period', style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w700, color: cs.primary)),
+                          Text(
+                            timeStr,
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 12,
+                              color: sem.onSurfaceMuted,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: AppSpacing.lg),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.md,
+                        ),
+                        decoration: BoxDecoration(
+                          color: cs.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.add_rounded,
+                              color: cs.primary,
+                              size: 20,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Text(
+                              'Configure Period',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: cs.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
             ),
           );
         }
@@ -504,87 +696,179 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
           child: SchedlyCard(
             variant: SchedlyCardVariant.elevated,
             padding: EdgeInsets.zero,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Period Header
-              Padding(
-                padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.sm),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                      decoration: BoxDecoration(color: cs.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                      child: Text(period.name, style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: cs.primary)),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Text(timeStr, style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: sem.onSurfaceMuted, fontWeight: FontWeight.w500)),
-                  ],
-                ),
-              ),
-              
-              ...periodLectures.asMap().entries.map((entry) {
-                final idx = entry.key;
-                final slot = entry.value;
-                final isWholeClass = slot.batch == 'Whole Class';
-
-                return Column(
-                  children: [
-                    if (idx > 0) Divider(color: sem.borderSubtle, height: 1, indent: 16, endIndent: 16),
-                    
-                    InkWell(
-                      onTap: () => _openPeriodConfig(day, period.id),
-                      onLongPress: () => _showSlotOptions(day, period.id, slot, idx),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-                        child: Row(
-                          children: [
-                            if (!isWholeClass)
-                              SizedBox(
-                                width: 70,
-                                child: Text(slot.batch ?? 'Batch', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w700, color: cs.onSurface)),
-                              ),
-                            if (!isWholeClass) const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: slot.isFilled
-                                ? Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(slot.subject ?? '', style: TextStyle(fontFamily: 'Outfit', fontSize: 16, fontWeight: FontWeight.w600)),
-                                      const SizedBox(height: 6),
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 4,
-                                        children: [
-                                          if (slot.room != null && slot.room!.isNotEmpty)
-                                            _buildChip(Icons.door_front_door_outlined, slot.room!, sem),
-                                          _buildChip(Icons.category_outlined, slot.component, sem),
-                                          if (slot.durationPeriods > 1)
-                                            _buildChip(Icons.access_time_rounded, '${slot.durationPeriods} Periods', sem),
-                                        ],
-                                      ),
-                                    ],
-                                  )
-                                : Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 6),
-                                      decoration: BoxDecoration(color: cs.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(AppRadius.xl)),
-                                      child: Text('+ Add Lecture', style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w700, color: cs.primary)),
-                                    ),
-                                  ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Icon(Icons.more_vert_rounded, size: 18, color: sem.onSurfaceMuted.withValues(alpha: 0.5)),
-                          ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Period Header
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: AppSpacing.xs,
+                        ),
+                        decoration: BoxDecoration(
+                          color: cs.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          period.name,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: cs.primary,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                );
-              }),
-            ],
-          ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        timeStr,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12,
+                          color: sem.onSurfaceMuted,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                ...periodLectures.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final slot = entry.value;
+                  final isWholeClass = slot.batch == 'Whole Class';
+
+                  return Column(
+                    children: [
+                      if (idx > 0)
+                        Divider(
+                          color: sem.borderSubtle,
+                          height: 1,
+                          indent: 16,
+                          endIndent: 16,
+                        ),
+
+                      InkWell(
+                        onTap: () => _openPeriodConfig(day, period.id),
+                        onLongPress: () =>
+                            _showSlotOptions(day, period.id, slot, idx),
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg,
+                            vertical: AppSpacing.md,
+                          ),
+                          child: Row(
+                            children: [
+                              if (!isWholeClass)
+                                SizedBox(
+                                  width: 70,
+                                  child: Text(
+                                    slot.batch ?? 'Batch',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: cs.onSurface,
+                                    ),
+                                  ),
+                                ),
+                              if (!isWholeClass)
+                                const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: slot.isFilled
+                                    ? Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            slot.subject ?? '',
+                                            style: TextStyle(
+                                              fontFamily: 'Outfit',
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Wrap(
+                                            spacing: 8,
+                                            runSpacing: 4,
+                                            children: [
+                                              if (slot.room != null &&
+                                                  slot.room!.isNotEmpty)
+                                                _buildChip(
+                                                  Icons
+                                                      .door_front_door_outlined,
+                                                  slot.room!,
+                                                  sem,
+                                                ),
+                                              _buildChip(
+                                                Icons.category_outlined,
+                                                slot.component,
+                                                sem,
+                                              ),
+                                              if (slot.durationPeriods > 1)
+                                                _buildChip(
+                                                  Icons.access_time_rounded,
+                                                  '${slot.durationPeriods} Periods',
+                                                  sem,
+                                                ),
+                                            ],
+                                          ),
+                                        ],
+                                      )
+                                    : Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: AppSpacing.md,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: cs.primary.withValues(
+                                              alpha: 0.1,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              AppRadius.xl,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '+ Add Lecture',
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: cs.primary,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Icon(
+                                Icons.more_vert_rounded,
+                                size: 18,
+                                color: sem.onSurfaceMuted.withValues(
+                                  alpha: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              ],
+            ),
           ),
         );
       },
@@ -593,7 +877,10 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
 
   Widget _buildChip(IconData icon, String label, AppSemanticColors sem) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
       decoration: BoxDecoration(
         color: sem.surfaceElevated,
         borderRadius: BorderRadius.circular(6),
@@ -604,7 +891,15 @@ class _WeeklyBuilderStepState extends State<WeeklyBuilderStep>
         children: [
           Icon(icon, size: 12, color: sem.onSurfaceMuted),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w600, color: sem.onSurfaceMuted)),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: sem.onSurfaceMuted,
+            ),
+          ),
         ],
       ),
     );

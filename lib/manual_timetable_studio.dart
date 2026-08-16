@@ -47,9 +47,10 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
       vsync: this,
       duration: const Duration(milliseconds: 380),
     );
-    _slideAnimation = Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).animate(
-      CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
-    );
+    _slideAnimation = Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
+        );
 
     _init();
   }
@@ -63,7 +64,7 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
   Future<void> _init() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString('studio_draft_${widget.division}');
-    
+
     if (widget.editMode) {
       // Typically if editMode is true, we should load from Firestore into draft.
       // But for simplicity in this demo, if draft exists we load it, else we start blank at step 3.
@@ -120,11 +121,23 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
       final confirm = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: Text('Empty Periods Detected', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-          content: Text('This timetable contains empty periods.\nThey will be treated as Free Periods.\n\nPublish anyway?', style: GoogleFonts.inter()),
+          title: Text(
+            'Empty Periods Detected',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            'This timetable contains empty periods.\nThey will be treated as Free Periods.\n\nPublish anyway?',
+            style: GoogleFonts.inter(),
+          ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Publish')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Publish'),
+            ),
           ],
         ),
       );
@@ -133,7 +146,9 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
 
     setState(() => _isPublishing = true);
     try {
-      final facultyMap = await TimetableManager.getSubjectToFacultyIdMap(widget.division);
+      final facultyMap = await TimetableManager.getSubjectToFacultyIdMap(
+        widget.division,
+      );
       final batch = FirebaseFirestore.instance.batch();
 
       for (final day in _draft.selectedDays) {
@@ -145,7 +160,7 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
 
           final period = _draft.periods[pIdx];
           final periodList = daySlots[period.id] ?? [];
-          
+
           int maxDuration = 1;
 
           for (final slot in periodList) {
@@ -153,25 +168,32 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
               if (slot.durationPeriods > maxDuration) {
                 maxDuration = slot.durationPeriods;
               }
-              
+
               int endMinutes = period.endMinutes;
               int duration = period.durationMinutes;
 
               if (slot.durationPeriods > 1) {
-                final lastIdx = (pIdx + slot.durationPeriods - 1).clamp(0, _draft.periods.length - 1);
+                final lastIdx = (pIdx + slot.durationPeriods - 1).clamp(
+                  0,
+                  _draft.periods.length - 1,
+                );
                 endMinutes = _draft.periods[lastIdx].endMinutes;
                 duration = endMinutes - period.startMinutes;
               }
-              
+
               final ref = FirebaseFirestore.instance
                   .collection('timetables')
                   .doc(AppSettings.sectionId ?? widget.division)
                   .collection(day)
                   .doc(); // Auto ID
 
-              final category = EventCategoryExtension.inferFromSubject(slot.subject ?? '');
+              final category = EventCategoryExtension.inferFromSubject(
+                slot.subject ?? '',
+              );
               final subjectRaw = slot.subject!;
-              final subjectCanonical = TimetableEntry.stripComponentSuffix(subjectRaw);
+              final subjectCanonical = TimetableEntry.stripComponentSuffix(
+                subjectRaw,
+              );
               final facultyId = facultyMap[subjectCanonical];
 
               final entry = TimetableEntry(
@@ -196,8 +218,12 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
         }
       }
 
-      final sectionRef = FirebaseFirestore.instance.collection('sections').doc(AppSettings.sectionId ?? widget.division);
-      batch.set(sectionRef, {'timetablePublished': true}, SetOptions(merge: true));
+      final sectionRef = FirebaseFirestore.instance
+          .collection('sections')
+          .doc(AppSettings.sectionId ?? widget.division);
+      batch.set(sectionRef, {
+        'timetablePublished': true,
+      }, SetOptions(merge: true));
 
       await batch.commit();
 
@@ -210,7 +236,7 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
         context: context,
         message: 'Timetable published! Next: Configure Subjects.',
       );
-      
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -235,36 +261,57 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: SafeArea(
-          child: TimetableSkeleton(),
-        ),
-      );
+      return const Scaffold(body: SafeArea(child: TimetableSkeleton()));
     }
-    
 
     final colorScheme = Theme.of(context).colorScheme;
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final titles = ['Working Days', 'Batch Setup', 'Period Schedule', 'Weekly Builder'];
+    final titles = [
+      'Working Days',
+      'Batch Setup',
+      'Period Schedule',
+      'Weekly Builder',
+    ];
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
       appBar: AppBar(
         leading: _step > 0 && _step < 2
-            ? IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: _prevStep)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: _prevStep,
+              )
             : (_step == 0 ? const BackButton() : null),
         automaticallyImplyLeading: _step == 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(titles[_step], style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 18)),
+            Text(
+              titles[_step],
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+              ),
+            ),
             if (_step < 2)
-              Text('Step ${_step + 1} of 3', style: GoogleFonts.inter(fontSize: 12, color: sem.onSurfaceMuted))
+              Text(
+                'Step ${_step + 1} of 3',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: sem.onSurfaceMuted,
+                ),
+              )
             else
-              Text(AppSettings.sectionId ?? widget.division, style: GoogleFonts.inter(fontSize: 12, color: sem.onSurfaceMuted)),
+              Text(
+                AppSettings.sectionId ?? widget.division,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: sem.onSurfaceMuted,
+                ),
+              ),
           ],
         ),
         actions: [
@@ -280,7 +327,9 @@ class _ManualTimetableStudioState extends State<ManualTimetableStudio>
                     width: i == _step ? 20 : 6,
                     height: 6,
                     decoration: BoxDecoration(
-                      color: i <= _step ? colorScheme.primary : sem.borderSubtle,
+                      color: i <= _step
+                          ? colorScheme.primary
+                          : sem.borderSubtle,
                       borderRadius: BorderRadius.circular(99),
                     ),
                   );

@@ -13,7 +13,10 @@ class StaggeredListItem extends StatelessWidget {
     required this.child,
     required this.index,
     this.delayMs = 60,
-    this.slideOffset = const Offset(0, 0.04), // Kept the same semantic slide definition
+    this.slideOffset = const Offset(
+      0,
+      0.04,
+    ), // Kept the same semantic slide definition
     this.axis = Axis.vertical,
   });
 
@@ -28,7 +31,10 @@ class StaggeredListItem extends StatelessWidget {
         .animate(delay: (index * delayMs).ms)
         .fade(duration: 220.ms, curve: Curves.easeOut)
         .slide(
-          begin: Offset(slideOffset.dx * 10, slideOffset.dy * 10), // Scale offset for precise flutter_animate pixel/fraction handling
+          begin: Offset(
+            slideOffset.dx * 10,
+            slideOffset.dy * 10,
+          ), // Scale offset for precise flutter_animate pixel/fraction handling
           end: Offset.zero,
           duration: 300.ms,
           curve: Curves.easeOutCubic, // Elegant physics feel

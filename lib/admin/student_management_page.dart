@@ -18,11 +18,14 @@ class _StudentManagementPageState extends State<StudentManagementPage> {
   @override
   Widget build(BuildContext context) {
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Student Management', style: TextStyle(fontFamily: 'Outfit')),
+        title: const Text(
+          'Student Management',
+          style: TextStyle(fontFamily: 'Outfit'),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -40,7 +43,10 @@ class _StudentManagementPageState extends State<StudentManagementPage> {
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: _db.collection('users').where('role', whereIn: ['Student', 'CR', 'SR']).snapshots(),
+              stream: _db
+                  .collection('users')
+                  .where('role', whereIn: ['Student', 'CR', 'SR'])
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -52,9 +58,14 @@ class _StudentManagementPageState extends State<StudentManagementPage> {
                 final docs = snapshot.data?.docs ?? [];
                 final filteredDocs = docs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
-                  final name = (data['draftProfile']?['name'] ?? '').toString().toLowerCase();
-                  final rollNo = (data['draftProfile']?['rollNo'] ?? '').toString().toLowerCase();
-                  return name.contains(_searchQuery) || rollNo.contains(_searchQuery);
+                  final name = (data['draftProfile']?['name'] ?? '')
+                      .toString()
+                      .toLowerCase();
+                  final rollNo = (data['draftProfile']?['rollNo'] ?? '')
+                      .toString()
+                      .toLowerCase();
+                  return name.contains(_searchQuery) ||
+                      rollNo.contains(_searchQuery);
                 }).toList();
 
                 if (filteredDocs.isEmpty) {
@@ -73,11 +84,19 @@ class _StudentManagementPageState extends State<StudentManagementPage> {
                     final doc = filteredDocs[index];
                     final data = doc.data() as Map<String, dynamic>;
                     final profile = data['draftProfile'] ?? {};
-                    
+
                     return ListTile(
-                      title: Text(profile['name'] ?? 'Unknown Name', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('${profile['rollNo'] ?? 'No Roll No'} • Div: ${data['division'] ?? 'Unknown'} • Role: ${data['role']}'),
-                      trailing: Icon(Icons.edit_rounded, color: semanticColors.accent),
+                      title: Text(
+                        profile['name'] ?? 'Unknown Name',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        '${profile['rollNo'] ?? 'No Roll No'} • Div: ${data['division'] ?? 'Unknown'} • Role: ${data['role']}',
+                      ),
+                      trailing: Icon(
+                        Icons.edit_rounded,
+                        color: semanticColors.accent,
+                      ),
                       onTap: () => _editStudent(doc.id, data),
                     );
                   },
@@ -95,7 +114,9 @@ class _StudentManagementPageState extends State<StudentManagementPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => _EditStudentSheet(uid: uid, data: data),
     );
   }
@@ -142,17 +163,22 @@ class _EditStudentSheetState extends State<_EditStudentSheet> {
   Future<void> _save() async {
     setState(() => _loading = true);
     try {
-      await FirebaseFirestore.instance.collection('users').doc(widget.uid).update({
-        'role': _roleCtrl.text.trim(),
-        'division': _divCtrl.text.trim(),
-        'onboardingCompleted': _onboardingCompleted,
-        'draftProfile.name': _nameCtrl.text.trim(),
-        'draftProfile.rollNo': _rollNoCtrl.text.trim(),
-      });
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.uid)
+          .update({
+            'role': _roleCtrl.text.trim(),
+            'division': _divCtrl.text.trim(),
+            'onboardingCompleted': _onboardingCompleted,
+            'draftProfile.name': _nameCtrl.text.trim(),
+            'draftProfile.rollNo': _rollNoCtrl.text.trim(),
+          });
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -164,22 +190,35 @@ class _EditStudentSheetState extends State<_EditStudentSheet> {
       context: context,
       builder: (c) => AlertDialog(
         title: const Text('Delete Student?'),
-        content: const Text('This will delete their Firestore document. They will have to onboard again.'),
+        content: const Text(
+          'This will delete their Firestore document. They will have to onboard again.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
         ],
       ),
     );
     if (confirm != true) return;
-    
+
     setState(() => _loading = true);
     try {
-      await FirebaseFirestore.instance.collection('users').doc(widget.uid).delete();
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.uid)
+          .delete();
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -200,25 +239,38 @@ class _EditStudentSheetState extends State<_EditStudentSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Edit User Document', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
+            Text(
+              'Edit User Document',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Outfit',
+              ),
+            ),
             const SizedBox(height: AppSpacing.md),
-            
+
             SchedlyTextField(controller: _nameCtrl, labelText: 'Name'),
             const SizedBox(height: AppSpacing.sm),
             SchedlyTextField(controller: _rollNoCtrl, labelText: 'Roll No'),
             const SizedBox(height: AppSpacing.sm),
-            SchedlyTextField(controller: _divCtrl, labelText: 'Division ID (e.g. 2023-24_B.Tech_A)'),
+            SchedlyTextField(
+              controller: _divCtrl,
+              labelText: 'Division ID (e.g. 2023-24_B.Tech_A)',
+            ),
             const SizedBox(height: AppSpacing.sm),
-            SchedlyTextField(controller: _roleCtrl, labelText: 'Role (Student, CR, SR)'),
+            SchedlyTextField(
+              controller: _roleCtrl,
+              labelText: 'Role (Student, CR, SR)',
+            ),
             const SizedBox(height: AppSpacing.sm),
-            
+
             SwitchListTile(
               title: const Text('Onboarding Completed'),
               value: _onboardingCompleted,
               onChanged: (v) => setState(() => _onboardingCompleted = v),
               activeColor: Theme.of(context).colorScheme.primary,
             ),
-            
+
             const SizedBox(height: AppSpacing.xl),
             AnimatedButton(
               onPressed: _loading ? null : _save,

@@ -7,7 +7,7 @@ import 'admin_session.dart';
 
 class AdminAuthSheet extends StatefulWidget {
   final VoidCallback? onSuccess;
-  
+
   const AdminAuthSheet({super.key, this.onSuccess});
 
   @override
@@ -66,7 +66,9 @@ class _AdminAuthSheetState extends State<AdminAuthSheet> {
             context,
             maxWidth: 500,
             child: Padding(
-              padding: ResponsiveUtils.getBottomSheetMargin(context).copyWith(top: AppSpacing.x2l, bottom: AppSpacing.x2l),
+              padding: ResponsiveUtils.getBottomSheetMargin(
+                context,
+              ).copyWith(top: AppSpacing.x2l, bottom: AppSpacing.x2l),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -125,7 +127,7 @@ class _AdminAuthSheetState extends State<AdminAuthSheet> {
                       },
                     ),
                     const SizedBox(height: AppSpacing.x2l),
-                    
+
                     AnimatedButton(
                       onPressed: _loading ? null : _verify,
                       isLoading: _loading,

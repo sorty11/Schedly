@@ -49,12 +49,12 @@ class SchedlyBottomSheet extends StatelessWidget {
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
     final textTheme = Theme.of(context).textTheme;
     final screenHeight = MediaQuery.of(context).size.height;
-    final maxH = maxHeight != null ? screenHeight * maxHeight! : screenHeight * 0.9;
+    final maxH = maxHeight != null
+        ? screenHeight * maxHeight!
+        : screenHeight * 0.9;
 
     return Container(
-      constraints: BoxConstraints(
-        maxHeight: maxH,
-      ),
+      constraints: BoxConstraints(maxHeight: maxH),
       decoration: BoxDecoration(
         color: semanticColors.surfaceElevated,
         borderRadius: const BorderRadius.only(
@@ -89,10 +89,7 @@ class SchedlyBottomSheet extends StatelessWidget {
                     children: [
                       if (title != null)
                         Expanded(
-                          child: Text(
-                            title!,
-                            style: textTheme.headlineSmall,
-                          ),
+                          child: Text(title!, style: textTheme.headlineSmall),
                         ),
                       if (showCloseButton) ...[
                         if (title != null) const SizedBox(width: AppSpacing.md),

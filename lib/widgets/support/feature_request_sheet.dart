@@ -25,7 +25,7 @@ class _FeatureRequestSheetState extends State<FeatureRequestSheet> {
     'Faculty',
     'Student',
     'Notifications',
-    'General'
+    'General',
   ];
 
   Future<void> _submit() async {
@@ -33,17 +33,17 @@ class _FeatureRequestSheetState extends State<FeatureRequestSheet> {
     _formKey.currentState!.save();
 
     setState(() => _isSubmitting = true);
-    
+
     try {
       await _feedbackService.submitFeatureRequest(
         category: _category,
         title: _title,
         description: _description,
       );
-      
+
       if (!mounted) return;
       Navigator.pop(context);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -68,7 +68,9 @@ class _FeatureRequestSheetState extends State<FeatureRequestSheet> {
               Text('Failed to submit suggestion. Saved offline.'),
             ],
           ),
-          backgroundColor: Theme.of(context).extension<AppSemanticColors>()?.error,
+          backgroundColor: Theme.of(
+            context,
+          ).extension<AppSemanticColors>()?.error,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -87,7 +89,9 @@ class _FeatureRequestSheetState extends State<FeatureRequestSheet> {
 
     // Support Web / Tablets by constraining width
     final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding = screenWidth > 600 ? (screenWidth - 500) / 2 : AppSpacing.lg;
+    final horizontalPadding = screenWidth > 600
+        ? (screenWidth - 500) / 2
+        : AppSpacing.lg;
 
     return Container(
       padding: EdgeInsets.only(
@@ -98,7 +102,9 @@ class _FeatureRequestSheetState extends State<FeatureRequestSheet> {
       ),
       decoration: BoxDecoration(
         color: isDark ? semanticColors.surfaceElevated2 : colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppRadius.xl),
+        ),
       ),
       child: Form(
         key: _formKey,
@@ -134,52 +140,69 @@ class _FeatureRequestSheetState extends State<FeatureRequestSheet> {
                 ],
               ),
               const SizedBox(height: AppSpacing.xl),
-              
+
               // Category
               DropdownButtonFormField<String>(
                 value: _category,
                 decoration: InputDecoration(
                   labelText: 'Category',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
                 ),
-                items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                items: _categories
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
                 onChanged: (val) => setState(() => _category = val!),
               ),
               const SizedBox(height: AppSpacing.lg),
-              
+
               // Title
               TextFormField(
                 decoration: InputDecoration(
                   labelText: 'Title',
                   hintText: 'Brief summary of the feature',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
                 ),
-                validator: (val) => val == null || val.trim().isEmpty ? 'Please enter a title' : null,
+                validator: (val) => val == null || val.trim().isEmpty
+                    ? 'Please enter a title'
+                    : null,
                 onSaved: (val) => _title = val!.trim(),
               ),
               const SizedBox(height: AppSpacing.lg),
-              
+
               // Description
               TextFormField(
                 decoration: InputDecoration(
                   labelText: 'Description',
                   hintText: 'How would this feature help you?',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
                   alignLabelWithHint: true,
                 ),
                 maxLines: 4,
-                validator: (val) => val == null || val.trim().isEmpty ? 'Please enter a description' : null,
+                validator: (val) => val == null || val.trim().isEmpty
+                    ? 'Please enter a description'
+                    : null,
                 onSaved: (val) => _description = val!.trim(),
               ),
               const SizedBox(height: AppSpacing.x2l),
-              
+
               // Actions
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: _isSubmitting ? null : () => Navigator.pop(context),
+                    onPressed: _isSubmitting
+                        ? null
+                        : () => Navigator.pop(context),
                     child: const Text('Cancel'),
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -187,11 +210,17 @@ class _FeatureRequestSheetState extends State<FeatureRequestSheet> {
                     onPressed: _isSubmitting ? null : _submit,
                     icon: _isSubmitting
                         ? const SizedBox(
-                            width: 16, height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
                         : const Icon(Icons.send_rounded, size: 18),
-                    label: Text(_isSubmitting ? 'Submitting...' : 'Submit Suggestion'),
+                    label: Text(
+                      _isSubmitting ? 'Submitting...' : 'Submit Suggestion',
+                    ),
                   ),
                 ],
               ),

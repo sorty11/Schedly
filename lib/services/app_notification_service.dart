@@ -16,7 +16,11 @@ class AppNotificationService {
     final batch = db.batch();
 
     // 1. In-app notification (for Updates tab)
-    final notifRef = db.collection('sections').doc(division).collection('notifications').doc();
+    final notifRef = db
+        .collection('sections')
+        .doc(division)
+        .collection('notifications')
+        .doc();
     batch.set(notifRef, {
       'title': title,
       'message': message,
@@ -26,7 +30,11 @@ class AppNotificationService {
 
     // 2. Announcements board
     if (type == 'announcement') {
-      final annRef = db.collection('sections').doc(division).collection('announcements').doc();
+      final annRef = db
+          .collection('sections')
+          .doc(division)
+          .collection('announcements')
+          .doc();
       batch.set(annRef, {
         'title': title,
         'message': message,
@@ -37,7 +45,8 @@ class AppNotificationService {
 
     // 3. Push Notification Outbox
     String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
-    if (AppSettings.currentRole == UserRole.faculty && AppSettings.facultyId != null) {
+    if (AppSettings.currentRole == UserRole.faculty &&
+        AppSettings.facultyId != null) {
       uid = AppSettings.facultyId!;
     }
 

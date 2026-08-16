@@ -28,11 +28,14 @@ class _SectionManagementPageState extends State<SectionManagementPage> {
   @override
   Widget build(BuildContext context) {
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Section Management', style: TextStyle(fontFamily: 'Outfit')),
+        title: const Text(
+          'Section Management',
+          style: TextStyle(fontFamily: 'Outfit'),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -46,12 +49,18 @@ class _SectionManagementPageState extends State<SectionManagementPage> {
           elevation: 4,
         ),
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Create Section', style: TextStyle(fontWeight: FontWeight.w600)),
+        label: const Text(
+          'Create Section',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
       ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: SchedlyTextField(
               hintText: 'Search Sections...',
               prefixIcon: Icons.search_rounded,
@@ -86,19 +95,32 @@ class _SectionManagementPageState extends State<SectionManagementPage> {
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.x6l),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    AppSpacing.x6l,
+                  ),
                   itemCount: filteredDocs.length,
                   itemBuilder: (context, index) {
                     final doc = filteredDocs[index];
                     final data = doc.data() as Map<String, dynamic>;
                     final bool isActive = data['active'] ?? true;
-                    
+
                     return Padding(
                       padding: const EdgeInsets.only(bottom: AppSpacing.md),
                       child: SchedlyCard(
                         padding: const EdgeInsets.all(AppSpacing.sm),
                         child: ListTile(
-                          title: Text(doc.id, style: TextStyle(fontWeight: FontWeight.bold, decoration: isActive ? null : TextDecoration.lineThrough)),
+                          title: Text(
+                            doc.id,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              decoration: isActive
+                                  ? null
+                                  : TextDecoration.lineThrough,
+                            ),
+                          ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -110,34 +132,55 @@ class _SectionManagementPageState extends State<SectionManagementPage> {
                               Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: isActive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                                      color: isActive
+                                          ? Colors.green.withOpacity(0.1)
+                                          : Colors.red.withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
                                       isActive ? 'Active' : 'Archived',
                                       style: TextStyle(
                                         fontSize: 10,
-                                        color: isActive ? Colors.green[700] : Colors.red[700],
+                                        color: isActive
+                                            ? Colors.green[700]
+                                            : Colors.red[700],
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
                                   FutureBuilder<int>(
-                                    future: DivisionMembershipService.getSectionRoleCount(doc.id, 'Student'),
+                                    future:
+                                        DivisionMembershipService.getSectionRoleCount(
+                                          doc.id,
+                                          'Student',
+                                        ),
                                     builder: (context, snap) => Text(
                                       '${snap.data ?? 0} Students',
-                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
                                   FutureBuilder<int>(
-                                    future: DivisionMembershipService.getSectionRoleCount(doc.id, 'Faculty'),
+                                    future:
+                                        DivisionMembershipService.getSectionRoleCount(
+                                          doc.id,
+                                          'Faculty',
+                                        ),
                                     builder: (context, snap) => Text(
                                       '${snap.data ?? 0} Faculty',
-                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -150,12 +193,18 @@ class _SectionManagementPageState extends State<SectionManagementPage> {
                               IconButton(
                                 icon: const Icon(Icons.copy_rounded),
                                 tooltip: 'Clone Section',
-                                onPressed: () => _cloneSection(context, doc.id, data),
+                                onPressed: () =>
+                                    _cloneSection(context, doc.id, data),
                               ),
                               IconButton(
-                                icon: Icon(isActive ? Icons.archive_rounded : Icons.unarchive_rounded),
+                                icon: Icon(
+                                  isActive
+                                      ? Icons.archive_rounded
+                                      : Icons.unarchive_rounded,
+                                ),
                                 tooltip: isActive ? 'Archive' : 'Unarchive',
-                                onPressed: () => _toggleArchive(doc.id, isActive),
+                                onPressed: () =>
+                                    _toggleArchive(doc.id, isActive),
                               ),
                             ],
                           ),
@@ -177,20 +226,26 @@ class _SectionManagementPageState extends State<SectionManagementPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => const _CreateSectionSheet(),
     );
   }
 
-  void _cloneSection(BuildContext context, String originalId, Map<String, dynamic> originalData) {
+  void _cloneSection(
+    BuildContext context,
+    String originalId,
+    Map<String, dynamic> originalData,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => _CreateSectionSheet(
-        cloneFromData: originalData,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
+      builder: (ctx) => _CreateSectionSheet(cloneFromData: originalData),
     );
   }
 
@@ -227,7 +282,7 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
       _semesterCtrl.text = widget.cloneFromData!['semester'] ?? '';
       _fetchExistingDivisions();
     }
-    
+
     // Fetch divisions when year or branch changes
     _yearCtrl.addListener(_onFieldChanged);
     _branchCtrl.addListener(_onFieldChanged);
@@ -258,7 +313,9 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
           .where('academicYear', isEqualTo: _yearCtrl.text.trim())
           .where('branch', isEqualTo: _branchCtrl.text.trim())
           .get();
-      final divs = snap.docs.map((d) => d.data()['division'] as String).toList();
+      final divs = snap.docs
+          .map((d) => d.data()['division'] as String)
+          .toList();
       divs.sort();
       if (mounted) {
         setState(() {
@@ -275,27 +332,39 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
     final branch = _branchCtrl.text.trim();
     final div = _divCtrl.text.trim().toUpperCase();
     final sem = _semesterCtrl.text.trim();
-    
+
     if (year.isEmpty || branch.isEmpty || div.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Year, Branch, and Division are required')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Year, Branch, and Division are required'),
+        ),
+      );
       return;
     }
 
     setState(() => _loading = true);
     try {
-      final sectionId = '${year.replaceAll(' ', '')}_${branch.replaceAll(' ', '')}_$div';
-      
-      final doc = await FirebaseFirestore.instance.collection('sections').doc(sectionId).get();
+      final sectionId =
+          '${year.replaceAll(' ', '')}_${branch.replaceAll(' ', '')}_$div';
+
+      final doc = await FirebaseFirestore.instance
+          .collection('sections')
+          .doc(sectionId)
+          .get();
       if (doc.exists) {
         if (mounted) {
-          AppDialogs.showError(context: context, title: 'Error', message: 'Section $sectionId already exists.');
+          AppDialogs.showError(
+            context: context,
+            title: 'Error',
+            message: 'Section $sectionId already exists.',
+          );
         }
         setState(() => _loading = false);
         return;
       }
-      
+
       Map<String, dynamic> dataToSave;
-      
+
       if (widget.cloneFromData != null) {
         dataToSave = Map<String, dynamic>.from(widget.cloneFromData!);
         dataToSave['academicYear'] = year;
@@ -305,16 +374,64 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
         dataToSave['active'] = true;
       } else {
         final periods = [
-          PeriodConfig(id: 'p1', name: 'Period 1', startTime: 900, endTime: 1000, isBreak: false),
-          PeriodConfig(id: 'p2', name: 'Period 2', startTime: 1000, endTime: 1100, isBreak: false),
-          PeriodConfig(id: 'br1', name: 'Break', startTime: 1100, endTime: 1130, isBreak: true),
-          PeriodConfig(id: 'p3', name: 'Period 3', startTime: 1130, endTime: 1230, isBreak: false),
-          PeriodConfig(id: 'p4', name: 'Period 4', startTime: 1230, endTime: 1330, isBreak: false),
-          PeriodConfig(id: 'br2', name: 'Lunch', startTime: 1330, endTime: 1430, isBreak: true),
-          PeriodConfig(id: 'p5', name: 'Period 5', startTime: 1430, endTime: 1530, isBreak: false),
-          PeriodConfig(id: 'p6', name: 'Period 6', startTime: 1530, endTime: 1630, isBreak: false),
+          PeriodConfig(
+            id: 'p1',
+            name: 'Period 1',
+            startTime: 900,
+            endTime: 1000,
+            isBreak: false,
+          ),
+          PeriodConfig(
+            id: 'p2',
+            name: 'Period 2',
+            startTime: 1000,
+            endTime: 1100,
+            isBreak: false,
+          ),
+          PeriodConfig(
+            id: 'br1',
+            name: 'Break',
+            startTime: 1100,
+            endTime: 1130,
+            isBreak: true,
+          ),
+          PeriodConfig(
+            id: 'p3',
+            name: 'Period 3',
+            startTime: 1130,
+            endTime: 1230,
+            isBreak: false,
+          ),
+          PeriodConfig(
+            id: 'p4',
+            name: 'Period 4',
+            startTime: 1230,
+            endTime: 1330,
+            isBreak: false,
+          ),
+          PeriodConfig(
+            id: 'br2',
+            name: 'Lunch',
+            startTime: 1330,
+            endTime: 1430,
+            isBreak: true,
+          ),
+          PeriodConfig(
+            id: 'p5',
+            name: 'Period 5',
+            startTime: 1430,
+            endTime: 1530,
+            isBreak: false,
+          ),
+          PeriodConfig(
+            id: 'p6',
+            name: 'Period 6',
+            startTime: 1530,
+            endTime: 1630,
+            isBreak: false,
+          ),
         ];
-        
+
         List<String> generateDefaultBatches(String d, int count) {
           if (count == 1) return ['Whole Class'];
           final parts = d.trim().split(RegExp(r'[\s_]+'));
@@ -323,7 +440,6 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
           return List.generate(count, (i) => '$base${i + 1}');
         }
 
-        
         final config = SectionConfig(
           id: sectionId,
           academicYear: year,
@@ -331,7 +447,14 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
           division: div,
           semester: sem.isNotEmpty ? sem : null,
           active: true,
-          workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+          workingDays: [
+            'Monday',
+            'Tuesday',
+            'Wednesday',
+            'Thursday',
+            'Friday',
+            'Saturday',
+          ],
           batches: generateDefaultBatches(div, 3),
           periods: periods,
         );
@@ -339,22 +462,32 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
       }
 
       final batch = FirebaseFirestore.instance.batch();
-      
-      final actionRef = FirebaseFirestore.instance.collection('admin_actions').doc('${FirebaseAuth.instance.currentUser!.uid}_$sectionId');
+
+      final actionRef = FirebaseFirestore.instance
+          .collection('admin_actions')
+          .doc('${FirebaseAuth.instance.currentUser!.uid}_$sectionId');
       batch.set(actionRef, {
         'masterHash': SecurityUtils.masterHash,
-        'action': widget.cloneFromData != null ? 'cloneSection' : 'createSection',
+        'action': widget.cloneFromData != null
+            ? 'cloneSection'
+            : 'createSection',
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      final sectionRef = FirebaseFirestore.instance.collection('sections').doc(sectionId);
+      final sectionRef = FirebaseFirestore.instance
+          .collection('sections')
+          .doc(sectionId);
       batch.set(sectionRef, dataToSave);
 
       await batch.commit();
 
       if (!mounted) return;
       Navigator.pop(context);
-      AppDialogs.showSuccess(context: context, title: 'Success', message: 'Section created successfully');
+      AppDialogs.showSuccess(
+        context: context,
+        title: 'Success',
+        message: 'Section created successfully',
+      );
     } catch (e) {
       debugPrint('Section Creation Error: $e');
       if (!mounted) return;
@@ -372,15 +505,18 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
     final year = _yearCtrl.text.trim().replaceAll(' ', '');
     final branch = _branchCtrl.text.trim().replaceAll(' ', '');
     final div = _divCtrl.text.trim();
-    if (year.isEmpty && branch.isEmpty && div.isEmpty) return 'Section ID Preview';
+    if (year.isEmpty && branch.isEmpty && div.isEmpty)
+      return 'Section ID Preview';
     return '${year.isEmpty ? 'Year' : year}_${branch.isEmpty ? 'Branch' : branch}_${div.isEmpty ? 'Div' : div}';
   }
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.cloneFromData != null ? 'Clone Section' : 'Create Section';
+    final title = widget.cloneFromData != null
+        ? 'Clone Section'
+        : 'Create Section';
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
-    
+
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -391,97 +527,139 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
             context,
             maxWidth: 500,
             child: Padding(
-              padding: ResponsiveUtils.getBottomSheetMargin(context).copyWith(top: AppSpacing.xl, bottom: AppSpacing.xl),
+              padding: ResponsiveUtils.getBottomSheetMargin(
+                context,
+              ).copyWith(top: AppSpacing.xl, bottom: AppSpacing.xl),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-              Text(title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
-              const SizedBox(height: AppSpacing.md),
-              
-              DropdownButtonFormField<String>(
-                value: _yearCtrl.text.isEmpty ? null : _yearCtrl.text,
-                decoration: InputDecoration(
-                  labelText: 'Academic Year',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                items: NMIMSStructure.academicYears.map((y) => DropdownMenuItem(value: y, child: Text(y))).toList(),
-                onChanged: (val) {
-                  if (val != null) setState(() => _yearCtrl.text = val);
-                },
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              
-              DropdownButtonFormField<String>(
-                value: _branchCtrl.text.isEmpty ? null : _branchCtrl.text,
-                decoration: InputDecoration(
-                  labelText: 'Department/Branch',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                items: NMIMSStructure.branches.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
-                onChanged: (val) {
-                  if (val != null) {
-                    setState(() {
-                      _branchCtrl.text = val;
-                      _divCtrl.text = ''; // Reset division when branch changes
-                    });
-                  }
-                },
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              
-              if (_branchCtrl.text.isNotEmpty)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_existingDivisions.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.sm, left: AppSpacing.xs),
-                        child: Text('Existing divisions: ${_existingDivisions.join(', ')}', 
-                          style: TextStyle(color: semanticColors.onSurfaceMuted, fontSize: 12)),
-                      ),
-                    SchedlyTextField(
-                      controller: _divCtrl, 
-                      labelText: 'Division', 
-                      hintText: 'e.g. A, B, C or custom name',
-                      textCapitalization: TextCapitalization.characters,
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Outfit',
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                  ]
-                ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
 
-              SchedlyTextField(controller: _semesterCtrl, labelText: 'Semester (Optional)', hintText: 'e.g. Semester 3'),
-              const SizedBox(height: AppSpacing.lg),
+                  DropdownButtonFormField<String>(
+                    value: _yearCtrl.text.isEmpty ? null : _yearCtrl.text,
+                    decoration: InputDecoration(
+                      labelText: 'Academic Year',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    items: NMIMSStructure.academicYears
+                        .map((y) => DropdownMenuItem(value: y, child: Text(y)))
+                        .toList(),
+                    onChanged: (val) {
+                      if (val != null) setState(() => _yearCtrl.text = val);
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
 
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: semanticColors.surfaceTinted,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: semanticColors.borderSubtle),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Generated Section ID', style: TextStyle(fontSize: 12, color: semanticColors.onSurfaceMuted)),
-                    const SizedBox(height: 4),
-                    Text(_generatedId, style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'monospace')),
-                  ],
-                ),
+                  DropdownButtonFormField<String>(
+                    value: _branchCtrl.text.isEmpty ? null : _branchCtrl.text,
+                    decoration: InputDecoration(
+                      labelText: 'Department/Branch',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    items: NMIMSStructure.branches
+                        .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                        .toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() {
+                          _branchCtrl.text = val;
+                          _divCtrl.text =
+                              ''; // Reset division when branch changes
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  if (_branchCtrl.text.isNotEmpty)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_existingDivisions.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: AppSpacing.sm,
+                              left: AppSpacing.xs,
+                            ),
+                            child: Text(
+                              'Existing divisions: ${_existingDivisions.join(', ')}',
+                              style: TextStyle(
+                                color: semanticColors.onSurfaceMuted,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        SchedlyTextField(
+                          controller: _divCtrl,
+                          labelText: 'Division',
+                          hintText: 'e.g. A, B, C or custom name',
+                          textCapitalization: TextCapitalization.characters,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                      ],
+                    ),
+
+                  SchedlyTextField(
+                    controller: _semesterCtrl,
+                    labelText: 'Semester (Optional)',
+                    hintText: 'e.g. Semester 3',
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: semanticColors.surfaceTinted,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: semanticColors.borderSubtle),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Generated Section ID',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: semanticColors.onSurfaceMuted,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _generatedId,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: AppSpacing.xl),
+                  AnimatedButton(
+                    onPressed: _loading ? null : _save,
+                    isLoading: _loading,
+                    child: Text(title),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                ],
               ),
-              
-              const SizedBox(height: AppSpacing.xl),
-              AnimatedButton(
-                onPressed: _loading ? null : _save,
-                isLoading: _loading,
-                child: Text(title),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-            ],
+            ),
           ),
         ),
-      ),
-      ),
       ),
     );
   }

@@ -48,10 +48,23 @@ class SectionConfig {
       division: json['division'] as String? ?? '',
       semester: json['semester'] as String?,
       active: json['active'] as bool? ?? true,
-      workingDays: (json['workingDays'] as List<dynamic>?)?.map((e) => e as String).toList() ?? [],
-      batches: (json['batches'] as List<dynamic>?)?.map((e) => e as String).toList() ?? [],
-      batchNames: (json['batchNames'] as Map<String, dynamic>?)?.map((k, v) => MapEntry(k, v as String)) ?? {},
-      periods: (json['periods'] as List<dynamic>?)
+      workingDays:
+          (json['workingDays'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+      batches:
+          (json['batches'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+      batchNames:
+          (json['batchNames'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, v as String),
+          ) ??
+          {},
+      periods:
+          (json['periods'] as List<dynamic>?)
               ?.map((e) => PeriodConfig.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
@@ -70,10 +83,11 @@ class SectionConfig {
       'batches': batches,
       'batchNames': batchNames,
       'periods': periods.map((p) => p.toJson()).toList(),
-      if (semesterStartDate != null) 'semesterStartDate': semesterStartDate!.toIso8601String(),
+      if (semesterStartDate != null)
+        'semesterStartDate': semesterStartDate!.toIso8601String(),
     };
   }
-  
+
   String getBatchName(String batchId) {
     return batchNames[batchId] ?? batchId;
   }

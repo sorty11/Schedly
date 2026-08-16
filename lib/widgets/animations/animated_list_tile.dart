@@ -19,23 +19,27 @@ class AnimatedListTile extends StatefulWidget {
     this.trailing,
     this.onTap,
     this.backgroundColor,
-    this.contentPadding = const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+    this.contentPadding = const EdgeInsets.symmetric(
+      horizontal: AppSpacing.lg,
+      vertical: AppSpacing.sm,
+    ),
   });
 
   @override
   State<AnimatedListTile> createState() => _AnimatedListTileState();
 }
 
-class _AnimatedListTileState extends State<AnimatedListTile> with TickerProviderStateMixin {
+class _AnimatedListTileState extends State<AnimatedListTile>
+    with TickerProviderStateMixin {
   late AnimationController _pressController;
   late Animation<double> _pressScaleAnimation;
-  
+
   late AnimationController _hoverController;
 
   @override
   void initState() {
     super.initState();
-    
+
     // Press Physics
     _pressController = AnimationController(
       vsync: this,
@@ -44,7 +48,11 @@ class _AnimatedListTileState extends State<AnimatedListTile> with TickerProvider
     );
 
     _pressScaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
-      CurvedAnimation(parent: _pressController, curve: Curves.easeOutCubic, reverseCurve: Curves.elasticOut),
+      CurvedAnimation(
+        parent: _pressController,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.elasticOut,
+      ),
     );
 
     // Hover Physics
@@ -72,7 +80,7 @@ class _AnimatedListTileState extends State<AnimatedListTile> with TickerProvider
     if (widget.onTap == null) return;
     _pressController.reverse();
   }
-  
+
   void _handleTapCancel() {
     if (widget.onTap == null) return;
     _pressController.reverse();
@@ -104,12 +112,12 @@ class _AnimatedListTileState extends State<AnimatedListTile> with TickerProvider
         child: AnimatedBuilder(
           animation: Listenable.merge([_pressController, _hoverController]),
           builder: (context, child) {
-            final currentColor = disabled 
+            final currentColor = disabled
                 ? (widget.backgroundColor ?? Colors.transparent)
                 : Color.lerp(
-                    widget.backgroundColor ?? Colors.transparent, 
-                    theme.colorScheme.primary.withValues(alpha: 0.05), 
-                    _hoverController.value
+                    widget.backgroundColor ?? Colors.transparent,
+                    theme.colorScheme.primary.withValues(alpha: 0.05),
+                    _hoverController.value,
                   );
 
             return Transform.scale(
@@ -125,8 +133,12 @@ class _AnimatedListTileState extends State<AnimatedListTile> with TickerProvider
                   clipBehavior: Clip.antiAlias,
                   child: InkWell(
                     onTap: widget.onTap,
-                    splashColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-                    highlightColor: theme.colorScheme.primary.withValues(alpha: 0.05),
+                    splashColor: theme.colorScheme.primary.withValues(
+                      alpha: 0.1,
+                    ),
+                    highlightColor: theme.colorScheme.primary.withValues(
+                      alpha: 0.05,
+                    ),
                     child: Padding(
                       padding: widget.contentPadding,
                       child: Row(
@@ -142,7 +154,10 @@ class _AnimatedListTileState extends State<AnimatedListTile> with TickerProvider
                               children: [
                                 DefaultTextStyle(
                                   style: theme.textTheme.titleMedium!.copyWith(
-                                    color: disabled ? theme.colorScheme.onSurface.withValues(alpha: 0.5) : theme.colorScheme.onSurface,
+                                    color: disabled
+                                        ? theme.colorScheme.onSurface
+                                              .withValues(alpha: 0.5)
+                                        : theme.colorScheme.onSurface,
                                   ),
                                   child: widget.title,
                                 ),

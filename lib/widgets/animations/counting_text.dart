@@ -26,16 +26,14 @@ class CountingText extends StatelessWidget {
       curve: Curves.easeOutCubic,
       builder: (context, val, child) {
         String formattedValue;
-        if (value is int || (!isPercentage && value.truncateToDouble() == value)) {
+        if (value is int ||
+            (!isPercentage && value.truncateToDouble() == value)) {
           formattedValue = val.toInt().toString();
         } else {
           formattedValue = val.toStringAsFixed(1);
         }
-        
-        return Text(
-          '$prefix$formattedValue$suffix',
-          style: style,
-        );
+
+        return Text('$prefix$formattedValue$suffix', style: style);
       },
     );
   }

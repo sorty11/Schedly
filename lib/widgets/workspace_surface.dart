@@ -72,7 +72,8 @@ class _InteractiveSurface extends StatefulWidget {
   State<_InteractiveSurface> createState() => _InteractiveSurfaceState();
 }
 
-class _InteractiveSurfaceState extends State<_InteractiveSurface> with SingleTickerProviderStateMixin {
+class _InteractiveSurfaceState extends State<_InteractiveSurface>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   bool _isHovered = false;
@@ -81,9 +82,10 @@ class _InteractiveSurfaceState extends State<_InteractiveSurface> with SingleTic
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: AppDuration.fast);
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
-      CurvedAnimation(parent: _controller, curve: AppCurves.standard),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.98,
+    ).animate(CurvedAnimation(parent: _controller, curve: AppCurves.standard));
   }
 
   @override
@@ -95,7 +97,9 @@ class _InteractiveSurfaceState extends State<_InteractiveSurface> with SingleTic
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      cursor: widget.onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      cursor: widget.onTap != null
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: Semantics(
@@ -103,19 +107,19 @@ class _InteractiveSurfaceState extends State<_InteractiveSurface> with SingleTic
         enabled: widget.onTap != null,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => _controller.forward(),
-        onTapUp: (_) {
-          _controller.reverse();
-          widget.onTap?.call();
-        },
-        onTapCancel: () => _controller.reverse(),
-        child: ScaleTransition(
-          scale: _scaleAnimation,
-          child: AnimatedOpacity(
-            opacity: _isHovered ? 0.95 : 1.0,
-            duration: AppDuration.fast,
-            child: widget.child,
-          ),
+          onTapDown: (_) => _controller.forward(),
+          onTapUp: (_) {
+            _controller.reverse();
+            widget.onTap?.call();
+          },
+          onTapCancel: () => _controller.reverse(),
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: AnimatedOpacity(
+              opacity: _isHovered ? 0.95 : 1.0,
+              duration: AppDuration.fast,
+              child: widget.child,
+            ),
           ),
         ),
       ),
@@ -136,10 +140,7 @@ class Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return WorkspaceSurface(
-      padding: padding,
-      child: child,
-    );
+    return WorkspaceSurface(padding: padding, child: child);
   }
 }
 
@@ -161,7 +162,7 @@ class MetricPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
-    
+
     return WorkspaceSurface(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
@@ -191,7 +192,11 @@ class MetricPanel extends StatelessWidget {
               fontFamily: 'Outfit',
               fontSize: 32,
               fontWeight: FontWeight.w800,
-              color: valueColor ?? (Theme.of(context).brightness == Brightness.dark ? AppColors.onSurfaceDark : AppColors.onSurface),
+              color:
+                  valueColor ??
+                  (Theme.of(context).brightness == Brightness.dark
+                      ? AppColors.onSurfaceDark
+                      : AppColors.onSurface),
               height: 1,
             ),
           ),
@@ -217,7 +222,7 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.lg),
       child: Row(
@@ -233,7 +238,9 @@ class SectionHeader extends StatelessWidget {
                   fontFamily: 'Outfit',
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
-                  color: Theme.of(context).brightness == Brightness.dark ? AppColors.onSurfaceDark : AppColors.onSurface,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? AppColors.onSurfaceDark
+                      : AppColors.onSurface,
                 ),
               ),
               if (subtitle != null) ...[
@@ -246,7 +253,7 @@ class SectionHeader extends StatelessWidget {
                     color: sem.onSurfaceMuted,
                   ),
                 ),
-              ]
+              ],
             ],
           ),
           if (trailing != null) SizedBox(child: trailing),

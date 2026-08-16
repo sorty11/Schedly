@@ -3,13 +3,16 @@ import 'package:flutter/material.dart';
 
 import '../../theme/theme.dart';
 
-Future<TimeOfDay?> showTimeWheelPicker(BuildContext context, {required TimeOfDay initialTime}) async {
+Future<TimeOfDay?> showTimeWheelPicker(
+  BuildContext context, {
+  required TimeOfDay initialTime,
+}) async {
   TimeOfDay? selectedTime = initialTime;
-  
+
   final isDark = Theme.of(context).brightness == Brightness.dark;
   final cs = Theme.of(context).colorScheme;
   final sem = Theme.of(context).extension<AppSemanticColors>()!;
-  
+
   final result = await showModalBottomSheet<TimeOfDay>(
     context: context,
     backgroundColor: Colors.transparent,
@@ -35,14 +38,18 @@ Future<TimeOfDay?> showTimeWheelPicker(BuildContext context, {required TimeOfDay
               ),
             ),
             const SizedBox(height: 20),
-            
+
             // Title
             Text(
               'Select Time',
-              style: TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 20),
-            
+
             // Picker
             SizedBox(
               height: 216,
@@ -50,7 +57,8 @@ Future<TimeOfDay?> showTimeWheelPicker(BuildContext context, {required TimeOfDay
                 data: CupertinoThemeData(
                   brightness: isDark ? Brightness.dark : Brightness.light,
                   textTheme: CupertinoTextThemeData(
-                    dateTimePickerTextStyle: TextStyle(fontFamily: 'Inter', 
+                    dateTimePickerTextStyle: TextStyle(
+                      fontFamily: 'Inter',
                       fontSize: 22,
                       fontWeight: FontWeight.w500,
                       color: cs.onSurface,
@@ -59,14 +67,20 @@ Future<TimeOfDay?> showTimeWheelPicker(BuildContext context, {required TimeOfDay
                 ),
                 child: CupertinoDatePicker(
                   mode: CupertinoDatePickerMode.time,
-                  initialDateTime: DateTime(2000, 1, 1, initialTime.hour, initialTime.minute),
+                  initialDateTime: DateTime(
+                    2000,
+                    1,
+                    1,
+                    initialTime.hour,
+                    initialTime.minute,
+                  ),
                   onDateTimeChanged: (DateTime newDateTime) {
                     selectedTime = TimeOfDay.fromDateTime(newDateTime);
                   },
                 ),
               ),
             ),
-            
+
             // Actions
             Padding(
               padding: EdgeInsets.all(AppSpacing.x2l),
@@ -77,10 +91,19 @@ Future<TimeOfDay?> showTimeWheelPicker(BuildContext context, {required TimeOfDay
                       onPressed: () => Navigator.pop(ctx),
                       style: OutlinedButton.styleFrom(
                         padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                        ),
                         side: BorderSide(color: sem.borderSubtle, width: 1.5),
                       ),
-                      child: Text('Cancel', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, color: cs.onSurface)),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.lg),
@@ -89,9 +112,17 @@ Future<TimeOfDay?> showTimeWheelPicker(BuildContext context, {required TimeOfDay
                       onPressed: () => Navigator.pop(ctx, selectedTime),
                       style: FilledButton.styleFrom(
                         padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                        ),
                       ),
-                      child: Text('Confirm', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700)),
+                      child: Text(
+                        'Confirm',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -102,6 +133,6 @@ Future<TimeOfDay?> showTimeWheelPicker(BuildContext context, {required TimeOfDay
       );
     },
   );
-  
+
   return result;
 }

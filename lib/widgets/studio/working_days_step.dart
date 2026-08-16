@@ -28,7 +28,7 @@ class _WorkingDaysStepState extends State<WorkingDaysStep> {
     'Thursday',
     'Friday',
     'Saturday',
-    'Sunday'
+    'Sunday',
   ];
   late List<String> _selected;
 
@@ -47,20 +47,33 @@ class _WorkingDaysStepState extends State<WorkingDaysStep> {
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.x3l, AppSpacing.x2l, 0),
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.x2l,
+              AppSpacing.x3l,
+              AppSpacing.x2l,
+              0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Which days does your college operate?',
-                  style: TextStyle(fontFamily: 'Outfit', 
-                      fontSize: 26, fontWeight: FontWeight.w700, height: 1.2),
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   'Select all the days your class has lectures.',
-                  style: TextStyle(fontFamily: 'Inter', 
-                      fontSize: 16, color: sem.onSurfaceMuted, height: 1.5),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 16,
+                    color: sem.onSurfaceMuted,
+                    height: 1.5,
+                  ),
                 ),
                 const SizedBox(height: 40),
                 Wrap(
@@ -78,9 +91,11 @@ class _WorkingDaysStepState extends State<WorkingDaysStep> {
                             if (_selected.length > 1) _selected.remove(day);
                           } else {
                             _selected.add(day);
-                            _selected.sort((a, b) => _allDays
-                                .indexOf(a)
-                                .compareTo(_allDays.indexOf(b)));
+                            _selected.sort(
+                              (a, b) => _allDays
+                                  .indexOf(a)
+                                  .compareTo(_allDays.indexOf(b)),
+                            );
                           }
                         });
                         widget.onChanged(_selected);
@@ -100,14 +115,21 @@ class _WorkingDaysStepState extends State<WorkingDaysStep> {
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.warning_rounded,
-                                  size: 16, color: cs.error),
+                              Icon(
+                                Icons.warning_rounded,
+                                size: 16,
+                                color: cs.error,
+                              ),
                               const SizedBox(width: AppSpacing.sm),
-                              Text('Select at least one day',
-                                  style: TextStyle(fontFamily: 'Inter', 
-                                      fontSize: 13,
-                                      color: cs.error,
-                                      fontWeight: FontWeight.w600)),
+                              Text(
+                                'Select at least one day',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 13,
+                                  color: cs.error,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ],
                           ),
                         )
@@ -159,9 +181,10 @@ class _AnimatedDayChip extends StatelessWidget {
           boxShadow: selected
               ? [
                   BoxShadow(
-                      color: cs.primary.withValues(alpha: 0.25),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4))
+                    color: cs.primary.withValues(alpha: 0.25),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
                 ]
               : null,
         ),
@@ -169,13 +192,17 @@ class _AnimatedDayChip extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (selected) ...[
-              const Icon(Icons.check_circle_rounded,
-                  size: 16, color: Colors.white),
+              const Icon(
+                Icons.check_circle_rounded,
+                size: 16,
+                color: Colors.white,
+              ),
               const SizedBox(width: 6),
             ],
             Text(
               label,
-              style: TextStyle(fontFamily: 'Inter', 
+              style: TextStyle(
+                fontFamily: 'Inter',
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: selected ? Colors.white : cs.onSurface,

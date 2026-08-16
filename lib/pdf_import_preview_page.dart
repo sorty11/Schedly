@@ -75,7 +75,8 @@ class PdfImportPreviewPage extends StatelessWidget {
                     children: [
                       Text(
                         'Data extracted successfully',
-                        style: TextStyle(fontFamily: 'Inter', 
+                        style: TextStyle(
+                          fontFamily: 'Inter',
                           fontWeight: FontWeight.w700,
                           fontSize: 16,
                           color: colorScheme.onSurface,
@@ -84,7 +85,8 @@ class PdfImportPreviewPage extends StatelessWidget {
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         'Target Division: $division',
-                        style: TextStyle(fontFamily: 'Inter', 
+                        style: TextStyle(
+                          fontFamily: 'Inter',
                           color: sem.onSurfaceMuted,
                           fontSize: 14,
                         ),
@@ -116,7 +118,8 @@ class PdfImportPreviewPage extends StatelessWidget {
                           padding: const EdgeInsets.all(AppSpacing.lg),
                           child: Text(
                             day,
-                            style: TextStyle(fontFamily: 'Outfit', 
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
                               fontSize: 20,
                               fontWeight: FontWeight.w800,
                               color: colorScheme.onSurface,
@@ -126,26 +129,39 @@ class PdfImportPreviewPage extends StatelessWidget {
                         Divider(height: 1, color: sem.borderSubtle),
                         ...lectures.map((entry) {
                           return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.lg,
+                              vertical: AppSpacing.lg,
+                            ),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
                                   padding: const EdgeInsets.all(AppSpacing.md),
                                   decoration: BoxDecoration(
-                                    color: colorScheme.primary.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                    color: colorScheme.primary.withValues(
+                                      alpha: 0.1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.md,
+                                    ),
                                   ),
-                                  child: Icon(Icons.book_rounded, color: colorScheme.primary, size: 20),
+                                  child: Icon(
+                                    Icons.book_rounded,
+                                    color: colorScheme.primary,
+                                    size: 20,
+                                  ),
                                 ),
                                 const SizedBox(width: AppSpacing.lg),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         '${entry.displaySubject} (${entry.batch})',
-                                        style: TextStyle(fontFamily: 'Inter', 
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
                                           fontSize: 16,
                                           fontWeight: FontWeight.w700,
                                           color: colorScheme.onSurface,
@@ -155,39 +171,71 @@ class PdfImportPreviewPage extends StatelessWidget {
                                       Wrap(
                                         spacing: AppSpacing.md,
                                         runSpacing: AppSpacing.xs,
-                                        crossAxisAlignment: WrapCrossAlignment.center,
+                                        crossAxisAlignment:
+                                            WrapCrossAlignment.center,
                                         children: [
                                           Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Icon(Icons.access_time_rounded, size: 14, color: sem.onSurfaceMuted),
-                                              const SizedBox(width: AppSpacing.xs),
+                                              Icon(
+                                                Icons.access_time_rounded,
+                                                size: 14,
+                                                color: sem.onSurfaceMuted,
+                                              ),
+                                              const SizedBox(
+                                                width: AppSpacing.xs,
+                                              ),
                                               Text(
-                                                TimetableManager.formatTime(entry.startTime, entry.endTime),
-                                                style: TextStyle(fontFamily: 'Inter', color: sem.onSurfaceMuted, fontSize: 13),
+                                                TimetableManager.formatTime(
+                                                  entry.startTime,
+                                                  entry.endTime,
+                                                ),
+                                                style: TextStyle(
+                                                  fontFamily: 'Inter',
+                                                  color: sem.onSurfaceMuted,
+                                                  fontSize: 13,
+                                                ),
                                               ),
                                             ],
                                           ),
                                           Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Icon(Icons.room_rounded, size: 14, color: sem.onSurfaceMuted),
-                                              const SizedBox(width: AppSpacing.xs),
+                                              Icon(
+                                                Icons.room_rounded,
+                                                size: 14,
+                                                color: sem.onSurfaceMuted,
+                                              ),
+                                              const SizedBox(
+                                                width: AppSpacing.xs,
+                                              ),
                                               Text(
                                                 entry.room ?? '',
-                                                style: TextStyle(fontFamily: 'Inter', color: sem.onSurfaceMuted, fontSize: 13),
+                                                style: TextStyle(
+                                                  fontFamily: 'Inter',
+                                                  color: sem.onSurfaceMuted,
+                                                  fontSize: 13,
+                                                ),
                                               ),
                                             ],
                                           ),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: AppSpacing.sm,
+                                              vertical: 2,
+                                            ),
                                             decoration: BoxDecoration(
-                                              color: colorScheme.primary.withValues(alpha: 0.1),
-                                              borderRadius: BorderRadius.circular(AppRadius.xs),
+                                              color: colorScheme.primary
+                                                  .withValues(alpha: 0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                    AppRadius.xs,
+                                                  ),
                                             ),
                                             child: Text(
                                               entry.category.name,
-                                              style: TextStyle(fontFamily: 'Inter', 
+                                              style: TextStyle(
+                                                fontFamily: 'Inter',
                                                 color: colorScheme.primary,
                                                 fontSize: 10,
                                                 fontWeight: FontWeight.w700,
@@ -232,7 +280,11 @@ class PdfImportPreviewPage extends StatelessWidget {
                 const SizedBox(width: AppSpacing.sm),
                 Text(
                   'Confirm & Import Timetable',
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),

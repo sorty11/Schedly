@@ -38,7 +38,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
 
   bool loading = false;
   bool _passwordVerified = false;
-  
+
   List<String> _uniqueSubjects = [];
 
   @override
@@ -63,12 +63,17 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
     setState(() => loading = true);
 
     try {
-      final doc = await FirebaseFirestore.instance.collection('sections').doc(widget.division).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('sections')
+          .doc(widget.division)
+          .get();
       if (!doc.exists) {
         throw AppException('Role configuration not found');
       }
       final data = doc.data()!;
-      final savedPassword = widget.role == 'CR' ? data['crPassword'] : data['srPassword'];
+      final savedPassword = widget.role == 'CR'
+          ? data['crPassword']
+          : data['srPassword'];
       if (passwordController.text.trim() != savedPassword) {
         throw AppException('Incorrect password');
       }
@@ -77,30 +82,39 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
         debugPrint('Writing to: users/uid directly from client');
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
-          await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-            'role': 'CR',
-            'division': widget.division,
-          }, SetOptions(merge: true));
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .set({
+                'role': 'CR',
+                'division': widget.division,
+              }, SetOptions(merge: true));
         }
 
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('selected_division', widget.division); 
-        
-        NotificationService.updateDivisionSubscription(widget.division).catchError((e) {
+        await prefs.setString('selected_division', widget.division);
+
+        NotificationService.updateDivisionSubscription(
+          widget.division,
+        ).catchError((e) {
           debugPrint('Notification error (ignored): $e');
         });
-        
+
         await AppSettings.saveRole(UserRole.cr);
 
         if (!mounted) return;
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => HomePage(division: widget.division)),
+          MaterialPageRoute(
+            builder: (_) => HomePage(division: widget.division),
+          ),
           (_) => false,
         );
       } else {
         // SR: Password verified locally for UI flow. Final verification happens during _performClaim.
-        final subjects = await TimetableManager.getUniqueSubjects(division: widget.division);
+        final subjects = await TimetableManager.getUniqueSubjects(
+          division: widget.division,
+        );
 
         if (!mounted) return;
         setState(() {
@@ -138,7 +152,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
     }
 
     setState(() => loading = true);
-    
+
     try {
       final assignmentId = subject.toLowerCase().replaceAll(' ', '_');
       final assignmentRef = FirebaseFirestore.instance
@@ -152,11 +166,11 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
       if (assignmentDoc.exists && assignmentDoc.data()?['srs'] is List) {
         activeSRs = List.from(assignmentDoc.data()!['srs']);
       }
-      
+
       if (activeSRs.length >= 2) {
         if (!mounted) return;
         setState(() => loading = false);
-        
+
         final userToReplace = await showDialog<String>(
           context: context,
           builder: (context) => AlertDialog(
@@ -165,15 +179,23 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('This subject already has two active Subject Representatives. Select an SR to transfer their role to yourself:'),
+                const Text(
+                  'This subject already has two active Subject Representatives. Select an SR to transfer their role to yourself:',
+                ),
                 const SizedBox(height: AppSpacing.lg),
-                ...activeSRs.map((sr) => ListTile(
-                  title: Text(sr.toString()),
-                  trailing: const Icon(Icons.swap_horiz_rounded),
-                  onTap: () => Navigator.pop(context, sr.toString()),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                  tileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                )),
+                ...activeSRs.map(
+                  (sr) => ListTile(
+                    title: Text(sr.toString()),
+                    trailing: const Icon(Icons.swap_horiz_rounded),
+                    onTap: () => Navigator.pop(context, sr.toString()),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    tileColor: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                  ),
+                ),
               ],
             ),
             actions: [
@@ -184,7 +206,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
             ],
           ),
         );
-        
+
         if (userToReplace != null) {
           await _performClaim(subject, activeSRs, userToReplace);
         }
@@ -202,24 +224,31 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
     }
   }
 
-  Future<void> _performClaim(String subject, List<dynamic> activeSRs, String? userToReplace) async {
+  Future<void> _performClaim(
+    String subject,
+    List<dynamic> activeSRs,
+    String? userToReplace,
+  ) async {
     setState(() => loading = true);
     try {
       final studentName = AppSettings.studentName ?? 'Unknown SR';
       final studentRoll = AppSettings.studentRollNo ?? '';
       final myIdentity = '$studentName ($studentRoll)';
-      
+
       debugPrint('Writing to: users/uid directly from client');
       final user = FirebaseAuth.instance.currentUser;
       final batch = FirebaseFirestore.instance.batch();
 
       if (user != null) {
-        batch.set(FirebaseFirestore.instance.collection('users').doc(user.uid), {
-          'role': 'SR',
-          'division': widget.division,
-        }, SetOptions(merge: true));
+        batch.set(
+          FirebaseFirestore.instance.collection('users').doc(user.uid),
+          {'role': 'SR', 'division': widget.division},
+          SetOptions(merge: true),
+        );
 
-        final actionRef = FirebaseFirestore.instance.collection('admin_actions').doc('${user.uid}_${widget.division}_sr');
+        final actionRef = FirebaseFirestore.instance
+            .collection('admin_actions')
+            .doc('${user.uid}_${widget.division}_sr');
         batch.set(actionRef, {
           'masterHash': SecurityUtils.masterHash,
           'action': 'claimSR',
@@ -233,10 +262,10 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
           .doc(widget.division)
           .collection('sr_assignments')
           .doc(assignmentId);
-      
+
       if (userToReplace != null) activeSRs.remove(userToReplace);
       if (!activeSRs.contains(myIdentity)) activeSRs.add(myIdentity);
-      
+
       batch.set(assignmentRef, {
         'srs': activeSRs,
         'timestamp': FieldValue.serverTimestamp(),
@@ -245,15 +274,17 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
       await batch.commit();
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('selected_division', widget.division); 
-      
-      NotificationService.updateDivisionSubscription(widget.division).catchError((e) {
+      await prefs.setString('selected_division', widget.division);
+
+      NotificationService.updateDivisionSubscription(
+        widget.division,
+      ).catchError((e) {
         debugPrint('Notification error (ignored): $e');
       });
-      
+
       await AppSettings.saveRole(UserRole.sr);
       await AppSettings.saveSRSection(sectionId: widget.division);
-      
+
       // We pass null for component and batch because the SR now manages the entire root subject
       await AppSettings.saveSRDetails(
         division: AppSettings.division ?? widget.division,
@@ -278,6 +309,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
       setState(() => loading = false);
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedAuthBackground(
@@ -287,7 +319,13 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          title: Text('${widget.role} Verification', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          title: Text(
+            '${widget.role} Verification',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           iconTheme: const IconThemeData(color: Colors.white),
         ),
         body: Center(
@@ -312,10 +350,7 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
       children: [
         Text(
           'Division: ${widget.division}',
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 20),
         TextField(
@@ -338,9 +373,15 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
                 ? const SizedBox(
                     height: 20,
                     width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
-                : const Text('Verify', style: TextStyle(fontWeight: FontWeight.bold)),
+                : const Text(
+                    'Verify',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
           ),
         ),
       ],
@@ -377,7 +418,8 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
                   children: [
                     Text(
                       'Select your assignment',
-                      style: TextStyle(fontFamily: 'Outfit', 
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.5,
@@ -386,7 +428,8 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       'Division: ${widget.division}',
-                      style: TextStyle(fontFamily: 'Inter', 
+                      style: TextStyle(
+                        fontFamily: 'Inter',
                         fontSize: 15,
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -407,78 +450,108 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
               )
             else
               SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final subject = _uniqueSubjects[index];
-                    final assignmentId = subject.toLowerCase().replaceAll(' ', '_');
-                    final srs = assignments[assignmentId] ?? [];
-                    final isFullyClaimed = srs.length >= 2;
-                    final displayStatus = srs.isEmpty 
-                        ? 'Available' 
-                        : srs.length == 1 
-                            ? '1/2 Claimed' 
-                            : 'Fully Claimed';
-                    
-                    return Padding(
-                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.sm),
-                      child: AnimatedCard(
-                        borderRadius: AppRadius.xl,
-                        onTap: loading ? null : () => _attemptClaim(subject),
-                        backgroundColor: isFullyClaimed 
-                            ? Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
-                            : Theme.of(context).colorScheme.surface,
-                        child: Container(
-                          padding: EdgeInsets.all(AppSpacing.md),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(AppRadius.xl),
-                            border: Border.all(
-                              color: isFullyClaimed
-                                  ? Theme.of(context).colorScheme.outlineVariant
-                                  : Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      subject,
-                                      style: TextStyle(fontFamily: 'Outfit', 
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w700,
-                                        color: isFullyClaimed ? Theme.of(context).colorScheme.onSurfaceVariant : Theme.of(context).colorScheme.onSurface,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      displayStatus,
-                                      style: TextStyle(fontFamily: 'Inter', 
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: isFullyClaimed 
-                                          ? Theme.of(context).colorScheme.onSurfaceVariant 
-                                          : Theme.of(context).colorScheme.primary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (isFullyClaimed)
-                                Icon(Icons.lock_rounded, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant)
-                              else
-                                Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Theme.of(context).colorScheme.primary),
-                            ],
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final subject = _uniqueSubjects[index];
+                  final assignmentId = subject.toLowerCase().replaceAll(
+                    ' ',
+                    '_',
+                  );
+                  final srs = assignments[assignmentId] ?? [];
+                  final isFullyClaimed = srs.length >= 2;
+                  final displayStatus = srs.isEmpty
+                      ? 'Available'
+                      : srs.length == 1
+                      ? '1/2 Claimed'
+                      : 'Fully Claimed';
+
+                  return Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.x2l,
+                      vertical: AppSpacing.sm,
+                    ),
+                    child: AnimatedCard(
+                      borderRadius: AppRadius.xl,
+                      onTap: loading ? null : () => _attemptClaim(subject),
+                      backgroundColor: isFullyClaimed
+                          ? Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withValues(alpha: 0.5)
+                          : Theme.of(context).colorScheme.surface,
+                      child: Container(
+                        padding: EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(AppRadius.xl),
+                          border: Border.all(
+                            color: isFullyClaimed
+                                ? Theme.of(context).colorScheme.outlineVariant
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.primary.withValues(alpha: 0.2),
                           ),
                         ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    subject,
+                                    style: TextStyle(
+                                      fontFamily: 'Outfit',
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: isFullyClaimed
+                                          ? Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant
+                                          : Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    displayStatus,
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: isFullyClaimed
+                                          ? Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant
+                                          : Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (isFullyClaimed)
+                              Icon(
+                                Icons.lock_rounded,
+                                size: 20,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              )
+                            else
+                              Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                size: 16,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                          ],
+                        ),
                       ),
-                    );
-                  },
-                  childCount: _uniqueSubjects.length,
-                ),
+                    ),
+                  );
+                }, childCount: _uniqueSubjects.length),
               ),
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.x6l)),
+            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.x6l)),
           ],
         );
       },

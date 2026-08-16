@@ -34,10 +34,27 @@ class _NavigationSidebarState extends State<NavigationSidebar> {
 
     final items = [
       _SidebarItem(Icons.home_outlined, Icons.home_rounded, 'Workspace'),
-      _SidebarItem(Icons.view_week_outlined, Icons.view_week_rounded, 'Timetable'),
-      _SidebarItem(Icons.insights_outlined, Icons.insights_rounded, 'Analytics'),
-      _SidebarItem(Icons.notifications_outlined, Icons.notifications_rounded, 'Updates', badge: widget.unreadCount),
-      _SidebarItem(Icons.account_circle_outlined, Icons.account_circle_rounded, 'Profile'),
+      _SidebarItem(
+        Icons.view_week_outlined,
+        Icons.view_week_rounded,
+        'Timetable',
+      ),
+      _SidebarItem(
+        Icons.insights_outlined,
+        Icons.insights_rounded,
+        'Analytics',
+      ),
+      _SidebarItem(
+        Icons.notifications_outlined,
+        Icons.notifications_rounded,
+        'Updates',
+        badge: widget.unreadCount,
+      ),
+      _SidebarItem(
+        Icons.account_circle_outlined,
+        Icons.account_circle_rounded,
+        'Profile',
+      ),
     ];
 
     final double targetWidth = _isHovered ? 220.0 : 64.0;
@@ -69,7 +86,9 @@ class _NavigationSidebarState extends State<NavigationSidebar> {
                     const SizedBox(height: AppSpacing.lg),
                     // Brand Mark / Workspace Icon
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
@@ -107,7 +126,7 @@ class _NavigationSidebarState extends State<NavigationSidebar> {
                                 overflow: TextOverflow.clip,
                               ),
                             ),
-                          ]
+                          ],
                         ],
                       ),
                     ),
@@ -125,14 +144,25 @@ class _NavigationSidebarState extends State<NavigationSidebar> {
                     }),
                     const Spacer(),
                     // Quick Action or Help (Minimal)
-                    if (_isHovered) 
+                    if (_isHovered)
                       Padding(
                         padding: const EdgeInsets.all(AppSpacing.md),
                         child: Row(
                           children: [
-                            Icon(Icons.help_outline, size: 16, color: sem.onSurfaceMuted),
+                            Icon(
+                              Icons.help_outline,
+                              size: 16,
+                              color: sem.onSurfaceMuted,
+                            ),
                             const SizedBox(width: AppSpacing.sm),
-                            Text('Help & Feedback', style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: sem.onSurfaceMuted)),
+                            Text(
+                              'Help & Feedback',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 12,
+                                color: sem.onSurfaceMuted,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -154,7 +184,12 @@ class _SidebarItem {
   final String label;
   final int badge;
 
-  const _SidebarItem(this.icon, this.selectedIcon, this.label, {this.badge = 0});
+  const _SidebarItem(
+    this.icon,
+    this.selectedIcon,
+    this.label, {
+    this.badge = 0,
+  });
 }
 
 class _SidebarNavItem extends StatefulWidget {
@@ -180,9 +215,12 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
   @override
   Widget build(BuildContext context) {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
-    
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         onEnter: (_) => setState(() => _isHovered = true),
@@ -198,8 +236,8 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
               color: widget.isSelected
                   ? sem.accent.withValues(alpha: 0.1)
                   : _isHovered
-                      ? sem.onSurfaceMuted.withValues(alpha: 0.05)
-                      : Colors.transparent,
+                  ? sem.onSurfaceMuted.withValues(alpha: 0.05)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Row(
@@ -216,7 +254,7 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
                     borderRadius: BorderRadius.circular(AppRadius.xs),
                   ),
                 ),
-                
+
                 // Icon Container
                 SizedBox(
                   width: 32,
@@ -226,8 +264,12 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
                       clipBehavior: Clip.none,
                       children: [
                         Icon(
-                          widget.isSelected ? widget.item.selectedIcon : widget.item.icon,
-                          color: widget.isSelected ? sem.accent : sem.onSurfaceMuted,
+                          widget.isSelected
+                              ? widget.item.selectedIcon
+                              : widget.item.icon,
+                          color: widget.isSelected
+                              ? sem.accent
+                              : sem.onSurfaceMuted,
                           size: AppIconSize.md,
                         ),
                         if (widget.item.badge > 0 && !widget.isExpanded)
@@ -237,7 +279,10 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
                             child: Container(
                               width: 8,
                               height: 8,
-                              decoration: BoxDecoration(color: sem.error, shape: BoxShape.circle),
+                              decoration: BoxDecoration(
+                                color: sem.error,
+                                shape: BoxShape.circle,
+                              ),
                             ),
                           ),
                       ],
@@ -254,8 +299,12 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 14,
-                        fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight.w500,
-                        color: widget.isSelected ? sem.accent : sem.onSurfaceMuted,
+                        fontWeight: widget.isSelected
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                        color: widget.isSelected
+                            ? sem.accent
+                            : sem.onSurfaceMuted,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.clip,
@@ -264,17 +313,25 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
                   if (widget.item.badge > 0)
                     Container(
                       margin: const EdgeInsets.only(right: AppSpacing.md),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: sem.error,
                         borderRadius: BorderRadius.circular(AppRadius.full),
                       ),
                       child: Text(
                         widget.item.badge.toString(),
-                        style: const TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                ]
+                ],
               ],
             ),
           ),

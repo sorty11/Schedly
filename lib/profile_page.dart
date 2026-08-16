@@ -36,10 +36,7 @@ import 'admin/section_management_page.dart';
 class ProfilePage extends StatefulWidget {
   final String division;
 
-  const ProfilePage({
-    super.key,
-    required this.division,
-  });
+  const ProfilePage({super.key, required this.division});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -90,7 +87,9 @@ class _ProfilePageState extends State<ProfilePage> {
       animation: themeController,
       builder: (context, _) {
         final colorScheme = Theme.of(context).colorScheme;
-        final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
+        final semanticColors = Theme.of(
+          context,
+        ).extension<AppSemanticColors>()!;
         final current = themeController.themeMode;
 
         return Container(
@@ -154,9 +153,7 @@ class _ProfilePageState extends State<ProfilePage> {
             horizontal: AppSpacing.sm,
           ),
           decoration: BoxDecoration(
-            color: selected
-                ? colorScheme.primary
-                : Colors.transparent,
+            color: selected ? colorScheme.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(AppRadius.lg),
             boxShadow: selected
                 ? [
@@ -164,7 +161,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       color: colorScheme.primary.withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
-                    )
+                    ),
                   ]
                 : null,
           ),
@@ -174,9 +171,7 @@ class _ProfilePageState extends State<ProfilePage> {
               Icon(
                 icon,
                 size: 18,
-                color: selected
-                    ? Colors.white
-                    : semanticColors.onSurfaceMuted,
+                color: selected ? Colors.white : semanticColors.onSurfaceMuted,
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
@@ -184,7 +179,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: selected ? Colors.white : semanticColors.onSurfaceMuted,
+                  color: selected
+                      ? Colors.white
+                      : semanticColors.onSurfaceMuted,
                 ),
               ),
             ],
@@ -277,10 +274,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
 
     if (targetId != null) {
-      return TutorialTarget(
-        id: targetId,
-        child: tile,
-      );
+      return TutorialTarget(id: targetId, child: tile);
     }
     return tile;
   }
@@ -300,10 +294,7 @@ class _ProfilePageState extends State<ProfilePage> {
         elevation: 0,
         title: Text(
           'My Profile',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-          ),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 20),
         ),
         centerTitle: true,
       ),
@@ -383,15 +374,20 @@ class _ProfilePageState extends State<ProfilePage> {
                             color: colorScheme.primary.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(AppRadius.full),
                             border: Border.all(
-                              color: colorScheme.primary.withValues(alpha: 0.18),
+                              color: colorScheme.primary.withValues(
+                                alpha: 0.18,
+                              ),
                               width: 1,
                             ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.badge_rounded,
-                                  size: 13, color: colorScheme.primary),
+                              Icon(
+                                Icons.badge_rounded,
+                                size: 13,
+                                color: colorScheme.primary,
+                              ),
                               const SizedBox(width: AppSpacing.xs),
                               Text(
                                 AppSettings.studentRollNo!,
@@ -414,8 +410,9 @@ class _ProfilePageState extends State<ProfilePage> {
                           _infoChip(
                             icon: Icons.class_rounded,
                             label: widget.division,
-                            bgColor:
-                                semanticColors.accent.withValues(alpha: 0.1),
+                            bgColor: semanticColors.accent.withValues(
+                              alpha: 0.1,
+                            ),
                             textColor: semanticColors.accent,
                           ),
                           const SizedBox(width: AppSpacing.sm),
@@ -423,11 +420,12 @@ class _ProfilePageState extends State<ProfilePage> {
                             icon: isCR
                                 ? Icons.star_rounded
                                 : isSR
-                                    ? Icons.assignment_ind_rounded
-                                    : Icons.school_rounded,
+                                ? Icons.assignment_ind_rounded
+                                : Icons.school_rounded,
                             label: roleText,
-                            bgColor:
-                                colorScheme.secondary.withValues(alpha: 0.1),
+                            bgColor: colorScheme.secondary.withValues(
+                              alpha: 0.1,
+                            ),
                             textColor: colorScheme.secondary,
                           ),
                           if (isSR && AppSettings.srSubject != null) ...[
@@ -435,8 +433,9 @@ class _ProfilePageState extends State<ProfilePage> {
                             _infoChip(
                               icon: Icons.menu_book_rounded,
                               label: AppSettings.srSubject!,
-                              bgColor: semanticColors.success
-                                  .withValues(alpha: 0.1),
+                              bgColor: semanticColors.success.withValues(
+                                alpha: 0.1,
+                              ),
                               textColor: semanticColors.success,
                             ),
                           ],
@@ -449,7 +448,9 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
 
             // 🎓 Academic Profile 🎓
-            if (!isCR && !isSR && AppSettings.currentRole == UserRole.student) ...[
+            if (!isCR &&
+                !isSR &&
+                AppSettings.currentRole == UserRole.student) ...[
               _sectionHeader('Academic Profile'),
               StaggeredListItem(
                 index: 1, // reuse index for animation
@@ -457,7 +458,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   _buildRoleTile(
                     icon: Icons.group_work_rounded,
                     title: 'My Batch',
-                    subtitle: AppSettings.studentBatch ?? 'Tap to select your batch (e.g., C1)',
+                    subtitle:
+                        AppSettings.studentBatch ??
+                        'Tap to select your batch (e.g., C1)',
                     iconColor: colorScheme.primary,
                     onTap: () => _showBatchSelector(context),
                   ),
@@ -467,10 +470,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
             // ── Appearance section ────────────────────────────────────────
             _sectionHeader('Appearance'),
-            StaggeredListItem(
-              index: 1,
-              child: _buildAppearanceSegment(),
-            ),
+            StaggeredListItem(index: 1, child: _buildAppearanceSegment()),
 
             // ── My Role section ───────────────────────────────────────────
             _sectionHeader('My Role'),
@@ -592,7 +592,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   onTap: () async {
                     await TutorialStorageService.resetAll();
                     if (!context.mounted) return;
-                    OnboardingService.instance.startRoleTour(context, AppSettings.currentRole);
+                    OnboardingService.instance.startRoleTour(
+                      context,
+                      AppSettings.currentRole,
+                    );
                   },
                 ),
               ]),
@@ -645,7 +648,12 @@ class _ProfilePageState extends State<ProfilePage> {
                   subtitle: 'Manage student profiles',
                   iconColor: colorScheme.primary,
                   onTap: () => _executeAdminAction(() {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentManagementPage()));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const StudentManagementPage(),
+                      ),
+                    );
                   }),
                 ),
                 _buildRoleTile(
@@ -654,7 +662,12 @@ class _ProfilePageState extends State<ProfilePage> {
                   subtitle: 'Manage faculty profiles',
                   iconColor: colorScheme.primary,
                   onTap: () => _executeAdminAction(() {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const FacultyManagementPage()));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const FacultyManagementPage(),
+                      ),
+                    );
                   }),
                 ),
                 _buildRoleTile(
@@ -663,7 +676,12 @@ class _ProfilePageState extends State<ProfilePage> {
                   subtitle: 'Create, edit, clone and archive sections',
                   iconColor: colorScheme.primary,
                   onTap: () => _executeAdminAction(() {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const SectionManagementPage()));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SectionManagementPage(),
+                      ),
+                    );
                   }),
                 ),
               ]),
@@ -682,7 +700,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const AboutSchedlyPage()),
+                      MaterialPageRoute(
+                        builder: (_) => const AboutSchedlyPage(),
+                      ),
                     );
                   },
                 ),
@@ -713,7 +733,8 @@ class _ProfilePageState extends State<ProfilePage> {
                     final confirmed = await AppDialogs.showConfirm(
                       context: context,
                       title: 'Reset App & Logout',
-                      message: 'Are you sure you want to clear all local data and sign out?',
+                      message:
+                          'Are you sure you want to clear all local data and sign out?',
                       confirmText: 'Logout',
                       isDestructive: true,
                     );
@@ -759,10 +780,7 @@ class _ProfilePageState extends State<ProfilePage> {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(AppRadius.full),
-        border: Border.all(
-          color: textColor.withValues(alpha: 0.18),
-          width: 1,
-        ),
+        border: Border.all(color: textColor.withValues(alpha: 0.18), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -791,7 +809,9 @@ class _ProfilePageState extends State<ProfilePage> {
         isScrollControlled: true,
         backgroundColor: Theme.of(context).colorScheme.surface,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppRadius.xl),
+          ),
         ),
         builder: (ctx) => AdminAuthSheet(onSuccess: action),
       );
@@ -805,7 +825,10 @@ class _ProfilePageState extends State<ProfilePage> {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('My Batch', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+        title: Text(
+          'My Batch',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+        ),
         content: Form(
           key: formKey,
           child: TextFormField(
@@ -849,11 +872,10 @@ class _ProfilePageState extends State<ProfilePage> {
       }
       if (mounted) setState(() {});
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Batch updated to $result')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Batch updated to $result')));
       }
     }
   }
 }
-

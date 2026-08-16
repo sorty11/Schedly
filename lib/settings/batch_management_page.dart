@@ -28,7 +28,10 @@ class _BatchManagementPageState extends State<BatchManagementPage> {
   Future<void> _fetchBatches() async {
     setState(() => _isLoading = true);
     try {
-      final doc = await FirebaseFirestore.instance.collection('sections').doc(AppSettings.division).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('sections')
+          .doc(AppSettings.division)
+          .get();
       if (doc.exists) {
         final data = doc.data()!;
         _batches = List<String>.from(data['batches'] ?? []);
@@ -52,25 +55,38 @@ class _BatchManagementPageState extends State<BatchManagementPage> {
       builder: (ctx) => const Center(child: CircularProgressIndicator()),
     );
     try {
-      await FirebaseFirestore.instance.collection('sections').doc(AppSettings.division).update({
-        'batchNames': _batchNames,
-      });
+      await FirebaseFirestore.instance
+          .collection('sections')
+          .doc(AppSettings.division)
+          .update({'batchNames': _batchNames});
       if (!mounted) return;
       Navigator.pop(context);
-      AppDialogs.showSnackBar(context: context, message: 'Batch names updated successfully');
+      AppDialogs.showSnackBar(
+        context: context,
+        message: 'Batch names updated successfully',
+      );
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
-      AppDialogs.showSnackBar(context: context, message: 'Failed to update batch names', isError: true);
+      AppDialogs.showSnackBar(
+        context: context,
+        message: 'Failed to update batch names',
+        isError: true,
+      );
     }
   }
 
   void _editBatchName(String batchId) {
-    final controller = TextEditingController(text: _batchNames[batchId] ?? batchId);
+    final controller = TextEditingController(
+      text: _batchNames[batchId] ?? batchId,
+    );
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Rename $batchId', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        title: Text(
+          'Rename $batchId',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(
@@ -88,7 +104,8 @@ class _BatchManagementPageState extends State<BatchManagementPage> {
           TextButton(
             onPressed: () {
               setState(() {
-                if (controller.text.trim().isEmpty || controller.text.trim() == batchId) {
+                if (controller.text.trim().isEmpty ||
+                    controller.text.trim() == batchId) {
                   _batchNames.remove(batchId);
                 } else {
                   _batchNames[batchId] = controller.text.trim();
@@ -103,13 +120,18 @@ class _BatchManagementPageState extends State<BatchManagementPage> {
       ),
     );
   }
-  
+
   void _resetToDefault() {
-     showDialog(
+    showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Reset to Default', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        content: const Text('Are you sure you want to remove all custom batch names? This will restore the default IDs.'),
+        title: Text(
+          'Reset to Default',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Are you sure you want to remove all custom batch names? This will restore the default IDs.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -138,7 +160,10 @@ class _BatchManagementPageState extends State<BatchManagementPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Manage Batches', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+        title: Text(
+          'Manage Batches',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+        ),
         centerTitle: true,
         scrolledUnderElevation: 0,
         actions: [
@@ -152,71 +177,76 @@ class _BatchManagementPageState extends State<BatchManagementPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _batches.isEmpty || (_batches.length == 1 && _batches.first == 'Whole Class')
-              ? const Center(child: Text('No split batches defined in section.'))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(AppSpacing.x2l),
-                  itemCount: _batches.length,
-                  itemBuilder: (context, index) {
-                    final batchId = _batches[index];
-                    if (batchId == 'Whole Class') return const SizedBox.shrink();
-                    final customName = _batchNames[batchId];
+          : _batches.isEmpty ||
+                (_batches.length == 1 && _batches.first == 'Whole Class')
+          ? const Center(child: Text('No split batches defined in section.'))
+          : ListView.builder(
+              padding: const EdgeInsets.all(AppSpacing.x2l),
+              itemCount: _batches.length,
+              itemBuilder: (context, index) {
+                final batchId = _batches[index];
+                if (batchId == 'Whole Class') return const SizedBox.shrink();
+                final customName = _batchNames[batchId];
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                      child: AnimatedCard(
-                        onTap: () => _editBatchName(batchId),
-                        child: Container(
-                          padding: const EdgeInsets.all(AppSpacing.lg),
-                          decoration: BoxDecoration(
-                            color: cs.surface,
-                            borderRadius: BorderRadius.circular(AppRadius.lg),
-                            border: Border.all(color: sem.borderSubtle),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(AppSpacing.sm),
-                                decoration: BoxDecoration(
-                                  color: cs.primary.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                ),
-                                child: Icon(Icons.group_rounded, color: cs.primary),
-                              ),
-                              const SizedBox(width: AppSpacing.lg),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      customName ?? batchId,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: cs.onSurface,
-                                      ),
-                                    ),
-                                    if (customName != null) ...[
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Original ID: $batchId',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          color: sem.onSurfaceMuted,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              Icon(Icons.edit_rounded, color: sem.onSurfaceFaint, size: 20),
-                            ],
-                          ),
-                        ),
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  child: AnimatedCard(
+                    onTap: () => _editBatchName(batchId),
+                    child: Container(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      decoration: BoxDecoration(
+                        color: cs.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        border: Border.all(color: sem.borderSubtle),
                       ),
-                    );
-                  },
-                ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(AppSpacing.sm),
+                            decoration: BoxDecoration(
+                              color: cs.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                            ),
+                            child: Icon(Icons.group_rounded, color: cs.primary),
+                          ),
+                          const SizedBox(width: AppSpacing.lg),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  customName ?? batchId,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: cs.onSurface,
+                                  ),
+                                ),
+                                if (customName != null) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Original ID: $batchId',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: sem.onSurfaceMuted,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.edit_rounded,
+                            color: sem.onSurfaceFaint,
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }

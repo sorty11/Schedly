@@ -17,7 +17,8 @@ class AttendanceSimulatorSheet extends StatefulWidget {
   });
 
   @override
-  State<AttendanceSimulatorSheet> createState() => _AttendanceSimulatorSheetState();
+  State<AttendanceSimulatorSheet> createState() =>
+      _AttendanceSimulatorSheetState();
 }
 
 class _AttendanceSimulatorSheetState extends State<AttendanceSimulatorSheet> {
@@ -59,41 +60,74 @@ class _AttendanceSimulatorSheetState extends State<AttendanceSimulatorSheet> {
         children: [
           Text(
             'Scenario Simulator',
-            style: TextStyle(fontFamily: 'Inter', fontSize: 18, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           Text(
             '${widget.record.subjectCode} ${widget.record.component}',
-            style: TextStyle(fontFamily: 'Inter', fontSize: 14, color: sem.onSurfaceMuted),
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              color: sem.onSurfaceMuted,
+            ),
           ),
           const SizedBox(height: AppSpacing.x3l),
-          
+
           // Current vs Projected
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               Column(
                 children: [
-                  Text('Current', style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: sem.onSurfaceMuted)),
+                  Text(
+                    'Current',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      color: sem.onSurfaceMuted,
+                    ),
+                  ),
                   Text(
                     '${(widget.record.percentage * 100).round()}%',
-                    style: TextStyle(fontFamily: 'Outfit', fontSize: 28, fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ],
               ),
               Icon(Icons.arrow_forward_rounded, color: sem.onSurfaceMuted),
               Column(
                 children: [
-                  Text('Projected', style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: sem.onSurfaceMuted)),
+                  Text(
+                    'Projected',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      color: sem.onSurfaceMuted,
+                    ),
+                  ),
                   Row(
                     children: [
                       Text(
                         '${(simulatedPct * 100).round()}%',
-                        style: TextStyle(fontFamily: 'Outfit', fontSize: 32, fontWeight: FontWeight.w800, color: projectedColor),
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          color: projectedColor,
+                        ),
                       ),
                       if (diff.abs() >= 0.005) ...[
                         const SizedBox(width: 4),
                         Icon(
-                          isPositive ? Icons.arrow_upward : Icons.arrow_downward,
+                          isPositive
+                              ? Icons.arrow_upward
+                              : Icons.arrow_downward,
                           size: 16,
                           color: isPositive ? sem.conducted : sem.cancelled,
                         ),
@@ -104,9 +138,9 @@ class _AttendanceSimulatorSheetState extends State<AttendanceSimulatorSheet> {
               ),
             ],
           ),
-          
+
           const SizedBox(height: AppSpacing.x3l),
-          
+
           // Controls
           SchedlyCard(
             variant: SchedlyCardVariant.standard,
@@ -132,14 +166,21 @@ class _AttendanceSimulatorSheetState extends State<AttendanceSimulatorSheet> {
               ],
             ),
           ),
-          
+
           const SizedBox(height: AppSpacing.x3l),
           SizedBox(
             width: double.infinity,
             height: 52,
             child: FilledButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Done', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
+              child: Text(
+                'Done',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ],
@@ -169,7 +210,14 @@ class _StepperRow extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Text(label, style: TextStyle(fontFamily: 'Inter', fontSize: 15, fontWeight: FontWeight.w500)),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ),
         Row(
           children: [
@@ -184,7 +232,12 @@ class _StepperRow extends StatelessWidget {
               child: Text(
                 '$value',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'Inter', fontSize: 18, fontWeight: FontWeight.w700, color: color),
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
               ),
             ),
             _CircleButton(
@@ -206,15 +259,22 @@ class _CircleButton extends StatelessWidget {
   final bool isDark;
   final AppSemanticColors sem;
 
-  const _CircleButton({required this.icon, this.onTap, required this.isDark, required this.sem});
+  const _CircleButton({
+    required this.icon,
+    this.onTap,
+    required this.isDark,
+    required this.sem,
+  });
 
   @override
   Widget build(BuildContext context) {
     final enabled = onTap != null;
     return Material(
-      color: enabled 
+      color: enabled
           ? (isDark ? Colors.white12 : const Color(0xFFF3F4F6))
-          : (isDark ? Colors.white.withValues(alpha: 0.02) : const Color(0xFFFAFAFA)),
+          : (isDark
+                ? Colors.white.withValues(alpha: 0.02)
+                : const Color(0xFFFAFAFA)),
       shape: const CircleBorder(),
       child: InkWell(
         onTap: onTap,
@@ -224,7 +284,9 @@ class _CircleButton extends StatelessWidget {
           child: Icon(
             icon,
             size: 20,
-            color: enabled ? (isDark ? Colors.white : Colors.black87) : sem.borderSubtle,
+            color: enabled
+                ? (isDark ? Colors.white : Colors.black87)
+                : sem.borderSubtle,
           ),
         ),
       ),

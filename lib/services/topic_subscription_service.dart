@@ -9,11 +9,14 @@ class TopicSubscriptionService {
     return topic.replaceAll(RegExp(r'[^a-zA-Z0-9-_.~%]'), '_');
   }
 
-  static Future<void> updateSubscriptions(String division, String role, {String? batch}) async {
+  static Future<void> updateSubscriptions(
+    String division,
+    String role, {
+    String? batch,
+  }) async {
     if (kIsWeb) return; // FCM topics are not supported natively on Flutter Web
-    
+
     try {
-      
       if (role == 'faculty') {
         // Faculty ONLY subscribe to their faculty topic, they do not subscribe to division/batch topics
         // to prevent receiving CR/Student generic alerts.
@@ -35,7 +38,7 @@ class TopicSubscriptionService {
     if (kIsWeb) return;
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       final oldTopic = prefs.getString('current_fcm_topic');
       if (oldTopic != null) {
         await unsubscribeDivision(oldTopic);
@@ -62,7 +65,7 @@ class TopicSubscriptionService {
     if (kIsWeb) return;
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       final oldTopic = prefs.getString('current_fcm_topic');
       if (oldTopic != null) {
         await unsubscribeDivision(oldTopic);
@@ -94,10 +97,13 @@ class TopicSubscriptionService {
     }
   }
 
-  static Future<void> _updateRoleSubscription(String division, String role) async {
+  static Future<void> _updateRoleSubscription(
+    String division,
+    String role,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     final oldRoleTopic = prefs.getString('current_fcm_role_topic');
-    
+
     if (oldRoleTopic != null) {
       await unsubscribeRole(oldRoleTopic);
       await prefs.remove('current_fcm_role_topic');
@@ -118,17 +124,23 @@ class TopicSubscriptionService {
     }
   }
 
-  static Future<void> _updateBatchSubscription(String division, String batch) async {
+  static Future<void> _updateBatchSubscription(
+    String division,
+    String batch,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     final oldBatchTopic = prefs.getString('current_fcm_batch_topic');
-    final newBatchTopic = 'batch_${sanitizeTopic(batch)}_${sanitizeTopic(division)}';
+    final newBatchTopic =
+        'batch_${sanitizeTopic(batch)}_${sanitizeTopic(division)}';
 
     if (oldBatchTopic != null && oldBatchTopic != newBatchTopic) {
       await unsubscribeBatch(oldBatchTopic);
     }
 
     if (oldBatchTopic != newBatchTopic) {
-      debugPrint('TopicSubscriptionService: Subscribing to batch topic: $newBatchTopic');
+      debugPrint(
+        'TopicSubscriptionService: Subscribing to batch topic: $newBatchTopic',
+      );
       await subscribeBatch(newBatchTopic);
       await prefs.setString('current_fcm_batch_topic', newBatchTopic);
     }

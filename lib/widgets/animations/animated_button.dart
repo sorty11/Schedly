@@ -29,7 +29,8 @@ class AnimatedButton extends StatefulWidget {
   State<AnimatedButton> createState() => _AnimatedButtonState();
 }
 
-class _AnimatedButtonState extends State<AnimatedButton> with SingleTickerProviderStateMixin {
+class _AnimatedButtonState extends State<AnimatedButton>
+    with SingleTickerProviderStateMixin {
   late AnimationController _pressController;
   late Animation<double> _pressScaleAnimation;
 
@@ -65,7 +66,7 @@ class _AnimatedButtonState extends State<AnimatedButton> with SingleTickerProvid
     if (widget.onPressed == null || widget.isLoading) return;
     _pressController.reverse();
   }
-  
+
   void _handleTapCancel() {
     if (widget.onPressed == null || widget.isLoading) return;
     _pressController.reverse();
@@ -95,9 +96,9 @@ class _AnimatedButtonState extends State<AnimatedButton> with SingleTickerProvid
           animation: _pressController,
           builder: (context, child) {
             final matrix = Matrix4.diagonal3Values(
-              _pressScaleAnimation.value, 
-              _pressScaleAnimation.value, 
-              1.0
+              _pressScaleAnimation.value,
+              _pressScaleAnimation.value,
+              1.0,
             );
 
             return Transform(
@@ -109,29 +110,36 @@ class _AnimatedButtonState extends State<AnimatedButton> with SingleTickerProvid
                 padding: widget.padding,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(widget.borderRadius),
-                  color: disabled ? theme.colorScheme.surfaceContainerHighest : bgColor,
+                  color: disabled
+                      ? theme.colorScheme.surfaceContainerHighest
+                      : bgColor,
                 ),
                 child: Material(
                   color: Colors.transparent,
                   child: Center(
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 200),
-                      child: widget.isLoading 
-                        ? SizedBox(
-                            width: 20, 
-                            height: 20, 
-                            child: CircularProgressIndicator(color: fgColor, strokeWidth: 2), // Keep minimal spinner but styled thin
-                          )
-                        : DefaultTextStyle(
-                            key: const ValueKey('text'),
-                            style: TextStyle(
-                              color: disabled ? theme.colorScheme.onSurfaceVariant : fgColor,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: -0.2,
+                      child: widget.isLoading
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: fgColor,
+                                strokeWidth: 2,
+                              ), // Keep minimal spinner but styled thin
+                            )
+                          : DefaultTextStyle(
+                              key: const ValueKey('text'),
+                              style: TextStyle(
+                                color: disabled
+                                    ? theme.colorScheme.onSurfaceVariant
+                                    : fgColor,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: -0.2,
+                              ),
+                              child: widget.child,
                             ),
-                            child: widget.child,
-                          ),
                     ),
                   ),
                 ),

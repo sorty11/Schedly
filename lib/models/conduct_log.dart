@@ -21,11 +21,11 @@ class LogAudit {
     return LogAudit(
       markedBy: data['markedBy'] ?? 'Unknown',
       markedByUid: data['markedByUid'] ?? '',
-      clientTimestamp: data['clientTimestamp'] != null 
-          ? DateTime.parse(data['clientTimestamp']) 
+      clientTimestamp: data['clientTimestamp'] != null
+          ? DateTime.parse(data['clientTimestamp'])
           : DateTime.now(),
-      serverTimestamp: data['serverTimestamp'] != null 
-          ? (data['serverTimestamp'] as Timestamp).toDate() 
+      serverTimestamp: data['serverTimestamp'] != null
+          ? (data['serverTimestamp'] as Timestamp).toDate()
           : null,
       verifiedByFaculty: data['verifiedByFaculty'] ?? false,
     );
@@ -69,15 +69,17 @@ class ConductLog {
 
   factory ConductLog.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
-    
-    // Fallback logic for legacy data if needed, but since we are wiping old logs, 
+
+    // Fallback logic for legacy data if needed, but since we are wiping old logs,
     // we assume the data conforms to the new schema.
     final origData = data['originalSlot'] as Map<String, dynamic>? ?? {};
     final origSlot = TimetableEntry(
       id: 'embedded_slot',
       subject: origData['subject'] ?? '',
       component: origData['component'] ?? 'Theory',
-      category: EventCategoryExtension.fromString(origData['category'] ?? 'academic'),
+      category: EventCategoryExtension.fromString(
+        origData['category'] ?? 'academic',
+      ),
       batch: origData['batch'] ?? 'Whole Class',
       startTime: origData['startTime'] ?? 0,
       endTime: origData['endTime'] ?? 0,
@@ -92,8 +94,8 @@ class ConductLog {
       actualSubject: data['actualSubject'],
       actualComponent: data['actualComponent'],
       actualBatch: data['actualBatch'],
-      actualCategory: data['actualCategory'] != null 
-          ? EventCategoryExtension.fromString(data['actualCategory']) 
+      actualCategory: data['actualCategory'] != null
+          ? EventCategoryExtension.fromString(data['actualCategory'])
           : null,
       durationMinutes: data['durationMinutes'] ?? origSlot.durationMinutes,
       status: data['status'] ?? 'pending',
@@ -116,7 +118,8 @@ class ConductLog {
       if (actualSubject != null) 'actualSubject': actualSubject,
       if (actualComponent != null) 'actualComponent': actualComponent,
       if (actualBatch != null) 'actualBatch': actualBatch,
-      if (actualCategory != null) 'actualCategory': actualCategory!.name.toLowerCase(),
+      if (actualCategory != null)
+        'actualCategory': actualCategory!.name.toLowerCase(),
       'durationMinutes': durationMinutes,
       'status': status,
       'audit': audit.toMap(),

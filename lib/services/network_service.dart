@@ -5,7 +5,7 @@ class NetworkService {
   static Future<bool> isOnline() async {
     final connectivityResult = await Connectivity().checkConnectivity();
     if (connectivityResult.contains(ConnectivityResult.none)) {
-      // In some cases, it might return [none, wifi] if wifi is connected but no internet, 
+      // In some cases, it might return [none, wifi] if wifi is connected but no internet,
       // but usually none means no active network interface.
       // Actually, if 'none' is the ONLY result, then we are offline.
       if (connectivityResult.length == 1) {

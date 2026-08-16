@@ -34,7 +34,8 @@ class _UpdatesPageState extends State<UpdatesPage>
 
   Future<String?> _getDivision() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('section_id') ?? prefs.getString('selected_division');
+    return prefs.getString('section_id') ??
+        prefs.getString('selected_division');
   }
 
   @override
@@ -173,33 +174,50 @@ class _ChangesTabState extends State<_ChangesTab> {
 
   Color _typeColor(String type, AppSemanticColors sem) {
     switch (type) {
-      case 'cancel': return sem.cancelled;
-      case 'add': return sem.success;
-      case 'room_change': return sem.rescheduled;
-      case 'time_change': return sem.warning;
-      default: return sem.onSurfaceMuted;
+      case 'cancel':
+        return sem.cancelled;
+      case 'add':
+        return sem.success;
+      case 'room_change':
+        return sem.rescheduled;
+      case 'time_change':
+        return sem.warning;
+      default:
+        return sem.onSurfaceMuted;
     }
   }
 
   IconData _typeIcon(String type) {
     switch (type) {
-      case 'cancel': return Icons.cancel_rounded;
-      case 'add': return Icons.add_circle_rounded;
-      case 'room_change': return Icons.meeting_room_rounded;
-      case 'time_change': return Icons.update_rounded;
-      case 'edit': return Icons.edit_rounded;
-      default: return Icons.notifications_rounded;
+      case 'cancel':
+        return Icons.cancel_rounded;
+      case 'add':
+        return Icons.add_circle_rounded;
+      case 'room_change':
+        return Icons.meeting_room_rounded;
+      case 'time_change':
+        return Icons.update_rounded;
+      case 'edit':
+        return Icons.edit_rounded;
+      default:
+        return Icons.notifications_rounded;
     }
   }
 
   String _typeLabel(String type) {
     switch (type) {
-      case 'cancel': return 'Cancelled';
-      case 'add': return 'Added';
-      case 'room_change': return 'Room Changed';
-      case 'time_change': return 'Rescheduled';
-      case 'edit': return 'Updated';
-      default: return 'Update';
+      case 'cancel':
+        return 'Cancelled';
+      case 'add':
+        return 'Added';
+      case 'room_change':
+        return 'Room Changed';
+      case 'time_change':
+        return 'Rescheduled';
+      case 'edit':
+        return 'Updated';
+      default:
+        return 'Update';
     }
   }
 
@@ -219,8 +237,10 @@ class _ChangesTabState extends State<_ChangesTab> {
         final docs = snapshot.data?.docs ?? [];
         // Filter out announcement-type notifications
         final changes = docs
-            .where((d) =>
-                (d.data() as Map<String, dynamic>)['type'] != 'announcement')
+            .where(
+              (d) =>
+                  (d.data() as Map<String, dynamic>)['type'] != 'announcement',
+            )
             .toList();
 
         if (changes.isEmpty) {
@@ -255,9 +275,7 @@ class _ChangesTabState extends State<_ChangesTab> {
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(AppRadius.xl),
-                      border: Border(
-                        left: BorderSide(color: color, width: 3),
-                      ),
+                      border: Border(left: BorderSide(color: color, width: 3)),
                     ),
                     child: Padding(
                       padding: EdgeInsets.all(AppSpacing.xl),
@@ -286,7 +304,9 @@ class _ChangesTabState extends State<_ChangesTab> {
                                       ),
                                       decoration: BoxDecoration(
                                         color: color.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(AppRadius.full),
+                                        borderRadius: BorderRadius.circular(
+                                          AppRadius.full,
+                                        ),
                                       ),
                                       child: Text(
                                         label.toUpperCase(),
@@ -353,17 +373,23 @@ class _AnnouncementsTabState extends State<_AnnouncementsTab> {
 
   Color _priorityColor(String priority, AppSemanticColors sem) {
     switch (priority.toLowerCase()) {
-      case 'high': return sem.cancelled;   // Red
-      case 'low':  return sem.conducted;   // Green
-      default:     return sem.warning;     // Amber for Normal
+      case 'high':
+        return sem.cancelled; // Red
+      case 'low':
+        return sem.conducted; // Green
+      default:
+        return sem.warning; // Amber for Normal
     }
   }
 
   IconData _priorityIcon(String priority) {
     switch (priority.toLowerCase()) {
-      case 'high': return Icons.priority_high_rounded;
-      case 'low':  return Icons.keyboard_arrow_down_rounded;
-      default:     return Icons.campaign_rounded;
+      case 'high':
+        return Icons.priority_high_rounded;
+      case 'low':
+        return Icons.keyboard_arrow_down_rounded;
+      default:
+        return Icons.campaign_rounded;
     }
   }
 
@@ -414,7 +440,9 @@ class _AnnouncementsTabState extends State<_AnnouncementsTab> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(AppRadius.xl),
                       border: Border.all(
-                        color: isDark ? sem.borderSubtle : const Color(0xFFE8E8F0),
+                        color: isDark
+                            ? sem.borderSubtle
+                            : const Color(0xFFE8E8F0),
                         width: 1,
                       ),
                     ),
@@ -432,7 +460,9 @@ class _AnnouncementsTabState extends State<_AnnouncementsTab> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: color.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(AppRadius.full),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.full,
+                                  ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -467,9 +497,11 @@ class _AnnouncementsTabState extends State<_AnnouncementsTab> {
                           const SizedBox(height: AppSpacing.sm),
                           Text(
                             data['message']?.toString() ?? '',
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                            ),
+                            style: Theme.of(context).textTheme.bodyLarge
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.7),
+                                ),
                           ),
                         ],
                       ),

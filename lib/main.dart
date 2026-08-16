@@ -23,21 +23,19 @@ import 'account_migration_page.dart';
 import 'onboarding_wizard_page.dart';
 import 'widgets/animations/skeleton_components.dart';
 
-
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   debugPrint("Handling a background message: ${message.messageId}");
-  
+
   // Since Android displays notification payloads automatically, we only need to handle data-only
-  // messages if we want to show a custom local notification. If it's a notification payload, 
+  // messages if we want to show a custom local notification. If it's a notification payload,
   // the OS handles it in the background!
-  
-  // Wait, our backend sends both data and notification payloads so Android OS will automatically 
+
+  // Wait, our backend sends both data and notification payloads so Android OS will automatically
   // display the banner in the background. We don't strictly need to call LocalNotificationService.show() here
   // unless we want to override the default behavior or if it's data-only.
 }
-
 
 late final ThemeController themeController;
 final Stopwatch appStartupTimer = Stopwatch();
@@ -45,7 +43,6 @@ final Stopwatch appStartupTimer = Stopwatch();
 Future<void> main() async {
   appStartupTimer.start();
   WidgetsFlutterBinding.ensureInitialized();
-  
 
   if (kIsWeb) {
     await Firebase.initializeApp(
@@ -73,7 +70,8 @@ Future<void> main() async {
   }
 
   FirebaseFirestore.instance.settings = Settings(
-    persistenceEnabled: !kIsWeb, // Disabled on Web to prevent BloomFilter crashes
+    persistenceEnabled:
+        !kIsWeb, // Disabled on Web to prevent BloomFilter crashes
     cacheSizeBytes: 104857600, // 100 MB
   );
 
@@ -82,7 +80,7 @@ Future<void> main() async {
 
   final prefs = await SharedPreferences.getInstance();
   themeController = ThemeController(prefs);
-  
+
   // Run these concurrently to speed up initialization
   await Future.wait([
     AppSettings.loadRole(),
@@ -96,10 +94,9 @@ Future<void> main() async {
   NotificationService.initialize();
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   LocalNotificationService.initialize();
-  
+
   runApp(const SchedlyApp());
 }
-
 
 class SchedlyApp extends StatelessWidget {
   const SchedlyApp({super.key});
@@ -122,7 +119,7 @@ class SchedlyApp extends StatelessWidget {
           },
           home: const StartupRouter(),
         );
-      }
+      },
     );
   }
 }
@@ -131,12 +128,10 @@ class StartupRouter extends StatefulWidget {
   const StartupRouter({super.key});
 
   @override
-  State<StartupRouter> createState() =>
-      _StartupRouterState();
+  State<StartupRouter> createState() => _StartupRouterState();
 }
 
-class _StartupRouterState
-    extends State<StartupRouter> {
+class _StartupRouterState extends State<StartupRouter> {
   @override
   void initState() {
     super.initState();
@@ -150,21 +145,33 @@ class _StartupRouterState
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const OnboardingFlow()));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const OnboardingFlow()),
+      );
       return;
     }
 
     if (user.isAnonymous) {
       final legacyDivision = prefs.getString('selected_division');
-      if (AppSettings.sectionId != null || AppSettings.facultyName != null || legacyDivision != null) {
+      if (AppSettings.sectionId != null ||
+          AppSettings.facultyName != null ||
+          legacyDivision != null) {
         // Needs migration
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AccountMigrationPage()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AccountMigrationPage()),
+        );
       } else {
         // Empty anonymous user
         await user.delete();
         await prefs.remove('has_logged_in');
         await AppSettings.resetRole();
-        if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const OnboardingFlow()));
+        if (mounted)
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const OnboardingFlow()),
+          );
       }
       return;
     }
@@ -178,38 +185,53 @@ class _StartupRouterState
     final updatedUser = FirebaseAuth.instance.currentUser;
 
     if (updatedUser != null && !updatedUser.emailVerified) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const EmailVerificationPage()));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const EmailVerificationPage()),
+      );
       return;
     }
 
     if (AppSettings.studentName != null || AppSettings.facultyName != null) {
       // Fast path: use cached session
       final role = AppSettings.facultyName != null ? 'Faculty' : 'Student';
-      
+
       if (role == 'Faculty') {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FacultyHomePage()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const FacultyHomePage()),
+        );
       } else {
         final div = AppSettings.sectionId ?? '';
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomePage(division: div)));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => HomePage(division: div)),
+        );
       }
-      
+
       // Update missing session info in the background without blocking navigation
       _syncSessionInBackground(updatedUser);
       return;
     }
 
     try {
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(updatedUser!.uid).get();
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(updatedUser!.uid)
+          .get();
       if (userDoc.exists) {
         final data = userDoc.data()!;
         if (data['onboardingCompleted'] == true) {
           final role = data['role'];
           if (role == 'Faculty') {
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FacultyHomePage()));
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const FacultyHomePage()),
+            );
           } else {
             // Student
             final div = AppSettings.sectionId ?? data['division'] ?? '';
-            
+
             // Re-populate AppSettings from Firestore on re-login
             if (AppSettings.studentName == null) {
               await AppSettings.saveStudentDetails(
@@ -220,7 +242,7 @@ class _StartupRouterState
                 div: '',
                 secId: div,
               );
-              
+
               final roleStr = data['role'] as String?;
               if (roleStr == 'CR') {
                 await AppSettings.saveRole(UserRole.cr);
@@ -230,8 +252,11 @@ class _StartupRouterState
                 await AppSettings.saveRole(UserRole.student);
               }
             }
-            
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomePage(division: div)));
+
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => HomePage(division: div)),
+            );
           }
           return;
         }
@@ -240,13 +265,19 @@ class _StartupRouterState
       debugPrint('Error reading user document in StartupRouter: $e');
     }
 
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const OnboardingWizardPage()));
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const OnboardingWizardPage()),
+    );
   }
 
   Future<void> _syncSessionInBackground(User? user) async {
     if (user == null) return;
     try {
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
       if (userDoc.exists) {
         final data = userDoc.data()!;
         bool needsUpdate = false;
@@ -263,54 +294,67 @@ class _StartupRouterState
 
         if (data.containsKey('draftProfile')) {
           final dp = data['draftProfile'] as Map<String, dynamic>;
-          if (dp.containsKey('name') && !data.containsKey('name')) updates['name'] = dp['name'];
-          if (dp.containsKey('rollNo') && !data.containsKey('rollNo')) updates['rollNo'] = dp['rollNo'];
+          if (dp.containsKey('name') && !data.containsKey('name'))
+            updates['name'] = dp['name'];
+          if (dp.containsKey('rollNo') && !data.containsKey('rollNo'))
+            updates['rollNo'] = dp['rollNo'];
           updates['draftProfile'] = FieldValue.delete();
           needsUpdate = true;
         }
 
         if (needsUpdate) {
-          await FirebaseFirestore.instance.collection('users').doc(user.uid).update(updates);
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .update(updates);
           debugPrint('Normalized user document for schema consistency.');
         }
 
-        final roleToUse = updates.containsKey('role') ? updates['role'] : data['role'];
+        final roleToUse = updates.containsKey('role')
+            ? updates['role']
+            : data['role'];
         final div = data['division'] as String?;
         final secId = data['sectionId'] ?? div ?? '';
-        
-        if (roleToUse == 'Faculty') {
-           await AppSettings.saveRole(UserRole.faculty);
-           if (data.containsKey('facultyProfileId')) {
-             final facDoc = await FirebaseFirestore.instance.collection('faculty_profiles').doc(data['facultyProfileId']).get();
-             if (facDoc.exists) {
-               final fData = facDoc.data()!;
-               await AppSettings.saveFacultyDetails(
-                 name: fData['name'] ?? '',
-                 email: fData['email'] ?? '',
-                 department: fData['department'] ?? '',
-                 designation: fData['designation'] ?? '',
-                 cabin: fData['cabin'] ?? '',
-                 id: facDoc.id,
-               );
-             }
-           }
-        } else {
-           final roleStr = roleToUse as String?;
-           if (roleStr == 'CR') {
-             await AppSettings.saveRole(UserRole.cr);
-           } else if (roleStr == 'SR') {
-             await AppSettings.saveRole(UserRole.sr);
-           } else {
-             await AppSettings.saveRole(UserRole.student);
-           }
 
-           if (div != null && div.isNotEmpty) {
-             await AppSettings.saveStudentDetails(
-                name: data['name'] ?? AppSettings.studentName ?? 'Student',
-                rollNo: data['rollNo'] ?? AppSettings.studentRollNo ?? 'Unknown',
-                acYear: '', br: '', div: div, secId: secId
-             );
-           }
+        if (roleToUse == 'Faculty') {
+          await AppSettings.saveRole(UserRole.faculty);
+          if (data.containsKey('facultyProfileId')) {
+            final facDoc = await FirebaseFirestore.instance
+                .collection('faculty_profiles')
+                .doc(data['facultyProfileId'])
+                .get();
+            if (facDoc.exists) {
+              final fData = facDoc.data()!;
+              await AppSettings.saveFacultyDetails(
+                name: fData['name'] ?? '',
+                email: fData['email'] ?? '',
+                department: fData['department'] ?? '',
+                designation: fData['designation'] ?? '',
+                cabin: fData['cabin'] ?? '',
+                id: facDoc.id,
+              );
+            }
+          }
+        } else {
+          final roleStr = roleToUse as String?;
+          if (roleStr == 'CR') {
+            await AppSettings.saveRole(UserRole.cr);
+          } else if (roleStr == 'SR') {
+            await AppSettings.saveRole(UserRole.sr);
+          } else {
+            await AppSettings.saveRole(UserRole.student);
+          }
+
+          if (div != null && div.isNotEmpty) {
+            await AppSettings.saveStudentDetails(
+              name: data['name'] ?? AppSettings.studentName ?? 'Student',
+              rollNo: data['rollNo'] ?? AppSettings.studentRollNo ?? 'Unknown',
+              acYear: '',
+              br: '',
+              div: div,
+              secId: secId,
+            );
+          }
         }
       }
     } catch (e) {
@@ -320,8 +364,6 @@ class _StartupRouterState
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: DashboardSkeleton(),
-    );
+    return const Scaffold(body: DashboardSkeleton());
   }
 }

@@ -35,7 +35,7 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
   String? _selectedSubject;
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
-  
+
   final _durationController = TextEditingController();
   final _roomController = TextEditingController();
   final _reasonController = TextEditingController();
@@ -46,8 +46,9 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
   void initState() {
     super.initState();
     _selectedDivision = widget.prefillDivision;
-    
-    if (widget.requestType == FacultyRequestType.cancel && widget.prefillEntry != null) {
+
+    if (widget.requestType == FacultyRequestType.cancel &&
+        widget.prefillEntry != null) {
       _selectedSubject = widget.prefillEntry!.subjectCode;
       _selectedDate = DateTime.now(); // Usually cancelling today's lecture
     } else {
@@ -59,7 +60,7 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
       _loadSubjectsForDivision(_selectedDivision!);
     }
   }
-  
+
   @override
   void dispose() {
     _durationController.dispose();
@@ -72,26 +73,41 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
     final uid = AppSettings.facultyId;
     if (uid == null) return;
 
-    final profileSnap = await FirebaseFirestore.instance.collection('faculty_profiles').doc(uid).get();
+    final profileSnap = await FirebaseFirestore.instance
+        .collection('faculty_profiles')
+        .doc(uid)
+        .get();
     final profileData = profileSnap.data() ?? {};
-    final subjectsMap = (profileData['subjects'] as Map<String, dynamic>?) ?? {};
-    
+    final subjectsMap =
+        (profileData['subjects'] as Map<String, dynamic>?) ?? {};
+
     setState(() {
       _availableSubjects = List<String>.from(subjectsMap[div] ?? []);
       if (!_availableSubjects.contains(_selectedSubject)) {
-        _selectedSubject = _availableSubjects.isNotEmpty ? _availableSubjects.first : null;
+        _selectedSubject = _availableSubjects.isNotEmpty
+            ? _availableSubjects.first
+            : null;
       }
     });
   }
 
   Future<void> _submitRequest() async {
-    if (_selectedDivision == null || _selectedSubject == null || _selectedDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all required fields')));
+    if (_selectedDivision == null ||
+        _selectedSubject == null ||
+        _selectedDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all required fields')),
+      );
       return;
     }
-    
-    if (widget.requestType == FacultyRequestType.addExtra && (_selectedTime == null || _durationController.text.trim().isEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Time and Duration are required for extra lectures')));
+
+    if (widget.requestType == FacultyRequestType.addExtra &&
+        (_selectedTime == null || _durationController.text.trim().isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Time and Duration are required for extra lectures'),
+        ),
+      );
       return;
     }
 
@@ -103,7 +119,7 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
 
       int? startTimeMinutes;
       int? endTimeMinutes;
-      
+
       if (widget.requestType == FacultyRequestType.addExtra) {
         startTimeMinutes = _selectedTime!.hour * 60 + _selectedTime!.minute;
         final duration = int.tryParse(_durationController.text.trim()) ?? 60;
@@ -124,11 +140,15 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
         type: widget.requestType,
         status: FacultyRequestStatus.pending,
         subject: _selectedSubject!,
-        reason: _reasonController.text.trim().isEmpty ? null : _reasonController.text.trim(),
+        reason: _reasonController.text.trim().isEmpty
+            ? null
+            : _reasonController.text.trim(),
         date: _selectedDate,
         startTime: startTimeMinutes,
         endTime: endTimeMinutes,
-        room: _roomController.text.trim().isEmpty ? null : _roomController.text.trim(),
+        room: _roomController.text.trim().isEmpty
+            ? null
+            : _roomController.text.trim(),
         originalLectureId: widget.prefillEntry?.id,
         createdAt: DateTime.now(),
       );
@@ -136,10 +156,11 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
       await docRef.set(request.toFirestore());
 
       await FacultyAuditService.logAction(
-        actionType: widget.requestType == FacultyRequestType.cancel 
-            ? FacultyActionType.requestCancel 
+        actionType: widget.requestType == FacultyRequestType.cancel
+            ? FacultyActionType.requestCancel
             : FacultyActionType.requestExtra,
-        description: 'Submitted request for $_selectedSubject in $_selectedDivision',
+        description:
+            'Submitted request for $_selectedSubject in $_selectedDivision',
         metadata: {
           'requestId': request.id,
           'division': _selectedDivision,
@@ -154,12 +175,11 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
           'topic': 'cr_$_selectedDivision',
           'role': 'CR',
           'title': 'New Faculty Request',
-          'body': 'Prof. $name requested to ${widget.requestType == FacultyRequestType.cancel ? 'cancel' : 'add'} a $_selectedSubject lecture.',
+          'body':
+              'Prof. $name requested to ${widget.requestType == FacultyRequestType.cancel ? 'cancel' : 'add'} a $_selectedSubject lecture.',
           'type': 'faculty_request',
           'uid': uid,
-          'data': {
-            'requestId': request.id,
-          },
+          'data': {'requestId': request.id},
           'createdAt': FieldValue.serverTimestamp(),
           'processed': false,
           'attempts': 0,
@@ -176,9 +196,9 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to submit request: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to submit request: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -205,9 +225,19 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
           // Division Selector
           if (widget.prefillDivision == null)
             DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'Select Division', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Select Division',
+                border: OutlineInputBorder(),
+              ),
               value: _selectedDivision,
-              items: divisions.map((d) => DropdownMenuItem(value: d, child: Text(d.replaceAll('_', ' ')))).toList(),
+              items: divisions
+                  .map(
+                    (d) => DropdownMenuItem(
+                      value: d,
+                      child: Text(d.replaceAll('_', ' ')),
+                    ),
+                  )
+                  .toList(),
               onChanged: (val) {
                 setState(() => _selectedDivision = val);
                 if (val != null) _loadSubjectsForDivision(val);
@@ -217,28 +247,39 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
             TextFormField(
               initialValue: _selectedDivision!.replaceAll('_', ' '),
               enabled: false,
-              decoration: const InputDecoration(labelText: 'Division', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Division',
+                border: OutlineInputBorder(),
+              ),
             ),
-          
+
           const SizedBox(height: AppSpacing.md),
-          
+
           // Subject Selector
           if (widget.prefillEntry == null)
             DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'Select Subject', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Select Subject',
+                border: OutlineInputBorder(),
+              ),
               value: _selectedSubject,
-              items: _availableSubjects.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+              items: _availableSubjects
+                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                  .toList(),
               onChanged: (val) => setState(() => _selectedSubject = val),
             )
           else
             TextFormField(
               initialValue: _selectedSubject,
               enabled: false,
-              decoration: const InputDecoration(labelText: 'Subject', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Subject',
+                border: OutlineInputBorder(),
+              ),
             ),
 
           const SizedBox(height: AppSpacing.md),
-          
+
           // Date Picker
           InkWell(
             onTap: () async {
@@ -251,11 +292,18 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
               if (date != null) setState(() => _selectedDate = date);
             },
             child: InputDecorator(
-              decoration: const InputDecoration(labelText: 'Date', border: OutlineInputBorder()),
-              child: Text(_selectedDate != null ? DateFormat('MMM d, yyyy').format(_selectedDate!) : 'Select Date'),
+              decoration: const InputDecoration(
+                labelText: 'Date',
+                border: OutlineInputBorder(),
+              ),
+              child: Text(
+                _selectedDate != null
+                    ? DateFormat('MMM d, yyyy').format(_selectedDate!)
+                    : 'Select Date',
+              ),
             ),
           ),
-          
+
           if (!isCancel) ...[
             const SizedBox(height: AppSpacing.md),
             Row(
@@ -270,8 +318,15 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
                       if (time != null) setState(() => _selectedTime = time);
                     },
                     child: InputDecorator(
-                      decoration: const InputDecoration(labelText: 'Start Time', border: OutlineInputBorder()),
-                      child: Text(_selectedTime != null ? _selectedTime!.format(context) : 'Select Time'),
+                      decoration: const InputDecoration(
+                        labelText: 'Start Time',
+                        border: OutlineInputBorder(),
+                      ),
+                      child: Text(
+                        _selectedTime != null
+                            ? _selectedTime!.format(context)
+                            : 'Select Time',
+                      ),
                     ),
                   ),
                 ),
@@ -280,7 +335,10 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
                   child: TextField(
                     controller: _durationController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Duration (mins)', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      labelText: 'Duration (mins)',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
                 ),
               ],
@@ -288,7 +346,10 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
             const SizedBox(height: AppSpacing.md),
             TextField(
               controller: _roomController,
-              decoration: const InputDecoration(labelText: 'Room (Optional)', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Room (Optional)',
+                border: OutlineInputBorder(),
+              ),
             ),
           ],
 
@@ -297,17 +358,25 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
             controller: _reasonController,
             maxLines: 2,
             decoration: InputDecoration(
-              labelText: isCancel ? 'Reason for Cancellation (Optional)' : 'Message to students (Optional)',
+              labelText: isCancel
+                  ? 'Reason for Cancellation (Optional)'
+                  : 'Message to students (Optional)',
               border: const OutlineInputBorder(),
             ),
           ),
-          
+
           const SizedBox(height: AppSpacing.xl),
           AnimatedButton(
             onPressed: _isLoading ? null : _submitRequest,
             isLoading: _isLoading,
-            backgroundColor: isCancel ? Colors.red : Theme.of(context).colorScheme.primary,
-            child: Text(isCancel ? 'Submit Cancellation Request' : 'Submit Extra Lecture Request'),
+            backgroundColor: isCancel
+                ? Colors.red
+                : Theme.of(context).colorScheme.primary,
+            child: Text(
+              isCancel
+                  ? 'Submit Cancellation Request'
+                  : 'Submit Extra Lecture Request',
+            ),
           ),
         ],
       ),

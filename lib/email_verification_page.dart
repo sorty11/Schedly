@@ -22,7 +22,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
   Future<void> _checkStatus() async {
     setState(() => _checking = true);
     final verified = await AuthenticationService.isEmailVerified();
-    
+
     if (!mounted) return;
     setState(() => _checking = false);
 
@@ -33,7 +33,9 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email not verified yet. Please check your inbox.')),
+        const SnackBar(
+          content: Text('Email not verified yet. Please check your inbox.'),
+        ),
       );
     }
   }
@@ -104,7 +106,9 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
                       width: 80,
                       height: 80,
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -116,17 +120,18 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
                     const SizedBox(height: AppSpacing.x2l),
                     Text(
                       'Verify your email',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     Text(
                       'We sent a verification link to:\n$email',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.x3l),
                     AnimatedButton(
@@ -134,13 +139,20 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
                       isLoading: _checking,
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Colors.white,
-                      child: const Text('I have verified my email', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        'I have verified my email',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     TextButton.icon(
                       onPressed: _resending ? null : _resendEmail,
                       icon: _resending
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
                           : const Icon(Icons.refresh_rounded),
                       label: const Text('Resend Verification Email'),
                     ),

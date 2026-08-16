@@ -21,10 +21,10 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
   bool _isLoading = false;
 
   final Set<String> _selectedDivisions = {};
-  
+
   // Mapping of division -> available subjects
   final Map<String, List<String>> _availableSubjects = {};
-  
+
   // Mapping of division -> selected subjects
   final Map<String, Set<String>> _selectedSubjects = {};
 
@@ -48,31 +48,39 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
     try {
       _availableSubjects.clear();
       for (final div in _selectedDivisions) {
-        final uniqueSubjects = await TimetableManager.getUniqueSubjects(division: div);
-        
+        final uniqueSubjects = await TimetableManager.getUniqueSubjects(
+          division: div,
+        );
+
         _availableSubjects[div] = uniqueSubjects;
         _selectedSubjects[div] = {}; // Initialize empty selection
       }
-      
+
       setState(() => _currentStep = 2);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading subjects: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error loading subjects: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-
   Future<void> _completeSetup() async {
-    if (_departmentController.text.trim().isEmpty || _designationController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Department and Designation are required')));
+    if (_departmentController.text.trim().isEmpty ||
+        _designationController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Department and Designation are required'),
+        ),
+      );
       return;
     }
 
     setState(() => _isLoading = true);
     try {
       final uid = AppSettings.facultyId ?? '';
-      
+
       final subjectMap = <String, List<String>>{};
       for (final div in _selectedDivisions) {
         subjectMap[div] = _selectedSubjects[div]?.toList() ?? [];
@@ -89,17 +97,27 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
       };
 
       try {
-        await FirebaseFirestore.instance.collection('faculty_profiles').doc(uid).set(profileData, SetOptions(merge: true));
+        await FirebaseFirestore.instance
+            .collection('faculty_profiles')
+            .doc(uid)
+            .set(profileData, SetOptions(merge: true));
       } catch (e) {
-        debugPrint('[FS_ERROR]\ncollection: faculty_profiles\ndocument: $uid\noperation: WRITE\nexception: $e');
+        debugPrint(
+          '[FS_ERROR]\ncollection: faculty_profiles\ndocument: $uid\noperation: WRITE\nexception: $e',
+        );
         rethrow;
       }
 
       DocumentSnapshot<Map<String, dynamic>> profileSnap;
       try {
-        profileSnap = await FirebaseFirestore.instance.collection('faculty_profiles').doc(uid).get();
+        profileSnap = await FirebaseFirestore.instance
+            .collection('faculty_profiles')
+            .doc(uid)
+            .get();
       } catch (e) {
-        debugPrint('[FS_ERROR]\ncollection: faculty_profiles\ndocument: $uid\noperation: READ\nexception: $e');
+        debugPrint(
+          '[FS_ERROR]\ncollection: faculty_profiles\ndocument: $uid\noperation: READ\nexception: $e',
+        );
         rethrow;
       }
       final data = profileSnap.data()!;
@@ -121,7 +139,9 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
         MaterialPageRoute(builder: (_) => const FacultyHomePage()),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving setup: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error saving setup: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -133,19 +153,27 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
       children: [
         Text(
           'Professional Details',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
           'Please provide your academic information.',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+          style: TextStyle(
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
         ),
         const SizedBox(height: AppSpacing.x2l),
         TextField(
           controller: _departmentController,
           decoration: InputDecoration(
             labelText: 'Department (e.g., Computer Engineering)',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -153,7 +181,9 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
           controller: _designationController,
           decoration: InputDecoration(
             labelText: 'Designation (e.g., Assistant Professor)',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -161,14 +191,21 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
           controller: _cabinController,
           decoration: InputDecoration(
             labelText: 'Cabin / Office Location (Optional)',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
           ),
         ),
         const Spacer(),
         AnimatedButton(
           onPressed: () {
-            if (_departmentController.text.trim().isEmpty || _designationController.text.trim().isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all required fields')));
+            if (_departmentController.text.trim().isEmpty ||
+                _designationController.text.trim().isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Please fill all required fields'),
+                ),
+              );
               return;
             }
             setState(() => _currentStep = 1);
@@ -192,7 +229,9 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
             Expanded(
               child: Text(
                 'Select Divisions',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
               ),
             ),
           ],
@@ -200,18 +239,30 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
         const SizedBox(height: AppSpacing.sm),
         Text(
           'Select all the divisions you teach across all branches and years.',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+          style: TextStyle(
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('sections').where('active', isEqualTo: true).snapshots(),
+            stream: FirebaseFirestore.instance
+                .collection('sections')
+                .where('active', isEqualTo: true)
+                .snapshots(),
             builder: (context, snapshot) {
-              if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-              
+              if (!snapshot.hasData)
+                return const Center(child: CircularProgressIndicator());
+
               final docs = snapshot.data!.docs;
               if (docs.isEmpty) {
-                return const Center(child: Text('No active divisions found. CRs must setup their portals first.'));
+                return const Center(
+                  child: Text(
+                    'No active divisions found. CRs must setup their portals first.',
+                  ),
+                );
               }
 
               // Group by branch
@@ -234,11 +285,16 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Text(
                           branch,
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
                       ),
                       ...divs.map((div) {
-                        final docData = docs.firstWhere((d) => d.id == div).data() as Map<String, dynamic>;
+                        final docData =
+                            docs.firstWhere((d) => d.id == div).data()
+                                as Map<String, dynamic>;
                         final displayYear = docData['academicYear'];
                         final displayDiv = docData['division'];
                         return CheckboxListTile(
@@ -246,8 +302,10 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                           value: _selectedDivisions.contains(div),
                           onChanged: (val) {
                             setState(() {
-                              if (val == true) _selectedDivisions.add(div);
-                              else _selectedDivisions.remove(div);
+                              if (val == true)
+                                _selectedDivisions.add(div);
+                              else
+                                _selectedDivisions.remove(div);
                             });
                           },
                         );
@@ -262,7 +320,9 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
         Padding(
           padding: const EdgeInsets.only(top: 16),
           child: AnimatedButton(
-            onPressed: _selectedDivisions.isEmpty ? null : _fetchSubjectsForDivisions,
+            onPressed: _selectedDivisions.isEmpty
+                ? null
+                : _fetchSubjectsForDivisions,
             isLoading: _isLoading,
             child: const Text('Next'),
           ),
@@ -301,7 +361,8 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                 children: [
                   Text(
                     'Step 2 of 3',
-                    style: TextStyle(fontFamily: 'Inter', 
+                    style: TextStyle(
+                      fontFamily: 'Inter',
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: colorScheme.primary,
@@ -311,7 +372,8 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                   const SizedBox(height: 2),
                   Text(
                     'Select Subjects',
-                    style: TextStyle(fontFamily: 'Outfit', 
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
                       color: colorScheme.onSurface,
@@ -356,7 +418,7 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
               final subjects = allSubjects
                   .where((s) => s.toLowerCase().contains(_searchQuery))
                   .toList();
-                  
+
               final selectedCount = _selectedSubjects[div]?.length ?? 0;
 
               if (allSubjects.isEmpty) {
@@ -380,7 +442,8 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                               children: [
                                 Text(
                                   div.replaceAll('_', ' '),
-                                  style: TextStyle(fontFamily: 'Outfit', 
+                                  style: TextStyle(
+                                    fontFamily: 'Outfit',
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
                                     color: colorScheme.onSurface,
@@ -389,7 +452,8 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                                 const SizedBox(height: 4),
                                 Text(
                                   '${allSubjects.length} Subjects Available',
-                                  style: TextStyle(fontFamily: 'Inter', 
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
                                     fontSize: 13,
                                     color: sem.onSurfaceMuted,
                                     fontWeight: FontWeight.w500,
@@ -400,14 +464,22 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                           ),
                           if (selectedCount > 0)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
-                                color: colorScheme.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(AppRadius.xl),
+                                color: colorScheme.primary.withValues(
+                                  alpha: 0.1,
+                                ),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.xl,
+                                ),
                               ),
                               child: Text(
                                 '$selectedCount Selected',
-                                style: TextStyle(fontFamily: 'Inter', 
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
                                   color: colorScheme.primary,
@@ -432,8 +504,10 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                           spacing: 12,
                           runSpacing: 12,
                           children: subjects.map((subj) {
-                            final isSelected = _selectedSubjects[div]!.contains(subj);
-                            
+                            final isSelected = _selectedSubjects[div]!.contains(
+                              subj,
+                            );
+
                             return GestureDetector(
                               onTap: () {
                                 setState(() {
@@ -448,25 +522,35 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
                                 curve: Curves.easeOutCubic,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: isSelected 
-                                      ? colorScheme.primary 
-                                      : (isDark ? sem.surfaceElevated2 : Colors.white),
-                                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                                  color: isSelected
+                                      ? colorScheme.primary
+                                      : (isDark
+                                            ? sem.surfaceElevated2
+                                            : Colors.white),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.lg,
+                                  ),
                                   border: Border.all(
-                                    color: isSelected 
-                                        ? colorScheme.primary 
-                                        : (isDark ? sem.borderSubtle : const Color(0xFFE0E0E0)),
+                                    color: isSelected
+                                        ? colorScheme.primary
+                                        : (isDark
+                                              ? sem.borderSubtle
+                                              : const Color(0xFFE0E0E0)),
                                     width: isSelected ? 2 : 1,
                                   ),
                                   boxShadow: isSelected
                                       ? [
                                           BoxShadow(
-                                            color: colorScheme.primary.withValues(alpha: 0.3),
+                                            color: colorScheme.primary
+                                                .withValues(alpha: 0.3),
                                             blurRadius: 8,
                                             offset: const Offset(0, 4),
-                                          )
+                                          ),
                                         ]
                                       : null,
                                 ),
@@ -474,18 +558,27 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
-                                      isSelected ? Icons.check_circle_rounded : Icons.menu_book_rounded,
+                                      isSelected
+                                          ? Icons.check_circle_rounded
+                                          : Icons.menu_book_rounded,
                                       size: 18,
-                                      color: isSelected ? Colors.white : colorScheme.primary,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : colorScheme.primary,
                                     ),
                                     const SizedBox(width: AppSpacing.sm),
                                     Flexible(
                                       child: Text(
                                         subj,
-                                        style: TextStyle(fontFamily: 'Inter', 
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
                                           fontSize: 14,
-                                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                                          color: isSelected ? Colors.white : colorScheme.onSurface,
+                                          fontWeight: isSelected
+                                              ? FontWeight.w700
+                                              : FontWeight.w600,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : colorScheme.onSurface,
                                         ),
                                         softWrap: true,
                                       ),
@@ -503,7 +596,7 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
             },
           ),
         ),
-        
+
         Container(
           padding: const EdgeInsets.only(top: 16),
           decoration: BoxDecoration(
@@ -517,57 +610,60 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
                   padding: const EdgeInsets.only(bottom: AppSpacing.md),
                   child: SchedlyCard(
                     variant: SchedlyCardVariant.standard,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Selected Subjects ($totalSelected)',
-                            style: TextStyle(fontFamily: 'Inter', 
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: colorScheme.onSurface,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Selected Subjects ($totalSelected)',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: colorScheme.onSurface,
+                              ),
                             ),
-                          ),
-                          MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  for (final div in _selectedDivisions) {
-                                    _selectedSubjects[div]?.clear();
-                                  }
-                                });
-                              },
-                              child: Text(
-                                'Clear All',
-                                style: TextStyle(fontFamily: 'Inter', 
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: sem.cancelled,
+                            MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    for (final div in _selectedDivisions) {
+                                      _selectedSubjects[div]?.clear();
+                                    }
+                                  });
+                                },
+                                child: Text(
+                                  'Clear All',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: sem.cancelled,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        allSelectedSubjects.toSet().join(', '),
-                        style: TextStyle(fontFamily: 'Inter', 
-                          fontSize: 13,
-                          color: sem.onSurfaceMuted,
-                          height: 1.4,
+                          ],
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          allSelectedSubjects.toSet().join(', '),
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13,
+                            color: sem.onSurfaceMuted,
+                            height: 1.4,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
               AnimatedButton(
                 onPressed: _isLoading ? null : _completeSetup,
                 isLoading: _isLoading,
@@ -596,11 +692,7 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
           padding: const EdgeInsets.all(24.0),
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
-            child: [
-              _buildStep0(),
-              _buildStep1(),
-              _buildStep2(),
-            ][_currentStep],
+            child: [_buildStep0(), _buildStep1(), _buildStep2()][_currentStep],
           ),
         ),
       ),

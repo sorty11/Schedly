@@ -26,10 +26,7 @@ import 'attendance_page.dart';
 class HomePage extends StatefulWidget {
   final String division;
 
-  const HomePage({
-    super.key,
-    required this.division,
-  });
+  const HomePage({super.key, required this.division});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -45,7 +42,8 @@ class _HomePageState extends State<HomePage>
   void initState() {
     super.initState();
     AnnouncementListener.start(widget.division);
-    if (AppSettings.currentRole == UserRole.cr || AppSettings.currentRole == UserRole.sr) {
+    if (AppSettings.currentRole == UserRole.cr ||
+        AppSettings.currentRole == UserRole.sr) {
       ConductSyncService.syncPendingLectures(widget.division);
     }
     _loadUnreadCount();
@@ -60,7 +58,10 @@ class _HomePageState extends State<HomePage>
     _runMigrationIfNeeded();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      OnboardingService.instance.initializeAndCheckFirstLaunch(context, AppSettings.currentRole);
+      OnboardingService.instance.initializeAndCheckFirstLaunch(
+        context,
+        AppSettings.currentRole,
+      );
       FeatureDiscoveryService.checkNewFeatures(context);
     });
   }
@@ -89,11 +90,15 @@ class _HomePageState extends State<HomePage>
     }
 
     // Run Batch Migration only for CRs/SRs using a centralized flag
-    if (AppSettings.currentRole == UserRole.cr || AppSettings.currentRole == UserRole.sr) {
+    if (AppSettings.currentRole == UserRole.cr ||
+        AppSettings.currentRole == UserRole.sr) {
       try {
-        final sectionRef = FirebaseFirestore.instance.collection('sections').doc(widget.division);
+        final sectionRef = FirebaseFirestore.instance
+            .collection('sections')
+            .doc(widget.division);
         final sectionDoc = await sectionRef.get();
-        if (sectionDoc.exists && !(sectionDoc.data()?['batchMigrationV1'] ?? false)) {
+        if (sectionDoc.exists &&
+            !(sectionDoc.data()?['batchMigrationV1'] ?? false)) {
           await MigrationService.migrateBatchNames(widget.division);
           await sectionRef.update({'batchMigrationV1': true});
           debugPrint('Batch migration V1 completed for ${widget.division}');
@@ -117,8 +122,7 @@ class _HomePageState extends State<HomePage>
       int count = 0;
       for (final doc in snap.docs) {
         final ts = doc.data()['createdAt'];
-        if (ts != null &&
-            (ts as Timestamp).millisecondsSinceEpoch > lastSeen) {
+        if (ts != null && (ts as Timestamp).millisecondsSinceEpoch > lastSeen) {
           count++;
         }
       }
@@ -151,9 +155,10 @@ class _HomePageState extends State<HomePage>
     final pages = [
       DashboardPage(division: widget.division),
       WeeklyTimetablePage(division: widget.division),
-        AttendancePage(division: widget.division),
+      AttendancePage(division: widget.division),
 
-      if (AppSettings.currentRole == UserRole.cr || AppSettings.currentRole == UserRole.sr)
+      if (AppSettings.currentRole == UserRole.cr ||
+          AppSettings.currentRole == UserRole.sr)
         const CRPanelPage(),
       const UpdatesPage(),
       ProfilePage(division: widget.division),
@@ -212,14 +217,39 @@ class _SchedlyNavBar extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final items = [
-      const _NavItem(Icons.home_outlined, Icons.home_rounded, 'Home', targetId: 'dashboard_tab'),
-      const _NavItem(Icons.view_week_outlined, Icons.view_week_rounded, 'Timetable', targetId: 'timetable_tab'),
-      const _NavItem(Icons.fact_check_outlined, Icons.fact_check_rounded, 'Attendance', targetId: 'attendance_tab'),
+      const _NavItem(
+        Icons.home_outlined,
+        Icons.home_rounded,
+        'Home',
+        targetId: 'dashboard_tab',
+      ),
+      const _NavItem(
+        Icons.view_week_outlined,
+        Icons.view_week_rounded,
+        'Timetable',
+        targetId: 'timetable_tab',
+      ),
+      const _NavItem(
+        Icons.fact_check_outlined,
+        Icons.fact_check_rounded,
+        'Attendance',
+        targetId: 'attendance_tab',
+      ),
 
       if (AppSettings.currentRole == UserRole.cr)
-        const _NavItem(Icons.admin_panel_settings_outlined, Icons.admin_panel_settings_rounded, 'CR Panel', targetId: 'admin_tab')
+        const _NavItem(
+          Icons.admin_panel_settings_outlined,
+          Icons.admin_panel_settings_rounded,
+          'CR Panel',
+          targetId: 'admin_tab',
+        )
       else if (AppSettings.currentRole == UserRole.sr)
-        const _NavItem(Icons.admin_panel_settings_outlined, Icons.admin_panel_settings_rounded, 'SR Panel', targetId: 'admin_tab'),
+        const _NavItem(
+          Icons.admin_panel_settings_outlined,
+          Icons.admin_panel_settings_rounded,
+          'SR Panel',
+          targetId: 'admin_tab',
+        ),
 
       _NavItem(
         Icons.notifications_outlined,
@@ -228,7 +258,12 @@ class _SchedlyNavBar extends StatelessWidget {
         badge: unreadCount,
         targetId: 'announcements_tab',
       ),
-      const _NavItem(Icons.account_circle_outlined, Icons.account_circle_rounded, 'Profile', targetId: 'profile_tab'),
+      const _NavItem(
+        Icons.account_circle_outlined,
+        Icons.account_circle_rounded,
+        'Profile',
+        targetId: 'profile_tab',
+      ),
     ];
 
     return ClipRect(
@@ -241,9 +276,7 @@ class _SchedlyNavBar extends StatelessWidget {
                 : Colors.white.withValues(alpha: 0.88),
             border: Border(
               top: BorderSide(
-                color: isDark
-                    ? sem.borderSubtle
-                    : const Color(0xFFE8E8F0),
+                color: isDark ? sem.borderSubtle : const Color(0xFFE8E8F0),
                 width: 0.8,
               ),
             ),
@@ -259,18 +292,20 @@ class _SchedlyNavBar extends StatelessWidget {
                 children: List.generate(
                   items.length,
                   (i) => Expanded(
-                    child: items[i].targetId != null ? TutorialTarget(
-                      id: items[i].targetId!,
-                      child: _NavBarItem(
-                        item: items[i],
-                        isSelected: selectedIndex == i,
-                        onTap: () => onTap(i),
-                      ),
-                    ) : _NavBarItem(
-                        item: items[i],
-                        isSelected: selectedIndex == i,
-                        onTap: () => onTap(i),
-                      ),
+                    child: items[i].targetId != null
+                        ? TutorialTarget(
+                            id: items[i].targetId!,
+                            child: _NavBarItem(
+                              item: items[i],
+                              isSelected: selectedIndex == i,
+                              onTap: () => onTap(i),
+                            ),
+                          )
+                        : _NavBarItem(
+                            item: items[i],
+                            isSelected: selectedIndex == i,
+                            onTap: () => onTap(i),
+                          ),
                   ),
                 ),
               ),
@@ -377,8 +412,8 @@ class _NavBarItemState extends State<_NavBarItem>
                       color: widget.isSelected
                           ? colorScheme.primary.withValues(alpha: 0.12)
                           : _isHovered
-                              ? colorScheme.primary.withValues(alpha: 0.06)
-                              : Colors.transparent,
+                          ? colorScheme.primary.withValues(alpha: 0.06)
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(AppRadius.full),
                     ),
                     child: Stack(

@@ -23,17 +23,18 @@ class AnimatedIconButton extends StatefulWidget {
   State<AnimatedIconButton> createState() => _AnimatedIconButtonState();
 }
 
-class _AnimatedIconButtonState extends State<AnimatedIconButton> with TickerProviderStateMixin {
+class _AnimatedIconButtonState extends State<AnimatedIconButton>
+    with TickerProviderStateMixin {
   late AnimationController _pressController;
   late Animation<double> _pressScaleAnimation;
-  
+
   late AnimationController _hoverController;
   late Animation<double> _hoverScaleAnimation;
 
   @override
   void initState() {
     super.initState();
-    
+
     // Press Physics
     _pressController = AnimationController(
       vsync: this,
@@ -42,7 +43,11 @@ class _AnimatedIconButtonState extends State<AnimatedIconButton> with TickerProv
     );
 
     _pressScaleAnimation = Tween<double>(begin: 1.0, end: 0.85).animate(
-      CurvedAnimation(parent: _pressController, curve: Curves.easeOutCubic, reverseCurve: Curves.elasticOut),
+      CurvedAnimation(
+        parent: _pressController,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.elasticOut,
+      ),
     );
 
     // Hover Physics
@@ -74,7 +79,7 @@ class _AnimatedIconButtonState extends State<AnimatedIconButton> with TickerProv
     if (widget.onPressed == null) return;
     _pressController.reverse();
   }
-  
+
   void _handleTapCancel() {
     if (widget.onPressed == null) return;
     _pressController.reverse();
@@ -107,12 +112,19 @@ class _AnimatedIconButtonState extends State<AnimatedIconButton> with TickerProv
         child: AnimatedBuilder(
           animation: Listenable.merge([_pressController, _hoverController]),
           builder: (context, child) {
-            final currentScale = _pressScaleAnimation.value * _hoverScaleAnimation.value;
-            
-            final hoverColor = widget.backgroundColor ?? theme.colorScheme.onSurface.withValues(alpha: 0.1);
-            final currentColor = disabled 
-                ? Colors.transparent 
-                : Color.lerp(widget.backgroundColor ?? Colors.transparent, hoverColor, _hoverController.value);
+            final currentScale =
+                _pressScaleAnimation.value * _hoverScaleAnimation.value;
+
+            final hoverColor =
+                widget.backgroundColor ??
+                theme.colorScheme.onSurface.withValues(alpha: 0.1);
+            final currentColor = disabled
+                ? Colors.transparent
+                : Color.lerp(
+                    widget.backgroundColor ?? Colors.transparent,
+                    hoverColor,
+                    _hoverController.value,
+                  );
 
             return Transform.scale(
               scale: currentScale,
@@ -131,12 +143,19 @@ class _AnimatedIconButtonState extends State<AnimatedIconButton> with TickerProv
                     splashColor: iconColor.withValues(alpha: 0.2),
                     highlightColor: iconColor.withValues(alpha: 0.1),
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                      constraints: const BoxConstraints(
+                        minWidth: 48,
+                        minHeight: 48,
+                      ),
                       child: Padding(
                         padding: EdgeInsets.all(widget.padding),
                         child: IconTheme.merge(
                           data: IconThemeData(
-                            color: disabled ? theme.colorScheme.onSurface.withValues(alpha: 0.38) : iconColor,
+                            color: disabled
+                                ? theme.colorScheme.onSurface.withValues(
+                                    alpha: 0.38,
+                                  )
+                                : iconColor,
                           ),
                           child: widget.icon,
                         ),
@@ -152,10 +171,7 @@ class _AnimatedIconButtonState extends State<AnimatedIconButton> with TickerProv
     );
 
     if (widget.tooltip != null) {
-      button = Tooltip(
-        message: widget.tooltip!,
-        child: button,
-      );
+      button = Tooltip(message: widget.tooltip!, child: button);
     }
 
     return Semantics(

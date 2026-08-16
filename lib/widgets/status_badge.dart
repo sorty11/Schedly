@@ -8,11 +8,7 @@ class StatusBadge extends StatelessWidget {
   final LectureStatus status;
   final bool compact;
 
-  const StatusBadge({
-    super.key,
-    required this.status,
-    this.compact = false,
-  });
+  const StatusBadge({super.key, required this.status, this.compact = false});
 
   @override
   Widget build(BuildContext context) {
@@ -49,10 +45,7 @@ class StatusBadge extends StatelessWidget {
       return Container(
         width: 8,
         height: 8,
-        decoration: BoxDecoration(
-          color: statusColor,
-          shape: BoxShape.circle,
-        ),
+        decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
       );
     }
 
@@ -68,18 +61,14 @@ class StatusBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: AppIconSize.sm,
-            color: statusColor,
-          ),
+          Icon(icon, size: AppIconSize.sm, color: statusColor),
           const SizedBox(width: AppSpacing.xs),
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: statusColor,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: statusColor,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),

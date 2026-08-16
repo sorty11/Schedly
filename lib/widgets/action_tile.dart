@@ -27,13 +27,17 @@ class ActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final defaultIconColor = isDark ? AppColors.onSurfaceDark : AppColors.onSurface;
+    final defaultIconColor = isDark
+        ? AppColors.onSurfaceDark
+        : AppColors.onSurface;
     final effectiveIconColor = iconColor ?? defaultIconColor;
 
     return WorkspaceSurface(
       onTap: onTap,
       isInteractive: onTap != null,
-      backgroundColor: useTintedBackground ? semanticColors.surfaceTinted : Colors.transparent,
+      backgroundColor: useTintedBackground
+          ? semanticColors.surfaceTinted
+          : Colors.transparent,
       borderColor: Colors.transparent,
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
@@ -49,11 +53,7 @@ class ActionTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             alignment: Alignment.center,
-            child: Icon(
-              icon,
-              size: AppIconSize.md,
-              color: effectiveIconColor,
-            ),
+            child: Icon(icon, size: AppIconSize.md, color: effectiveIconColor),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
@@ -67,7 +67,9 @@ class ActionTile extends StatelessWidget {
                     fontFamily: 'Inter',
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.onSurfaceDark : AppColors.onSurface,
+                    color: isDark
+                        ? AppColors.onSurfaceDark
+                        : AppColors.onSurface,
                   ),
                 ),
                 if (subtitle != null) ...[

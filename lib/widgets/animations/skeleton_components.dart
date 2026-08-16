@@ -10,7 +10,10 @@ class HeroCardSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SkeletonShimmer(
       child: Container(
-        margin: EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.lg),
+        margin: EdgeInsets.symmetric(
+          horizontal: AppSpacing.x2l,
+          vertical: AppSpacing.lg,
+        ),
         padding: EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
           color: Theme.of(context).brightness == Brightness.dark
@@ -36,9 +39,17 @@ class HeroCardSkeleton extends StatelessWidget {
                   const SizedBox(height: AppSpacing.lg),
                   Row(
                     children: [
-                      const SkeletonBlock(width: 80, height: 32, borderRadius: AppRadius.full),
+                      const SkeletonBlock(
+                        width: 80,
+                        height: 32,
+                        borderRadius: AppRadius.full,
+                      ),
                       const SizedBox(width: AppSpacing.sm),
-                      const SkeletonBlock(width: 80, height: 32, borderRadius: AppRadius.full),
+                      const SkeletonBlock(
+                        width: 80,
+                        height: 32,
+                        borderRadius: AppRadius.full,
+                      ),
                     ],
                   ),
                 ],
@@ -96,7 +107,7 @@ class StatsRowSkeleton extends StatelessWidget {
 
 class LectureCardSkeleton extends StatelessWidget {
   final bool includeTime;
-  
+
   const LectureCardSkeleton({super.key, this.includeTime = false});
 
   @override
@@ -115,17 +126,29 @@ class LectureCardSkeleton extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SkeletonBlock(width: 48, height: 48, borderRadius: AppRadius.md),
+              const SkeletonBlock(
+                width: 48,
+                height: 48,
+                borderRadius: AppRadius.md,
+              ),
               const SizedBox(width: AppSpacing.lg),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (includeTime) ...[
-                      const SkeletonBlock(width: 60, height: 12, borderRadius: 4),
+                      const SkeletonBlock(
+                        width: 60,
+                        height: 12,
+                        borderRadius: 4,
+                      ),
                       const SizedBox(height: AppSpacing.xs),
                     ],
-                    const SkeletonBlock(width: double.infinity, height: 18, borderRadius: 4),
+                    const SkeletonBlock(
+                      width: double.infinity,
+                      height: 18,
+                      borderRadius: 4,
+                    ),
                     const SizedBox(height: AppSpacing.sm),
                     const Row(
                       children: [
@@ -205,14 +228,26 @@ class AnnouncementCardSkeleton extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  SkeletonBlock(width: 80, height: 24, borderRadius: AppRadius.full),
-                  SkeletonBlock(width: 24, height: 24, borderRadius: AppRadius.full),
+                  SkeletonBlock(
+                    width: 80,
+                    height: 24,
+                    borderRadius: AppRadius.full,
+                  ),
+                  SkeletonBlock(
+                    width: 24,
+                    height: 24,
+                    borderRadius: AppRadius.full,
+                  ),
                 ],
               ),
               SizedBox(height: AppSpacing.md),
               SkeletonBlock(width: 250, height: 20, borderRadius: 4),
               SizedBox(height: AppSpacing.sm),
-              SkeletonBlock(width: double.infinity, height: 14, borderRadius: 4),
+              SkeletonBlock(
+                width: double.infinity,
+                height: 14,
+                borderRadius: 4,
+              ),
               SizedBox(height: 4),
               SkeletonBlock(width: 200, height: 14, borderRadius: 4),
             ],
@@ -269,9 +304,15 @@ class TimetableSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.lg, AppSpacing.x2l, AppSpacing.x6l),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.x2l,
+        AppSpacing.lg,
+        AppSpacing.x2l,
+        AppSpacing.x6l,
+      ),
       itemCount: 5,
-      itemBuilder: (context, index) => const LectureCardSkeleton(includeTime: true),
+      itemBuilder: (context, index) =>
+          const LectureCardSkeleton(includeTime: true),
     );
   }
 }
@@ -283,7 +324,10 @@ class AnalyticsSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.sm),
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.x2l,
+        vertical: AppSpacing.sm,
+      ),
       children: [
         Row(
           children: [
@@ -332,10 +376,12 @@ class UpdatesSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.sm),
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.x2l,
+        vertical: AppSpacing.sm,
+      ),
       itemCount: 4,
       itemBuilder: (context, index) => const AnnouncementCardSkeleton(),
     );
   }
 }
-

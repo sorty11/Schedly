@@ -46,7 +46,7 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
   void _validate() {
     _errorPeriodIds.clear();
     _errorMessage = null;
-    
+
     if (_periods.isEmpty) {
       _errorMessage = 'Add at least one period.';
       setState(() {});
@@ -54,13 +54,14 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
     }
 
     // Sort by start time for overlap checking visually
-    final sorted = List<PeriodDef>.from(_periods)..sort((a, b) => a.startMinutes.compareTo(b.startMinutes));
-    
+    final sorted = List<PeriodDef>.from(_periods)
+      ..sort((a, b) => a.startMinutes.compareTo(b.startMinutes));
+
     final names = <String>{};
 
     for (int i = 0; i < sorted.length; i++) {
       final p = sorted[i];
-      
+
       // End before start
       if (p.endMinutes <= p.startMinutes) {
         _errorPeriodIds.add(p.id);
@@ -84,7 +85,7 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
         }
       }
     }
-    
+
     setState(() {});
   }
 
@@ -92,24 +93,27 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
     HapticFeedback.selectionClick();
     int start = 9 * 60; // 9 AM
     int end = 10 * 60; // 10 AM
-    
+
     if (_periods.isNotEmpty) {
       start = _periods.last.endMinutes;
       end = start + 60;
     }
 
-    String name = 'Period ${_periods.where((p) => p.kind == PeriodKind.lecture).length + 1}';
+    String name =
+        'Period ${_periods.where((p) => p.kind == PeriodKind.lecture).length + 1}';
     if (kind == PeriodKind.breakTime) name = 'Break';
     if (kind == PeriodKind.lunch) name = 'Lunch';
 
     setState(() {
-      _periods.add(PeriodDef(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: name,
-        startMinutes: start,
-        endMinutes: end,
-        kind: kind,
-      ));
+      _periods.add(
+        PeriodDef(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          name: name,
+          startMinutes: start,
+          endMinutes: end,
+          kind: kind,
+        ),
+      );
     });
     _update();
   }
@@ -118,13 +122,16 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
     HapticFeedback.selectionClick();
     final p = _periods[index];
     setState(() {
-      _periods.insert(index + 1, PeriodDef(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: '${p.name} (Copy)',
-        startMinutes: p.endMinutes,
-        endMinutes: p.endMinutes + p.durationMinutes,
-        kind: p.kind,
-      ));
+      _periods.insert(
+        index + 1,
+        PeriodDef(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          name: '${p.name} (Copy)',
+          startMinutes: p.endMinutes,
+          endMinutes: p.endMinutes + p.durationMinutes,
+          kind: p.kind,
+        ),
+      );
     });
     _update();
   }
@@ -156,9 +163,15 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
   Future<void> _pickTime(int index, bool isStart) async {
     final p = _periods[index];
     final initialMins = isStart ? p.startMinutes : p.endMinutes;
-    final initialTime = TimeOfDay(hour: initialMins ~/ 60, minute: initialMins % 60);
+    final initialTime = TimeOfDay(
+      hour: initialMins ~/ 60,
+      minute: initialMins % 60,
+    );
 
-    final selected = await showTimeWheelPicker(context, initialTime: initialTime);
+    final selected = await showTimeWheelPicker(
+      context,
+      initialTime: initialTime,
+    );
     if (selected != null) {
       final mins = selected.hour * 60 + selected.minute;
       setState(() {
@@ -184,7 +197,12 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.x2l, AppSpacing.x2l, AppSpacing.lg),
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.x2l,
+                  AppSpacing.x2l,
+                  AppSpacing.x2l,
+                  AppSpacing.lg,
+                ),
                 child: Row(
                   children: [
                     Expanded(
@@ -193,14 +211,20 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
                         children: [
                           Text(
                             'Period Schedule',
-                            style: TextStyle(fontFamily: 'Outfit', 
-                                fontSize: 24, fontWeight: FontWeight.w700),
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Define timings once for the whole week.',
-                            style: TextStyle(fontFamily: 'Inter', 
-                                fontSize: 14, color: sem.onSurfaceMuted),
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 14,
+                              color: sem.onSurfaceMuted,
+                            ),
                           ),
                         ],
                       ),
@@ -220,7 +244,9 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
                       icon: const Icon(Icons.auto_awesome_rounded, size: 16),
                       label: const Text('Template'),
                       style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
                       ),
                     ),
                   ],
@@ -232,21 +258,36 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
                 duration: const Duration(milliseconds: 200),
                 child: _errorMessage != null
                     ? Container(
-                        margin: EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.sm),
+                        margin: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.x2l,
+                          vertical: AppSpacing.sm,
+                        ),
                         padding: EdgeInsets.all(AppSpacing.md),
                         decoration: BoxDecoration(
                           color: cs.error.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(AppRadius.md),
-                          border: Border.all(color: cs.error.withValues(alpha: 0.3)),
+                          border: Border.all(
+                            color: cs.error.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.error_rounded, color: cs.error, size: 18),
+                            Icon(
+                              Icons.error_rounded,
+                              color: cs.error,
+                              size: 18,
+                            ),
                             const SizedBox(width: AppSpacing.sm),
                             Expanded(
-                              child: Text(_errorMessage!,
-                                  style: TextStyle(fontFamily: 'Inter', 
-                                      color: cs.error, fontWeight: FontWeight.w600, fontSize: 13)),
+                              child: Text(
+                                _errorMessage!,
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  color: cs.error,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -257,7 +298,12 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
               // List
               Expanded(
                 child: ReorderableListView.builder(
-                  padding: EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.sm, AppSpacing.x2l, 120),
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.x2l,
+                    AppSpacing.sm,
+                    AppSpacing.x2l,
+                    120,
+                  ),
                   itemCount: _periods.length,
                   onReorder: (oldIdx, newIdx) {
                     setState(() {
@@ -308,7 +354,10 @@ class _PeriodBuilderStepState extends State<PeriodBuilderStep> {
 
         // Bottom Bar with Add Buttons
         Container(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
           decoration: BoxDecoration(
             color: Theme.of(context).brightness == Brightness.dark
                 ? sem.surfaceElevated
@@ -378,7 +427,7 @@ class _PeriodCard extends StatelessWidget {
 
     Color cardColor = isDark ? sem.surfaceElevated2 : cs.surface;
     Color borderColor = sem.borderSubtle;
-    
+
     if (hasError) {
       cardColor = cs.errorContainer.withValues(alpha: 0.3);
       borderColor = cs.error;
@@ -401,7 +450,7 @@ class _PeriodCard extends StatelessWidget {
             padding: EdgeInsets.only(top: AppSpacing.md, right: AppSpacing.sm),
             child: Icon(Icons.drag_indicator_rounded, color: Colors.grey),
           ),
-          
+
           Expanded(
             child: Column(
               children: [
@@ -420,15 +469,32 @@ class _PeriodCard extends StatelessWidget {
                           value: period.kind,
                           icon: const Icon(Icons.arrow_drop_down, size: 18),
                           isDense: true,
-                          style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: cs.onSurface),
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: cs.onSurface,
+                          ),
                           onChanged: (k) {
                             if (k != null) onKindChanged(k);
                           },
                           items: const [
-                            DropdownMenuItem(value: PeriodKind.lecture, child: Text('Lecture')),
-                            DropdownMenuItem(value: PeriodKind.breakTime, child: Text('Break')),
-                            DropdownMenuItem(value: PeriodKind.lunch, child: Text('Lunch')),
-                            DropdownMenuItem(value: PeriodKind.freePeriod, child: Text('Free Period')),
+                            DropdownMenuItem(
+                              value: PeriodKind.lecture,
+                              child: Text('Lecture'),
+                            ),
+                            DropdownMenuItem(
+                              value: PeriodKind.breakTime,
+                              child: Text('Break'),
+                            ),
+                            DropdownMenuItem(
+                              value: PeriodKind.lunch,
+                              child: Text('Lunch'),
+                            ),
+                            DropdownMenuItem(
+                              value: PeriodKind.freePeriod,
+                              child: Text('Free Period'),
+                            ),
                           ],
                         ),
                       ),
@@ -439,33 +505,52 @@ class _PeriodCard extends StatelessWidget {
                       onPressed: onDuplicate,
                       tooltip: 'Duplicate',
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      constraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.delete_outline_rounded, size: 18, color: cs.error),
+                      icon: Icon(
+                        Icons.delete_outline_rounded,
+                        size: 18,
+                        color: cs.error,
+                      ),
                       onPressed: onDelete,
                       tooltip: 'Delete',
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      constraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.md),
-                
+
                 // Name Input
                 TextFormField(
                   initialValue: period.name,
                   onChanged: onNameChanged,
-                  style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 16),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
                   decoration: InputDecoration(
                     labelText: 'Period Name',
-                    contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
                     isDense: true,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                
+
                 // Time Pickers
                 Row(
                   children: [
@@ -474,7 +559,10 @@ class _PeriodCard extends StatelessWidget {
                         onTap: onPickStart,
                         borderRadius: BorderRadius.circular(AppRadius.sm),
                         child: Container(
-                          padding: EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.md),
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppSpacing.sm,
+                            horizontal: AppSpacing.md,
+                          ),
                           decoration: BoxDecoration(
                             border: Border.all(color: sem.borderSubtle),
                             borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -482,22 +570,43 @@ class _PeriodCard extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Start', style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: sem.onSurfaceMuted)),
-                              Text(formatTime(period.startMinutes), style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 14)),
+                              Text(
+                                'Start',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 10,
+                                  color: sem.onSurfaceMuted,
+                                ),
+                              ),
+                              Text(
+                                formatTime(period.startMinutes),
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
                             ],
                           ),
                         ),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
-                    const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.grey),
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 16,
+                      color: Colors.grey,
+                    ),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: InkWell(
                         onTap: onPickEnd,
                         borderRadius: BorderRadius.circular(AppRadius.sm),
                         child: Container(
-                          padding: EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.md),
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppSpacing.sm,
+                            horizontal: AppSpacing.md,
+                          ),
                           decoration: BoxDecoration(
                             border: Border.all(color: sem.borderSubtle),
                             borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -505,8 +614,22 @@ class _PeriodCard extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('End', style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: sem.onSurfaceMuted)),
-                              Text(formatTime(period.endMinutes), style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 14)),
+                              Text(
+                                'End',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 10,
+                                  color: sem.onSurfaceMuted,
+                                ),
+                              ),
+                              Text(
+                                formatTime(period.endMinutes),
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -561,7 +684,9 @@ class _TemplateSelectorSheet extends StatelessWidget {
             subtitle: const Text('9:00 AM - 3:00 PM'),
             onTap: () => onSelect(PeriodTemplates.ou()),
           ),
-          SizedBox(height: MediaQuery.of(context).padding.bottom + AppSpacing.lg),
+          SizedBox(
+            height: MediaQuery.of(context).padding.bottom + AppSpacing.lg,
+          ),
         ],
       ),
     );

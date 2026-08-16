@@ -49,23 +49,27 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
 
       if (request.type == FacultyRequestType.cancel) {
         if (request.originalLectureId != null) {
-          final dayStr = DateFormat('EEEE').format(request.date ?? DateTime.now());
+          final dayStr = DateFormat(
+            'EEEE',
+          ).format(request.date ?? DateTime.now());
           final lecRef = FirebaseFirestore.instance
               .collection('timetables')
               .doc(widget.division)
               .collection(dayStr)
               .doc(request.originalLectureId);
-              
+
           batch.update(lecRef, {'status': 'cancelled', 'isActive': false});
         }
       } else if (request.type == FacultyRequestType.addExtra) {
-        final dayStr = DateFormat('EEEE').format(request.date ?? DateTime.now());
+        final dayStr = DateFormat(
+          'EEEE',
+        ).format(request.date ?? DateTime.now());
         final newLecRef = FirebaseFirestore.instance
             .collection('timetables')
             .doc(widget.division)
             .collection(dayStr)
             .doc();
-            
+
         final entry = TimetableEntry(
           id: newLecRef.id,
           subject: request.subject,
@@ -77,7 +81,7 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
           room: request.room,
           facultyId: request.facultyId,
         );
-        
+
         batch.set(newLecRef, entry.toFirestore());
       }
 
@@ -90,7 +94,8 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
           'division': widget.division,
           'role': 'student',
           'title': 'Timetable Update',
-          'body': '${request.type == FacultyRequestType.cancel ? 'Cancelled' : 'Extra'} ${request.subject} lecture by Prof. ${request.facultyName}.',
+          'body':
+              '${request.type == FacultyRequestType.cancel ? 'Cancelled' : 'Extra'} ${request.subject} lecture by Prof. ${request.facultyName}.',
           'createdAt': FieldValue.serverTimestamp(),
           'uid': uid,
           'type': request.type == FacultyRequestType.cancel ? 'cancel' : 'add',
@@ -98,12 +103,13 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
           'attempts': 0,
           'nextRetryAt': FieldValue.serverTimestamp(),
         });
-        
+
         await FirebaseFirestore.instance.collection('notification_outbox').add({
           'division': request.facultyId,
           'role': 'faculty',
           'title': 'Request Approved',
-          'body': 'Your request for ${request.subject} has been approved by the CR.',
+          'body':
+              'Your request for ${request.subject} has been approved by the CR.',
           'createdAt': FieldValue.serverTimestamp(),
           'uid': uid,
           'type': 'add',
@@ -148,9 +154,9 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
           .collection('faculty_requests')
           .doc(request.id)
           .update({
-        'status': FacultyRequestStatus.denied.name,
-        'resolvedAt': FieldValue.serverTimestamp(),
-      });
+            'status': FacultyRequestStatus.denied.name,
+            'resolvedAt': FieldValue.serverTimestamp(),
+          });
 
       final String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
@@ -192,40 +198,55 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
     required Color confirmColor,
   }) async {
     return await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.xl),
-          ),
-          title: Text(
-            title,
-            style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, fontSize: 18),
-          ),
-          content: Text(
-            message,
-            style: TextStyle(fontFamily: 'Inter', fontSize: 14, height: 1.5),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(
-                'Cancel',
-                style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
+          context: context,
+          builder: (ctx) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.xl),
               ),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: FilledButton.styleFrom(backgroundColor: confirmColor),
-              child: Text(
-                confirmLabel,
-                style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
+              title: Text(
+                title,
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                ),
               ),
-            ),
-          ],
-        );
-      },
-    ) ?? false;
+              content: Text(
+                message,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  height: 1.5,
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: FilledButton.styleFrom(backgroundColor: confirmColor),
+                  child: Text(
+                    confirmLabel,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
   }
 
   String _formatTime(int? minutesFromMidnight) {
@@ -248,7 +269,11 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
       appBar: AppBar(
         title: Text(
           'Faculty Requests',
-          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, fontSize: 20),
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
+          ),
         ),
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -273,17 +298,17 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
               ),
             );
           }
-          
+
           final docs = snapshot.data!.docs;
 
           // Empty state
-            if (docs.isEmpty) {
-              return const FloatingEmptyState(
-                icon: Icons.check_circle_outline_rounded,
-                title: 'All caught up!',
-                subtitle: 'No pending faculty requests.',
-              );
-            }
+          if (docs.isEmpty) {
+            return const FloatingEmptyState(
+              icon: Icons.check_circle_outline_rounded,
+              title: 'All caught up!',
+              subtitle: 'No pending faculty requests.',
+            );
+          }
 
           return ListView.separated(
             padding: const EdgeInsets.all(AppSpacing.x2l),
@@ -338,13 +363,15 @@ class _RequestCard extends StatelessWidget {
         color: isDark ? sem.surfaceElevated : colorScheme.surface,
         borderRadius: BorderRadius.circular(AppRadius.xl),
         border: Border.all(color: accentColor.withValues(alpha: 0.2)),
-        boxShadow: isDark ? null : [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -357,19 +384,24 @@ class _RequestCard extends StatelessWidget {
             ),
             decoration: BoxDecoration(
               color: accentColor.withValues(alpha: 0.08),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppRadius.xl),
+              ),
             ),
             child: Row(
               children: [
                 Icon(
-                  isCancel ? Icons.cancel_outlined : Icons.add_circle_outline_rounded,
+                  isCancel
+                      ? Icons.cancel_outlined
+                      : Icons.add_circle_outline_rounded,
                   color: accentColor,
                   size: 18,
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Text(
                   isCancel ? 'Cancellation Request' : 'Extra Lecture Request',
-                  style: TextStyle(fontFamily: 'Inter', 
+                  style: TextStyle(
+                    fontFamily: 'Inter',
                     fontWeight: FontWeight.w700,
                     color: accentColor,
                     fontSize: 13,
@@ -377,12 +409,13 @@ class _RequestCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                    DateFormat('MMM d, hh:mm a').format(request.createdAt),
-                    style: TextStyle(fontFamily: 'Inter', 
-                      fontSize: 11,
-                      color: sem.onSurfaceMuted,
-                    ),
+                  DateFormat('MMM d, hh:mm a').format(request.createdAt),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    color: sem.onSurfaceMuted,
                   ),
+                ),
               ],
             ),
           ),
@@ -409,7 +442,8 @@ class _RequestCard extends StatelessWidget {
                           request.facultyName.isNotEmpty
                               ? request.facultyName[0].toUpperCase()
                               : 'F',
-                          style: TextStyle(fontFamily: 'Outfit', 
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
                             fontWeight: FontWeight.w700,
                             color: colorScheme.primary,
                             fontSize: 18,
@@ -424,14 +458,16 @@ class _RequestCard extends StatelessWidget {
                         children: [
                           Text(
                             'Prof. ${request.facultyName}',
-                            style: TextStyle(fontFamily: 'Outfit', 
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
                               fontWeight: FontWeight.w700,
                               fontSize: 16,
                             ),
                           ),
                           Text(
                             request.subject,
-                            style: TextStyle(fontFamily: 'Inter', 
+                            style: TextStyle(
+                              fontFamily: 'Inter',
                               fontSize: 14,
                               color: sem.onSurfaceMuted,
                             ),
@@ -454,10 +490,13 @@ class _RequestCard extends StatelessWidget {
                         label: DateFormat('EEE, MMM d').format(request.date!),
                         sem: sem,
                       ),
-                    if (!isCancel && request.startTime != null && request.endTime != null)
+                    if (!isCancel &&
+                        request.startTime != null &&
+                        request.endTime != null)
                       _DetailChip(
                         icon: Icons.access_time_rounded,
-                        label: '${formatTime(request.startTime)} – ${formatTime(request.endTime)}',
+                        label:
+                            '${formatTime(request.startTime)} – ${formatTime(request.endTime)}',
                         sem: sem,
                       ),
                     if (request.room != null && request.room!.isNotEmpty)
@@ -481,12 +520,17 @@ class _RequestCard extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.format_quote_rounded, size: 16, color: sem.onSurfaceMuted),
+                        Icon(
+                          Icons.format_quote_rounded,
+                          size: 16,
+                          color: sem.onSurfaceMuted,
+                        ),
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: Text(
                             request.reason!,
-                            style: TextStyle(fontFamily: 'Inter', 
+                            style: TextStyle(
+                              fontFamily: 'Inter',
                               fontSize: 13,
                               fontStyle: FontStyle.italic,
                               color: sem.onSurfaceMuted,
@@ -509,7 +553,9 @@ class _RequestCard extends StatelessWidget {
                         onPressed: onDeny,
                         style: OutlinedButton.styleFrom(
                           foregroundColor: sem.cancelled,
-                          side: BorderSide(color: sem.cancelled.withValues(alpha: 0.5)),
+                          side: BorderSide(
+                            color: sem.cancelled.withValues(alpha: 0.5),
+                          ),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -517,7 +563,10 @@ class _RequestCard extends StatelessWidget {
                         ),
                         child: Text(
                           'Deny',
-                          style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),
@@ -526,7 +575,9 @@ class _RequestCard extends StatelessWidget {
                       child: FilledButton(
                         onPressed: onApprove,
                         style: FilledButton.styleFrom(
-                          backgroundColor: isCancel ? sem.conducted : colorScheme.primary,
+                          backgroundColor: isCancel
+                              ? sem.conducted
+                              : colorScheme.primary,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -534,7 +585,10 @@ class _RequestCard extends StatelessWidget {
                         ),
                         child: Text(
                           'Approve',
-                          style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),
@@ -580,7 +634,8 @@ class _DetailChip extends StatelessWidget {
           const SizedBox(width: AppSpacing.xs),
           Text(
             label,
-            style: TextStyle(fontFamily: 'Inter', 
+            style: TextStyle(
+              fontFamily: 'Inter',
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: sem.onSurfaceMuted,

@@ -14,6 +14,9 @@ class TimetableEntry {
   final String? room;
   final String? facultyId;
   final String status; // 'active', 'cancelled', 'rescheduled'
+  final String? validForDate; // If set, lecture only exists on this YYYY-MM-DD
+  final List<String>
+  hiddenOnDates; // If date is in this list, lecture is hidden
 
   TimetableEntry({
     required this.id,
@@ -27,21 +30,30 @@ class TimetableEntry {
     this.room,
     this.facultyId,
     this.status = 'active',
+    this.validForDate,
+    this.hiddenOnDates = const [],
   });
 
   bool shouldIncludeForUserBatch(String? userBatch) {
     String entryBatch = batch;
-    
+
     // 1. Whole class lectures apply to everyone
     if (entryBatch.isEmpty || entryBatch == 'Whole Class') return true;
-    
+
     // 2. If the user doesn't have a batch set, assume they see everything (fallback)
     if (userBatch == null || userBatch.isEmpty) return true;
-    
+
     // 3. For sub-batches, it must strictly match the user's batch
     return entryBatch.toUpperCase() == userBatch.toUpperCase();
   }
 
+  bool isVisibleOnDate(String dateStr) {
+    if (validForDate != null && validForDate != dateStr) return false;
+    if (hiddenOnDates.contains(dateStr)) return false;
+    return true;
+  }
+
+  bool get isHoliday => category == EventCategory.holiday;
   bool get isActive => status == 'active';
   bool get isCancelled => status == 'cancelled';
   bool get isRescheduled => status == 'rescheduled';
@@ -122,7 +134,11 @@ class TimetableEntry {
       durationMinutes: parsedDuration,
       room: data['room'],
       facultyId: data['facultyId'],
-      status: data['status'] ?? (data['isActive'] == false ? 'cancelled' : 'active'),
+      status:
+          data['status'] ??
+          (data['isActive'] == false ? 'cancelled' : 'active'),
+      validForDate: data['validForDate'],
+      hiddenOnDates: List<String>.from(data['hiddenOnDates'] ?? []),
     );
   }
 
@@ -139,6 +155,8 @@ class TimetableEntry {
       if (facultyId != null) 'facultyId': facultyId,
       'status': status,
       'isActive': status == 'active', // For backwards compatibility if queried
+      if (validForDate != null) 'validForDate': validForDate,
+      if (hiddenOnDates.isNotEmpty) 'hiddenOnDates': hiddenOnDates,
     };
   }
 
@@ -154,6 +172,8 @@ class TimetableEntry {
     String? room,
     String? facultyId,
     String? status,
+    String? validForDate,
+    List<String>? hiddenOnDates,
   }) {
     return TimetableEntry(
       id: id ?? this.id,
@@ -167,6 +187,8 @@ class TimetableEntry {
       room: room ?? this.room,
       facultyId: facultyId ?? this.facultyId,
       status: status ?? this.status,
+      validForDate: validForDate ?? this.validForDate,
+      hiddenOnDates: hiddenOnDates ?? this.hiddenOnDates,
     );
   }
 }

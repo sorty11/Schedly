@@ -132,31 +132,85 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(widget.periodName, style: TextStyle(fontFamily: 'Outfit', fontSize: 22, fontWeight: FontWeight.w700)),
-                    Text(widget.timeString, style: TextStyle(fontFamily: 'Inter', fontSize: 14, color: sem.onSurfaceMuted)),
+                    Text(
+                      widget.periodName,
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      widget.timeString,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14,
+                        color: sem.onSurfaceMuted,
+                      ),
+                    ),
                   ],
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.close_rounded),
-                  style: IconButton.styleFrom(backgroundColor: sem.surfaceElevated),
+                  style: IconButton.styleFrom(
+                    backgroundColor: sem.surfaceElevated,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: AppSpacing.x2l),
 
             // Slot Type
-            Text('Slot Type', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w700, color: sem.onSurfaceMuted)),
+            Text(
+              'Slot Type',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: sem.onSurfaceMuted,
+              ),
+            ),
             const SizedBox(height: AppSpacing.sm),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _buildTypeChip('Lecture', SlotType.lecture, Icons.menu_book_rounded, cs, sem),
-                  _buildTypeChip('Free', SlotType.free, Icons.event_available_rounded, cs, sem),
-                  _buildTypeChip('Break', SlotType.breakSlot, Icons.coffee_rounded, cs, sem),
-                  _buildTypeChip('Lunch', SlotType.lunchSlot, Icons.restaurant_rounded, cs, sem),
-                  _buildTypeChip('Holiday', SlotType.holiday, Icons.celebration_rounded, cs, sem),
+                  _buildTypeChip(
+                    'Lecture',
+                    SlotType.lecture,
+                    Icons.menu_book_rounded,
+                    cs,
+                    sem,
+                  ),
+                  _buildTypeChip(
+                    'Free',
+                    SlotType.free,
+                    Icons.event_available_rounded,
+                    cs,
+                    sem,
+                  ),
+                  _buildTypeChip(
+                    'Break',
+                    SlotType.breakSlot,
+                    Icons.coffee_rounded,
+                    cs,
+                    sem,
+                  ),
+                  _buildTypeChip(
+                    'Lunch',
+                    SlotType.lunchSlot,
+                    Icons.restaurant_rounded,
+                    cs,
+                    sem,
+                  ),
+                  _buildTypeChip(
+                    'Holiday',
+                    SlotType.holiday,
+                    Icons.celebration_rounded,
+                    cs,
+                    sem,
+                  ),
                 ],
               ),
             ),
@@ -166,11 +220,17 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
               // Subject
               TextFormField(
                 controller: _subjectCtrl,
-                style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 16),
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Subject Name',
                   hintText: 'e.g. Mathematics',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
                   prefixIcon: const Icon(Icons.class_outlined),
                 ),
               ),
@@ -179,34 +239,62 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
               // Room
               TextFormField(
                 controller: _roomCtrl,
-                style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 16),
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Room / Lab',
                   hintText: 'e.g. Room 402',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
                   prefixIcon: const Icon(Icons.door_front_door_outlined),
                 ),
               ),
 
-
               // Component Type
-              Text('Lecture Type', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w700, color: sem.onSurfaceMuted)),
+              Text(
+                'Lecture Type',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: sem.onSurfaceMuted,
+                ),
+              ),
               const SizedBox(height: AppSpacing.sm),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: ['Theory', 'Lab', 'Tutorial', 'Project', 'Seminar', 'Viva', 'Event'].map((c) {
-                  final selected = _component == c;
-                  return ChoiceChip(
-                    label: Text(c, style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
-                    selected: selected,
-                    onSelected: (v) {
-                      if (v) setState(() => _component = c);
-                    },
-                    backgroundColor: sem.surfaceElevated,
-                    selectedColor: cs.secondaryContainer,
-                  );
-                }).toList(),
+                children:
+                    [
+                      'Theory',
+                      'Lab',
+                      'Tutorial',
+                      'Project',
+                      'Seminar',
+                      'Viva',
+                      'Event',
+                    ].map((c) {
+                      final selected = _component == c;
+                      return ChoiceChip(
+                        label: Text(
+                          c,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        selected: selected,
+                        onSelected: (v) {
+                          if (v) setState(() => _component = c);
+                        },
+                        backgroundColor: sem.surfaceElevated,
+                        selectedColor: cs.secondaryContainer,
+                      );
+                    }).toList(),
               ),
               const SizedBox(height: AppSpacing.x3l),
             ] else ...[
@@ -222,11 +310,16 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
                       widget.onDelete!();
                       Navigator.pop(context);
                     },
-                    icon: Icon(Icons.delete_outline_rounded, color: sem.cancelled),
+                    icon: Icon(
+                      Icons.delete_outline_rounded,
+                      color: sem.cancelled,
+                    ),
                     style: IconButton.styleFrom(
                       backgroundColor: sem.cancelled.withValues(alpha: 0.1),
                       padding: EdgeInsets.all(AppSpacing.lg),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                      ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.lg),
@@ -236,10 +329,19 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
                     onPressed: _save,
                     style: OutlinedButton.styleFrom(
                       padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                      ),
                       side: BorderSide(color: sem.borderSubtle, width: 1.5),
                     ),
-                    child: Text('Save', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, color: cs.onSurface)),
+                    child: Text(
+                      'Save',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                      ),
+                    ),
                   ),
                 ),
                 if (widget.onSaveAndNext != null) ...[
@@ -249,10 +351,18 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
                     child: FilledButton.icon(
                       onPressed: _saveAndNext,
                       icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                      label: Text('Save & Next', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700)),
+                      label: Text(
+                        'Save & Next',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                       style: FilledButton.styleFrom(
                         padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                        ),
                       ),
                     ),
                   ),
@@ -265,13 +375,30 @@ class _AddLectureSheetState extends State<AddLectureSheet> {
     );
   }
 
-  Widget _buildTypeChip(String label, SlotType type, IconData icon, ColorScheme cs, AppSemanticColors sem) {
+  Widget _buildTypeChip(
+    String label,
+    SlotType type,
+    IconData icon,
+    ColorScheme cs,
+    AppSemanticColors sem,
+  ) {
     final selected = _type == type;
     return Padding(
       padding: EdgeInsets.only(right: AppSpacing.sm),
       child: FilterChip(
-        label: Text(label, style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, color: selected ? cs.onPrimaryContainer : cs.onSurface)),
-        avatar: Icon(icon, size: 16, color: selected ? cs.onPrimaryContainer : sem.onSurfaceMuted),
+        label: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w600,
+            color: selected ? cs.onPrimaryContainer : cs.onSurface,
+          ),
+        ),
+        avatar: Icon(
+          icon,
+          size: 16,
+          color: selected ? cs.onPrimaryContainer : sem.onSurfaceMuted,
+        ),
         selected: selected,
         onSelected: (v) {
           if (v) setState(() => _type = type);

@@ -20,13 +20,15 @@ class AnimatedNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return ClipRRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
         child: Container(
           decoration: BoxDecoration(
-            color: backgroundColor ?? theme.colorScheme.surface.withValues(alpha: 0.8),
+            color:
+                backgroundColor ??
+                theme.colorScheme.surface.withValues(alpha: 0.8),
             border: Border(
               top: BorderSide(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
@@ -36,7 +38,10 @@ class AnimatedNavigationBar extends StatelessWidget {
           ),
           child: SafeArea(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
+              padding: EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.sm,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: List.generate(destinations.length, (index) {
@@ -89,16 +94,17 @@ class AnimatedNavigationItem extends StatefulWidget {
   State<AnimatedNavigationItem> createState() => _AnimatedNavigationItemState();
 }
 
-class _AnimatedNavigationItemState extends State<AnimatedNavigationItem> with TickerProviderStateMixin {
+class _AnimatedNavigationItemState extends State<AnimatedNavigationItem>
+    with TickerProviderStateMixin {
   late AnimationController _pressController;
   late Animation<double> _pressScaleAnimation;
-  
+
   late AnimationController _hoverController;
 
   @override
   void initState() {
     super.initState();
-    
+
     _pressController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 150),
@@ -106,7 +112,11 @@ class _AnimatedNavigationItemState extends State<AnimatedNavigationItem> with Ti
     );
 
     _pressScaleAnimation = Tween<double>(begin: 1.0, end: 0.85).animate(
-      CurvedAnimation(parent: _pressController, curve: Curves.easeOutCubic, reverseCurve: Curves.elasticOut),
+      CurvedAnimation(
+        parent: _pressController,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.elasticOut,
+      ),
     );
 
     _hoverController = AnimationController(
@@ -131,7 +141,7 @@ class _AnimatedNavigationItemState extends State<AnimatedNavigationItem> with Ti
   void _handleTapUp(_) {
     _pressController.reverse();
   }
-  
+
   void _handleTapCancel() {
     _pressController.reverse();
   }
@@ -140,7 +150,7 @@ class _AnimatedNavigationItemState extends State<AnimatedNavigationItem> with Ti
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isSelected = widget.isSelected;
-    
+
     final activeColor = theme.colorScheme.primary;
     final inactiveColor = theme.colorScheme.onSurfaceVariant;
 
@@ -162,9 +172,9 @@ class _AnimatedNavigationItemState extends State<AnimatedNavigationItem> with Ti
           builder: (context, child) {
             final hoverScale = 1.0 + (_hoverController.value * 0.05);
             final currentScale = _pressScaleAnimation.value * hoverScale;
-            
+
             final targetColor = isSelected ? activeColor : inactiveColor;
-            
+
             return Transform.scale(
               scale: currentScale,
               child: Column(
@@ -173,19 +183,23 @@ class _AnimatedNavigationItemState extends State<AnimatedNavigationItem> with Ti
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeOutCubic,
-                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.sm),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
+                      vertical: AppSpacing.sm,
+                    ),
                     decoration: BoxDecoration(
-                      color: isSelected 
-                        ? activeColor.withValues(alpha: 0.15)
-                        : activeColor.withValues(alpha: 0.05 * _hoverController.value),
+                      color: isSelected
+                          ? activeColor.withValues(alpha: 0.15)
+                          : activeColor.withValues(
+                              alpha: 0.05 * _hoverController.value,
+                            ),
                       borderRadius: BorderRadius.circular(AppRadius.xl),
                     ),
                     child: IconTheme.merge(
-                      data: IconThemeData(
-                        color: targetColor,
-                        size: 26,
-                      ),
-                      child: (isSelected && widget.destination.selectedIcon != null)
+                      data: IconThemeData(color: targetColor, size: 26),
+                      child:
+                          (isSelected &&
+                              widget.destination.selectedIcon != null)
                           ? widget.destination.selectedIcon!
                           : widget.destination.icon,
                     ),
@@ -196,8 +210,12 @@ class _AnimatedNavigationItemState extends State<AnimatedNavigationItem> with Ti
                     curve: Curves.easeOutCubic,
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected ? activeColor : Colors.transparent, // Fade text in/out
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: isSelected
+                          ? activeColor
+                          : Colors.transparent, // Fade text in/out
                     ),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 300),

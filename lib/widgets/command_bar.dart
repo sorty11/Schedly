@@ -7,11 +7,7 @@ class CommandBar extends StatelessWidget {
   final Widget? leading;
   final Widget? trailing;
 
-  const CommandBar({
-    super.key,
-    this.leading,
-    this.trailing,
-  });
+  const CommandBar({super.key, this.leading, this.trailing});
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +23,7 @@ class CommandBar extends StatelessWidget {
             leading!,
             const SizedBox(width: AppSpacing.lg),
           ],
-          
+
           // Command Palette Trigger
           Expanded(
             child: Align(
@@ -41,15 +37,23 @@ class CommandBar extends StatelessWidget {
                     onTap: () => CommandPaletteOverlay.show(context),
                     child: Container(
                       height: 36,
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                      ),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF161616) : const Color(0xFFF9F9F9),
+                        color: isDark
+                            ? const Color(0xFF161616)
+                            : const Color(0xFFF9F9F9),
                         borderRadius: BorderRadius.circular(AppRadius.md),
                         border: Border.all(color: sem.borderSubtle, width: 1),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.search, size: 16, color: sem.onSurfaceMuted),
+                          Icon(
+                            Icons.search,
+                            size: 16,
+                            color: sem.onSurfaceMuted,
+                          ),
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Text(
@@ -62,9 +66,14 @@ class CommandBar extends StatelessWidget {
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF222222) : const Color(0xFFEBEBEB),
+                              color: isDark
+                                  ? const Color(0xFF222222)
+                                  : const Color(0xFFEBEBEB),
                               borderRadius: BorderRadius.circular(AppRadius.sm),
                             ),
                             child: Text(
@@ -76,7 +85,7 @@ class CommandBar extends StatelessWidget {
                                 color: sem.onSurfaceMuted,
                               ),
                             ),
-                          )
+                          ),
                         ],
                       ),
                     ),
@@ -85,11 +94,11 @@ class CommandBar extends StatelessWidget {
               ),
             ),
           ),
-          
+
           if (trailing != null) ...[
             const SizedBox(width: AppSpacing.lg),
             trailing!,
-          ]
+          ],
         ],
       ),
     );

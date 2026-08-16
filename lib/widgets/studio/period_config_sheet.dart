@@ -58,16 +58,19 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
       _duration = s.durationPeriods;
     } else {
       _isSplit = true;
-      _duration = slots.first.durationPeriods; // Merged periods apply to the whole slot
+      _duration =
+          slots.first.durationPeriods; // Merged periods apply to the whole slot
       _splitCount = slots.length;
       for (int i = 0; i < slots.length; i++) {
-        _splitSubjCtrls.add(TextEditingController(text: slots[i].subject ?? ''));
+        _splitSubjCtrls.add(
+          TextEditingController(text: slots[i].subject ?? ''),
+        );
         _splitRoomCtrls.add(TextEditingController(text: slots[i].room ?? ''));
         _splitComponents.add(slots[i].component);
         _splitBatches.add(slots[i].batch ?? 'A${i + 1}');
       }
     }
-    
+
     // Ensure we have enough controllers if split
     _ensureSplitControllers(_splitCount);
   }
@@ -91,7 +94,9 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
   }
 
   void _save() {
-    if (!_isSplit && _wcType == SlotType.lecture && _wcSubjectCtrl.text.trim().isEmpty) {
+    if (!_isSplit &&
+        _wcType == SlotType.lecture &&
+        _wcSubjectCtrl.text.trim().isEmpty) {
       AppDialogs.showSnackBar(
         context: context,
         message: 'Subject is required',
@@ -99,31 +104,39 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
       );
       return;
     }
-    
+
     List<SlotState> res = [];
     if (!_isSplit) {
-      res.add(SlotState(
-        periodId: widget.period.id,
-        type: _wcType,
-        subject: _wcType == SlotType.lecture ? _wcSubjectCtrl.text.trim() : null,
-        room: _wcType == SlotType.lecture ? _wcRoomCtrl.text.trim() : null,
-        component: _wcComponent,
-        batch: 'Whole Class',
-        durationPeriods: _duration,
-      ));
+      res.add(
+        SlotState(
+          periodId: widget.period.id,
+          type: _wcType,
+          subject: _wcType == SlotType.lecture
+              ? _wcSubjectCtrl.text.trim()
+              : null,
+          room: _wcType == SlotType.lecture ? _wcRoomCtrl.text.trim() : null,
+          component: _wcComponent,
+          batch: 'Whole Class',
+          durationPeriods: _duration,
+        ),
+      );
     } else {
       for (int i = 0; i < _splitCount; i++) {
         final subj = _splitSubjCtrls[i].text.trim();
         // Even if empty, we save the empty slot to maintain the lane
-        res.add(SlotState(
-          periodId: widget.period.id,
-          type: SlotType.lecture,
-          subject: subj.isEmpty ? null : subj,
-          room: _splitRoomCtrls[i].text.trim().isEmpty ? null : _splitRoomCtrls[i].text.trim(),
-          component: _splitComponents[i],
-          batch: _splitBatches[i],
-          durationPeriods: _duration,
-        ));
+        res.add(
+          SlotState(
+            periodId: widget.period.id,
+            type: SlotType.lecture,
+            subject: subj.isEmpty ? null : subj,
+            room: _splitRoomCtrls[i].text.trim().isEmpty
+                ? null
+                : _splitRoomCtrls[i].text.trim(),
+            component: _splitComponents[i],
+            batch: _splitBatches[i],
+            durationPeriods: _duration,
+          ),
+        );
       }
     }
     widget.onSave(res);
@@ -156,7 +169,10 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
             child: Container(
               width: 48,
               height: 5,
-              decoration: BoxDecoration(color: sem.borderSubtle, borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(
+                color: sem.borderSubtle,
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           ),
           const SizedBox(height: 20),
@@ -165,11 +181,20 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(widget.period.name, style: TextStyle(fontFamily: 'Outfit', fontSize: 22, fontWeight: FontWeight.w700)),
+              Text(
+                widget.period.name,
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               IconButton(
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.close_rounded),
-                style: IconButton.styleFrom(backgroundColor: sem.surfaceElevated),
+                style: IconButton.styleFrom(
+                  backgroundColor: sem.surfaceElevated,
+                ),
               ),
             ],
           ),
@@ -181,7 +206,14 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('How is this lecture conducted?', style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w700)),
+                  Text(
+                    'How is this lecture conducted?',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.md),
                   Row(
                     children: [
@@ -190,7 +222,14 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
                           value: false,
                           groupValue: _isSplit,
                           onChanged: (v) => setState(() => _isSplit = v!),
-                          title: Text('Whole Class', style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w600)),
+                          title: Text(
+                            'Whole Class',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           contentPadding: EdgeInsets.zero,
                           dense: true,
                         ),
@@ -200,7 +239,14 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
                           value: true,
                           groupValue: _isSplit,
                           onChanged: (v) => setState(() => _isSplit = v!),
-                          title: Text('Split into Batches', style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w600)),
+                          title: Text(
+                            'Split into Batches',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           contentPadding: EdgeInsets.zero,
                           dense: true,
                         ),
@@ -209,7 +255,10 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
                   ),
                   const Divider(height: 32),
 
-                  if (!_isSplit) _buildWholeClassForm(cs, sem) else _buildSplitForm(cs, sem),
+                  if (!_isSplit)
+                    _buildWholeClassForm(cs, sem)
+                  else
+                    _buildSplitForm(cs, sem),
                 ],
               ),
             ),
@@ -223,9 +272,18 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
                   onPressed: _save,
                   style: FilledButton.styleFrom(
                     padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                    ),
                   ),
-                  child: Text('Save Period', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700, fontSize: 16)),
+                  child: Text(
+                    'Save Period',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -244,10 +302,34 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _buildTypeChip('Lecture', SlotType.lecture, Icons.menu_book_rounded, cs, sem),
-              _buildTypeChip('Free', SlotType.free, Icons.event_available_rounded, cs, sem),
-              _buildTypeChip('Break', SlotType.breakSlot, Icons.coffee_rounded, cs, sem),
-              _buildTypeChip('Lunch', SlotType.lunchSlot, Icons.restaurant_rounded, cs, sem),
+              _buildTypeChip(
+                'Lecture',
+                SlotType.lecture,
+                Icons.menu_book_rounded,
+                cs,
+                sem,
+              ),
+              _buildTypeChip(
+                'Free',
+                SlotType.free,
+                Icons.event_available_rounded,
+                cs,
+                sem,
+              ),
+              _buildTypeChip(
+                'Break',
+                SlotType.breakSlot,
+                Icons.coffee_rounded,
+                cs,
+                sem,
+              ),
+              _buildTypeChip(
+                'Lunch',
+                SlotType.lunchSlot,
+                Icons.restaurant_rounded,
+                cs,
+                sem,
+              ),
             ],
           ),
         ),
@@ -256,51 +338,100 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
         if (_wcType == SlotType.lecture) ...[
           TextFormField(
             controller: _wcSubjectCtrl,
-            style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 16),
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+            ),
             decoration: InputDecoration(
               labelText: 'Subject Name',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
               prefixIcon: const Icon(Icons.class_outlined),
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
           TextFormField(
             controller: _wcRoomCtrl,
-            style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 16),
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+            ),
             decoration: InputDecoration(
               labelText: 'Room / Lab',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
               prefixIcon: const Icon(Icons.door_front_door_outlined),
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          Text('Lecture Type', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w700, color: sem.onSurfaceMuted)),
+          Text(
+            'Lecture Type',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: sem.onSurfaceMuted,
+            ),
+          ),
           const SizedBox(height: AppSpacing.sm),
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: ['Theory', 'Lab', 'Tutorial', 'Project', 'Seminar', 'Viva', 'Event'].map((c) {
-              return ChoiceChip(
-                label: Text(c, style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
-                selected: _wcComponent == c,
-                onSelected: (v) {
-                  if (v) setState(() => _wcComponent = c);
-                },
-                backgroundColor: sem.surfaceElevated,
-                selectedColor: cs.secondaryContainer,
-              );
-            }).toList(),
+            children:
+                [
+                  'Theory',
+                  'Lab',
+                  'Tutorial',
+                  'Project',
+                  'Seminar',
+                  'Viva',
+                  'Event',
+                ].map((c) {
+                  return ChoiceChip(
+                    label: Text(
+                      c,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    selected: _wcComponent == c,
+                    onSelected: (v) {
+                      if (v) setState(() => _wcComponent = c);
+                    },
+                    backgroundColor: sem.surfaceElevated,
+                    selectedColor: cs.secondaryContainer,
+                  );
+                }).toList(),
           ),
         ],
 
         const SizedBox(height: AppSpacing.x2l),
-        Text('Duration (Periods)', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w700, color: sem.onSurfaceMuted)),
+        Text(
+          'Duration (Periods)',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: sem.onSurfaceMuted,
+          ),
+        ),
         const SizedBox(height: AppSpacing.sm),
         Wrap(
           spacing: 8,
           children: [1, 2, 3].map((d) {
             return ChoiceChip(
-              label: Text('$d Period${d > 1 ? 's' : ''}', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+              label: Text(
+                '$d Period${d > 1 ? 's' : ''}',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               selected: _duration == d,
               onSelected: (v) {
                 if (v) setState(() => _duration = d);
@@ -317,13 +448,27 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Number of Batches', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w700, color: sem.onSurfaceMuted)),
+        Text(
+          'Number of Batches',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: sem.onSurfaceMuted,
+          ),
+        ),
         const SizedBox(height: AppSpacing.sm),
         Wrap(
           spacing: 8,
           children: [2, 3, 4].map((c) {
             return ChoiceChip(
-              label: Text('$c Batches', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+              label: Text(
+                '$c Batches',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               selected: _splitCount == c,
               onSelected: (v) {
                 if (v) {
@@ -337,13 +482,27 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
           }).toList(),
         ),
         const SizedBox(height: AppSpacing.x2l),
-        Text('Duration (Periods)', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w700, color: sem.onSurfaceMuted)),
+        Text(
+          'Duration (Periods)',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: sem.onSurfaceMuted,
+          ),
+        ),
         const SizedBox(height: AppSpacing.sm),
         Wrap(
           spacing: 8,
           children: [1, 2, 3].map((d) {
             return ChoiceChip(
-              label: Text('$d Period${d > 1 ? 's' : ''}', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+              label: Text(
+                '$d Period${d > 1 ? 's' : ''}',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               selected: _duration == d,
               onSelected: (v) {
                 if (v) setState(() => _duration = d);
@@ -370,7 +529,10 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
                     Expanded(
                       child: TextFormField(
                         initialValue: _splitBatches[i],
-                        decoration: const InputDecoration(labelText: 'Batch Name (e.g. A1)', isDense: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Batch Name (e.g. A1)',
+                          isDense: true,
+                        ),
                         onChanged: (val) => _splitBatches[i] = val.trim(),
                       ),
                     ),
@@ -379,7 +541,10 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
                 const SizedBox(height: AppSpacing.lg),
                 TextFormField(
                   controller: _splitSubjCtrls[i],
-                  decoration: const InputDecoration(labelText: 'Subject', isDense: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Subject',
+                    isDense: true,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Row(
@@ -387,17 +552,40 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
                     Expanded(
                       child: TextFormField(
                         controller: _splitRoomCtrls[i],
-                        decoration: const InputDecoration(labelText: 'Room', isDense: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Room',
+                          isDense: true,
+                        ),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         value: _splitComponents[i],
-                        decoration: const InputDecoration(labelText: 'Type', isDense: true),
-                        items: ['Theory', 'Lab', 'Tutorial', 'Project', 'Seminar', 'Viva', 'Event'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                        decoration: const InputDecoration(
+                          labelText: 'Type',
+                          isDense: true,
+                        ),
+                        items:
+                            [
+                                  'Theory',
+                                  'Lab',
+                                  'Tutorial',
+                                  'Project',
+                                  'Seminar',
+                                  'Viva',
+                                  'Event',
+                                ]
+                                .map(
+                                  (c) => DropdownMenuItem(
+                                    value: c,
+                                    child: Text(c),
+                                  ),
+                                )
+                                .toList(),
                         onChanged: (v) {
-                          if (v != null) setState(() => _splitComponents[i] = v);
+                          if (v != null)
+                            setState(() => _splitComponents[i] = v);
                         },
                       ),
                     ),
@@ -412,12 +600,21 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
     );
   }
 
-  Widget _buildTypeChip(String label, SlotType type, IconData icon, ColorScheme cs, AppSemanticColors sem) {
+  Widget _buildTypeChip(
+    String label,
+    SlotType type,
+    IconData icon,
+    ColorScheme cs,
+    AppSemanticColors sem,
+  ) {
     final selected = _wcType == type;
     return Padding(
       padding: EdgeInsets.only(right: AppSpacing.sm),
       child: FilterChip(
-        label: Text(label, style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+        label: Text(
+          label,
+          style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
+        ),
         avatar: Icon(icon, size: 16),
         selected: selected,
         onSelected: (v) {

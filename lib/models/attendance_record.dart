@@ -8,7 +8,8 @@ class AttendanceRecord {
   final int present;
   final int absent;
   final int cancelled; // student-marked (lecture was cancelled, doesn't count)
-  final Map<String, String> markedInstances; // Stores instance IDs to mark types ('present', 'absent', 'cancelled')
+  final Map<String, String>
+  markedInstances; // Stores instance IDs to mark types ('present', 'absent', 'cancelled')
   final DateTime updatedAt;
 
   AttendanceRecord({
@@ -45,7 +46,7 @@ class AttendanceRecord {
 
   factory AttendanceRecord.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
-    
+
     Map<String, String> parsedInstances = {};
     if (data['markedInstances'] is Map) {
       parsedInstances = Map<String, String>.from(data['markedInstances']);

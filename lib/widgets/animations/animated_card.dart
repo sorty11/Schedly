@@ -18,21 +18,23 @@ class AnimatedCard extends StatefulWidget {
     this.margin,
     this.backgroundColor,
     this.borderRadius = 20,
-    this.disableTilt = true, // Default to true now to prevent unnecessary movement
+    this.disableTilt =
+        true, // Default to true now to prevent unnecessary movement
   });
 
   @override
   State<AnimatedCard> createState() => _AnimatedCardState();
 }
 
-class _AnimatedCardState extends State<AnimatedCard> with SingleTickerProviderStateMixin {
+class _AnimatedCardState extends State<AnimatedCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _pressController;
   late Animation<double> _pressScaleAnimation;
 
   @override
   void initState() {
     super.initState();
-    
+
     // Strict Premium Timing (Cards): 160ms (between 140-180ms constraint)
     _pressController = AnimationController(
       vsync: this,
@@ -64,7 +66,8 @@ class _AnimatedCardState extends State<AnimatedCard> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    final bool isInteractive = widget.onTap != null || widget.onLongPress != null;
+    final bool isInteractive =
+        widget.onTap != null || widget.onLongPress != null;
 
     return Semantics(
       button: isInteractive,
@@ -83,17 +86,19 @@ class _AnimatedCardState extends State<AnimatedCard> with SingleTickerProviderSt
               });
             }
           },
-          onLongPress: widget.onLongPress != null ? () {
-            HapticFeedback.mediumImpact();
-            widget.onLongPress!();
-          } : null,
+          onLongPress: widget.onLongPress != null
+              ? () {
+                  HapticFeedback.mediumImpact();
+                  widget.onLongPress!();
+                }
+              : null,
           child: AnimatedBuilder(
             animation: _pressController,
             builder: (context, child) {
               final matrix = Matrix4.diagonal3Values(
-                _pressScaleAnimation.value, 
-                _pressScaleAnimation.value, 
-                1.0
+                _pressScaleAnimation.value,
+                _pressScaleAnimation.value,
+                1.0,
               );
 
               return Transform(

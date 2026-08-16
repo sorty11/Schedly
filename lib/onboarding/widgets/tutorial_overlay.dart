@@ -11,7 +11,7 @@ class TutorialOverlayManager {
 
   static void show(BuildContext context) {
     if (_overlayEntry != null) return;
-    
+
     _overlayEntry = OverlayEntry(
       builder: (context) => const _TutorialOverlayWidget(),
     );
@@ -32,7 +32,9 @@ class _HoleClipper extends CustomClipper<Path> {
   Path getClip(Size size) {
     return Path()
       ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..addRRect(RRect.fromRectAndRadius(hole, const Radius.circular(AppRadius.lg)))
+      ..addRRect(
+        RRect.fromRectAndRadius(hole, const Radius.circular(AppRadius.lg)),
+      )
       ..fillType = PathFillType.evenOdd;
   }
 
@@ -47,13 +49,14 @@ class _TutorialOverlayWidget extends StatefulWidget {
   State<_TutorialOverlayWidget> createState() => _TutorialOverlayWidgetState();
 }
 
-class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget> with SingleTickerProviderStateMixin {
+class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget>
+    with SingleTickerProviderStateMixin {
   final TutorialController _controller = TutorialController.instance;
-  
+
   Rect? _currentTargetBounds;
   Rect? _previousTargetBounds;
   Ticker? _ticker;
-  
+
   @override
   void initState() {
     super.initState();
@@ -70,7 +73,7 @@ class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget> with Sin
 
   void _onTick(Duration elapsed) {
     if (!_controller.isVisible) return;
-    
+
     final step = _controller.currentStep;
     if (step != null) {
       final bounds = TargetRegistry.instance.getBounds(step.targetId);
@@ -90,7 +93,7 @@ class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget> with Sin
       TutorialOverlayManager.hide();
       return;
     }
-    
+
     final step = _controller.currentStep;
     if (step != null) {
       final bounds = TargetRegistry.instance.getBounds(step.targetId);
@@ -103,7 +106,7 @@ class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget> with Sin
         }
       } else if (bounds == null) {
         // Target is missing, state is likely waitingForTarget.
-        // We do NOT clear _currentTargetBounds. We keep the previous bounds 
+        // We do NOT clear _currentTargetBounds. We keep the previous bounds
         // to prevent the overlay from unmounting or jumping to an error state.
         if (mounted) setState(() {});
       } else {
@@ -117,7 +120,7 @@ class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget> with Sin
   @override
   Widget build(BuildContext context) {
     final state = _controller.state;
-    
+
     if (state == TutorialState.idle || state == TutorialState.preparing) {
       return const SizedBox.shrink();
     }
@@ -134,7 +137,7 @@ class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget> with Sin
       rect.right + 8,
       rect.bottom + 8,
     );
-    
+
     final prevRect = _previousTargetBounds ?? highlightRect;
     final prevHighlightRect = Rect.fromLTRB(
       prevRect.left - 8,
@@ -144,10 +147,11 @@ class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget> with Sin
     );
 
     // Fade out tooltip during transition, paused, or celebration
-    final bool showTooltip = state == TutorialState.highlighting || 
-                             state == TutorialState.waitingForInteraction || 
-                             state == TutorialState.interactionCompleted ||
-                             state == TutorialState.celebration;
+    final bool showTooltip =
+        state == TutorialState.highlighting ||
+        state == TutorialState.waitingForInteraction ||
+        state == TutorialState.interactionCompleted ||
+        state == TutorialState.celebration;
 
     return Material(
       type: MaterialType.transparency,
@@ -168,12 +172,16 @@ class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget> with Sin
                         children: [
                           BackdropFilter(
                             filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
-                            child: Container(color: Colors.black.withValues(alpha: 0.1)),
+                            child: Container(
+                              color: Colors.black.withValues(alpha: 0.1),
+                            ),
                           ),
                           GestureDetector(
                             onTap: () {}, // Block all taps outside the hole
                             behavior: HitTestBehavior.opaque,
-                            child: Container(color: Colors.black.withValues(alpha: 0.65)),
+                            child: Container(
+                              color: Colors.black.withValues(alpha: 0.65),
+                            ),
                           ),
                         ],
                       ),
@@ -185,12 +193,16 @@ class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget> with Sin
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(AppRadius.lg),
                             border: Border.all(
-                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primary.withValues(alpha: 0.6),
                               width: 2,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withValues(alpha: 0.3),
                                 blurRadius: 15,
                                 spreadRadius: 1,
                               ),
@@ -204,7 +216,7 @@ class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget> with Sin
               },
             ),
           ),
-          
+
           // Tooltip Layer
           Positioned.fill(
             child: TweenAnimationBuilder<Rect?>(

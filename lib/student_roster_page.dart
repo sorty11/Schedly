@@ -24,7 +24,7 @@ class StudentRosterPage extends StatefulWidget {
 class _StudentRosterPageState extends State<StudentRosterPage> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
-  
+
   bool _isLoading = true;
   List<Map<String, dynamic>> _roster = [];
 
@@ -45,8 +45,10 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
     setState(() => _isLoading = true);
 
     try {
-      final roster = await DivisionMembershipService.getSectionRoster(widget.division);
-      
+      final roster = await DivisionMembershipService.getSectionRoster(
+        widget.division,
+      );
+
       // Sort by roll number initially
       roster.sort((a, b) {
         final rollA = (a['profile']['rollNo'] as String?) ?? '';
@@ -96,7 +98,9 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Are you sure you want to remove\n\n$name\n\nfrom\n\n${widget.division}?'),
+            Text(
+              'Are you sure you want to remove\n\n$name\n\nfrom\n\n${widget.division}?',
+            ),
             const SizedBox(height: AppSpacing.lg),
             const Text('This action will:'),
             const Text('✓ Remove the student from the class roster'),
@@ -104,7 +108,10 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
             const Text('✓ Stop receiving section notifications'),
             const Text('✓ End their current section session'),
             const SizedBox(height: AppSpacing.lg),
-            const Text('The student\'s account and historical data will NOT be deleted.', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+            const Text(
+              'The student\'s account and historical data will NOT be deleted.',
+              style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+            ),
           ],
         ),
         actions: [
@@ -113,7 +120,9 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Remove Student'),
           ),
@@ -130,7 +139,9 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
             title: const Text('Reason (Optional)'),
             content: TextField(
               controller: controller,
-              decoration: const InputDecoration(hintText: 'e.g., Transferred, Dropped out'),
+              decoration: const InputDecoration(
+                hintText: 'e.g., Transferred, Dropped out',
+              ),
             ),
             actions: [
               TextButton(
@@ -148,7 +159,11 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
     }
   }
 
-  Future<void> _removeStudent(String targetUid, String targetName, String reason) async {
+  Future<void> _removeStudent(
+    String targetUid,
+    String targetName,
+    String reason,
+  ) async {
     setState(() => _isLoading = true);
     try {
       final crUid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown';
@@ -166,11 +181,13 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('$targetName was removed from the section.')),
       );
-      
+
       await _loadRoster();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to remove student. Please try again.')),
+        const SnackBar(
+          content: Text('Unable to remove student. Please try again.'),
+        ),
       );
       setState(() => _isLoading = false);
     }
@@ -204,15 +221,22 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Remove ${_selectedUids.length} Students?', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700)),
-        content: const Text('Are you sure you want to remove the selected students from the section?'),
+        title: Text(
+          'Remove ${_selectedUids.length} Students?',
+          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700),
+        ),
+        content: const Text(
+          'Are you sure you want to remove the selected students from the section?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Remove'),
           ),
@@ -227,12 +251,12 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
       try {
         final crUid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown';
         final crName = AppSettings.studentName ?? 'CR';
-        
+
         for (final uid in _selectedUids) {
           final student = _roster.firstWhere((s) => s['uid'] == uid);
           final profile = student['profile'] as Map<String, dynamic>;
           final name = profile['name'] as String? ?? 'Unknown Student';
-          
+
           await DivisionMembershipService.removeStudent(
             targetUid: uid,
             sectionId: widget.division,
@@ -242,16 +266,23 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
             reason: 'Bulk removal',
           );
         }
-        
+
         if (mounted) {
-          AppDialogs.showSnackBar(context: context, message: 'Removed ${_selectedUids.length} students.');
+          AppDialogs.showSnackBar(
+            context: context,
+            message: 'Removed ${_selectedUids.length} students.',
+          );
           _isSelectionMode = false;
           _selectedUids.clear();
           await _loadRoster();
         }
       } catch (e) {
         if (mounted) {
-          AppDialogs.showSnackBar(context: context, message: 'Failed to remove some students.', isError: true);
+          AppDialogs.showSnackBar(
+            context: context,
+            message: 'Failed to remove some students.',
+            isError: true,
+          );
           setState(() => _isLoading = false);
         }
       }
@@ -263,7 +294,7 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     final filteredRoster = _roster.where((s) {
       if (_searchQuery.isEmpty) return true;
       final profile = s['profile'] as Map<String, dynamic>;
@@ -281,8 +312,17 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
           ? FloatingActionButton.extended(
               onPressed: _removeSelected,
               backgroundColor: sem.error,
-              icon: const Icon(Icons.person_remove_rounded, color: Colors.white),
-              label: Text('Remove ', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              icon: const Icon(
+                Icons.person_remove_rounded,
+                color: Colors.white,
+              ),
+              label: Text(
+                'Remove ',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             )
           : null,
       body: RefreshIndicator(
@@ -296,14 +336,18 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
                 children: [
                   if (!_isSelectionMode)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(AppRadius.full),
                       ),
                       child: Text(
                         ' Students',
-                        style: TextStyle(fontFamily: 'Inter', 
+                        style: TextStyle(
+                          fontFamily: 'Inter',
                           fontSize: 12,
                           color: colorScheme.primary,
                           fontWeight: FontWeight.bold,
@@ -313,8 +357,14 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
                   if (isCR && filteredRoster.isNotEmpty) ...[
                     const SizedBox(width: AppSpacing.sm),
                     IconButton(
-                      icon: Icon(_isSelectionMode ? Icons.close_rounded : Icons.checklist_rounded),
-                      tooltip: _isSelectionMode ? 'Cancel Selection' : 'Select Multiple',
+                      icon: Icon(
+                        _isSelectionMode
+                            ? Icons.close_rounded
+                            : Icons.checklist_rounded,
+                      ),
+                      tooltip: _isSelectionMode
+                          ? 'Cancel Selection'
+                          : 'Select Multiple',
                       onPressed: _toggleSelectionMode,
                     ),
                   ],
@@ -331,13 +381,19 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
               ),
             ),
             if (_isLoading)
-              const Center(child: Padding(padding: EdgeInsets.all(AppSpacing.x3l), child: CircularProgressIndicator()))
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(AppSpacing.x3l),
+                  child: CircularProgressIndicator(),
+                ),
+              )
             else if (filteredRoster.isEmpty)
               const Center(
                 child: FloatingEmptyState(
                   icon: Icons.people_outline_rounded,
                   title: 'No Students Found',
-                  subtitle: 'Could not find any active students matching your query.',
+                  subtitle:
+                      'Could not find any active students matching your query.',
                 ),
               )
             else
@@ -345,20 +401,24 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: filteredRoster.length,
-                separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: AppSpacing.md),
                 itemBuilder: (context, index) {
                   final student = filteredRoster[index];
                   final profile = student['profile'] as Map<String, dynamic>;
                   final name = profile['name'] as String? ?? 'Unknown';
                   final rollNo = profile['rollNo'] as String? ?? '-';
-                  final role = student['membership']['role'] as String? ?? 'Student';
+                  final role =
+                      student['membership']['role'] as String? ?? 'Student';
                   final uid = student['uid'] as String;
-                  
+
                   final isCRRole = role == 'CR';
                   final isSelected = _selectedUids.contains(uid);
 
                   return SchedlyCard(
-                    variant: isSelected ? SchedlyCardVariant.tinted : SchedlyCardVariant.elevated,
+                    variant: isSelected
+                        ? SchedlyCardVariant.tinted
+                        : SchedlyCardVariant.elevated,
                     padding: const EdgeInsets.all(AppSpacing.sm),
                     onTap: _isSelectionMode && !isCRRole
                         ? () => _toggleStudentSelection(uid)
@@ -367,10 +427,16 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
                       children: [
                         if (_isSelectionMode && !isCRRole)
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                            ),
                             child: Icon(
-                              isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                              color: isSelected ? colorScheme.primary : sem.onSurfaceFaint,
+                              isSelected
+                                  ? Icons.check_circle_rounded
+                                  : Icons.radio_button_unchecked_rounded,
+                              color: isSelected
+                                  ? colorScheme.primary
+                                  : sem.onSurfaceFaint,
                             ),
                           ),
                         Container(
@@ -378,16 +444,21 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
                           height: 48,
                           margin: const EdgeInsets.all(AppSpacing.xs),
                           decoration: BoxDecoration(
-                            color: isCRRole ? colorScheme.primary.withValues(alpha: 0.15) : colorScheme.secondary.withValues(alpha: 0.1),
+                            color: isCRRole
+                                ? colorScheme.primary.withValues(alpha: 0.15)
+                                : colorScheme.secondary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(AppRadius.md),
                           ),
                           alignment: Alignment.center,
                           child: Text(
                             name.isNotEmpty ? name[0].toUpperCase() : '?',
-                            style: TextStyle(fontFamily: 'Outfit', 
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
-                              color: isCRRole ? colorScheme.primary : colorScheme.secondary,
+                              color: isCRRole
+                                  ? colorScheme.primary
+                                  : colorScheme.secondary,
                             ),
                           ),
                         ),
@@ -398,7 +469,8 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
                             children: [
                               Text(
                                 name,
-                                style: TextStyle(fontFamily: 'Inter', 
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
                                   fontWeight: FontWeight.w700,
                                   fontSize: 15,
                                   color: colorScheme.onSurface,
@@ -409,7 +481,8 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
                                 children: [
                                   Text(
                                     rollNo,
-                                    style: TextStyle(fontFamily: 'Inter', 
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
                                       color: sem.onSurfaceMuted,
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
@@ -418,14 +491,20 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
                                   if (isCRRole) ...[
                                     const SizedBox(width: AppSpacing.sm),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: colorScheme.primary.withValues(alpha: 0.1),
+                                        color: colorScheme.primary.withValues(
+                                          alpha: 0.1,
+                                        ),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
                                         'Class Rep',
-                                        style: TextStyle(fontFamily: 'Inter', 
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
                                           fontSize: 10,
                                           fontWeight: FontWeight.w700,
                                           color: colorScheme.primary,
@@ -440,9 +519,16 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
                         ),
                         if (isCR && !_isSelectionMode)
                           PopupMenuButton<String>(
-                            icon: Icon(Icons.more_vert_rounded, color: sem.onSurfaceMuted),
-                            color: isDark ? sem.surfaceElevated2 : colorScheme.surface,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                            icon: Icon(
+                              Icons.more_vert_rounded,
+                              color: sem.onSurfaceMuted,
+                            ),
+                            color: isDark
+                                ? sem.surfaceElevated2
+                                : colorScheme.surface,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.lg),
+                            ),
                             onSelected: (value) {
                               if (value == 'remove') {
                                 _confirmRemoveStudent(student);
@@ -458,7 +544,11 @@ class _StudentRosterPageState extends State<StudentRosterPage> {
                                 enabled: !isCRRole,
                                 child: Text(
                                   'Remove from Division',
-                                  style: TextStyle(color: isCRRole ? Theme.of(context).disabledColor : sem.error),
+                                  style: TextStyle(
+                                    color: isCRRole
+                                        ? Theme.of(context).disabledColor
+                                        : sem.error,
+                                  ),
                                 ),
                               ),
                             ],

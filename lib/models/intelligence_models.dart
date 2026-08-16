@@ -10,18 +10,14 @@ enum RecommendationLevel {
 
 enum IntelligenceGrade {
   excellent, // 95%+
-  safe,      // 85-94%
-  monitor,   // 80-84%
+  safe, // 85-94%
+  monitor, // 80-84%
   attention, // 75-79%
-  critical,  // 70-74%
+  critical, // 70-74%
   emergency, // <70%
 }
 
-enum AttendanceTrend {
-  improving,
-  stable,
-  declining,
-}
+enum AttendanceTrend { improving, stable, declining }
 
 class SubjectIntelligence {
   final String subjectCode;
@@ -49,7 +45,8 @@ class OverallHealth {
   final int score; // 0-100
   final String grade; // A, B, C, D, F
   final AttendanceTrend trend;
-  final int safeClassesRemaining; // Global safe margin until next subject drops below threshold
+  final int
+  safeClassesRemaining; // Global safe margin until next subject drops below threshold
 
   OverallHealth({
     required this.score,

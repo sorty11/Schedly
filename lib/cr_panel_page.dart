@@ -54,8 +54,14 @@ class _CRPanelPageState extends State<CRPanelPage> {
       return;
     }
     try {
-      final complete = await CourseConfigurationService.isSetupComplete(sectionId);
-      if (mounted) setState(() { _setupComplete = complete; _isCheckingSetup = false; });
+      final complete = await CourseConfigurationService.isSetupComplete(
+        sectionId,
+      );
+      if (mounted)
+        setState(() {
+          _setupComplete = complete;
+          _isCheckingSetup = false;
+        });
     } catch (_) {
       if (mounted) setState(() => _isCheckingSetup = false);
     }
@@ -64,10 +70,7 @@ class _CRPanelPageState extends State<CRPanelPage> {
   Future<void> _logoutCR(BuildContext context) async {
     await AppSettings.resetRole();
     if (!context.mounted) return;
-    AppDialogs.showSnackBar(
-      context: context,
-      message: 'Exited role mode',
-    );
+    AppDialogs.showSnackBar(context: context, message: 'Exited role mode');
     Navigator.pop(context);
   }
 
@@ -100,80 +103,71 @@ class _CRPanelPageState extends State<CRPanelPage> {
       padding: EdgeInsets.only(bottom: AppSpacing.md),
       child: AnimatedCard(
         onTap: onTap,
-          borderRadius: AppRadius.xl,
-          backgroundColor: semanticColors.surfaceElevated,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.xl),
-              border: Border.all(
-                color: semanticColors.borderSubtle,
-                width: 1,
+        borderRadius: AppRadius.xl,
+        backgroundColor: semanticColors.surfaceElevated,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+            border: Border.all(color: semanticColors.borderSubtle, width: 1),
+          ),
+          padding: EdgeInsets.all(AppSpacing.xl),
+          child: Row(
+            children: [
+              // Icon container
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Icon(icon, color: color, size: 26),
               ),
-            ),
-            padding: EdgeInsets.all(AppSpacing.xl),
-            child: Row(
-              children: [
-                // Icon container
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                  ),
-                  child: Icon(icon, color: color, size: 26),
-                ),
-                const SizedBox(width: AppSpacing.lg),
+              const SizedBox(width: AppSpacing.lg),
 
-                // Text block
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: GoogleFonts.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: colorScheme.onSurface,
-                        ),
+              // Text block
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onSurface,
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        subtitle,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                          color: semanticColors.onSurfaceMuted,
-                        ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        color: semanticColors.onSurfaceMuted,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
+              ),
 
-                // Chevron
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: 20,
-                  color: semanticColors.onSurfaceMuted,
-                ),
-              ],
-            ),
+              // Chevron
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: semanticColors.onSurfaceMuted,
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    );
 
     if (targetId != null) {
-      cardContent = TutorialTarget(
-        id: targetId,
-        child: cardContent,
-      );
+      cardContent = TutorialTarget(id: targetId, child: cardContent);
     }
 
-    return StaggeredListItem(
-      index: staggerIndex,
-      child: cardContent,
-    );
+    return StaggeredListItem(index: staggerIndex, child: cardContent);
   }
 
   // ─── Section label ─────────────────────────────────────────────────────────
@@ -208,7 +202,10 @@ class _CRPanelPageState extends State<CRPanelPage> {
         body: Center(
           child: Text(
             'Access Denied',
-            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold),
+            style: GoogleFonts.outfit(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       );
@@ -217,7 +214,8 @@ class _CRPanelPageState extends State<CRPanelPage> {
     final isCR = AppSettings.currentRole == UserRole.cr;
     final colorScheme = Theme.of(context).colorScheme;
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
-    final sectionId = AppSettings.sectionId ?? AppSettings.division ?? 'Division';
+    final sectionId =
+        AppSettings.sectionId ?? AppSettings.division ?? 'Division';
 
     return Scaffold(
       appBar: AppBar(
@@ -248,9 +246,8 @@ class _CRPanelPageState extends State<CRPanelPage> {
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => CourseDetailsSetupPage(
-                        division: sectionId,
-                      ),
+                      builder: (context) =>
+                          CourseDetailsSetupPage(division: sectionId),
                     ),
                   );
                   _checkSetup(); // recheck when back
@@ -319,7 +316,9 @@ class _CRPanelPageState extends State<CRPanelPage> {
                             ),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(AppRadius.full),
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.full,
+                              ),
                             ),
                             child: Text(
                               isCR
@@ -359,7 +358,9 @@ class _CRPanelPageState extends State<CRPanelPage> {
                   context,
                   MaterialPageRoute(
                     builder: (_) => WeeklyTimetablePage(
-                        division: division, isEditMode: true),
+                      division: division,
+                      isEditMode: true,
+                    ),
                   ),
                 );
               },
@@ -430,7 +431,8 @@ class _CRPanelPageState extends State<CRPanelPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => CRPasswordManagementPage(division: sectionId),
+                      builder: (_) =>
+                          CRPasswordManagementPage(division: sectionId),
                     ),
                   );
                 },
@@ -440,7 +442,8 @@ class _CRPanelPageState extends State<CRPanelPage> {
                 targetId: 'batch_management_btn',
                 icon: Icons.group_rounded,
                 title: 'Batch Management',
-                subtitle: 'Rename batches (e.g., ${(AppSettings.division ?? 'A').split('_').last}1 → Batch Alpha)',
+                subtitle:
+                    'Rename batches (e.g., ${(AppSettings.division ?? 'A').split('_').last}1 → Batch Alpha)',
                 color: colorScheme.primary,
                 onTap: () {
                   Navigator.push(
@@ -465,8 +468,12 @@ class _CRPanelPageState extends State<CRPanelPage> {
                 color: semanticColors.pending,
                 targetId: 'student_roster_btn',
                 onTap: () async {
-                  final division = AppSettings.sectionId ?? AppSettings.division;
-                  await DiagnosticService.logNavigation('StudentRosterPage', division);
+                  final division =
+                      AppSettings.sectionId ?? AppSettings.division;
+                  await DiagnosticService.logNavigation(
+                    'StudentRosterPage',
+                    division,
+                  );
                   if (!context.mounted || division == null) return;
                   Navigator.push(
                     context,
@@ -485,8 +492,12 @@ class _CRPanelPageState extends State<CRPanelPage> {
                 targetId: 'faculty_roster_btn',
                 color: semanticColors.pending,
                 onTap: () async {
-                  final division = AppSettings.sectionId ?? AppSettings.division;
-                  await DiagnosticService.logNavigation('CRFacultyViewPage', division);
+                  final division =
+                      AppSettings.sectionId ?? AppSettings.division;
+                  await DiagnosticService.logNavigation(
+                    'CRFacultyViewPage',
+                    division,
+                  );
                   if (!context.mounted || division == null) return;
                   Navigator.push(
                     context,
@@ -505,8 +516,12 @@ class _CRPanelPageState extends State<CRPanelPage> {
                 targetId: 'faculty_requests_btn',
                 color: semanticColors.pending,
                 onTap: () async {
-                  final division = AppSettings.sectionId ?? AppSettings.division;
-                  await DiagnosticService.logNavigation('CRFacultyRequestsPage', division);
+                  final division =
+                      AppSettings.sectionId ?? AppSettings.division;
+                  await DiagnosticService.logNavigation(
+                    'CRFacultyRequestsPage',
+                    division,
+                  );
                   if (!context.mounted || division == null) return;
                   Navigator.push(
                     context,
@@ -595,24 +610,29 @@ class _CRPanelPageState extends State<CRPanelPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          showDialog(context: context, builder: (_) => const AlertDialog(content: CircularProgressIndicator()));
-          
+          showDialog(
+            context: context,
+            builder: (_) =>
+                const AlertDialog(content: CircularProgressIndicator()),
+          );
+
           final result = await DiagnosticService.runDiagnostics();
-          
+
           if (!context.mounted) return;
           Navigator.pop(context); // pop loading
-          
+
           showDialog(
-            context: context, 
+            context: context,
             builder: (_) => AlertDialog(
               title: const Text('Diagnostics'),
-              content: SingleChildScrollView(
-                child: SelectableText(result),
-              ),
+              content: SingleChildScrollView(child: SelectableText(result)),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'),
+                ),
               ],
-            )
+            ),
           );
         },
         child: const Icon(Icons.bug_report),
@@ -622,49 +642,84 @@ class _CRPanelPageState extends State<CRPanelPage> {
 
   Future<void> _deleteTimetable(BuildContext context, String division) async {
     final TextEditingController _ctrl = TextEditingController();
-    bool confirmed = await showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
-        title: Text('Delete Timetable?', style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: Colors.red)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('This will permanently delete the published timetable and all drafts. Students will see "No Timetable".', style: GoogleFonts.inter(fontSize: 14)),
-            const SizedBox(height: 16),
-            Text('Type DELETE to confirm:', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _ctrl,
-              decoration: InputDecoration(
-                hintText: 'DELETE',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+    bool confirmed =
+        await showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+            ),
+            title: Text(
+              'Delete Timetable?',
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w700,
+                color: Colors.red,
               ),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              if (_ctrl.text.trim() == 'DELETE') {
-                Navigator.pop(ctx, true);
-              }
-            },
-            child: const Text('Delete'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'This will permanently delete the published timetable and all drafts. Students will see "No Timetable".',
+                  style: GoogleFonts.inter(fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Type DELETE to confirm:',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _ctrl,
+                  decoration: InputDecoration(
+                    hintText: 'DELETE',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: () {
+                  if (_ctrl.text.trim() == 'DELETE') {
+                    Navigator.pop(ctx, true);
+                  }
+                },
+                child: const Text('Delete'),
+              ),
+            ],
           ),
-        ],
-      ),
-    ) ?? false;
+        ) ??
+        false;
 
     if (!confirmed || !context.mounted) return;
 
     // Execute deletion
-    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    final days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
     for (final day in days) {
-      final snap = await FirebaseFirestore.instance.collection('timetables').doc(division).collection(day).get();
+      final snap = await FirebaseFirestore.instance
+          .collection('timetables')
+          .doc(division)
+          .collection(day)
+          .get();
       for (final doc in snap.docs) {
         await doc.reference.delete();
       }

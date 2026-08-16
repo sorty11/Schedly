@@ -49,7 +49,8 @@ class ResponsiveScaffold extends StatelessWidget {
           body = mobileBody;
         }
 
-        final scaffoldBg = backgroundColor ??
+        final scaffoldBg =
+            backgroundColor ??
             (isDark ? AppColors.backgroundDark : AppColors.background);
 
         // ── Desktop: 3-zone layout ──
@@ -70,9 +71,7 @@ class ResponsiveScaffold extends StatelessWidget {
                 navigationRail!,
 
                 // Zone 2: Main content
-                Expanded(
-                  child: body,
-                ),
+                Expanded(child: body),
 
                 // Zone 3: Context panel (persistent on large desktop)
                 if (showContextPanel)
@@ -109,9 +108,7 @@ class _ContextPanelContainer extends StatelessWidget {
     return Container(
       width: 320,
       decoration: BoxDecoration(
-        border: Border(
-          left: BorderSide(color: sem.borderSubtle, width: 1),
-        ),
+        border: Border(left: BorderSide(color: sem.borderSubtle, width: 1)),
       ),
       child: child,
     );

@@ -7,8 +7,11 @@ import 'package:schedly/exceptions.dart';
 class AttendanceService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  static String _recordId(String division, String subjectCode, String component) =>
-      '${division}_${subjectCode}_$component'.replaceAll(RegExp(r'\s+'), '_');
+  static String _recordId(
+    String division,
+    String subjectCode,
+    String component,
+  ) => '${division}_${subjectCode}_$component'.replaceAll(RegExp(r'\s+'), '_');
 
   static CollectionReference _col() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -18,7 +21,10 @@ class AttendanceService {
 
   /// Stream a single subject's attendance record (null = no record yet).
   static Stream<AttendanceRecord?> streamRecord(
-      String division, String subjectCode, String component) {
+    String division,
+    String subjectCode,
+    String component,
+  ) {
     final id = _recordId(division, subjectCode, component);
     return _col().doc(id).snapshots().map((snap) {
       if (!snap.exists) return null;
@@ -31,14 +37,17 @@ class AttendanceService {
     return _col()
         .where('division', isEqualTo: division)
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => AttendanceRecord.fromFirestore(d))
-            .toList());
+        .map(
+          (snap) =>
+              snap.docs.map((d) => AttendanceRecord.fromFirestore(d)).toList(),
+        );
   }
 
   /// Get all attendance records for a division once.
   static Future<List<AttendanceRecord>> getAll(String division) async {
-    final snap = await _col().where('division', isEqualTo: division).get(const GetOptions(source: Source.serverAndCache));
+    final snap = await _col()
+        .where('division', isEqualTo: division)
+        .get(const GetOptions(source: Source.serverAndCache));
     return snap.docs.map((d) => AttendanceRecord.fromFirestore(d)).toList();
   }
 
@@ -47,7 +56,8 @@ class AttendanceService {
     required String subjectCode,
     required String component,
     required String instanceId,
-    required String? markType, // 'present', 'absent', 'cancelled', or null for undo
+    required String?
+    markType, // 'present', 'absent', 'cancelled', or null for undo
   }) async {
     final id = _recordId(division, subjectCode, component);
     final ref = _col().doc(id);
@@ -55,7 +65,7 @@ class AttendanceService {
     await _db.runTransaction((tx) async {
       final snap = await tx.get(ref);
       final data = snap.data() as Map<String, dynamic>? ?? {};
-      
+
       Map<String, String> markedInstances = {};
       if (data['markedInstances'] is Map) {
         markedInstances = Map<String, String>.from(data['markedInstances']);
@@ -121,7 +131,10 @@ class AttendanceService {
         .orderBy('startTime', descending: true)
         .limit(200)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => AttendanceLog.fromFirestore(d)).toList());
+        .map(
+          (snap) =>
+              snap.docs.map((d) => AttendanceLog.fromFirestore(d)).toList(),
+        );
   }
 
   static Future<List<AttendanceLog>> getLogs() async {
@@ -142,9 +155,11 @@ class AttendanceService {
     required String status, // 'present', 'absent', 'cancelled', 'delete'
     required String? entryId,
   }) async {
-    final dateStr = '${date.year}_${date.month.toString().padLeft(2, '0')}_${date.day.toString().padLeft(2, '0')}';
-    final id = '${subjectCode}_${component}_${dateStr}_${startTime}_$endTime'.replaceAll(RegExp(r'\s+'), '_');
-    
+    final dateStr =
+        '${date.year}_${date.month.toString().padLeft(2, '0')}_${date.day.toString().padLeft(2, '0')}';
+    final id = '${subjectCode}_${component}_${dateStr}_${startTime}_$endTime'
+        .replaceAll(RegExp(r'\s+'), '_');
+
     if (status == 'delete') {
       await _logsCol().doc(id).delete();
       return;
@@ -193,7 +208,9 @@ class AttendanceService {
     }
 
     // We need to update aggregate records too. First read them.
-    final aggregatesSnap = await _col().where('division', isEqualTo: division).get();
+    final aggregatesSnap = await _col()
+        .where('division', isEqualTo: division)
+        .get();
     final aggregates = <String, Map<String, dynamic>>{};
     for (final doc in aggregatesSnap.docs) {
       aggregates[doc.id] = doc.data() as Map<String, dynamic>;
@@ -230,8 +247,12 @@ class AttendanceService {
       if (log.subjectCode.isNotEmpty) {
         final aggId = _recordId(division, log.subjectCode, log.component);
         aggregateDeltas.putIfAbsent(aggId, () => {'present': 0, 'absent': 0});
-        if (log.status == 'present' || log.status == 'P') aggregateDeltas[aggId]!['present'] = aggregateDeltas[aggId]!['present']! + 1;
-        if (log.status == 'absent' || log.status == 'A') aggregateDeltas[aggId]!['absent'] = aggregateDeltas[aggId]!['absent']! + 1;
+        if (log.status == 'present' || log.status == 'P')
+          aggregateDeltas[aggId]!['present'] =
+              aggregateDeltas[aggId]!['present']! + 1;
+        if (log.status == 'absent' || log.status == 'A')
+          aggregateDeltas[aggId]!['absent'] =
+              aggregateDeltas[aggId]!['absent']! + 1;
       }
     }
 
@@ -240,11 +261,11 @@ class AttendanceService {
       commitOp();
       final aggRef = _col().doc(aggId);
       final delta = aggregateDeltas[aggId]!;
-      
+
       final currentData = aggregates[aggId];
       final currPresent = (currentData?['present'] as num?)?.toInt() ?? 0;
       final currAbsent = (currentData?['absent'] as num?)?.toInt() ?? 0;
-      
+
       // If it's a new aggregate, set division and component
       final splits = aggId.split('_');
       final subj = splits.length > 1 ? splits[1] : '';

@@ -15,5 +15,4 @@ class NMIMSStructure {
     'MBA Tech CE',
     'MBA Tech AI',
   ];
-
 }

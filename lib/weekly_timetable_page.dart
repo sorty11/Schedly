@@ -20,6 +20,8 @@ import 'services/local_notification_service.dart';
 import 'timetable_manager.dart';
 import 'services/history_service.dart';
 import 'services/timetable_event_service.dart';
+import 'services/timetable_resolver_service.dart';
+import 'monthly_timetable_page.dart';
 
 class WeeklyTimetablePage extends StatefulWidget {
   final String division;
@@ -37,7 +39,12 @@ class WeeklyTimetablePage extends StatefulWidget {
 
 class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
   static const _days = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
   ];
   static const _dayShort = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -50,6 +57,24 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
     final todayIndex = (DateTime.now().weekday - 1).clamp(0, 5);
     selectedIndex = todayIndex;
     selectedDay = _days[todayIndex];
+  }
+
+  String _getTargetDateStr(String dayName) {
+    final now = DateTime.now();
+    const days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    final targetWeekday = days.indexOf(dayName) + 1;
+    int daysToAdd = targetWeekday - now.weekday;
+    if (daysToAdd < 0) daysToAdd += 7;
+    final targetDate = now.add(Duration(days: daysToAdd));
+    return '${targetDate.year}-${targetDate.month.toString().padLeft(2, '0')}-${targetDate.day.toString().padLeft(2, '0')}';
   }
 
   Color _subjectColor(String subject, BuildContext context) {
@@ -95,7 +120,10 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
             children: [
               // Drag handle
               Padding(
-                padding: EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.sm),
+                padding: EdgeInsets.only(
+                  top: AppSpacing.md,
+                  bottom: AppSpacing.sm,
+                ),
                 child: Container(
                   width: 36,
                   height: 4,
@@ -106,7 +134,10 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                 ),
               ),
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.sm),
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.x2l,
+                  vertical: AppSpacing.sm,
+                ),
                 child: Text(
                   entry.displaySubject,
                   style: Theme.of(ctx).textTheme.titleMedium,
@@ -143,7 +174,11 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                     color: cs.secondary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
-                  child: Icon(Icons.find_replace_rounded, size: 18, color: cs.secondary),
+                  child: Icon(
+                    Icons.find_replace_rounded,
+                    size: 18,
+                    color: cs.secondary,
+                  ),
                 ),
                 title: const Text('Replace Lecture'),
                 onTap: () {
@@ -166,9 +201,16 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                       color: sem.cancelled.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
-                    child: Icon(Icons.cancel_outlined, size: 18, color: sem.cancelled),
+                    child: Icon(
+                      Icons.cancel_outlined,
+                      size: 18,
+                      color: sem.cancelled,
+                    ),
                   ),
-                  title: Text('Cancel Lecture', style: TextStyle(color: sem.cancelled)),
+                  title: Text(
+                    'Cancel Lecture',
+                    style: TextStyle(color: sem.cancelled),
+                  ),
                   onTap: () async {
                     Navigator.pop(ctx);
                     await FirebaseFirestore.instance
@@ -177,13 +219,17 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                         .collection(selectedDay)
                         .doc(entry.id)
                         .update({'status': 'cancelled', 'isActive': false});
-                    
-                    final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
-                    
+
+                    final timeStr = TimetableManager.formatTime(
+                      entry.startTime,
+                      entry.endTime,
+                    );
+
                     await HistoryService.logOperation(
                       division: widget.division,
                       operation: 'Lecture Cancelled',
-                      details: '${entry.displaySubject} on $selectedDay at $timeStr',
+                      details:
+                          '${entry.displaySubject} on $selectedDay at $timeStr',
                       role: AppSettings.currentRole.name,
                     );
 
@@ -204,9 +250,16 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                       color: sem.conducted.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
-                    child: Icon(Icons.check_circle_outline, size: 18, color: sem.conducted),
+                    child: Icon(
+                      Icons.check_circle_outline,
+                      size: 18,
+                      color: sem.conducted,
+                    ),
                   ),
-                  title: Text('Restore Lecture', style: TextStyle(color: sem.conducted)),
+                  title: Text(
+                    'Restore Lecture',
+                    style: TextStyle(color: sem.conducted),
+                  ),
                   onTap: () async {
                     Navigator.pop(ctx);
                     await FirebaseFirestore.instance
@@ -215,12 +268,16 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                         .collection(selectedDay)
                         .doc(entry.id)
                         .update({'status': 'active', 'isActive': true});
-                    
-                    final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
+
+                    final timeStr = TimetableManager.formatTime(
+                      entry.startTime,
+                      entry.endTime,
+                    );
                     await HistoryService.logOperation(
                       division: widget.division,
                       operation: 'Lecture Restored',
-                      details: '${entry.displaySubject} on $selectedDay at $timeStr',
+                      details:
+                          '${entry.displaySubject} on $selectedDay at $timeStr',
                       role: AppSettings.currentRole.name,
                     );
 
@@ -241,9 +298,16 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                       color: sem.error.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
-                    child: Icon(Icons.delete_rounded, size: 18, color: sem.error),
+                    child: Icon(
+                      Icons.delete_rounded,
+                      size: 18,
+                      color: sem.error,
+                    ),
                   ),
-                  title: Text('Delete Lecture', style: TextStyle(color: sem.error)),
+                  title: Text(
+                    'Delete Lecture',
+                    style: TextStyle(color: sem.error),
+                  ),
                   onTap: () async {
                     Navigator.pop(ctx);
                     await FirebaseFirestore.instance
@@ -252,12 +316,16 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                         .collection(selectedDay)
                         .doc(entry.id)
                         .delete();
-                    
-                    final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
+
+                    final timeStr = TimetableManager.formatTime(
+                      entry.startTime,
+                      entry.endTime,
+                    );
                     await HistoryService.logOperation(
                       division: widget.division,
                       operation: 'Lecture Deleted',
-                      details: '${entry.displaySubject} on $selectedDay at $timeStr',
+                      details:
+                          '${entry.displaySubject} on $selectedDay at $timeStr',
                       role: AppSettings.currentRole.name,
                     );
 
@@ -279,19 +347,29 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
 
   IconData _subjectIcon(String subject) {
     switch (subject.toLowerCase()) {
-      case 'mathematics': return Icons.calculate_rounded;
+      case 'mathematics':
+        return Icons.calculate_rounded;
       case 'programming':
       case 'oop':
-      case 'java': return Icons.computer_rounded;
-      case 'beee': return Icons.electrical_services_rounded;
-      case 'physics': return Icons.science_rounded;
-      case 'chemistry': return Icons.biotech_rounded;
-      case 'dbms': return Icons.storage_rounded;
-      case 'lade': return Icons.menu_book_rounded;
-      case 'ctps': return Icons.lightbulb_rounded;
+      case 'java':
+        return Icons.computer_rounded;
+      case 'beee':
+        return Icons.electrical_services_rounded;
+      case 'physics':
+        return Icons.science_rounded;
+      case 'chemistry':
+        return Icons.biotech_rounded;
+      case 'dbms':
+        return Icons.storage_rounded;
+      case 'lade':
+        return Icons.menu_book_rounded;
+      case 'ctps':
+        return Icons.lightbulb_rounded;
       case 'lunch break':
-      case 'lunch': return Icons.restaurant_rounded;
-      default: return Icons.book_rounded;
+      case 'lunch':
+        return Icons.restaurant_rounded;
+      default:
+        return Icons.book_rounded;
     }
   }
 
@@ -328,7 +406,24 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                     style: Theme.of(context).appBarTheme.titleTextStyle,
                   ),
                   const Spacer(),
-                  if (!widget.isEditMode && (AppSettings.currentRole == UserRole.cr || AppSettings.currentRole == UserRole.sr))
+                  if (!widget.isEditMode)
+                    IconButton(
+                      icon: const Icon(Icons.calendar_month_rounded),
+                      color: colorScheme.primary,
+                      tooltip: 'Monthly View',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                MonthlyTimetablePage(division: widget.division),
+                          ),
+                        );
+                      },
+                    ),
+                  if (!widget.isEditMode &&
+                      (AppSettings.currentRole == UserRole.cr ||
+                          AppSettings.currentRole == UserRole.sr))
                     Container(
                       padding: EdgeInsets.symmetric(
                         horizontal: AppSpacing.md,
@@ -383,97 +478,102 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
               },
               behavior: HitTestBehavior.opaque,
               child: Container(
-                height: 72,
                 decoration: BoxDecoration(
-                  color: isDark ? sem.surfaceElevated2 : colorScheme.surface,
+                  color: isDark ? sem.surfaceElevated : colorScheme.surface,
                   border: Border(
                     bottom: BorderSide(
-                      color: isDark
-                          ? sem.borderSubtle
-                          : const Color(0xFFEEEEF8),
+                      color: isDark ? sem.borderSubtle : sem.borderSubtle.withValues(alpha: 0.5),
                       width: 1,
                     ),
                   ),
                 ),
-                child: ListView.separated(
+                child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.x2l,
-                    vertical: AppSpacing.md,
-                  ),
-                  itemCount: _days.length,
-                  separatorBuilder: (_, _) =>
-                      const SizedBox(width: AppSpacing.sm),
-                  itemBuilder: (context, index) {
-                    final isSelected = selectedIndex == index;
-                    final isToday = todayIndex == index;
-                    return GestureDetector(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setState(() {
-                          selectedIndex = index;
-                          selectedDay = _days[index];
-                        });
-                      },
-                      child: MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: AnimatedContainer(
-                          duration: AppDuration.standard,
-                          curve: AppCurves.standard,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSpacing.lg,
-                            vertical: AppSpacing.sm,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? colorScheme.primary
-                                : isToday
-                                    ? colorScheme.primary.withValues(alpha: 0.08)
-                                    : Colors.transparent,
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.full),
-                            border: isToday && !isSelected
-                                ? Border.all(
-                                    color: colorScheme.primary
-                                        .withValues(alpha: 0.3),
-                                    width: 1,
-                                  )
-                                : null,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                _dayShort[index],
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
+                  physics: const BouncingScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minWidth: MediaQuery.of(context).size.width,
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                        vertical: AppSpacing.md,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: List.generate(_days.length, (index) {
+                          final isSelected = selectedIndex == index;
+                          final isToday = todayIndex == index;
+                          return GestureDetector(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              setState(() {
+                                selectedIndex = index;
+                                selectedDay = _days[index];
+                              });
+                            },
+                            child: MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: AnimatedContainer(
+                                duration: AppDuration.standard,
+                                curve: AppCurves.standard,
+                                margin: EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.xl,
+                                  vertical: AppSpacing.md,
+                                ),
+                                decoration: BoxDecoration(
                                   color: isSelected
-                                      ? Colors.white
+                                      ? colorScheme.primary
                                       : isToday
-                                          ? colorScheme.primary
-                                          : sem.onSurfaceMuted,
+                                      ? colorScheme.primary.withValues(alpha: 0.08)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(AppRadius.full),
+                                  border: isToday && !isSelected
+                                      ? Border.all(
+                                          color: colorScheme.primary.withValues(alpha: 0.3),
+                                          width: 1,
+                                        )
+                                      : Border.all(
+                                          color: Colors.transparent,
+                                          width: 1,
+                                        ),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      _dayShort[index],
+                                      style: GoogleFonts.inter(
+                                        fontSize: 15,
+                                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                                        color: isSelected
+                                            ? colorScheme.onPrimary
+                                            : isToday
+                                            ? colorScheme.primary
+                                            : sem.onSurfaceMuted,
+                                      ),
+                                    ),
+                                    if (isToday && !isSelected) ...[
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        width: 4,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: colorScheme.primary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ),
-                              if (isToday) ...[
-                                const SizedBox(width: 5),
-                                Container(
-                                  width: 5,
-                                  height: 5,
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? Colors.white.withValues(alpha: 0.7)
-                                        : colorScheme.primary,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
+                            ),
+                          );
+                        }),
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -491,7 +591,37 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                     return const TimetableSkeleton();
                   }
 
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  final targetDateStr = _getTargetDateStr(selectedDay);
+
+                  final userBatch = AppSettings.currentRole == UserRole.student
+                      ? AppSettings.studentBatch
+                      : null;
+                  final rawEntries = snapshot.data!.docs
+                      .map((doc) => TimetableEntry.fromFirestore(doc))
+                      .toList();
+
+                  final resolved = TimetableResolverService.resolve(
+                    rawEntries: rawEntries,
+                    targetDateStr: targetDateStr,
+                    userBatch: userBatch,
+                    isEditMode: widget.isEditMode,
+                  );
+
+                  if (resolved.isHoliday) {
+                    return AnimatedSwitcher(
+                      duration: AppDuration.enter,
+                      child: FloatingEmptyState(
+                        key: ValueKey(selectedDay),
+                        icon: Icons.celebration_rounded,
+                        title: 'Holiday',
+                        subtitle: resolved.holidayName ?? 'No classes today.',
+                      ),
+                    );
+                  }
+
+                  final rawLectures = resolved.lectures;
+
+                  if (rawLectures.isEmpty) {
                     return AnimatedSwitcher(
                       duration: AppDuration.enter,
                       child: FloatingEmptyState(
@@ -503,17 +633,6 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                     );
                   }
 
-                  final rawLectures = snapshot.data!.docs
-                      .map((doc) => TimetableEntry.fromFirestore(doc))
-                      .where((e) {
-                        if (widget.isEditMode) return true;
-                        if (AppSettings.currentRole == UserRole.student) {
-                          return e.shouldIncludeForUserBatch(AppSettings.studentBatch);
-                        }
-                        return true;
-                      })
-                      .toList();
-
                   final Map<int, List<TimetableEntry>> grouped = {};
                   for (final e in rawLectures) {
                     if (!grouped.containsKey(e.startTime)) {
@@ -523,7 +642,9 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                   }
 
                   final sortedKeys = grouped.keys.toList()..sort();
-                  final groupedLectures = sortedKeys.map((k) => grouped[k]!).toList();
+                  final groupedLectures = sortedKeys
+                      .map((k) => grouped[k]!)
+                      .toList();
 
                   return AnimatedSwitcher(
                     duration: AppDuration.enter,
@@ -550,7 +671,10 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                       itemBuilder: (context, index) {
                         final entries = groupedLectures[index];
                         final allCancelled = entries.every((e) => !e.isActive);
-                        final activeEntry = entries.firstWhere((e) => e.isActive, orElse: () => entries.first);
+                        final activeEntry = entries.firstWhere(
+                          (e) => e.isActive,
+                          orElse: () => entries.first,
+                        );
                         final subjectColor = allCancelled
                             ? sem.cancelled
                             : _subjectColor(activeEntry.subject, context);
@@ -558,25 +682,31 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                         return StaggeredListItem(
                           index: index,
                           child: Padding(
-                            padding:
-                                EdgeInsets.only(bottom: AppSpacing.md),
+                            padding: EdgeInsets.only(bottom: AppSpacing.md),
                             child: AnimatedCard(
                               borderRadius: AppRadius.xl,
                               backgroundColor: allCancelled
                                   ? sem.cancelled.withValues(alpha: 0.05)
                                   : isDark
-                                      ? sem.surfaceElevated
-                                      : colorScheme.surface,
-                              onTap: (widget.isEditMode && entries.length == 1 && _canEdit(entries.first))
+                                  ? sem.surfaceElevated
+                                  : colorScheme.surface,
+                              onTap:
+                                  (widget.isEditMode &&
+                                      entries.length == 1 &&
+                                      _canEdit(entries.first))
                                   ? () => _editLecture(entries.first)
                                   : null,
-                              onLongPress: (!widget.isEditMode && entries.length == 1 && _canEdit(entries.first))
+                              onLongPress:
+                                  (!widget.isEditMode &&
+                                      entries.length == 1 &&
+                                      _canEdit(entries.first))
                                   ? () => _editLecture(entries.first)
                                   : null,
                               child: Container(
                                 decoration: BoxDecoration(
-                                  borderRadius:
-                                      BorderRadius.circular(AppRadius.xl),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.xl,
+                                  ),
                                   border: Border(
                                     left: BorderSide(
                                       color: subjectColor,
@@ -587,12 +717,20 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                                 child: Padding(
                                   padding: EdgeInsets.all(AppSpacing.xl),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: entries.asMap().entries.map((mapEntry) {
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: entries.asMap().entries.map((
+                                      mapEntry,
+                                    ) {
                                       final idx = mapEntry.key;
                                       final entry = mapEntry.value;
                                       final isCancelled = !entry.isActive;
-                                      final entryColor = isCancelled ? sem.cancelled : _subjectColor(entry.subject, context);
+                                      final entryColor = isCancelled
+                                          ? sem.cancelled
+                                          : _subjectColor(
+                                              entry.subject,
+                                              context,
+                                            );
 
                                       Widget content = Row(
                                         children: [
@@ -600,8 +738,13 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                                             width: 48,
                                             height: 48,
                                             decoration: BoxDecoration(
-                                              color: entryColor.withValues(alpha: 0.1),
-                                              borderRadius: BorderRadius.circular(AppRadius.md),
+                                              color: entryColor.withValues(
+                                                alpha: 0.1,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                    AppRadius.md,
+                                                  ),
                                             ),
                                             child: Icon(
                                               isCancelled
@@ -614,7 +757,8 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                                           const SizedBox(width: AppSpacing.lg),
                                           Expanded(
                                             child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 Row(
                                                   children: [
@@ -623,99 +767,145 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                                                         entry.displaySubject,
                                                         style: GoogleFonts.outfit(
                                                           fontSize: 17,
-                                                          fontWeight: FontWeight.w700,
+                                                          fontWeight:
+                                                              FontWeight.w700,
                                                           color: isCancelled
                                                               ? sem.cancelled
-                                                              : colorScheme.onSurface,
-                                                          decoration: isCancelled
-                                                              ? TextDecoration.lineThrough
+                                                              : colorScheme
+                                                                    .onSurface,
+                                                          decoration:
+                                                              isCancelled
+                                                              ? TextDecoration
+                                                                    .lineThrough
                                                               : null,
                                                         ),
                                                       ),
                                                     ),
                                                     if (isCancelled)
                                                       Container(
-                                                        padding: EdgeInsets.symmetric(
-                                                          horizontal: AppSpacing.sm,
-                                                          vertical: 2,
-                                                        ),
+                                                        padding:
+                                                            EdgeInsets.symmetric(
+                                                              horizontal:
+                                                                  AppSpacing.sm,
+                                                              vertical: 2,
+                                                            ),
                                                         decoration: BoxDecoration(
-                                                          color: sem.cancelled.withValues(alpha: 0.1),
-                                                          borderRadius: BorderRadius.circular(AppRadius.full),
+                                                          color: sem.cancelled
+                                                              .withValues(
+                                                                alpha: 0.1,
+                                                              ),
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                AppRadius.full,
+                                                              ),
                                                         ),
                                                         child: Text(
                                                           'CANCELLED',
-                                                          style: GoogleFonts.inter(
-                                                            fontSize: 9,
-                                                            fontWeight: FontWeight.w800,
-                                                            letterSpacing: 0.8,
-                                                            color: sem.cancelled,
-                                                          ),
+                                                          style:
+                                                              GoogleFonts.inter(
+                                                                fontSize: 9,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w800,
+                                                                letterSpacing:
+                                                                    0.8,
+                                                                color: sem
+                                                                    .cancelled,
+                                                              ),
                                                         ),
                                                       ),
                                                   ],
                                                 ),
-                                                const SizedBox(height: AppSpacing.sm),
+                                                const SizedBox(
+                                                  height: AppSpacing.sm,
+                                                ),
                                                 Wrap(
                                                   spacing: AppSpacing.md,
                                                   runSpacing: AppSpacing.sm,
-                                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                                  crossAxisAlignment:
+                                                      WrapCrossAlignment.center,
                                                   children: [
                                                     Row(
-                                                      mainAxisSize: MainAxisSize.min,
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
                                                       children: [
                                                         Icon(
-                                                          Icons.access_time_rounded,
+                                                          Icons
+                                                              .access_time_rounded,
                                                           size: 13,
-                                                          color: sem.onSurfaceMuted,
+                                                          color: sem
+                                                              .onSurfaceMuted,
                                                         ),
-                                                        const SizedBox(width: 4),
+                                                        const SizedBox(
+                                                          width: 4,
+                                                        ),
                                                         Text(
-                                                          TimetableManager.formatTime(entry.startTime, entry.endTime),
+                                                          TimetableManager.formatTime(
+                                                            entry.startTime,
+                                                            entry.endTime,
+                                                          ),
                                                           style: GoogleFonts.inter(
                                                             fontSize: 13,
-                                                            fontWeight: FontWeight.w600,
-                                                            color: sem.onSurfaceMuted,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            color: sem
+                                                                .onSurfaceMuted,
                                                           ),
                                                         ),
                                                       ],
                                                     ),
-                                                    if (entry.room != null && entry.room!.isNotEmpty)
+                                                    if (entry.room != null &&
+                                                        entry.room!.isNotEmpty)
                                                       Row(
-                                                        mainAxisSize: MainAxisSize.min,
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
                                                         children: [
                                                           Icon(
                                                             Icons.room_rounded,
                                                             size: 13,
-                                                            color: sem.onSurfaceMuted,
+                                                            color: sem
+                                                                .onSurfaceMuted,
                                                           ),
-                                                          const SizedBox(width: 4),
+                                                          const SizedBox(
+                                                            width: 4,
+                                                          ),
                                                           Text(
                                                             'Room ${entry.room}',
                                                             style: GoogleFonts.inter(
                                                               fontSize: 13,
-                                                              fontWeight: FontWeight.w500,
-                                                              color: sem.onSurfaceMuted,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w500,
+                                                              color: sem
+                                                                  .onSurfaceMuted,
                                                             ),
                                                           ),
                                                         ],
                                                       ),
-                                                    if (entry.batch != 'Whole Class')
+                                                    if (entry.batch !=
+                                                        'Whole Class')
                                                       Row(
-                                                        mainAxisSize: MainAxisSize.min,
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
                                                         children: [
                                                           Icon(
                                                             Icons.group_rounded,
                                                             size: 13,
-                                                            color: sem.onSurfaceMuted,
+                                                            color: sem
+                                                                .onSurfaceMuted,
                                                           ),
-                                                          const SizedBox(width: 4),
+                                                          const SizedBox(
+                                                            width: 4,
+                                                          ),
                                                           Text(
                                                             entry.batch,
                                                             style: GoogleFonts.inter(
                                                               fontSize: 13,
-                                                              fontWeight: FontWeight.w600,
-                                                              color: sem.onSurfaceMuted,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                              color: sem
+                                                                  .onSurfaceMuted,
                                                             ),
                                                           ),
                                                         ],
@@ -725,13 +915,17 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                                               ],
                                             ),
                                           ),
-                                          if (_canEdit(entry) && entries.length > 1)
+                                          if (_canEdit(entry) &&
+                                              entries.length > 1)
                                             Padding(
-                                              padding: EdgeInsets.only(left: AppSpacing.sm),
+                                              padding: EdgeInsets.only(
+                                                left: AppSpacing.sm,
+                                              ),
                                               child: Icon(
                                                 Icons.more_vert_rounded,
                                                 size: 18,
-                                                color: sem.onSurfaceMuted.withValues(alpha: 0.4),
+                                                color: sem.onSurfaceMuted
+                                                    .withValues(alpha: 0.4),
                                               ),
                                             ),
                                         ],
@@ -739,14 +933,35 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
 
                                       if (entries.length > 1) {
                                         return GestureDetector(
-                                          onTap: (widget.isEditMode && _canEdit(entry)) ? () => _editLecture(entry) : null,
-                                          onLongPress: (!widget.isEditMode && _canEdit(entry)) ? () => _editLecture(entry) : null,
+                                          onTap:
+                                              (widget.isEditMode &&
+                                                  _canEdit(entry))
+                                              ? () => _editLecture(entry)
+                                              : null,
+                                          onLongPress:
+                                              (!widget.isEditMode &&
+                                                  _canEdit(entry))
+                                              ? () => _editLecture(entry)
+                                              : null,
                                           child: Container(
-                                            margin: EdgeInsets.only(top: idx == 0 ? 0 : AppSpacing.md),
-                                            padding: EdgeInsets.all(AppSpacing.sm),
+                                            margin: EdgeInsets.only(
+                                              top: idx == 0 ? 0 : AppSpacing.md,
+                                            ),
+                                            padding: EdgeInsets.all(
+                                              AppSpacing.sm,
+                                            ),
                                             decoration: BoxDecoration(
-                                              color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02),
-                                              borderRadius: BorderRadius.circular(AppRadius.md),
+                                              color: isDark
+                                                  ? Colors.white.withValues(
+                                                      alpha: 0.03,
+                                                    )
+                                                  : Colors.black.withValues(
+                                                      alpha: 0.02,
+                                                    ),
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                    AppRadius.md,
+                                                  ),
                                             ),
                                             child: content,
                                           ),

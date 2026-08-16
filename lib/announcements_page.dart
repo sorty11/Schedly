@@ -20,14 +20,18 @@ class AnnouncementsPage extends StatefulWidget {
 class _AnnouncementsPageState extends State<AnnouncementsPage> {
   Future<String?> _getDivision() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('section_id') ?? prefs.getString('selected_division');
+    return prefs.getString('section_id') ??
+        prefs.getString('selected_division');
   }
 
   Color _priorityColor(String priority, AppSemanticColors sem) {
     switch (priority.toLowerCase()) {
-      case 'high': return sem.cancelled;
-      case 'low': return sem.conducted;
-      default: return sem.warning;
+      case 'high':
+        return sem.cancelled;
+      case 'low':
+        return sem.conducted;
+      default:
+        return sem.warning;
     }
   }
 
@@ -105,8 +109,9 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                     child: Padding(
                       padding: EdgeInsets.only(bottom: AppSpacing.md),
                       child: AnimatedCard(
-                        backgroundColor:
-                            isDark ? sem.surfaceElevated : Colors.white,
+                        backgroundColor: isDark
+                            ? sem.surfaceElevated
+                            : Colors.white,
                         borderRadius: AppRadius.xl,
                         child: Container(
                           decoration: BoxDecoration(
@@ -133,7 +138,8 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                                       decoration: BoxDecoration(
                                         color: color.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(
-                                            AppRadius.full),
+                                          AppRadius.full,
+                                        ),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
@@ -149,7 +155,8 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                                           const SizedBox(width: 6),
                                           Text(
                                             priority.toUpperCase(),
-                                            style: TextStyle(fontFamily: 'Inter', 
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
                                               fontSize: 10,
                                               fontWeight: FontWeight.w800,
                                               letterSpacing: 0.8,
@@ -164,14 +171,14 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                                 const SizedBox(height: AppSpacing.md),
                                 Text(
                                   data['title']?.toString() ?? '',
-                                  style: Theme.of(context).textTheme.headlineSmall,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.headlineSmall,
                                 ),
                                 const SizedBox(height: AppSpacing.sm),
                                 Text(
                                   data['message']?.toString() ?? '',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyLarge
+                                  style: Theme.of(context).textTheme.bodyLarge
                                       ?.copyWith(
                                         color: Theme.of(context)
                                             .colorScheme

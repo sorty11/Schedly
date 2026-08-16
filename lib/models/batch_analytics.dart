@@ -9,7 +9,7 @@ class BatchAnalytics {
   final String component; // 'Theory', 'Lab', 'Tutorial'
   final String batch;
   final EventCategory category;
-  final int targetLectures; 
+  final int targetLectures;
   final int? overrideTarget; // manual CR override
   final int completedLectures;
   final int pendingLectures;
@@ -38,18 +38,22 @@ class BatchAnalytics {
 
   factory BatchAnalytics.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
-    
+
     // Attempt to extract subject/batch from ID if missing
     final parts = doc.id.split('_');
-    final extractedSubject = data['subject'] ?? (parts.isNotEmpty ? parts[0] : '');
-    final extractedBatch = data['batch'] ?? (parts.length > 2 ? parts[2] : 'Whole Class');
+    final extractedSubject =
+        data['subject'] ?? (parts.isNotEmpty ? parts[0] : '');
+    final extractedBatch =
+        data['batch'] ?? (parts.length > 2 ? parts[2] : 'Whole Class');
 
     return BatchAnalytics(
       id: doc.id,
       subject: extractedSubject,
       component: data['component'] ?? 'Theory',
       batch: extractedBatch,
-      category: EventCategoryExtension.fromString(data['category'] ?? 'academic'),
+      category: EventCategoryExtension.fromString(
+        data['category'] ?? 'academic',
+      ),
       targetLectures: data['targetLectures'] ?? 0,
       overrideTarget: data['overrideTarget'],
       completedLectures: data['completedLectures'] ?? 0,
@@ -81,24 +85,32 @@ class SubjectAnalytics {
   final List<BatchAnalytics> batches;
   final CourseComponent? metadata;
 
-  SubjectAnalytics({required this.subject, required this.batches, this.metadata});
+  SubjectAnalytics({
+    required this.subject,
+    required this.batches,
+    this.metadata,
+  });
 
-  int get totalCompleted => batches.fold(0, (acc, b) => acc + b.completedLectures);
-  int get totalAdjusted => batches.fold(0, (acc, b) => acc + b.adjustedLectures);
+  int get totalCompleted =>
+      batches.fold(0, (acc, b) => acc + b.completedLectures);
+  int get totalAdjusted =>
+      batches.fold(0, (acc, b) => acc + b.adjustedLectures);
   int get totalPending => batches.fold(0, (acc, b) => acc + b.pendingLectures);
-  int get totalCancelled => batches.fold(0, (acc, b) => acc + b.cancelledLectures);
-  
+  int get totalCancelled =>
+      batches.fold(0, (acc, b) => acc + b.cancelledLectures);
+
   // Use metadata targetHours if available, else sum up batch targets
-  int get totalTarget => metadata?.targetHours ?? batches.fold(0, (acc, b) => acc + b.activeTarget);
+  int get totalTarget =>
+      metadata?.targetHours ??
+      batches.fold(0, (acc, b) => acc + b.activeTarget);
 
   double get completionPercentage {
     if (totalTarget == 0) return 0;
     return (totalCompleted + totalAdjusted) / totalTarget;
   }
-  
+
   int get remaining {
     final rem = totalTarget - totalCompleted - totalAdjusted - totalCancelled;
     return rem < 0 ? 0 : rem;
   }
 }
-

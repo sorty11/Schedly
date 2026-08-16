@@ -41,23 +41,42 @@ class _FacultyAuthBottomSheetState extends State<FacultyAuthBottomSheet> {
   InputDecoration _modernDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
+      prefixIcon: Icon(
+        icon,
+        color: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+      ),
       filled: true,
       fillColor: Theme.of(context).colorScheme.surface,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        borderSide: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
+        borderSide: BorderSide(
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        borderSide: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
+        borderSide: BorderSide(
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+        borderSide: BorderSide(
+          color: Theme.of(context).colorScheme.primary,
+          width: 2,
+        ),
       ),
-      labelStyle: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
-      floatingLabelStyle: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),
+      labelStyle: TextStyle(
+        color: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+      ),
+      floatingLabelStyle: TextStyle(
+        color: Theme.of(context).colorScheme.primary,
+        fontWeight: FontWeight.w600,
+      ),
     );
   }
 
@@ -141,15 +160,41 @@ class _FacultyAuthBottomSheetState extends State<FacultyAuthBottomSheet> {
           const SizedBox(height: AppSpacing.sm),
           Text(
             'Access your combined timetable and manage classes',
-            style: TextStyle(fontSize: 15, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
+            style: TextStyle(
+              fontSize: 15,
+              color: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.x3l),
-          
-          StaggeredListItem(index: 1, child: _buildFeatureRow(Icons.event_available_rounded, 'Consolidated Timetable', 'View classes across multiple divisions')),
-          StaggeredListItem(index: 2, child: _buildFeatureRow(Icons.cancel_schedule_send_rounded, 'Manage Lectures', 'Cancel or add extra lectures')),
-          StaggeredListItem(index: 3, child: _buildFeatureRow(Icons.campaign_rounded, 'Announcements', 'Send updates to your assigned divisions')),
-          
+
+          StaggeredListItem(
+            index: 1,
+            child: _buildFeatureRow(
+              Icons.event_available_rounded,
+              'Consolidated Timetable',
+              'View classes across multiple divisions',
+            ),
+          ),
+          StaggeredListItem(
+            index: 2,
+            child: _buildFeatureRow(
+              Icons.cancel_schedule_send_rounded,
+              'Manage Lectures',
+              'Cancel or add extra lectures',
+            ),
+          ),
+          StaggeredListItem(
+            index: 3,
+            child: _buildFeatureRow(
+              Icons.campaign_rounded,
+              'Announcements',
+              'Send updates to your assigned divisions',
+            ),
+          ),
+
           const SizedBox(height: AppSpacing.x2l),
           StaggeredListItem(
             index: 4,
@@ -173,19 +218,39 @@ class _FacultyAuthBottomSheetState extends State<FacultyAuthBottomSheet> {
           Container(
             padding: EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+              color: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 24),
+            child: Icon(
+              icon,
+              color: Theme.of(context).colorScheme.primary,
+              size: 24,
+            ),
           ),
           const SizedBox(width: AppSpacing.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(subtitle, style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7), fontSize: 13)),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                    fontSize: 13,
+                  ),
+                ),
               ],
             ),
           ),
@@ -229,10 +294,15 @@ class _FacultyAuthBottomSheetState extends State<FacultyAuthBottomSheet> {
               Container(
                 padding: EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.school_rounded, color: Theme.of(context).colorScheme.primary),
+                child: Icon(
+                  Icons.school_rounded,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
               const SizedBox(width: AppSpacing.lg),
               const Expanded(
@@ -241,7 +311,10 @@ class _FacultyAuthBottomSheetState extends State<FacultyAuthBottomSheet> {
                   children: [
                     Text(
                       'Faculty Login',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     Text(
                       'Secure Authentication Required',
@@ -260,13 +333,16 @@ class _FacultyAuthBottomSheetState extends State<FacultyAuthBottomSheet> {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          
+
           StaggeredListItem(
             index: 2,
             child: TextField(
               controller: _masterPasswordController,
               obscureText: true,
-              decoration: _modernDecoration('Master Password', Icons.admin_panel_settings_rounded),
+              decoration: _modernDecoration(
+                'Master Password',
+                Icons.admin_panel_settings_rounded,
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.x2l),
@@ -292,10 +368,17 @@ class _FacultyAuthBottomSheetState extends State<FacultyAuthBottomSheet> {
         filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
         child: Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.85),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.x2l)),
+            color: Theme.of(
+              context,
+            ).colorScheme.surface.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(AppRadius.x2l),
+            ),
             border: Border(
-              top: BorderSide(color: Colors.white.withValues(alpha: 0.2), width: 1.5),
+              top: BorderSide(
+                color: Colors.white.withValues(alpha: 0.2),
+                width: 1.5,
+              ),
             ),
             boxShadow: [
               BoxShadow(

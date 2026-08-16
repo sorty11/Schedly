@@ -15,7 +15,7 @@ class CourseComponent {
 
   // Backward compatibility getter for code that used 'subjectName' directly
   String get subjectName => componentId;
-  
+
   // Dynamic check for components that might act as labs for UI/icons
   bool get isLab => componentType.toLowerCase().contains('lab');
 
@@ -35,7 +35,7 @@ class CourseComponent {
 
   factory CourseComponent.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
-    
+
     // Automatic fallback during migration phase if fields are missing:
     final fallbackSubjectName = data['subjectName'] as String? ?? doc.id;
     final fallbackType = (data['isLab'] == true) ? 'Lab' : 'Theory';
@@ -45,9 +45,15 @@ class CourseComponent {
       componentType: data['componentType'] ?? fallbackType,
       courseName: data['courseName'] ?? fallbackSubjectName,
       courseCode: data['courseCode'] ?? '',
-      targetHours: data['targetHours'] ?? data['totalHours'] ?? 0, // Fallback to legacy totalHours
+      targetHours:
+          data['targetHours'] ??
+          data['totalHours'] ??
+          0, // Fallback to legacy totalHours
       credits: data['credits'] ?? 0,
-      facultyId: data['facultyId'] ?? data['faculty'] ?? '', // Fallback to legacy faculty field
+      facultyId:
+          data['facultyId'] ??
+          data['faculty'] ??
+          '', // Fallback to legacy faculty field
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       semesterId: data['semesterId'],
       sectionId: data['sectionId'] ?? '',
@@ -58,11 +64,11 @@ class CourseComponent {
   Map<String, dynamic> toFirestore() {
     return {
       // We keep legacy fields to ensure backward compatibility for old clients temporarily
-      'subjectName': subjectName, 
+      'subjectName': subjectName,
       'totalHours': targetHours,
       'faculty': facultyId,
       'isLab': isLab,
-      
+
       // New strictly defined fields
       'componentType': componentType,
       'courseName': courseName,
@@ -70,7 +76,7 @@ class CourseComponent {
       'targetHours': targetHours,
       'credits': credits,
       'facultyId': facultyId,
-      
+
       'createdAt': Timestamp.fromDate(createdAt),
       if (semesterId != null) 'semesterId': semesterId,
       'sectionId': sectionId,

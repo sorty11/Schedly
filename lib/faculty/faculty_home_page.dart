@@ -59,10 +59,7 @@ class _FacultyNavBar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onTap;
 
-  const _FacultyNavBar({
-    required this.selectedIndex,
-    required this.onTap,
-  });
+  const _FacultyNavBar({required this.selectedIndex, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -71,8 +68,16 @@ class _FacultyNavBar extends StatelessWidget {
 
     final items = [
       _NavItem(Icons.home_outlined, Icons.home_rounded, 'Home'),
-      _NavItem(Icons.calendar_month_outlined, Icons.calendar_month_rounded, 'Timetable'),
-      _NavItem(Icons.account_circle_outlined, Icons.account_circle_rounded, 'Profile'),
+      _NavItem(
+        Icons.calendar_month_outlined,
+        Icons.calendar_month_rounded,
+        'Timetable',
+      ),
+      _NavItem(
+        Icons.account_circle_outlined,
+        Icons.account_circle_rounded,
+        'Profile',
+      ),
     ];
 
     return ClipRect(
@@ -93,7 +98,10 @@ class _FacultyNavBar extends StatelessWidget {
           child: SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.sm,
+              ),
               child: Row(
                 children: List.generate(
                   items.length,
@@ -137,7 +145,8 @@ class _NavBarItem extends StatefulWidget {
   State<_NavBarItem> createState() => _NavBarItemState();
 }
 
-class _NavBarItemState extends State<_NavBarItem> with SingleTickerProviderStateMixin {
+class _NavBarItemState extends State<_NavBarItem>
+    with SingleTickerProviderStateMixin {
   late AnimationController _pressController;
   late Animation<double> _pressScale;
   bool _isHovered = false;
@@ -191,21 +200,28 @@ class _NavBarItemState extends State<_NavBarItem> with SingleTickerProviderState
                   AnimatedContainer(
                     duration: AppDuration.standard,
                     curve: AppCurves.standard,
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.sm,
+                    ),
                     decoration: BoxDecoration(
                       color: widget.isSelected
                           ? colorScheme.primary.withValues(alpha: 0.12)
                           : _isHovered
-                              ? colorScheme.primary.withValues(alpha: 0.06)
-                              : Colors.transparent,
+                          ? colorScheme.primary.withValues(alpha: 0.06)
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(AppRadius.full),
                     ),
                     child: AnimatedSwitcher(
                       duration: AppDuration.standard,
                       child: Icon(
-                        widget.isSelected ? widget.item.selectedIcon : widget.item.icon,
+                        widget.isSelected
+                            ? widget.item.selectedIcon
+                            : widget.item.icon,
                         key: ValueKey(widget.isSelected),
-                        color: widget.isSelected ? colorScheme.primary : sem.onSurfaceMuted,
+                        color: widget.isSelected
+                            ? colorScheme.primary
+                            : sem.onSurfaceMuted,
                         size: 24,
                       ),
                     ),
@@ -215,8 +231,12 @@ class _NavBarItemState extends State<_NavBarItem> with SingleTickerProviderState
                     duration: AppDuration.standard,
                     style: GoogleFonts.inter(
                       fontSize: 10,
-                      fontWeight: widget.isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: widget.isSelected ? colorScheme.primary : sem.onSurfaceMuted,
+                      fontWeight: widget.isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: widget.isSelected
+                          ? colorScheme.primary
+                          : sem.onSurfaceMuted,
                     ),
                     child: Text(widget.item.label),
                   ),

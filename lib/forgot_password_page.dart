@@ -52,10 +52,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       isCenteredLogo: true,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-        ),
+        appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
         body: Center(
           child: SingleChildScrollView(
             padding: EdgeInsets.all(AppSpacing.x2l),
@@ -81,7 +78,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+              color: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -93,14 +92,20 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           const SizedBox(height: AppSpacing.x2l),
           Text(
             'Forgot your password?',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             'Enter your email address and we will send you a link to reset your password.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+            style: TextStyle(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
           ),
           const SizedBox(height: AppSpacing.x3l),
           SchedlyTextField(
@@ -115,7 +120,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             isLoading: _loading,
             backgroundColor: Theme.of(context).colorScheme.primary,
             foregroundColor: Colors.white,
-            child: const Text('Send Reset Link', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Send Reset Link',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -146,21 +154,30 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           const SizedBox(height: AppSpacing.x2l),
           Text(
             'Email Sent',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             'Check your inbox for the password reset link. Once you have reset your password, return to the login screen.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+            style: TextStyle(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
           ),
           const SizedBox(height: AppSpacing.x3l),
           AnimatedButton(
             onPressed: () => Navigator.pop(context),
             backgroundColor: Theme.of(context).colorScheme.primary,
             foregroundColor: Colors.white,
-            child: const Text('Back to Login', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Back to Login',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),

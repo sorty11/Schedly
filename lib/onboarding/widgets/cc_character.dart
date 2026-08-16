@@ -17,12 +17,13 @@ class CCCharacter extends StatefulWidget {
   State<CCCharacter> createState() => _CCCharacterState();
 }
 
-class _CCCharacterState extends State<CCCharacter> with TickerProviderStateMixin {
+class _CCCharacterState extends State<CCCharacter>
+    with TickerProviderStateMixin {
   late AnimationController _floatController;
   late AnimationController _blinkController;
-  
+
   bool _isBlinking = false;
-  
+
   @override
   void initState() {
     super.initState();
@@ -30,23 +31,26 @@ class _CCCharacterState extends State<CCCharacter> with TickerProviderStateMixin
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
-    
+
     _blinkController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 150),
     );
-    
+
     _scheduleBlink();
   }
-  
+
   void _scheduleBlink() {
     if (!mounted) return;
-    Future.delayed(Duration(milliseconds: 2000 + math.Random().nextInt(4000)), () {
-      if (!mounted) return;
-      _blink();
-    });
+    Future.delayed(
+      Duration(milliseconds: 2000 + math.Random().nextInt(4000)),
+      () {
+        if (!mounted) return;
+        _blink();
+      },
+    );
   }
-  
+
   void _blink() async {
     if (!mounted) return;
     setState(() => _isBlinking = true);
@@ -57,7 +61,7 @@ class _CCCharacterState extends State<CCCharacter> with TickerProviderStateMixin
     setState(() => _isBlinking = false);
     _scheduleBlink();
   }
-  
+
   @override
   void dispose() {
     _floatController.dispose();
@@ -67,8 +71,16 @@ class _CCCharacterState extends State<CCCharacter> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    final floatAnim = Tween<Offset>(begin: const Offset(0, -0.05), end: const Offset(0, 0.05))
-        .animate(CurvedAnimation(parent: _floatController, curve: Curves.easeInOutSine));
+    final floatAnim =
+        Tween<Offset>(
+          begin: const Offset(0, -0.05),
+          end: const Offset(0, 0.05),
+        ).animate(
+          CurvedAnimation(
+            parent: _floatController,
+            curve: Curves.easeInOutSine,
+          ),
+        );
 
     return SlideTransition(
       position: floatAnim,
@@ -101,7 +113,7 @@ class _CCPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..style = PaintingStyle.fill;
-    
+
     // Body (glassy or solid primary)
     paint.color = colorScheme.primary;
     final bodyRect = Rect.fromCenter(
@@ -113,7 +125,7 @@ class _CCPainter extends CustomPainter {
       RRect.fromRectAndRadius(bodyRect, Radius.circular(size.width * 0.3)),
       paint,
     );
-    
+
     // Face screen
     paint.color = colorScheme.surface;
     final faceRect = Rect.fromCenter(
@@ -131,37 +143,51 @@ class _CCPainter extends CustomPainter {
     final eyeY = faceRect.center.dy - size.height * 0.05;
     final eyeW = size.width * 0.08;
     final eyeH = isBlinking ? size.height * 0.02 : size.height * 0.12;
-    
+
     // Left eye
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromCenter(center: Offset(faceRect.center.dx - size.width * 0.15, eyeY), width: eyeW, height: eyeH),
+        Rect.fromCenter(
+          center: Offset(faceRect.center.dx - size.width * 0.15, eyeY),
+          width: eyeW,
+          height: eyeH,
+        ),
         Radius.circular(eyeW / 2),
       ),
       paint,
     );
-    
+
     // Right eye
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromCenter(center: Offset(faceRect.center.dx + size.width * 0.15, eyeY), width: eyeW, height: eyeH),
+        Rect.fromCenter(
+          center: Offset(faceRect.center.dx + size.width * 0.15, eyeY),
+          width: eyeW,
+          height: eyeH,
+        ),
         Radius.circular(eyeW / 2),
       ),
       paint,
     );
 
     // Expression specific
-    if (expression == CCExpression.happy || expression == CCExpression.celebrating) {
+    if (expression == CCExpression.happy ||
+        expression == CCExpression.celebrating) {
       // Draw a smile
       paint.style = PaintingStyle.stroke;
       paint.strokeWidth = size.width * 0.04;
       paint.strokeCap = StrokeCap.round;
       final smileHeight = expression == CCExpression.celebrating ? 0.18 : 0.15;
       final smilePath = Path()
-        ..moveTo(faceRect.center.dx - size.width * 0.1, faceRect.center.dy + size.height * 0.1)
+        ..moveTo(
+          faceRect.center.dx - size.width * 0.1,
+          faceRect.center.dy + size.height * 0.1,
+        )
         ..quadraticBezierTo(
-          faceRect.center.dx, faceRect.center.dy + size.height * smileHeight,
-          faceRect.center.dx + size.width * 0.1, faceRect.center.dy + size.height * 0.1,
+          faceRect.center.dx,
+          faceRect.center.dy + size.height * smileHeight,
+          faceRect.center.dx + size.width * 0.1,
+          faceRect.center.dy + size.height * 0.1,
         );
       canvas.drawPath(smilePath, paint);
     } else if (expression == CCExpression.thinking) {
@@ -170,12 +196,18 @@ class _CCPainter extends CustomPainter {
       paint.strokeWidth = size.width * 0.04;
       paint.strokeCap = StrokeCap.round;
       canvas.drawLine(
-        Offset(faceRect.center.dx - size.width * 0.05, faceRect.center.dy + size.height * 0.12),
-        Offset(faceRect.center.dx + size.width * 0.05, faceRect.center.dy + size.height * 0.12),
+        Offset(
+          faceRect.center.dx - size.width * 0.05,
+          faceRect.center.dy + size.height * 0.12,
+        ),
+        Offset(
+          faceRect.center.dx + size.width * 0.05,
+          faceRect.center.dy + size.height * 0.12,
+        ),
         paint,
       );
     }
-    
+
     // Antenna line
     paint.style = PaintingStyle.fill;
     paint.color = colorScheme.primary;
@@ -198,8 +230,8 @@ class _CCPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CCPainter oldDelegate) {
-    return oldDelegate.expression != expression || 
-           oldDelegate.isBlinking != isBlinking ||
-           oldDelegate.colorScheme != colorScheme;
+    return oldDelegate.expression != expression ||
+        oldDelegate.isBlinking != isBlinking ||
+        oldDelegate.colorScheme != colorScheme;
   }
 }

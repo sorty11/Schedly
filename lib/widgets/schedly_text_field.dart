@@ -80,7 +80,7 @@ class _SchedlyTextFieldState extends State<SchedlyTextField> {
   Widget build(BuildContext context) {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return TextFormField(
       controller: widget.controller,
       focusNode: _internalFocusNode,
@@ -100,16 +100,18 @@ class _SchedlyTextFieldState extends State<SchedlyTextField> {
       decoration: InputDecoration(
         labelText: widget.labelText,
         hintText: widget.hintText,
-        prefixIcon: widget.prefixIcon != null ? Icon(widget.prefixIcon, size: 20) : null,
+        prefixIcon: widget.prefixIcon != null
+            ? Icon(widget.prefixIcon, size: 20)
+            : null,
         suffixIcon: widget.suffixIcon,
         fillColor: isDark ? sem.surfaceElevated2 : sem.surfaceElevated2,
         filled: true,
         labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
           color: _isFocused ? sem.accent : sem.onSurfaceMuted,
         ),
-        hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: sem.onSurfaceFaint,
-        ),
+        hintStyle: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: sem.onSurfaceFaint),
         prefixIconColor: _isFocused ? sem.accent : sem.onSurfaceMuted,
         suffixIconColor: _isFocused ? sem.accent : sem.onSurfaceMuted,
         contentPadding: const EdgeInsets.symmetric(
@@ -122,28 +124,20 @@ class _SchedlyTextFieldState extends State<SchedlyTextField> {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide.none, // "Calm precision" means fill only until focused
+          borderSide:
+              BorderSide.none, // "Calm precision" means fill only until focused
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(
-            color: sem.borderFocus,
-            width: 1.5,
-          ),
+          borderSide: BorderSide(color: sem.borderFocus, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(
-            color: sem.error,
-            width: 1.5,
-          ),
+          borderSide: BorderSide(color: sem.error, width: 1.5),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(
-            color: sem.error,
-            width: 1.5,
-          ),
+          borderSide: BorderSide(color: sem.error, width: 1.5),
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 import '../theme/theme.dart';
 import '../models/timetable_entry.dart';
@@ -19,6 +20,7 @@ class TimetableStudioSheet extends StatefulWidget {
   final String initialDay;
   final TimetableEntry? existingEntry;
   final TimetableEntry? duplicateFrom;
+  final DateTime? targetDateForOverride;
 
   const TimetableStudioSheet({
     super.key,
@@ -26,9 +28,16 @@ class TimetableStudioSheet extends StatefulWidget {
     required this.initialDay,
     this.existingEntry,
     this.duplicateFrom,
+    this.targetDateForOverride,
   });
 
-  static Future<void> show(BuildContext context, {required String division, required String initialDay, TimetableEntry? existingEntry, TimetableEntry? duplicateFrom}) async {
+  static Future<void> show(
+    BuildContext context, {
+    required String division,
+    required String initialDay,
+    TimetableEntry? existingEntry,
+    TimetableEntry? duplicateFrom,
+  }) async {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -72,14 +81,21 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
   List<String> _availableSubjects = [];
   List<String> _availableRooms = [];
 
-  final List<String> _days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  final List<String> _days = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ];
 
   List<String> get _batchOptions {
     final l = _divLetter;
-    final baseOptions = l.isEmpty 
-      ? ['Whole Class', 'Batch 1', 'Batch 2'] 
-      : ['Whole Class', '${l}1', '${l}2'];
-    
+    final baseOptions = l.isEmpty
+        ? ['Whole Class', 'Batch 1', 'Batch 2']
+        : ['Whole Class', '${l}1', '${l}2'];
+
     // Inject current _batch if it's a legacy name not in the generated list
     // This prevents DropdownButton assertions during migration edge cases.
     if (_batch.isNotEmpty && !baseOptions.contains(_batch)) {
@@ -113,6 +129,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
       _room = entry.room ?? '';
       _startTime = entry.startTime;
       _endTime = entry.endTime;
+      _repeatWeekly = entry.validForDate == null;
     } else if (widget.duplicateFrom != null) {
       final entry = widget.duplicateFrom!;
       _subject = entry.subject;
@@ -137,11 +154,16 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
   }
 
   Future<void> _fetchMetadata() async {
-    final subjects = await TimetableManager.getUniqueSubjects(division: widget.division);
-    
+    final subjects = await TimetableManager.getUniqueSubjects(
+      division: widget.division,
+    );
+
     final Set<String> rooms = {};
     for (final day in _days) {
-      final entries = await TimetableManager.getEntriesForDay(division: widget.division, day: day);
+      final entries = await TimetableManager.getEntriesForDay(
+        division: widget.division,
+        day: day,
+      );
       for (final e in entries) {
         if (e.room != null && e.room!.trim().isNotEmpty) {
           rooms.add(e.room!.trim());
@@ -186,6 +208,24 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
     }
   }
 
+  String _getTargetDateStr(String dayName) {
+    final now = DateTime.now();
+    const days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    final targetWeekday = days.indexOf(dayName) + 1;
+    int daysToAdd = targetWeekday - now.weekday;
+    if (daysToAdd < 0) daysToAdd += 7; // Next occurrence
+    final targetDate = now.add(Duration(days: daysToAdd));
+    return '${targetDate.year}-${targetDate.month.toString().padLeft(2, '0')}-${targetDate.day.toString().padLeft(2, '0')}';
+  }
+
   Future<void> _save({required bool keepOpen}) async {
     final rawSubject = _subjectController.text.trim();
     final room = _roomController.text.trim();
@@ -207,17 +247,39 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
       );
       return;
     }
-    
+
     // Always strip component suffixes to get the canonical subject code
     final subject = TimetableEntry.stripComponentSuffix(rawSubject);
 
     setState(() => _isLoading = true);
 
     try {
-      final entryId = widget.existingEntry?.id ?? FirebaseFirestore.instance.collection('timetables').doc().id;
+      final isEditing = widget.existingEntry != null;
+      final bool wasOneOff =
+          isEditing && widget.existingEntry!.validForDate != null;
+
+      String? targetDateStr;
+      if (!_repeatWeekly) {
+        if (wasOneOff && _selectedDay == widget.initialDay) {
+          targetDateStr = widget.existingEntry!.validForDate;
+        } else {
+          targetDateStr = _getTargetDateStr(_selectedDay);
+        }
+      }
+
+      // If replacing a RECURRING lecture with a ONE-OFF lecture:
+      final bool replacingRecurringWithOneOff =
+          isEditing && !wasOneOff && !_repeatWeekly;
+
+      final entryId = replacingRecurringWithOneOff
+          ? FirebaseFirestore.instance.collection('timetables').doc().id
+          : (widget.existingEntry?.id ??
+                FirebaseFirestore.instance.collection('timetables').doc().id);
 
       // Auto-populate facultyId if a mapping exists in faculty_profiles
-      final facultyMap = await TimetableManager.getSubjectToFacultyIdMap(widget.division);
+      final facultyMap = await TimetableManager.getSubjectToFacultyIdMap(
+        widget.division,
+      );
       final mappedFacultyId = facultyMap[subject];
 
       final entry = TimetableEntry(
@@ -232,28 +294,58 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
         room: room.isEmpty ? null : room,
         status: 'active',
         facultyId: mappedFacultyId,
+        validForDate: targetDateStr,
+        hiddenOnDates: replacingRecurringWithOneOff
+            ? []
+            : (widget.existingEntry?.hiddenOnDates ?? []),
       );
 
-      if (widget.existingEntry != null && widget.initialDay != _selectedDay) {
+      if (replacingRecurringWithOneOff) {
+        // Hide original recurring lecture on this date
+        final oldEntry = widget.existingEntry!;
+        final updatedHiddenDates = List<String>.from(oldEntry.hiddenOnDates)
+          ..add(targetDateStr!);
         await FirebaseFirestore.instance
             .collection('timetables')
             .doc(widget.division)
             .collection(widget.initialDay)
-            .doc(entryId)
-            .delete();
+            .doc(oldEntry.id)
+            .update({'hiddenOnDates': updatedHiddenDates});
+
+        // Create the new one-off lecture
+        await TimetableManager.addLecture(
+          division: widget.division,
+          day: _selectedDay,
+          entry: entry,
+          oldEntry: oldEntry, // Ignore overlap with oldEntry
+        );
+      } else {
+        if (isEditing && widget.initialDay != _selectedDay) {
+          await FirebaseFirestore.instance
+              .collection('timetables')
+              .doc(widget.division)
+              .collection(widget.initialDay)
+              .doc(entryId)
+              .delete();
+        }
+
+        await TimetableManager.addLecture(
+          division: widget.division,
+          day: _selectedDay,
+          entry: entry,
+          oldEntry: widget.existingEntry,
+        );
       }
 
-      await TimetableManager.addLecture(
-        division: widget.division,
-        day: _selectedDay,
-        entry: entry,
-        oldEntry: widget.existingEntry,
+      final timeStr = TimetableManager.formatTime(
+        entry.startTime,
+        entry.endTime,
       );
-
-      final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
       await HistoryService.logOperation(
         division: widget.division,
-        operation: widget.existingEntry != null ? 'Lecture Replaced' : 'Lecture Added',
+        operation: widget.existingEntry != null
+            ? 'Lecture Replaced'
+            : 'Lecture Added',
         details: '${entry.displaySubject} on $_selectedDay at $timeStr',
         role: AppSettings.currentRole.name,
       );
@@ -265,11 +357,13 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
       _lastRoom = room;
 
       if (!mounted) return;
-      
+
       HapticFeedback.mediumImpact();
       AppDialogs.showSnackBar(
         context: context,
-        message: widget.existingEntry != null ? 'Lecture updated!' : 'Lecture added successfully!',
+        message: widget.existingEntry != null
+            ? 'Lecture updated!'
+            : 'Lecture added successfully!',
       );
 
       if (keepOpen) {
@@ -281,7 +375,11 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
         Navigator.pop(context);
       }
     } on ValidationException catch (e) {
-      AppDialogs.showError(context: context, title: e.title, message: e.message);
+      AppDialogs.showError(
+        context: context,
+        title: e.title,
+        message: e.message,
+      );
     } catch (e) {
       AppDialogs.showError(
         context: context,
@@ -317,7 +415,8 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Text(
         label.toUpperCase(),
-        style: TextStyle(fontFamily: 'Inter', 
+        style: TextStyle(
+          fontFamily: 'Inter',
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: 1.0,
@@ -336,11 +435,16 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
     final isCR = AppSettings.currentRole == UserRole.cr;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: SchedlyBottomSheet(
         title: isEditing ? 'Edit Lecture' : 'Add Lecture',
         subtitle: isEditing ? widget.existingEntry!.displaySubject : null,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.lg),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x2l,
+          vertical: AppSpacing.lg,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -356,108 +460,185 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
             // ── Section: Lecture Details ──────────────────────────────
             _buildSectionLabel('Lecture Details'),
 
-            // Subject autocomplete
-            Autocomplete<String>(
-              optionsBuilder: (textEditingValue) {
-                if (textEditingValue.text.isEmpty) return _availableSubjects;
-                return _availableSubjects.where((option) =>
-                    option.toLowerCase().contains(textEditingValue.text.toLowerCase()));
-              },
-              fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-                if (controller.text.isEmpty && _subjectController.text.isNotEmpty) {
-                  controller.text = _subjectController.text;
-                }
-                controller.addListener(() => _subjectController.text = controller.text);
-                _subjectFocusNode = focusNode;
-                return SchedlyTextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  labelText: 'Subject / Course Code',
-                  prefixIcon: Icons.book_rounded,
-                );
-              },
-            ),
-            const SizedBox(height: AppSpacing.md),
-
-            // Batch + Room
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: _batch,
-                    decoration: InputDecoration(
-                      labelText: 'Batch',
-                      prefixIcon: Icon(Icons.groups_rounded, size: 20, color: sem.onSurfaceMuted),
-                      fillColor: sem.surfaceElevated2,
-                      filled: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        borderSide: BorderSide(color: sem.borderFocus, width: 1.5),
-                      ),
+            Container(
+              decoration: BoxDecoration(
+                color: isDark ? sem.surfaceElevated2 : colorScheme.surface,
+                borderRadius: BorderRadius.circular(AppRadius.xl),
+                border: Border.all(color: sem.borderSubtle),
+                boxShadow: [
+                  if (!isDark)
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
-                    isExpanded: true,
-                    items: _batchOptions.map((b) => DropdownMenuItem(value: b, child: Text(b, overflow: TextOverflow.ellipsis))).toList(),
-                    onChanged: (val) => setState(() => _batch = val!),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Autocomplete<String>(
-                    optionsBuilder: (tv) {
-                      if (tv.text.isEmpty) return _availableRooms;
-                      return _availableRooms.where((option) =>
-                          option.toLowerCase().contains(tv.text.toLowerCase()));
-                    },
-                    fieldViewBuilder: (context, controller, focusNode, _) {
-                      if (controller.text.isEmpty && _roomController.text.isNotEmpty) {
-                        controller.text = _roomController.text;
-                      }
-                      controller.addListener(() => _roomController.text = controller.text);
-                      return SchedlyTextField(
-                        controller: controller,
-                        focusNode: focusNode,
-                        labelText: 'Room',
-                        prefixIcon: Icons.room_rounded,
+                ],
+              ),
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Subject autocomplete
+                  Autocomplete<String>(
+                    optionsBuilder: (textEditingValue) {
+                      if (textEditingValue.text.isEmpty) return _availableSubjects;
+                      return _availableSubjects.where(
+                        (option) => option.toLowerCase().contains(
+                          textEditingValue.text.toLowerCase(),
+                        ),
                       );
                     },
+                    fieldViewBuilder:
+                        (context, controller, focusNode, onFieldSubmitted) {
+                          if (controller.text.isEmpty &&
+                              _subjectController.text.isNotEmpty) {
+                            controller.text = _subjectController.text;
+                          }
+                          controller.addListener(
+                            () => _subjectController.text = controller.text,
+                          );
+                          _subjectFocusNode = focusNode;
+                          return SchedlyTextField(
+                            controller: controller,
+                            focusNode: focusNode,
+                            labelText: 'Subject / Course Code',
+                            prefixIcon: Icons.book_rounded,
+                          );
+                        },
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: AppSpacing.lg),
 
-            // Lecture type chips
-            Text(
-              'Type',
-              style: TextStyle(fontFamily: 'Inter', 
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: sem.onSurfaceMuted,
+                  // Batch + Room
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: _batch,
+                          decoration: InputDecoration(
+                            labelText: 'Batch',
+                            prefixIcon: Icon(
+                              Icons.groups_rounded,
+                              size: 20,
+                              color: sem.onSurfaceMuted,
+                            ),
+                            fillColor: isDark ? sem.surfaceElevated : const Color(0xFFF8F8FC),
+                            filled: true,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              borderSide: BorderSide(
+                                color: sem.borderFocus,
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
+                          isExpanded: true,
+                          items: _batchOptions
+                              .map(
+                                (b) => DropdownMenuItem(
+                                  value: b,
+                                  child: Text(b, overflow: TextOverflow.ellipsis),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (val) => setState(() => _batch = val!),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(
+                        child: Autocomplete<String>(
+                          optionsBuilder: (tv) {
+                            if (tv.text.isEmpty) return _availableRooms;
+                            return _availableRooms.where(
+                              (option) => option.toLowerCase().contains(
+                                tv.text.toLowerCase(),
+                              ),
+                            );
+                          },
+                          fieldViewBuilder: (context, controller, focusNode, _) {
+                            if (controller.text.isEmpty &&
+                                _roomController.text.isNotEmpty) {
+                              controller.text = _roomController.text;
+                            }
+                            controller.addListener(
+                              () => _roomController.text = controller.text,
+                            );
+                            return SchedlyTextField(
+                              controller: controller,
+                              focusNode: focusNode,
+                              labelText: 'Room',
+                              prefixIcon: Icons.room_rounded,
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // Lecture type chips
+                  Text(
+                    'Type',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: sem.onSurfaceMuted,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: [
+                      _buildTypeChip(
+                        'Theory',
+                        EventCategory.academic,
+                        Icons.auto_stories_rounded,
+                      ),
+                      _buildTypeChip(
+                        'Lab',
+                        EventCategory.academic,
+                        Icons.science_rounded,
+                      ),
+                      _buildTypeChip(
+                        'Tutorial',
+                        EventCategory.academic,
+                        Icons.school_rounded,
+                      ),
+                      _buildTypeChip(
+                        'Project',
+                        EventCategory.academic,
+                        Icons.assignment_rounded,
+                      ),
+                      _buildTypeChip(
+                        'Seminar',
+                        EventCategory.academic,
+                        Icons.record_voice_over_rounded,
+                      ),
+                      _buildTypeChip(
+                        'Viva',
+                        EventCategory.academic,
+                        Icons.mic_rounded,
+                      ),
+                      _buildTypeChip(
+                        'Event',
+                        EventCategory.event,
+                        Icons.celebration_rounded,
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: [
-                _buildTypeChip('Theory', EventCategory.academic, Icons.auto_stories_rounded),
-                _buildTypeChip('Lab', EventCategory.academic, Icons.science_rounded),
-                _buildTypeChip('Tutorial', EventCategory.academic, Icons.school_rounded),
-                _buildTypeChip('Project', EventCategory.academic, Icons.assignment_rounded),
-                _buildTypeChip('Seminar', EventCategory.academic, Icons.record_voice_over_rounded),
-                _buildTypeChip('Viva', EventCategory.academic, Icons.mic_rounded),
-                _buildTypeChip('Event', EventCategory.event, Icons.celebration_rounded),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.x2l),
 
             // ── Section: Timing ────────────────────────────────────────
             _buildSectionLabel('Timing'),
@@ -475,15 +656,22 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                  ),
                   child: Column(
                     children: [
-                      Icon(Icons.arrow_forward_rounded, size: 18, color: sem.onSurfaceMuted),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 18,
+                        color: sem.onSurfaceMuted,
+                      ),
                       if (_durationLabel.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.xs),
                         Text(
                           _durationLabel,
-                          style: TextStyle(fontFamily: 'Inter', 
+                          style: TextStyle(
+                            fontFamily: 'Inter',
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                             color: sem.onSurfaceMuted,
@@ -508,6 +696,66 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
             ),
             const SizedBox(height: AppSpacing.x2l),
 
+            // ── Section: Options ──────────────────────────────────────
+            _buildSectionLabel('Options'),
+            Container(
+              decoration: BoxDecoration(
+                color: _repeatWeekly ? colorScheme.primary.withValues(alpha: 0.1) : (isDark ? sem.surfaceElevated : const Color(0xFFF8F8FC)),
+                borderRadius: BorderRadius.circular(AppRadius.xl),
+                border: Border.all(
+                  color: _repeatWeekly ? colorScheme.primary.withValues(alpha: 0.3) : sem.borderSubtle,
+                  width: _repeatWeekly ? 1.5 : 1.0,
+                ),
+              ),
+              child: SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl,
+                  vertical: AppSpacing.sm,
+                ),
+                title: Row(
+                  children: [
+                    Icon(
+                      _repeatWeekly ? Icons.repeat_rounded : Icons.today_rounded,
+                      size: 20,
+                      color: _repeatWeekly ? colorScheme.primary : colorScheme.onSurface,
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Text(
+                      'Repeat weekly',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: _repeatWeekly ? colorScheme.primary : colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(left: 32.0, top: 4.0),
+                  child: Text(
+                    _repeatWeekly ? 'Applies to every ${widget.initialDay}' : 'Only applies on ${widget.targetDateForOverride != null ? DateFormat('d MMM').format(widget.targetDateForOverride!) : widget.initialDay}',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13,
+                      color: _repeatWeekly ? colorScheme.primary.withValues(alpha: 0.8) : sem.onSurfaceMuted,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                value: _repeatWeekly,
+                onChanged: (val) {
+                  HapticFeedback.lightImpact();
+                  setState(() => _repeatWeekly = val);
+                },
+                activeColor: colorScheme.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.xl),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x3l),
+
             // ── Action Buttons ────────────────────────────────────────
             if (isEditing && isCR)
               Row(
@@ -519,8 +767,12 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                       onPressed: _isLoading ? null : _confirmDelete,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: colorScheme.error,
-                        side: BorderSide(color: colorScheme.error.withValues(alpha: 0.5)),
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                        side: BorderSide(
+                          color: colorScheme.error.withValues(alpha: 0.5),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(AppRadius.lg),
                         ),
@@ -572,14 +824,20 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
       builder: (ctx) {
         final colorScheme = Theme.of(ctx).colorScheme;
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+          ),
           icon: Container(
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
               color: colorScheme.error.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.delete_rounded, color: colorScheme.error, size: 28),
+            child: Icon(
+              Icons.delete_rounded,
+              color: colorScheme.error,
+              size: 28,
+            ),
           ),
           title: Text(
             'Delete Lecture?',
@@ -587,7 +845,9 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
             textAlign: TextAlign.center,
           ),
           content: Text(
-            'This will permanently remove the lecture. Students and faculty will be notified.',
+            !_repeatWeekly
+                ? 'This will cancel the lecture for $_selectedDay only.'
+                : 'This will permanently remove the lecture. Students and faculty will be notified.',
             style: TextStyle(fontFamily: 'Inter', fontSize: 14, height: 1.5),
             textAlign: TextAlign.center,
           ),
@@ -595,12 +855,24 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Cancel', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
               style: FilledButton.styleFrom(backgroundColor: colorScheme.error),
-              child: Text('Delete', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700)),
+              child: Text(
+                'Delete',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ],
         );
@@ -611,33 +883,74 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
 
     setState(() => _isLoading = true);
     try {
-      await FirebaseFirestore.instance
-          .collection('timetables')
-          .doc(widget.division)
-          .collection(widget.initialDay)
-          .doc(widget.existingEntry!.id)
-          .delete();
-          
-      await TimetableEventService.handleModification(
-        division: widget.division,
-        day: widget.initialDay,
-        oldEntry: widget.existingEntry,
-        newEntry: null,
-        isDelete: true,
-      );
-      
+      final oldEntry = widget.existingEntry!;
+
+      if (!_repeatWeekly && oldEntry.validForDate == null) {
+        // One-off cancellation of a recurring lecture
+        final targetDateStr = _getTargetDateStr(_selectedDay);
+
+        // Hide original
+        final updatedHiddenDates = List<String>.from(oldEntry.hiddenOnDates)
+          ..add(targetDateStr);
+        await FirebaseFirestore.instance
+            .collection('timetables')
+            .doc(widget.division)
+            .collection(widget.initialDay)
+            .doc(oldEntry.id)
+            .update({'hiddenOnDates': updatedHiddenDates});
+
+        // Add cancelled placeholder
+        final cancelledEntry = oldEntry.copyWith(
+          id: FirebaseFirestore.instance.collection('timetables').doc().id,
+          validForDate: targetDateStr,
+          status: 'cancelled',
+          hiddenOnDates: [],
+        );
+
+        await TimetableManager.addLecture(
+          division: widget.division,
+          day: _selectedDay,
+          entry: cancelledEntry,
+          oldEntry: oldEntry, // ignore overlap
+        );
+      } else {
+        // Permanent delete OR deleting an already one-off lecture
+        await FirebaseFirestore.instance
+            .collection('timetables')
+            .doc(widget.division)
+            .collection(widget.initialDay)
+            .doc(oldEntry.id)
+            .delete();
+
+        await TimetableEventService.handleModification(
+          division: widget.division,
+          day: widget.initialDay,
+          oldEntry: oldEntry,
+          newEntry: null,
+          isDelete: true,
+        );
+      }
+
       HapticFeedback.mediumImpact();
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        AppDialogs.showError(context: context, title: 'Error', message: e.toString());
+        AppDialogs.showError(
+          context: context,
+          title: 'Error',
+          message: e.toString(),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Widget _buildTypeChip(String component, EventCategory category, IconData icon) {
+  Widget _buildTypeChip(
+    String component,
+    EventCategory category,
+    IconData icon,
+  ) {
     final isSelected = _component == component && _category == category;
     final colorScheme = Theme.of(context).colorScheme;
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
@@ -658,9 +971,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
           vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
-          color: isSelected
-              ? colorScheme.primary
-              : sem.surfaceElevated2,
+          color: isSelected ? colorScheme.primary : sem.surfaceElevated2,
           borderRadius: BorderRadius.circular(AppRadius.full),
           border: Border.all(
             color: isSelected ? colorScheme.primary : sem.borderSubtle,
@@ -678,7 +989,8 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
             const SizedBox(width: AppSpacing.xs),
             Text(
               component,
-              style: TextStyle(fontFamily: 'Inter', 
+              style: TextStyle(
+                fontFamily: 'Inter',
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: isSelected ? Colors.white : colorScheme.onSurface,
@@ -716,7 +1028,9 @@ class _DayPillSelector extends StatelessWidget {
         children: days.map((day) {
           final isSelected = selected == day;
           return Padding(
-            padding: EdgeInsets.only(right: days.last == day ? 0 : AppSpacing.sm),
+            padding: EdgeInsets.only(
+              right: days.last == day ? 0 : AppSpacing.sm,
+            ),
             child: GestureDetector(
               onTap: () => onSelected(day),
               child: AnimatedContainer(
@@ -727,7 +1041,11 @@ class _DayPillSelector extends StatelessWidget {
                   vertical: AppSpacing.sm + 2,
                 ),
                 decoration: BoxDecoration(
-                  color: isSelected ? colorScheme.primary : isDark ? sem.surfaceElevated2 : const Color(0xFFF0F0F8),
+                  color: isSelected
+                      ? colorScheme.primary
+                      : isDark
+                      ? sem.surfaceElevated2
+                      : const Color(0xFFF0F0F8),
                   borderRadius: BorderRadius.circular(AppRadius.full),
                   border: Border.all(
                     color: isSelected ? colorScheme.primary : sem.borderSubtle,
@@ -736,7 +1054,8 @@ class _DayPillSelector extends StatelessWidget {
                 ),
                 child: Text(
                   day.substring(0, 3),
-                  style: TextStyle(fontFamily: 'Inter', 
+                  style: TextStyle(
+                    fontFamily: 'Inter',
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: isSelected ? Colors.white : colorScheme.onSurface,
@@ -777,16 +1096,24 @@ class _TimePicker extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
         child: Container(
           padding: const EdgeInsets.symmetric(
-            vertical: AppSpacing.lg,
-            horizontal: AppSpacing.md,
+            vertical: AppSpacing.xl,
+            horizontal: AppSpacing.lg,
           ),
           decoration: BoxDecoration(
-            color: isDark ? sem.surfaceElevated2 : const Color(0xFFF8F8FC),
-            borderRadius: BorderRadius.circular(AppRadius.lg),
+            color: isDark ? sem.surfaceElevated2 : colorScheme.surface,
+            borderRadius: BorderRadius.circular(AppRadius.xl),
             border: Border.all(color: sem.borderSubtle),
+            boxShadow: [
+              if (!isDark)
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -794,34 +1121,41 @@ class _TimePicker extends StatelessWidget {
               Row(
                 children: [
                   Icon(
-                    isStart ? Icons.play_circle_outline_rounded : Icons.stop_circle_outlined,
-                    size: 14,
-                    color: sem.onSurfaceMuted,
+                    isStart
+                        ? Icons.play_circle_fill_rounded
+                        : Icons.stop_circle_rounded,
+                    size: 16,
+                    color: isStart ? colorScheme.primary : colorScheme.secondary,
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: AppSpacing.xs),
                   Text(
                     label,
-                    style: TextStyle(fontFamily: 'Inter', 
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
                       color: sem.onSurfaceMuted,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.xs),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 time,
-                style: TextStyle(fontFamily: 'Outfit', 
-                  fontSize: 22,
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontSize: 26,
                   fontWeight: FontWeight.w700,
                   color: colorScheme.onSurface,
+                  height: 1.1,
                 ),
               ),
-              const SizedBox(height: AppSpacing.xs),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 'Tap to change',
-                style: TextStyle(fontFamily: 'Inter', 
+                style: TextStyle(
+                  fontFamily: 'Inter',
                   fontSize: 10,
                   color: colorScheme.primary.withValues(alpha: 0.7),
                   fontWeight: FontWeight.w500,
@@ -863,7 +1197,11 @@ class _ActionButton extends StatelessWidget {
           )
         : Text(
             label,
-            style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
           );
 
     final style = ButtonStyle(
@@ -871,7 +1209,9 @@ class _ActionButton extends StatelessWidget {
         EdgeInsets.symmetric(vertical: AppSpacing.lg),
       ),
       shape: WidgetStatePropertyAll(
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
       ),
     );
 

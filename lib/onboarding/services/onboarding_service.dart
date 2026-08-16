@@ -11,7 +11,10 @@ class OnboardingService {
   static final OnboardingService instance = OnboardingService._();
   OnboardingService._();
 
-  Future<void> initializeAndCheckFirstLaunch(BuildContext context, UserRole role) async {
+  Future<void> initializeAndCheckFirstLaunch(
+    BuildContext context,
+    UserRole role,
+  ) async {
     final hasSeenWelcome = await TutorialStorageService.hasSeenTour('welcome');
     if (!hasSeenWelcome) {
       if (!context.mounted) return;
@@ -59,7 +62,7 @@ class OnboardingService {
     } else if (role == UserRole.cr) {
       tour = _crTour();
     }
-    
+
     if (tour != null) {
       TutorialOverlayManager.show(context);
       TutorialController.instance.startTour(tour);
@@ -74,7 +77,8 @@ class OnboardingService {
         TutorialStep(
           targetId: 'dashboard_tab',
           title: 'Your Dashboard',
-          description: 'Here you can see your upcoming lectures and daily schedule at a glance.',
+          description:
+              'Here you can see your upcoming lectures and daily schedule at a glance.',
           ccMessage: 'Welcome to Schedly!',
         ),
         TutorialStep(
@@ -92,7 +96,8 @@ class OnboardingService {
         TutorialStep(
           targetId: 'analytics_tab',
           title: 'Semester Analytics',
-          description: 'Keep track of how many lectures are completed or pending.',
+          description:
+              'Keep track of how many lectures are completed or pending.',
           ccMessage: 'Stay on top of your attendance!',
         ),
         TutorialStep(
@@ -112,13 +117,15 @@ class OnboardingService {
         TutorialStep(
           targetId: 'dashboard_tab',
           title: 'SR Dashboard',
-          description: 'Your dashboard highlights lectures waiting for your verification.',
+          description:
+              'Your dashboard highlights lectures waiting for your verification.',
           ccMessage: 'You have special permissions now.',
         ),
         TutorialStep(
           targetId: 'conduct_dashboard_tab',
           title: 'Conduct Dashboard',
-          description: 'Tap here to manage all lectures for your assigned subject.',
+          description:
+              'Tap here to manage all lectures for your assigned subject.',
           requireInteraction: true,
         ),
         TutorialStep(
@@ -134,7 +141,8 @@ class OnboardingService {
         TutorialStep(
           targetId: 'announcements_tab',
           title: 'Notifications',
-          description: 'Get alerted instantly when CRs assign you to a lecture.',
+          description:
+              'Get alerted instantly when CRs assign you to a lecture.',
         ),
       ],
     );
@@ -153,19 +161,22 @@ class OnboardingService {
         TutorialStep(
           targetId: 'timetable_tab',
           title: 'Timetable',
-          description: 'View the schedule to find slots that need modifications.',
+          description:
+              'View the schedule to find slots that need modifications.',
         ),
         TutorialStep(
           targetId: 'cr_panel_btn',
           title: 'CR Control Panel',
-          description: 'Tap here to access your powerful class management tools.',
+          description:
+              'Tap here to access your powerful class management tools.',
           ccMessage: 'You are in control.',
           requireInteraction: true,
         ),
         TutorialStep(
           targetId: 'edit_lecture_btn',
           title: 'Edit Lectures',
-          description: 'Modify timings, faculty, or rooms for an existing lecture.',
+          description:
+              'Modify timings, faculty, or rooms for an existing lecture.',
         ),
         TutorialStep(
           targetId: 'replace_lecture_btn',
@@ -180,24 +191,26 @@ class OnboardingService {
         TutorialStep(
           targetId: 'announcements_tab',
           title: 'Notifications',
-          description: 'Receive updates when SRs verify the lectures you modified.',
+          description:
+              'Receive updates when SRs verify the lectures you modified.',
         ),
         TutorialStep(
           targetId: 'analytics_tab',
           title: 'Analytics',
-          description: 'Ensure your section is hitting the required academic targets.',
+          description:
+              'Ensure your section is hitting the required academic targets.',
         ),
       ],
     );
   }
 
   Future<void> checkAnalyticsContext(BuildContext context) async {
-    if (TutorialController.instance.isVisible) return; 
+    if (TutorialController.instance.isVisible) return;
     if (await TutorialStorageService.hasSeenTour('analytics_context')) return;
     if (await TutorialStorageService.hasMastery('analytics')) return;
 
     if (!context.mounted) return;
-    
+
     final tour = const TutorialTour(
       tourId: 'analytics_context',
       name: 'Understanding Analytics',
@@ -205,17 +218,19 @@ class OnboardingService {
         TutorialStep(
           targetId: 'health_card',
           title: 'Semester Progress',
-          description: 'This shows your overall completion rate across all subjects.',
+          description:
+              'This shows your overall completion rate across all subjects.',
           ccMessage: 'Let\'s review your progress.',
         ),
         TutorialStep(
           targetId: 'subject_breakdown',
           title: 'Subject Breakdown',
-          description: 'See detailed stats for completed and remaining lectures per subject.',
+          description:
+              'See detailed stats for completed and remaining lectures per subject.',
         ),
       ],
     );
-    
+
     TutorialOverlayManager.show(context);
     TutorialController.instance.startTour(tour);
     await TutorialStorageService.markTourSeen('analytics_context');

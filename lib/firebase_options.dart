@@ -62,7 +62,8 @@ class DefaultFirebaseOptions {
   // Register it at console.firebase.google.com → schedly-production → Add app → iOS
   // Then download GoogleService-Info.plist and replace these placeholder values.
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCvHene63scD_yzJiR0HHWHBKTad-n-sSI', // placeholder: use iOS-specific key after registering
+    apiKey:
+        'AIzaSyCvHene63scD_yzJiR0HHWHBKTad-n-sSI', // placeholder: use iOS-specific key after registering
     appId: '1:1044389536762:ios:REPLACE_WITH_REAL_IOS_APP_ID',
     messagingSenderId: '1044389536762',
     projectId: 'schedly-production',

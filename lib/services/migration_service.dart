@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-
 import 'package:shared_preferences/shared_preferences.dart';
 import '../app_settings.dart';
 import '../models/timetable_entry.dart';
@@ -13,14 +12,19 @@ class MigrationService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   static const List<String> _days = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
   ];
 
   static Future<bool> migrateFacultyIds() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final version = prefs.getInt('faculty_id_migration_version') ?? 0;
-      if (version >= 2) return true; 
+      if (version >= 2) return true;
 
       final role = prefs.getString('user_role');
       if (role != 'faculty') {
@@ -35,9 +39,15 @@ class MigrationService {
       final newId = _db.collection('faculty_profiles').doc().id;
 
       // STEP 1: Copy
-      final profileSnap = await _db.collection('faculty_profiles').doc(legacyId).get();
+      final profileSnap = await _db
+          .collection('faculty_profiles')
+          .doc(legacyId)
+          .get();
       if (profileSnap.exists) {
-        await _db.collection('faculty_profiles').doc(newId).set(profileSnap.data()!);
+        await _db
+            .collection('faculty_profiles')
+            .doc(newId)
+            .set(profileSnap.data()!);
       } else {
         await _db.collection('faculty_profiles').doc(newId).set({
           'name': name,
@@ -45,7 +55,9 @@ class MigrationService {
           'department': prefs.getString('faculty_department'),
           'designation': prefs.getString('faculty_designation'),
           'cabin': prefs.getString('faculty_cabin'),
-          'assignedDivisions': prefs.getStringList('faculty_assigned_divisions'),
+          'assignedDivisions': prefs.getStringList(
+            'faculty_assigned_divisions',
+          ),
         });
       }
 
@@ -60,10 +72,15 @@ class MigrationService {
       }
 
       // STEP 2: Verify Copied Data
-      final verifyProfile = await _db.collection('faculty_profiles').doc(newId).get();
+      final verifyProfile = await _db
+          .collection('faculty_profiles')
+          .doc(newId)
+          .get();
       final verifyUser = await _db.collection('users').doc(newId).get();
       if (!verifyProfile.exists || !verifyUser.exists) {
-        throw AppException("Verification failed: Copied documents do not exist.");
+        throw AppException(
+          "Verification failed: Copied documents do not exist.",
+        );
       }
 
       // STEP 3: Mark migration successful locally
@@ -73,7 +90,8 @@ class MigrationService {
         department: prefs.getString('faculty_department') ?? '',
         designation: prefs.getString('faculty_designation') ?? '',
         cabin: prefs.getString('faculty_cabin') ?? '',
-        assignedDivisions: prefs.getStringList('faculty_assigned_divisions') ?? [],
+        assignedDivisions:
+            prefs.getStringList('faculty_assigned_divisions') ?? [],
         id: newId,
         migrationVersion: 2,
       );
@@ -81,8 +99,10 @@ class MigrationService {
       // STEP 4: Remove legacy documents
       await _db.collection('faculty_profiles').doc(legacyId).delete();
       await _db.collection('users').doc(legacyId).delete();
-      
-      debugPrint('MIGRATION: Successfully migrated $legacyId to $newId and deleted legacy docs.');
+
+      debugPrint(
+        'MIGRATION: Successfully migrated $legacyId to $newId and deleted legacy docs.',
+      );
       return true;
     } catch (e) {
       debugPrint('MIGRATION ERROR: $e');
@@ -97,10 +117,10 @@ class MigrationService {
     // 1. Migrate Timetables
     for (final day in _days) {
       final snapshot = await divRef.collection(day).get();
-      
+
       for (final doc in snapshot.docs) {
         final data = doc.data();
-        
+
         // Skip if already migrated (contains 'startTime')
         if (data.containsKey('startTime')) continue;
 
@@ -109,26 +129,38 @@ class MigrationService {
         final rawRoom = data['room'] as String? ?? 'L-19';
 
         // Use the proper PdfTimetableImportService to break down the string
-        final entries = PdfTimetableImportService.buildEntriesFromText(rawSubject, rawTime, rawRoom);
-        
+        final entries = PdfTimetableImportService.buildEntriesFromText(
+          rawSubject,
+          rawTime,
+          rawRoom,
+        );
+
         final batch = _db.batch();
         batch.delete(doc.reference); // Delete legacy doc
-        
+
         for (final entry in entries) {
           batch.set(divRef.collection(day).doc(entry.id), entry.toFirestore());
         }
-        
+
         await batch.commit();
       }
     }
 
     // 2. Wipe legacy conduct logs and analytics (since they are incompatible with v2 flat architecture)
-    final logsSnapshot = await _db.collection('sections').doc(division).collection('conduct_logs').get();
+    final logsSnapshot = await _db
+        .collection('sections')
+        .doc(division)
+        .collection('conduct_logs')
+        .get();
     for (final doc in logsSnapshot.docs) {
       await doc.reference.delete();
     }
 
-    final analyticsSnapshot = await _db.collection('sections').doc(division).collection('analytics').get();
+    final analyticsSnapshot = await _db
+        .collection('sections')
+        .doc(division)
+        .collection('analytics')
+        .get();
     for (final doc in analyticsSnapshot.docs) {
       await doc.reference.delete();
     }
@@ -162,7 +194,11 @@ class MigrationService {
 
     // 1. Migrate Timetables
     for (final day in _days) {
-      final snapshot = await _db.collection('timetables').doc(division).collection(day).get();
+      final snapshot = await _db
+          .collection('timetables')
+          .doc(division)
+          .collection(day)
+          .get();
       for (final doc in snapshot.docs) {
         final data = doc.data();
         final mapped = _remapBatch(data['batch'] as String?);
@@ -175,7 +211,11 @@ class MigrationService {
     }
 
     // 2. Migrate Analytics
-    final analyticsSnapshot = await _db.collection('sections').doc(division).collection('analytics').get();
+    final analyticsSnapshot = await _db
+        .collection('sections')
+        .doc(division)
+        .collection('analytics')
+        .get();
     for (final doc in analyticsSnapshot.docs) {
       final data = doc.data();
       final mapped = _remapBatch(data['batch'] as String?);
@@ -187,7 +227,11 @@ class MigrationService {
     }
 
     // 3. Migrate Conduct Logs
-    final logsSnapshot = await _db.collection('sections').doc(division).collection('conduct_logs').get();
+    final logsSnapshot = await _db
+        .collection('sections')
+        .doc(division)
+        .collection('conduct_logs')
+        .get();
     for (final doc in logsSnapshot.docs) {
       final data = doc.data();
       final originalSlot = data['originalSlot'] as Map<String, dynamic>?;
@@ -225,7 +269,11 @@ class MigrationService {
 
     // 1. Sanitize Timetables
     for (final day in _days) {
-      final snapshot = await _db.collection('timetables').doc(division).collection(day).get();
+      final snapshot = await _db
+          .collection('timetables')
+          .doc(division)
+          .collection(day)
+          .get();
       for (final doc in snapshot.docs) {
         final data = doc.data();
         final rawSubject = data['subject'] as String?;
@@ -241,7 +289,11 @@ class MigrationService {
     }
 
     // 2. Sanitize Analytics
-    final analyticsSnapshot = await _db.collection('sections').doc(division).collection('analytics').get();
+    final analyticsSnapshot = await _db
+        .collection('sections')
+        .doc(division)
+        .collection('analytics')
+        .get();
     for (final doc in analyticsSnapshot.docs) {
       final data = doc.data();
       final rawSubject = data['subject'] as String?;
@@ -256,11 +308,15 @@ class MigrationService {
     }
 
     // 3. Sanitize Conduct Logs
-    final logsSnapshot = await _db.collection('sections').doc(division).collection('conduct_logs').get();
+    final logsSnapshot = await _db
+        .collection('sections')
+        .doc(division)
+        .collection('conduct_logs')
+        .get();
     for (final doc in logsSnapshot.docs) {
       final data = doc.data();
       bool changed = false;
-      
+
       final originalSlot = data['originalSlot'] as Map<String, dynamic>?;
       if (originalSlot != null) {
         final rawSubject = originalSlot['subject'] as String?;
@@ -314,10 +370,14 @@ class MigrationService {
       }
     }
 
-    final snapshot = await _db.collection('sections').doc(division).collection('subjects').get();
+    final snapshot = await _db
+        .collection('sections')
+        .doc(division)
+        .collection('subjects')
+        .get();
     for (final doc in snapshot.docs) {
       final data = doc.data();
-      
+
       // If already migrated (has componentType explicitly set), skip
       if (data.containsKey('componentType') && data.containsKey('courseName')) {
         continue;
@@ -325,10 +385,10 @@ class MigrationService {
 
       final docId = doc.id;
       final subjectName = data['subjectName'] as String? ?? docId;
-      
+
       // Derive from subjectName (which is often the same as docId, but subjectName is safer)
       final courseName = TimetableEntry.stripComponentSuffix(subjectName);
-      
+
       // Determine type
       String componentType = 'Theory';
       final lowerName = subjectName.toLowerCase();

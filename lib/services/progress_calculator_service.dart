@@ -23,11 +23,12 @@ class ProgressCalculatorService {
     // 1. Get semester start date
     final sectionDoc = await db.collection('sections').doc(division).get();
     DateTime semesterStartDate = DateTime(2026, 7, 13); // Fallback date
-    
+
     if (sectionDoc.exists) {
       final sectionData = sectionDoc.data()!;
       if (sectionData['semesterStartDate'] != null) {
-        semesterStartDate = (sectionData['semesterStartDate'] as Timestamp).toDate();
+        semesterStartDate = (sectionData['semesterStartDate'] as Timestamp)
+            .toDate();
       }
     }
 
@@ -35,7 +36,8 @@ class ProgressCalculatorService {
     final weeklyTimetable = <int, List<TimetableEntry>>{};
     final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
     for (int i = 0; i < days.length; i++) {
-      final snap = await db.collection('timetables')
+      final snap = await db
+          .collection('timetables')
           .doc(division)
           .collection(days[i])
           .where('isActive', isEqualTo: true)
@@ -52,7 +54,11 @@ class ProgressCalculatorService {
     }
 
     // 3. Fetch course components (subject config)
-    final metaSnap = await db.collection('sections').doc(division).collection('subject_metadata').get();
+    final metaSnap = await db
+        .collection('sections')
+        .doc(division)
+        .collection('subject_metadata')
+        .get();
     final subjectMetadata = <String, CourseComponent>{};
     for (var doc in metaSnap.docs) {
       final comp = CourseComponent.fromFirestore(doc);
@@ -96,7 +102,8 @@ class ProgressCalculatorService {
   }
 
   int getConductedClasses(String subjectCode, String component) {
-    return getExpectedConductedHours(subjectCode, component) - getCancelledHours(subjectCode, component);
+    return getExpectedConductedHours(subjectCode, component) -
+        getCancelledHours(subjectCode, component);
   }
 
   int getTotalProjectedHours(String subjectCode, String component) {
@@ -108,11 +115,13 @@ class ProgressCalculatorService {
       for (var entry in dayEntries) {
         String entrySubj = entry.subject;
         String entryComp = entry.component;
-        
+
         // Force-normalize DSA variants
-        if (entrySubj.toUpperCase().contains('DATA STRUCTURES') || entrySubj.trim().toUpperCase() == 'DSA') {
+        if (entrySubj.toUpperCase().contains('DATA STRUCTURES') ||
+            entrySubj.trim().toUpperCase() == 'DSA') {
           entrySubj = 'DSA';
-          if (entryComp.toUpperCase().contains('LAB') || entryComp.toUpperCase().contains('PRACTICAL')) {
+          if (entryComp.toUpperCase().contains('LAB') ||
+              entryComp.toUpperCase().contains('PRACTICAL')) {
             entryComp = 'Lab';
           } else {
             entryComp = 'Theory';
@@ -121,30 +130,37 @@ class ProgressCalculatorService {
 
         // Determine if we should process this entry based on split/merged rules
         bool isMatch = false;
-        
+
         if (component == 'Merged' || component == 'All' || component.isEmpty) {
           // Merged Subject -> Match by subject name only, grab all components
           isMatch = (entrySubj == subjectCode);
         } else {
           // Split Subject -> Must match BOTH subject and specific component
           String normEntryComp = entryComp;
-          if (normEntryComp.isEmpty || normEntryComp == 'Lecture') normEntryComp = 'Theory';
-          else if (normEntryComp == 'Practical') normEntryComp = 'Lab';
-          
-          String normTargetComp = component;
-          if (normTargetComp.isEmpty || normTargetComp == 'Lecture') normTargetComp = 'Theory';
-          else if (normTargetComp == 'Practical') normTargetComp = 'Lab';
+          if (normEntryComp.isEmpty || normEntryComp == 'Lecture')
+            normEntryComp = 'Theory';
+          else if (normEntryComp == 'Practical')
+            normEntryComp = 'Lab';
 
-          isMatch = (entrySubj == subjectCode && normEntryComp == normTargetComp);
+          String normTargetComp = component;
+          if (normTargetComp.isEmpty || normTargetComp == 'Lecture')
+            normTargetComp = 'Theory';
+          else if (normTargetComp == 'Practical')
+            normTargetComp = 'Lab';
+
+          isMatch =
+              (entrySubj == subjectCode && normEntryComp == normTargetComp);
         }
 
         if (isMatch) {
           int hours = (entry.durationMinutes / 60).round();
           String batch = entry.batch.isEmpty ? "Whole Class" : entry.batch;
-          
+
           String comp = entryComp;
-          if (comp.isEmpty || comp == 'Lecture') comp = 'Theory';
-          else if (comp == 'Practical') comp = 'Lab';
+          if (comp.isEmpty || comp == 'Lecture')
+            comp = 'Theory';
+          else if (comp == 'Practical')
+            comp = 'Lab';
 
           if (batch == "Whole Class") {
             // Everyone attends these (Theory)
@@ -152,7 +168,8 @@ class ProgressCalculatorService {
           } else {
             // Sub-batches (Labs/Tutorials). Track separately to find the max single-student requirement.
             splitComponentHours.putIfAbsent(comp, () => {});
-            splitComponentHours[comp]![batch] = (splitComponentHours[comp]![batch] ?? 0) + hours;
+            splitComponentHours[comp]![batch] =
+                (splitComponentHours[comp]![batch] ?? 0) + hours;
           }
         }
       }

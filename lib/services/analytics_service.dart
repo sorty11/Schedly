@@ -10,8 +10,15 @@ import 'package:rxdart/rxdart.dart';
 class AnalyticsService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  static String getAnalyticsDocId(String subject, String component, String batch) {
-    return '${subject.trim()}_${component.trim()}_${batch.trim()}'.replaceAll(RegExp(r'\s+'), '_');
+  static String getAnalyticsDocId(
+    String subject,
+    String component,
+    String batch,
+  ) {
+    return '${subject.trim()}_${component.trim()}_${batch.trim()}'.replaceAll(
+      RegExp(r'\s+'),
+      '_',
+    );
   }
 
   static Stream<List<BatchAnalytics>> streamAnalytics(String division) {
@@ -27,37 +34,35 @@ class AnalyticsService {
         .collection('conduct_adjustments')
         .snapshots();
 
-    return Rx.combineLatest2(
-      analyticsStream,
-      adjustmentsStream,
-      (QuerySnapshot analyticsSnap, QuerySnapshot adjSnap) {
-        
-        final Map<String, int> adjustmentMap = {};
-        for (var doc in adjSnap.docs) {
-          final adj = ConductAdjustment.fromFirestore(doc);
-          final key = getAnalyticsDocId(adj.subject, adj.component, adj.batch);
-          adjustmentMap[key] = (adjustmentMap[key] ?? 0) + adj.adjustmentHours;
-        }
+    return Rx.combineLatest2(analyticsStream, adjustmentsStream, (
+      QuerySnapshot analyticsSnap,
+      QuerySnapshot adjSnap,
+    ) {
+      final Map<String, int> adjustmentMap = {};
+      for (var doc in adjSnap.docs) {
+        final adj = ConductAdjustment.fromFirestore(doc);
+        final key = getAnalyticsDocId(adj.subject, adj.component, adj.batch);
+        adjustmentMap[key] = (adjustmentMap[key] ?? 0) + adj.adjustmentHours;
+      }
 
-        return analyticsSnap.docs.map((doc) {
-          final analytics = BatchAnalytics.fromFirestore(doc);
-          final extraHours = adjustmentMap[analytics.id] ?? 0;
-          return BatchAnalytics(
-            id: analytics.id,
-            subject: analytics.subject,
-            component: analytics.component,
-            batch: analytics.batch,
-            category: analytics.category,
-            targetLectures: analytics.targetLectures,
-            overrideTarget: analytics.overrideTarget,
-            completedLectures: analytics.completedLectures,
-            pendingLectures: analytics.pendingLectures,
-            cancelledLectures: analytics.cancelledLectures,
-            adjustedLectures: extraHours,
-          );
-        }).toList();
-      },
-    );
+      return analyticsSnap.docs.map((doc) {
+        final analytics = BatchAnalytics.fromFirestore(doc);
+        final extraHours = adjustmentMap[analytics.id] ?? 0;
+        return BatchAnalytics(
+          id: analytics.id,
+          subject: analytics.subject,
+          component: analytics.component,
+          batch: analytics.batch,
+          category: analytics.category,
+          targetLectures: analytics.targetLectures,
+          overrideTarget: analytics.overrideTarget,
+          completedLectures: analytics.completedLectures,
+          pendingLectures: analytics.pendingLectures,
+          cancelledLectures: analytics.cancelledLectures,
+          adjustedLectures: extraHours,
+        );
+      }).toList();
+    });
   }
 
   static Future<void> addConductAdjustment({
@@ -70,7 +75,11 @@ class AnalyticsService {
     required String createdBy,
     required String createdByUid,
   }) async {
-    final docRef = _db.collection('sections').doc(division).collection('conduct_adjustments').doc();
+    final docRef = _db
+        .collection('sections')
+        .doc(division)
+        .collection('conduct_adjustments')
+        .doc();
     final adj = ConductAdjustment(
       id: docRef.id,
       subject: subject,
@@ -100,21 +109,40 @@ class AnalyticsService {
         .where('batch', isEqualTo: batch)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => ConductAdjustment.fromFirestore(d)).toList());
+        .map(
+          (snap) =>
+              snap.docs.map((d) => ConductAdjustment.fromFirestore(d)).toList(),
+        );
   }
 
   static Future<void> initializeSubjectAnalytics(String division) async {
-    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    final days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
     final Map<String, int> weeklyOccurrences = {};
     final Set<String> allBatches = {'Whole Class'};
-    
+
     // 1. Calculate weekly occurrences from timetable
     for (final day in days) {
-      final snapshot = await _db.collection('timetables').doc(division).collection(day).where('isActive', isEqualTo: true).get();
+      final snapshot = await _db
+          .collection('timetables')
+          .doc(division)
+          .collection(day)
+          .where('isActive', isEqualTo: true)
+          .get();
       for (final doc in snapshot.docs) {
         final entry = TimetableEntry.fromFirestore(doc);
         if (entry.category == EventCategory.academic) {
-          final id = getAnalyticsDocId(entry.subject, entry.component, entry.batch);
+          final id = getAnalyticsDocId(
+            entry.subject,
+            entry.component,
+            entry.batch,
+          );
           weeklyOccurrences[id] = (weeklyOccurrences[id] ?? 0) + 1;
           allBatches.add(entry.batch);
         }
@@ -122,8 +150,15 @@ class AnalyticsService {
     }
 
     // 2. Fetch existing analytics to avoid overwriting completed/pending counts
-    final existingSnapshot = await _db.collection('sections').doc(division).collection('analytics').get();
-    final existingDocs = {for (var doc in existingSnapshot.docs) doc.id: BatchAnalytics.fromFirestore(doc)};
+    final existingSnapshot = await _db
+        .collection('sections')
+        .doc(division)
+        .collection('analytics')
+        .get();
+    final existingDocs = {
+      for (var doc in existingSnapshot.docs)
+        doc.id: BatchAnalytics.fromFirestore(doc),
+    };
 
     final batchWriter = _db.batch();
 
@@ -132,12 +167,18 @@ class AnalyticsService {
       final parts = id.split('_');
       final subject = parts[0];
       final component = parts.length > 1 ? parts[1] : 'Theory';
-      final batch = parts.length > 2 ? parts.sublist(2).join('_') : 'Whole Class';
-      
+      final batch = parts.length > 2
+          ? parts.sublist(2).join('_')
+          : 'Whole Class';
+
       final target = weeklyOccurrences[id]! * 15; // 15 teaching weeks
-      
-      final docRef = _db.collection('sections').doc(division).collection('analytics').doc(id);
-      
+
+      final docRef = _db
+          .collection('sections')
+          .doc(division)
+          .collection('analytics')
+          .doc(id);
+
       if (existingDocs.containsKey(id)) {
         batchWriter.update(docRef, {'targetLectures': target});
       } else {
@@ -152,7 +193,7 @@ class AnalyticsService {
         batchWriter.set(docRef, newAnalytics.toFirestore());
       }
     }
-    
+
     await batchWriter.commit();
   }
 
@@ -162,19 +203,19 @@ class AnalyticsService {
     required String newStatus,
     required String markedBy,
     required String markedByUid,
-    String? actualSubject, 
+    String? actualSubject,
     String? actualComponent,
     String? actualBatch,
     EventCategory? actualCategory,
   }) async {
-    if (log.status == newStatus && 
-        log.actualSubject == actualSubject && 
+    if (log.status == newStatus &&
+        log.actualSubject == actualSubject &&
         log.actualBatch == actualBatch) {
-      return; 
+      return;
     }
 
     final batchWriter = _db.batch();
-    
+
     final logRef = _db
         .collection('sections')
         .doc(division)
@@ -188,12 +229,14 @@ class AnalyticsService {
       'audit.clientTimestamp': DateTime.now().toIso8601String(),
       'audit.serverTimestamp': FieldValue.serverTimestamp(),
     };
-    
+
     if (newStatus == 'rescheduled' && actualSubject != null) {
       logUpdates['actualSubject'] = actualSubject;
       logUpdates['actualComponent'] = actualComponent ?? 'Theory';
       logUpdates['actualBatch'] = actualBatch ?? log.originalSlot.batch;
-      logUpdates['actualCategory'] = actualCategory?.name.toLowerCase() ?? EventCategory.academic.name.toLowerCase();
+      logUpdates['actualCategory'] =
+          actualCategory?.name.toLowerCase() ??
+          EventCategory.academic.name.toLowerCase();
     } else if (newStatus != 'rescheduled') {
       logUpdates['actualSubject'] = FieldValue.delete();
       logUpdates['actualComponent'] = FieldValue.delete();
@@ -209,18 +252,18 @@ class AnalyticsService {
 
     // Helper to extract contribution for analytics
     Map<String, Map<String, int>> getContributions(
-      String status, 
-      String origSubj, 
+      String status,
+      String origSubj,
       String origComp,
-      String origBatch, 
-      String? actSubj, 
+      String origBatch,
+      String? actSubj,
       String? actComp,
       String? actBatch,
       EventCategory origCat,
       EventCategory? actCat,
     ) {
       final res = <String, Map<String, int>>{};
-      
+
       void add(String s, String c, String b, String field, int val) {
         final id = getAnalyticsDocId(s, c, b);
         res.putIfAbsent(id, () => {});
@@ -239,7 +282,10 @@ class AnalyticsService {
       }
 
       // Actual slot (only impacts analytics if rescheduled AND academic)
-      if (status == 'rescheduled' && actSubj != null && actComp != null && actBatch != null) {
+      if (status == 'rescheduled' &&
+          actSubj != null &&
+          actComp != null &&
+          actBatch != null) {
         if (actCat == EventCategory.academic) {
           add(actSubj, actComp, actBatch, 'completedLectures', weight);
           add(actSubj, actComp, actBatch, 'pendingLectures', -weight);
@@ -250,8 +296,8 @@ class AnalyticsService {
     }
 
     final oldContribs = getContributions(
-      log.status, 
-      log.originalSlot.subject, 
+      log.status,
+      log.originalSlot.subject,
       log.originalSlot.component,
       log.originalSlot.batch,
       log.actualSubject,
@@ -262,30 +308,36 @@ class AnalyticsService {
     );
 
     final newContribs = getContributions(
-      newStatus, 
-      log.originalSlot.subject, 
+      newStatus,
+      log.originalSlot.subject,
       log.originalSlot.component,
       log.originalSlot.batch,
       newStatus == 'rescheduled' ? actualSubject : null,
       newStatus == 'rescheduled' ? (actualComponent ?? 'Theory') : null,
-      newStatus == 'rescheduled' ? (actualBatch ?? log.originalSlot.batch) : null,
+      newStatus == 'rescheduled'
+          ? (actualBatch ?? log.originalSlot.batch)
+          : null,
       log.originalSlot.category,
-      newStatus == 'rescheduled' ? (actualCategory ?? EventCategory.academic) : null,
+      newStatus == 'rescheduled'
+          ? (actualCategory ?? EventCategory.academic)
+          : null,
     );
 
     // Compute Net Change
     final netChanges = <String, Map<String, int>>{};
-    
+
     for (final id in oldContribs.keys) {
       for (final field in oldContribs[id]!.keys) {
         netChanges.putIfAbsent(id, () => {});
-        netChanges[id]![field] = (netChanges[id]![field] ?? 0) - oldContribs[id]![field]!;
+        netChanges[id]![field] =
+            (netChanges[id]![field] ?? 0) - oldContribs[id]![field]!;
       }
     }
     for (final id in newContribs.keys) {
       for (final field in newContribs[id]!.keys) {
         netChanges.putIfAbsent(id, () => {});
-        netChanges[id]![field] = (netChanges[id]![field] ?? 0) + newContribs[id]![field]!;
+        netChanges[id]![field] =
+            (netChanges[id]![field] ?? 0) + newContribs[id]![field]!;
       }
     }
 
@@ -298,14 +350,14 @@ class AnalyticsService {
           increments[field] = FieldValue.increment(change);
         }
       }
-      
+
       if (increments.isNotEmpty) {
         final analyticsRef = _db
             .collection('sections')
             .doc(division)
             .collection('analytics')
             .doc(id);
-            
+
         batchWriter.set(analyticsRef, increments, SetOptions(merge: true));
       }
     }
@@ -313,7 +365,12 @@ class AnalyticsService {
     await batchWriter.commit();
   }
 
-  static Stream<List<ConductLog>> streamPendingLogs(String division, String subjectFilter, String? componentFilter, String? batchFilter) {
+  static Stream<List<ConductLog>> streamPendingLogs(
+    String division,
+    String subjectFilter,
+    String? componentFilter,
+    String? batchFilter,
+  ) {
     return _db
         .collection('sections')
         .doc(division)
@@ -321,9 +378,12 @@ class AnalyticsService {
         .where('status', isEqualTo: 'pending')
         .snapshots()
         .map((snapshot) {
-          final allLogs = snapshot.docs.map((doc) => ConductLog.fromFirestore(doc)).toList();
+          final allLogs = snapshot.docs
+              .map((doc) => ConductLog.fromFirestore(doc))
+              .toList();
           final now = DateTime.now();
-          final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+          final todayStr =
+              '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
           final currentMinutes = now.hour * 60 + now.minute;
 
           return allLogs.where((log) {
@@ -331,15 +391,22 @@ class AnalyticsService {
 
             // Ensure canonical subject code matching
             final canonicalSubject = log.originalSlot.subjectCode;
-            final canonicalFilter = TimetableEntry.stripComponentSuffix(subjectFilter);
+            final canonicalFilter = TimetableEntry.stripComponentSuffix(
+              subjectFilter,
+            );
             if (canonicalSubject != canonicalFilter) return false;
 
-            if (componentFilter != null && log.originalSlot.component != componentFilter) return false;
-            if (batchFilter != null && log.originalSlot.batch != batchFilter) return false;
+            if (componentFilter != null &&
+                log.originalSlot.component != componentFilter)
+              return false;
+            if (batchFilter != null && log.originalSlot.batch != batchFilter)
+              return false;
 
             // Filter out future lectures
             if (log.date.compareTo(todayStr) > 0) return false;
-            if (log.date == todayStr && log.originalSlot.endTime > currentMinutes) return false;
+            if (log.date == todayStr &&
+                log.originalSlot.endTime > currentMinutes)
+              return false;
 
             return true;
           }).toList();

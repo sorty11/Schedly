@@ -13,17 +13,13 @@ class Lecture {
     this.cancelled = false,
   });
 
-  factory Lecture.fromMap(
-    Map<String, String> map,
-  ) {
+  factory Lecture.fromMap(Map<String, String> map) {
     return Lecture(
       id: map['id'] ?? '',
       subject: map['subject'] ?? '',
       time: map['time'] ?? '',
       room: map['room'] ?? '',
-      cancelled:
-          (map['cancelled'] ?? 'false') ==
-              'true',
+      cancelled: (map['cancelled'] ?? 'false') == 'true',
     );
   }
 
@@ -33,8 +29,7 @@ class Lecture {
       'subject': subject,
       'time': time,
       'room': room,
-      'cancelled':
-          cancelled.toString(),
+      'cancelled': cancelled.toString(),
     };
   }
 }

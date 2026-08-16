@@ -6,7 +6,10 @@ import '../../theme/theme.dart';
 class CelebrationOverlayManager {
   static OverlayEntry? _overlayEntry;
 
-  static void showCelebration(BuildContext context, {required VoidCallback onComplete}) {
+  static void showCelebration(
+    BuildContext context, {
+    required VoidCallback onComplete,
+  }) {
     if (_overlayEntry != null) return;
 
     _overlayEntry = OverlayEntry(
@@ -24,14 +27,15 @@ class CelebrationOverlayManager {
 
 class _CelebrationWidget extends StatefulWidget {
   final VoidCallback onComplete;
-  
+
   const _CelebrationWidget({required this.onComplete});
 
   @override
   State<_CelebrationWidget> createState() => _CelebrationWidgetState();
 }
 
-class _CelebrationWidgetState extends State<_CelebrationWidget> with TickerProviderStateMixin {
+class _CelebrationWidgetState extends State<_CelebrationWidget>
+    with TickerProviderStateMixin {
   late AnimationController _appearController;
   late List<_Particle> _particles;
   final math.Random _random = math.Random();
@@ -40,7 +44,7 @@ class _CelebrationWidgetState extends State<_CelebrationWidget> with TickerProvi
   void initState() {
     super.initState();
     _particles = List.generate(40, (index) => _Particle.create(_random));
-    
+
     _appearController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2500), // Total celebration time
@@ -63,11 +67,14 @@ class _CelebrationWidgetState extends State<_CelebrationWidget> with TickerProvi
           // Background fade
           FadeTransition(
             opacity: Tween(begin: 0.0, end: 0.6).animate(
-              CurvedAnimation(parent: _appearController, curve: const Interval(0.0, 0.2, curve: Curves.easeOut)),
+              CurvedAnimation(
+                parent: _appearController,
+                curve: const Interval(0.0, 0.2, curve: Curves.easeOut),
+              ),
             ),
             child: Container(color: Colors.black),
           ),
-          
+
           // Confetti Particle System
           AnimatedBuilder(
             animation: _appearController,
@@ -78,7 +85,7 @@ class _CelebrationWidgetState extends State<_CelebrationWidget> with TickerProvi
               );
             },
           ),
-          
+
           // CC Character and Message
           ScaleTransition(
             scale: CurvedAnimation(
@@ -87,7 +94,10 @@ class _CelebrationWidgetState extends State<_CelebrationWidget> with TickerProvi
             ),
             child: FadeTransition(
               opacity: Tween(begin: 0.0, end: 1.0).animate(
-                CurvedAnimation(parent: _appearController, curve: const Interval(0.1, 0.3)),
+                CurvedAnimation(
+                  parent: _appearController,
+                  curve: const Interval(0.1, 0.3),
+                ),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -96,7 +106,8 @@ class _CelebrationWidgetState extends State<_CelebrationWidget> with TickerProvi
                   const SizedBox(height: AppSpacing.x2l),
                   Text(
                     "🎉 You're Ready!",
-                    style: TextStyle(fontFamily: 'Outfit', 
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
                       fontSize: 32,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
@@ -105,7 +116,8 @@ class _CelebrationWidgetState extends State<_CelebrationWidget> with TickerProvi
                   const SizedBox(height: AppSpacing.md),
                   Text(
                     "Welcome to Schedly.",
-                    style: TextStyle(fontFamily: 'Inter', 
+                    style: TextStyle(
+                      fontFamily: 'Inter',
                       fontSize: 18,
                       fontWeight: FontWeight.w500,
                       color: Colors.white.withValues(alpha: 0.8),
@@ -144,19 +156,30 @@ class _Particle {
 
   static _Particle create(math.Random random) {
     final colors = [
-      Colors.blue, Colors.red, Colors.green, Colors.yellow, Colors.purple, Colors.orange
+      Colors.blue,
+      Colors.red,
+      Colors.green,
+      Colors.yellow,
+      Colors.purple,
+      Colors.orange,
     ];
-    
+
     // Start from center
     final angle = random.nextDouble() * 2 * math.pi;
     final distance = random.nextDouble() * 400 + 100;
     final endX = math.cos(angle) * distance;
     final endY = math.sin(angle) * distance + 200; // gravity effect
-    
+
     return _Particle(
       start: Offset.zero,
-      control1: Offset(math.cos(angle) * distance * 0.5, math.sin(angle) * distance * 0.5 - 100),
-      control2: Offset(math.cos(angle) * distance * 0.8, math.sin(angle) * distance * 0.8),
+      control1: Offset(
+        math.cos(angle) * distance * 0.5,
+        math.sin(angle) * distance * 0.5 - 100,
+      ),
+      control2: Offset(
+        math.cos(angle) * distance * 0.8,
+        math.sin(angle) * distance * 0.8,
+      ),
       end: Offset(endX, endY),
       color: colors[random.nextInt(colors.length)],
       size: random.nextDouble() * 8 + 4,
@@ -179,24 +202,39 @@ class _ConfettiPainter extends CustomPainter {
 
     for (var p in particles) {
       if (progress < p.startT) continue;
-      
+
       double localProgress = (progress - p.startT) / p.duration;
       if (localProgress > 1.0) continue; // particle faded out
 
       // Bezier curve interpolation
       final t = localProgress;
       final t1 = 1 - t;
-      
-      final currentX = t1*t1*t1*p.start.dx + 3*t1*t1*t*p.control1.dx + 3*t1*t*t*p.control2.dx + t*t*t*p.end.dx;
-      final currentY = t1*t1*t1*p.start.dy + 3*t1*t1*t*p.control1.dy + 3*t1*t*t*p.control2.dy + t*t*t*p.end.dy;
-      
+
+      final currentX =
+          t1 * t1 * t1 * p.start.dx +
+          3 * t1 * t1 * t * p.control1.dx +
+          3 * t1 * t * t * p.control2.dx +
+          t * t * t * p.end.dx;
+      final currentY =
+          t1 * t1 * t1 * p.start.dy +
+          3 * t1 * t1 * t * p.control1.dy +
+          3 * t1 * t * t * p.control2.dy +
+          t * t * t * p.end.dy;
+
       paint.color = p.color.withValues(alpha: 1.0 - localProgress);
-      
+
       // Draw spinning rectangles or circles
       canvas.save();
       canvas.translate(center.dx + currentX, center.dy + currentY);
       canvas.rotate(t * math.pi * 4); // spin
-      canvas.drawRect(Rect.fromCenter(center: Offset.zero, width: p.size, height: p.size * 1.5), paint);
+      canvas.drawRect(
+        Rect.fromCenter(
+          center: Offset.zero,
+          width: p.size,
+          height: p.size * 1.5,
+        ),
+        paint,
+      );
       canvas.restore();
     }
   }

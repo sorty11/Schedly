@@ -14,7 +14,8 @@ enum MatchConfidence {
 
 class AttendanceLog {
   final String id; // format: {division}_{dateStr}_{startTime}_{endTime}
-  final String subjectCode; // Extracted or matched subject code (this might be the canonical id or the raw fallback)
+  final String
+  subjectCode; // Extracted or matched subject code (this might be the canonical id or the raw fallback)
   final String component; // Extracted or matched component
   final String rawSubjectText; // What was actually in the PDF
   final String? normalizedSubject; // Stripped string
@@ -47,14 +48,18 @@ class AttendanceLog {
 
   factory AttendanceLog.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
-    
+
     // Fallback parsing for confidence
     final score = data['confidenceScore'] as int? ?? 0;
     MatchConfidence conf = MatchConfidence.unknown;
-    if (score >= 100) conf = MatchConfidence.exact;
-    else if (score >= 90) conf = MatchConfidence.alias;
-    else if (score >= 80) conf = MatchConfidence.normalized;
-    else if (score >= 60) conf = MatchConfidence.fuzzy;
+    if (score >= 100)
+      conf = MatchConfidence.exact;
+    else if (score >= 90)
+      conf = MatchConfidence.alias;
+    else if (score >= 80)
+      conf = MatchConfidence.normalized;
+    else if (score >= 60)
+      conf = MatchConfidence.fuzzy;
 
     return AttendanceLog(
       id: doc.id,
@@ -70,7 +75,8 @@ class AttendanceLog {
       source: data['source'] ?? 'unknown',
       confidence: conf,
       timetableEntryId: data['timetableEntryId'],
-      importedAt: (data['importedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      importedAt:
+          (data['importedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 
@@ -93,5 +99,6 @@ class AttendanceLog {
   }
 
   // Idempotent key for deduplication
-  String get deduplicationKey => '${date.year}-${date.month}-${date.day}_${startTime}_${subjectCode}_$component';
+  String get deduplicationKey =>
+      '${date.year}-${date.month}-${date.day}_${startTime}_${subjectCode}_$component';
 }

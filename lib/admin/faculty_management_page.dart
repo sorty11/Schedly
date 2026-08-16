@@ -18,11 +18,14 @@ class _FacultyManagementPageState extends State<FacultyManagementPage> {
   @override
   Widget build(BuildContext context) {
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Faculty Management', style: TextStyle(fontFamily: 'Outfit')),
+        title: const Text(
+          'Faculty Management',
+          style: TextStyle(fontFamily: 'Outfit'),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -54,7 +57,8 @@ class _FacultyManagementPageState extends State<FacultyManagementPage> {
                   final data = doc.data() as Map<String, dynamic>;
                   final name = (data['name'] ?? '').toString().toLowerCase();
                   final legacyId = doc.id.toLowerCase();
-                  return name.contains(_searchQuery) || legacyId.contains(_searchQuery);
+                  return name.contains(_searchQuery) ||
+                      legacyId.contains(_searchQuery);
                 }).toList();
 
                 if (filteredDocs.isEmpty) {
@@ -72,11 +76,17 @@ class _FacultyManagementPageState extends State<FacultyManagementPage> {
                   itemBuilder: (context, index) {
                     final doc = filteredDocs[index];
                     final data = doc.data() as Map<String, dynamic>;
-                    
+
                     return ListTile(
-                      title: Text(data['name'] ?? 'Unknown Name', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      title: Text(
+                        data['name'] ?? 'Unknown Name',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       subtitle: Text('ID: ${doc.id}'),
-                      trailing: Icon(Icons.edit_rounded, color: semanticColors.accent),
+                      trailing: Icon(
+                        Icons.edit_rounded,
+                        color: semanticColors.accent,
+                      ),
                       onTap: () => _editFaculty(doc.id, data),
                     );
                   },
@@ -94,7 +104,9 @@ class _FacultyManagementPageState extends State<FacultyManagementPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => _EditFacultySheet(uid: uid, data: data),
     );
   }
@@ -120,11 +132,19 @@ class _EditFacultySheetState extends State<_EditFacultySheet> {
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.data['name'] ?? '');
-    
+
     // Convert arrays to comma-separated strings for easy editing
-    final divs = (widget.data['divisions'] as List<dynamic>?)?.map((e) => e.toString()).join(', ') ?? '';
-    final subs = (widget.data['subjects'] as List<dynamic>?)?.map((e) => e.toString()).join(', ') ?? '';
-    
+    final divs =
+        (widget.data['divisions'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .join(', ') ??
+        '';
+    final subs =
+        (widget.data['subjects'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .join(', ') ??
+        '';
+
     _divisionsCtrl = TextEditingController(text: divs);
     _subjectsCtrl = TextEditingController(text: subs);
   }
@@ -140,19 +160,32 @@ class _EditFacultySheetState extends State<_EditFacultySheet> {
   Future<void> _save() async {
     setState(() => _loading = true);
     try {
-      final divisionsList = _divisionsCtrl.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-      final subjectsList = _subjectsCtrl.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+      final divisionsList = _divisionsCtrl.text
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+      final subjectsList = _subjectsCtrl.text
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
 
-      await FirebaseFirestore.instance.collection('faculty_profiles').doc(widget.uid).set({
-        'name': _nameCtrl.text.trim(),
-        'divisions': divisionsList,
-        'subjects': subjectsList,
-      }, SetOptions(merge: true));
-      
+      await FirebaseFirestore.instance
+          .collection('faculty_profiles')
+          .doc(widget.uid)
+          .set({
+            'name': _nameCtrl.text.trim(),
+            'divisions': divisionsList,
+            'subjects': subjectsList,
+          }, SetOptions(merge: true));
+
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -166,20 +199,31 @@ class _EditFacultySheetState extends State<_EditFacultySheet> {
         title: const Text('Delete Faculty?'),
         content: const Text('This will delete their Firestore document.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
         ],
       ),
     );
     if (confirm != true) return;
-    
+
     setState(() => _loading = true);
     try {
-      await FirebaseFirestore.instance.collection('faculty_profiles').doc(widget.uid).delete();
+      await FirebaseFirestore.instance
+          .collection('faculty_profiles')
+          .doc(widget.uid)
+          .delete();
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -200,15 +244,29 @@ class _EditFacultySheetState extends State<_EditFacultySheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Edit Faculty Document', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
+            Text(
+              'Edit Faculty Document',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Outfit',
+              ),
+            ),
             const SizedBox(height: AppSpacing.md),
-            
+
             SchedlyTextField(controller: _nameCtrl, labelText: 'Name'),
             const SizedBox(height: AppSpacing.sm),
-            SchedlyTextField(controller: _divisionsCtrl, labelText: 'Divisions (comma separated)', hintText: '2023-24_B.Tech_A, 2023-24_B.Tech_B'),
+            SchedlyTextField(
+              controller: _divisionsCtrl,
+              labelText: 'Divisions (comma separated)',
+              hintText: '2023-24_B.Tech_A, 2023-24_B.Tech_B',
+            ),
             const SizedBox(height: AppSpacing.sm),
-            SchedlyTextField(controller: _subjectsCtrl, labelText: 'Subjects (comma separated)'),
-            
+            SchedlyTextField(
+              controller: _subjectsCtrl,
+              labelText: 'Subjects (comma separated)',
+            ),
+
             const SizedBox(height: AppSpacing.xl),
             AnimatedButton(
               onPressed: _loading ? null : _save,

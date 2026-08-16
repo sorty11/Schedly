@@ -19,26 +19,22 @@ class SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     return Padding(
-      padding: padding ??
-          EdgeInsets.only(
-            bottom: AppSpacing.md,
-            top: AppSpacing.x2l,
-          ),
+      padding:
+          padding ??
+          EdgeInsets.only(bottom: AppSpacing.md, top: AppSpacing.x2l),
       child: Row(
         children: [
           Text(
             title.toUpperCase(),
-            style: TextStyle(fontFamily: 'Inter', 
+            style: TextStyle(
+              fontFamily: 'Inter',
               fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.2,
               color: sem.onSurfaceMuted,
             ),
           ),
-          if (trailing != null) ...[
-            const Spacer(),
-            trailing!,
-          ],
+          if (trailing != null) ...[const Spacer(), trailing!],
         ],
       ),
     );

@@ -18,18 +18,16 @@ class DivisionMembershipService {
     final batch = _db.batch();
 
     // 1. Create/Update Membership Record
-    final membershipRef = _db.collection('section_memberships').doc(membershipId);
-    batch.set(
-      membershipRef,
-      {
-        'userId': uid,
-        'sectionId': sectionId,
-        'role': role,
-        'status': 'active',
-        'joinedAt': FieldValue.serverTimestamp(),
-      },
-      SetOptions(merge: true),
-    );
+    final membershipRef = _db
+        .collection('section_memberships')
+        .doc(membershipId);
+    batch.set(membershipRef, {
+      'userId': uid,
+      'sectionId': sectionId,
+      'role': role,
+      'status': 'active',
+      'joinedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
 
     // 2. Update Legacy Users Document
     final userRef = _db.collection('users').doc(uid);
@@ -46,16 +44,16 @@ class DivisionMembershipService {
 
     // 3. Update Legacy Students Subcollection (if student)
     if (role == 'Student' && rollNo != null && name != null) {
-      final studentRef = _db.collection('sections').doc(sectionId).collection('students').doc(rollNo);
-      batch.set(
-        studentRef,
-        {
-          'name': name,
-          'rollNo': rollNo,
-          'joinedAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
-      );
+      final studentRef = _db
+          .collection('sections')
+          .doc(sectionId)
+          .collection('students')
+          .doc(rollNo);
+      batch.set(studentRef, {
+        'name': name,
+        'rollNo': rollNo,
+        'joinedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
     }
 
     await batch.commit();
@@ -72,7 +70,9 @@ class DivisionMembershipService {
     final batch = _db.batch();
 
     // 1. Mark membership as removed
-    final membershipRef = _db.collection('section_memberships').doc('${sectionId}_$targetUid');
+    final membershipRef = _db
+        .collection('section_memberships')
+        .doc('${sectionId}_$targetUid');
     batch.update(membershipRef, {
       'status': 'removed',
       'removedAt': FieldValue.serverTimestamp(),
@@ -83,9 +83,7 @@ class DivisionMembershipService {
     final userRef = _db.collection('users').doc(targetUid);
     final userSnap = await userRef.get();
     if (userSnap.exists && userSnap.data()?['division'] == sectionId) {
-      batch.update(userRef, {
-        'division': FieldValue.delete(),
-      });
+      batch.update(userRef, {'division': FieldValue.delete()});
     }
 
     // 3. Log the audit event
@@ -105,15 +103,21 @@ class DivisionMembershipService {
   /// Listens to the current membership status of a user in a specific section.
   static Stream<String> listenToMembershipStatus(String uid, String sectionId) {
     final membershipId = '${sectionId}_$uid';
-    return _db.collection('section_memberships').doc(membershipId).snapshots().map((doc) {
-      if (!doc.exists) return 'unknown';
-      return doc.data()?['status'] as String? ?? 'unknown';
-    });
+    return _db
+        .collection('section_memberships')
+        .doc(membershipId)
+        .snapshots()
+        .map((doc) {
+          if (!doc.exists) return 'unknown';
+          return doc.data()?['status'] as String? ?? 'unknown';
+        });
   }
 
   /// Fetches the roster (active members) for a given section.
   /// Returns a list of maps containing combined membership and user profile data.
-  static Future<List<Map<String, dynamic>>> getSectionRoster(String sectionId) async {
+  static Future<List<Map<String, dynamic>>> getSectionRoster(
+    String sectionId,
+  ) async {
     try {
       // 1. Get all active memberships for the section
       final snapshot = await _db
@@ -125,21 +129,28 @@ class DivisionMembershipService {
       if (snapshot.docs.isEmpty) return [];
 
       // 2. Extract UIDs
-      final uids = snapshot.docs.map((doc) => doc.data()['userId'] as String).toList();
-      
+      final uids = snapshot.docs
+          .map((doc) => doc.data()['userId'] as String)
+          .toList();
+
       // 3. Chunk UIDs into groups of 10 for Firestore 'whereIn' limitation
       List<List<String>> chunks = [];
       for (var i = 0; i < uids.length; i += 10) {
-        chunks.add(uids.sublist(i, i + 10 > uids.length ? uids.length : i + 10));
+        chunks.add(
+          uids.sublist(i, i + 10 > uids.length ? uids.length : i + 10),
+        );
       }
 
       // 4. Fetch User Profiles
       final List<Map<String, dynamic>> roster = [];
-      
+
       for (var chunk in chunks) {
-        final usersSnap = await _db.collection('users').where(FieldPath.documentId, whereIn: chunk).get();
+        final usersSnap = await _db
+            .collection('users')
+            .where(FieldPath.documentId, whereIn: chunk)
+            .get();
         final usersMap = {for (var doc in usersSnap.docs) doc.id: doc.data()};
-        
+
         // Match user profiles with memberships
         for (var membershipDoc in snapshot.docs) {
           final mData = membershipDoc.data();
@@ -153,7 +164,7 @@ class DivisionMembershipService {
           }
         }
       }
-      
+
       return roster;
     } catch (e) {
       debugPrint('Error fetching roster: $e');

@@ -19,11 +19,12 @@ class CacheService {
   }
 
   /// Saves data to cache with a specified time-to-live (TTL)
-  void set(String key, dynamic data, {Duration ttl = const Duration(minutes: 5)}) {
-    _cache[key] = _CacheEntry(
-      data: data,
-      expiryTime: DateTime.now().add(ttl),
-    );
+  void set(
+    String key,
+    dynamic data, {
+    Duration ttl = const Duration(minutes: 5),
+  }) {
+    _cache[key] = _CacheEntry(data: data, expiryTime: DateTime.now().add(ttl));
   }
 
   /// Check if cache has a valid entry

@@ -27,14 +27,16 @@ class TutorialController extends ChangeNotifier with WidgetsBindingObserver {
   int _currentStepIndex = 0;
   TutorialState _state = TutorialState.idle;
   TutorialState? _prePauseState;
-  
+
   TutorialTour? get activeTour => _activeTour;
   int get currentStepIndex => _currentStepIndex;
   TutorialState get state => _state;
-  bool get isVisible => _state != TutorialState.idle && _state != TutorialState.paused;
-  
+  bool get isVisible =>
+      _state != TutorialState.idle && _state != TutorialState.paused;
+
   TutorialStep? get currentStep {
-    if (_activeTour == null || _currentStepIndex >= _activeTour!.steps.length) return null;
+    if (_activeTour == null || _currentStepIndex >= _activeTour!.steps.length)
+      return null;
     return _activeTour!.steps[_currentStepIndex];
   }
 
@@ -51,7 +53,7 @@ class TutorialController extends ChangeNotifier with WidgetsBindingObserver {
     _activeTour = tour;
     _currentStepIndex = 0;
     _transitionTo(TutorialState.preparing);
-    
+
     // Give UI a frame to prepare
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _evaluateCurrentStep();
@@ -59,9 +61,10 @@ class TutorialController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void completeStep() {
-    if (_state == TutorialState.waitingForInteraction || _state == TutorialState.highlighting) {
+    if (_state == TutorialState.waitingForInteraction ||
+        _state == TutorialState.highlighting) {
       _transitionTo(TutorialState.interactionCompleted);
-      
+
       // Briefly show celebration, then advance
       Future.delayed(const Duration(milliseconds: 200), () {
         if (_state == TutorialState.interactionCompleted) {
@@ -78,7 +81,7 @@ class TutorialController extends ChangeNotifier with WidgetsBindingObserver {
 
   void advanceStep() {
     if (_activeTour == null) return;
-    
+
     if (_currentStepIndex < _activeTour!.steps.length - 1) {
       _currentStepIndex++;
       _evaluateCurrentStep();
@@ -86,7 +89,7 @@ class TutorialController extends ChangeNotifier with WidgetsBindingObserver {
       finishTour();
     }
   }
-  
+
   void previousStep() {
     if (_currentStepIndex > 0) {
       _currentStepIndex--;
@@ -133,7 +136,7 @@ class TutorialController extends ChangeNotifier with WidgetsBindingObserver {
 
     _transitionTo(TutorialState.waitingForTarget);
     _checkTargetAvailability();
-    
+
     // Recovery timeout
     Future.delayed(const Duration(seconds: 3), () {
       if (_state == TutorialState.waitingForTarget && _activeTour != null) {
@@ -145,7 +148,8 @@ class TutorialController extends ChangeNotifier with WidgetsBindingObserver {
   void _onTargetRegistryUpdated() {
     if (_state == TutorialState.waitingForTarget) {
       _checkTargetAvailability();
-    } else if (_state == TutorialState.highlighting || _state == TutorialState.waitingForInteraction) {
+    } else if (_state == TutorialState.highlighting ||
+        _state == TutorialState.waitingForInteraction) {
       // If target disappears while highlighting, fallback to waiting
       final bounds = TargetRegistry.instance.getBounds(currentStep!.targetId);
       if (bounds == null) {
@@ -157,9 +161,11 @@ class TutorialController extends ChangeNotifier with WidgetsBindingObserver {
   void _checkTargetAvailability() {
     final step = currentStep;
     if (step == null) return;
-    
+
     final key = TargetRegistry.instance.getKey(step.targetId);
-    if (key != null && key.currentContext != null && key.currentContext!.mounted) {
+    if (key != null &&
+        key.currentContext != null &&
+        key.currentContext!.mounted) {
       try {
         Scrollable.ensureVisible(
           key.currentContext!,

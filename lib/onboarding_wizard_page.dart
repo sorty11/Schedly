@@ -30,28 +30,28 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
   final PageController _pageController = PageController();
   final _firestore = FirebaseFirestore.instance;
   User? get user => FirebaseAuth.instance.currentUser;
-  
+
   bool _loading = true;
   int _currentStep = 0;
-  
+
   String? _selectedRole; // 'Student' or 'Faculty'
-  
+
   // Student & Faculty Shared
   final _nameController = TextEditingController();
   final _departmentController = TextEditingController();
-  
+
   // Student specific
   final _rollNoController = TextEditingController();
-  
+
   // Faculty specific
   final _facultyIdController = TextEditingController();
   final _masterPasswordController = TextEditingController();
-  
+
   // Section Selection (Student)
   String? _selectedYear;
   String? _selectedBranch;
   String? _selectedDivision;
-  
+
   final _profileFormKey = GlobalKey<FormState>();
   final _verifyFormKey = GlobalKey<FormState>();
 
@@ -74,7 +74,7 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
 
   Future<void> _loadDraft() async {
     if (user == null) return;
-    
+
     try {
       final doc = await _firestore.collection('users').doc(user!.uid).get();
       if (doc.exists) {
@@ -83,16 +83,17 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
           _routeToDashboard(data['role']);
           return;
         }
-        
+
         if (data['role'] != null) {
           _selectedRole = data['role'];
         }
         setState(() {
           _currentStep = data['onboardingStep'] ?? 0;
-          
+
           if (data['draftProfile'] != null) {
             _nameController.text = data['draftProfile']['name'] ?? '';
-            _departmentController.text = data['draftProfile']['department'] ?? '';
+            _departmentController.text =
+                data['draftProfile']['department'] ?? '';
             _rollNoController.text = data['draftProfile']['rollNo'] ?? '';
             _facultyIdController.text = data['draftProfile']['facultyId'] ?? '';
           }
@@ -113,7 +114,7 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
   Future<void> _saveDraftAndProceed(int nextStep) async {
     if (user == null) return;
     setState(() => _loading = true);
-    
+
     try {
       await _firestore.collection('users').doc(user!.uid).set({
         'role': _selectedRole,
@@ -125,7 +126,7 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
           'facultyId': _facultyIdController.text.trim(),
         },
       }, SetOptions(merge: true));
-      
+
       setState(() => _currentStep = nextStep);
       _pageController.animateToPage(
         nextStep,
@@ -133,30 +134,49 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
         curve: Curves.easeInOut,
       );
     } catch (e) {
-      AppDialogs.showError(context: context, title: 'Error', message: 'Could not save progress.');
+      AppDialogs.showError(
+        context: context,
+        title: 'Error',
+        message: 'Could not save progress.',
+      );
     } finally {
       setState(() => _loading = false);
     }
   }
-  
+
   void _routeToDashboard(String? role) {
     if (role == 'Faculty') {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FacultyHomePage()));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const FacultyHomePage()),
+      );
     } else {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomePage(division: AppSettings.sectionId ?? '')));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => HomePage(division: AppSettings.sectionId ?? ''),
+        ),
+      );
     }
   }
 
   Future<void> _completeStudentOnboarding() async {
-    if (_selectedYear == null || _selectedBranch == null || _selectedDivision == null) {
-      AppDialogs.showError(context: context, title: 'Missing Info', message: 'Please select a section.');
+    if (_selectedYear == null ||
+        _selectedBranch == null ||
+        _selectedDivision == null) {
+      AppDialogs.showError(
+        context: context,
+        title: 'Missing Info',
+        message: 'Please select a section.',
+      );
       return;
     }
-    
+
     setState(() => _loading = true);
     try {
-      final sectionId = '${_selectedYear!.replaceAll(' ', '')}_${_selectedBranch!.replaceAll(' ', '')}_$_selectedDivision';
-      
+      final sectionId =
+          '${_selectedYear!.replaceAll(' ', '')}_${_selectedBranch!.replaceAll(' ', '')}_$_selectedDivision';
+
       await DivisionMembershipService.joinDivision(
         uid: user!.uid,
         sectionId: sectionId,
@@ -174,17 +194,21 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
         div: _selectedDivision!,
         secId: sectionId,
       );
-      
+
       await _firestore.collection('users').doc(user!.uid).set({
         'onboardingCompleted': true,
         'profileCompleted': true,
         'profileVersion': 1,
         'division': sectionId,
       }, SetOptions(merge: true));
-      
+
       _routeToDashboard('Student');
     } catch (e) {
-      AppDialogs.showError(context: context, title: 'Error', message: e.toString());
+      AppDialogs.showError(
+        context: context,
+        title: 'Error',
+        message: e.toString(),
+      );
       setState(() => _loading = false);
     }
   }
@@ -207,7 +231,11 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
 
       _routeToDashboard('Faculty');
     } catch (e) {
-      AppDialogs.showError(context: context, title: 'Verification Failed', message: e.toString().replaceAll('Exception: ', ''));
+      AppDialogs.showError(
+        context: context,
+        title: 'Verification Failed',
+        message: e.toString().replaceAll('Exception: ', ''),
+      );
       setState(() => _loading = false);
     }
   }
@@ -222,13 +250,18 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
       appBar: AppBar(
         title: const Text('Account Setup'),
         automaticallyImplyLeading: false,
-        leading: _currentStep > 0 && !_loading ? IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () {
-            setState(() => _currentStep--);
-            _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-          },
-        ) : null,
+        leading: _currentStep > 0 && !_loading
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: () {
+                  setState(() => _currentStep--);
+                  _pageController.previousPage(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                },
+              )
+            : null,
       ),
       body: SafeArea(
         child: Column(
@@ -241,7 +274,9 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
                 children: [
                   _buildRoleSelectionPage(),
                   _buildProfileSetupPage(),
-                  _selectedRole == 'Student' ? _buildStudentSectionPage() : _buildFacultyVerificationPage(),
+                  _selectedRole == 'Student'
+                      ? _buildStudentSectionPage()
+                      : _buildFacultyVerificationPage(),
                 ],
               ),
             ),
@@ -283,7 +318,9 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
           ),
           const SizedBox(height: AppSpacing.x3l),
           AnimatedButton(
-            onPressed: _selectedRole == null ? null : () => _saveDraftAndProceed(1),
+            onPressed: _selectedRole == null
+                ? null
+                : () => _saveDraftAndProceed(1),
             child: const Text('Continue'),
           ),
         ],
@@ -367,16 +404,24 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
       title: 'Join Section',
       subtitle: 'Select your academic year, branch, and division.',
       child: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('sections').where('active', isEqualTo: true).snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('sections')
+            .where('active', isEqualTo: true)
+            .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) return const CircularProgressIndicator();
+          if (snapshot.connectionState == ConnectionState.waiting)
+            return const CircularProgressIndicator();
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Text('No active sections available. Ask your CR to create one.');
+            return const Text(
+              'No active sections available. Ask your CR to create one.',
+            );
           }
 
           final docs = snapshot.data!.docs;
-          
-          final activeYears = docs.map((d) => d['academicYear'] as String).toSet().toList()..sort();
+
+          final activeYears =
+              docs.map((d) => d['academicYear'] as String).toSet().toList()
+                ..sort();
           if (_selectedYear != null && !activeYears.contains(_selectedYear)) {
             _selectedYear = null;
             _selectedBranch = null;
@@ -385,8 +430,15 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
 
           List<String> activeBranches = [];
           if (_selectedYear != null) {
-            activeBranches = docs.where((d) => d['academicYear'] == _selectedYear).map((d) => d['branch'] as String).toSet().toList()..sort();
-            if (_selectedBranch != null && !activeBranches.contains(_selectedBranch)) {
+            activeBranches =
+                docs
+                    .where((d) => d['academicYear'] == _selectedYear)
+                    .map((d) => d['branch'] as String)
+                    .toSet()
+                    .toList()
+                  ..sort();
+            if (_selectedBranch != null &&
+                !activeBranches.contains(_selectedBranch)) {
               _selectedBranch = null;
               _selectedDivision = null;
             }
@@ -394,9 +446,20 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
 
           List<String> activeDivisions = [];
           if (_selectedYear != null && _selectedBranch != null) {
-            activeDivisions = docs.where((d) => d['academicYear'] == _selectedYear && d['branch'] == _selectedBranch)
-                                  .map((d) => d['division'] as String).toSet().toList()..sort();
-            if (_selectedDivision != null && !activeDivisions.contains(_selectedDivision)) _selectedDivision = null;
+            activeDivisions =
+                docs
+                    .where(
+                      (d) =>
+                          d['academicYear'] == _selectedYear &&
+                          d['branch'] == _selectedBranch,
+                    )
+                    .map((d) => d['division'] as String)
+                    .toSet()
+                    .toList()
+                  ..sort();
+            if (_selectedDivision != null &&
+                !activeDivisions.contains(_selectedDivision))
+              _selectedDivision = null;
           }
 
           return Column(
@@ -404,38 +467,78 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
             children: [
               DropdownButtonFormField<String>(
                 value: _selectedYear,
-                decoration: InputDecoration(labelText: 'Academic Year', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
-                items: activeYears.map((y) => DropdownMenuItem(value: y, child: Text(y))).toList(),
-                onChanged: (val) => setState(() { _selectedYear = val; _selectedBranch = null; _selectedDivision = null; }),
+                decoration: InputDecoration(
+                  labelText: 'Academic Year',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                items: activeYears
+                    .map((y) => DropdownMenuItem(value: y, child: Text(y)))
+                    .toList(),
+                onChanged: (val) => setState(() {
+                  _selectedYear = val;
+                  _selectedBranch = null;
+                  _selectedDivision = null;
+                }),
               ),
               const SizedBox(height: AppSpacing.lg),
               if (_selectedYear != null) ...[
                 DropdownButtonFormField<String>(
                   value: _selectedBranch,
-                  decoration: InputDecoration(labelText: 'Branch', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
-                  items: activeBranches.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
-                  onChanged: (val) => setState(() { _selectedBranch = val; _selectedDivision = null; }),
+                  decoration: InputDecoration(
+                    labelText: 'Branch',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  items: activeBranches
+                      .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                      .toList(),
+                  onChanged: (val) => setState(() {
+                    _selectedBranch = val;
+                    _selectedDivision = null;
+                  }),
                 ),
                 const SizedBox(height: AppSpacing.lg),
               ],
               if (_selectedBranch != null) ...[
                 if (activeDivisions.isEmpty)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                    child: Text('No sections available for this Year and Branch.', 
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.md,
+                    ),
+                    child: Text(
+                      'No sections available for this Year and Branch.',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                   )
                 else
                   DropdownButtonFormField<String>(
                     value: _selectedDivision,
-                    decoration: InputDecoration(labelText: 'Division', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
-                    items: activeDivisions.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
+                    decoration: InputDecoration(
+                      labelText: 'Division',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    items: activeDivisions
+                        .map((d) => DropdownMenuItem(value: d, child: Text(d)))
+                        .toList(),
                     onChanged: (val) => setState(() => _selectedDivision = val),
                   ),
                 const SizedBox(height: AppSpacing.x3l),
               ],
               AnimatedButton(
-                onPressed: (_loading || _selectedYear == null || _selectedBranch == null || _selectedDivision == null) ? null : _completeStudentOnboarding,
+                onPressed:
+                    (_loading ||
+                        _selectedYear == null ||
+                        _selectedBranch == null ||
+                        _selectedDivision == null)
+                    ? null
+                    : _completeStudentOnboarding,
                 isLoading: _loading,
                 child: const Text('Complete Setup'),
               ),
@@ -449,7 +552,8 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
   Widget _buildFacultyVerificationPage() {
     return _WizardPageContainer(
       title: 'Faculty Verification',
-      subtitle: 'Enter the master password provided by administration to activate your faculty account.',
+      subtitle:
+          'Enter the master password provided by administration to activate your faculty account.',
       child: Form(
         key: _verifyFormKey,
         child: Column(
@@ -480,7 +584,11 @@ class _WizardPageContainer extends StatelessWidget {
   final String subtitle;
   final Widget child;
 
-  const _WizardPageContainer({required this.title, required this.subtitle, required this.child});
+  const _WizardPageContainer({
+    required this.title,
+    required this.subtitle,
+    required this.child,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -492,13 +600,28 @@ class _WizardPageContainer extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(title, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: AppSpacing.sm),
-              Text(subtitle, textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
               const SizedBox(height: AppSpacing.x3l),
               SchedlyCard(
                 variant: SchedlyCardVariant.elevated,
-                padding: EdgeInsets.all(ResponsiveUtils.getCardPadding(context)),
+                padding: EdgeInsets.all(
+                  ResponsiveUtils.getCardPadding(context),
+                ),
                 child: child,
               ),
             ],
@@ -516,7 +639,13 @@ class _RoleCard extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
-  const _RoleCard({required this.title, required this.description, required this.icon, required this.isSelected, required this.onTap});
+  const _RoleCard({
+    required this.title,
+    required this.description,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -525,30 +654,68 @@ class _RoleCard extends StatelessWidget {
       onTap: onTap,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final isVertical = ResponsiveUtils.shouldUseVerticalLayout(context, availableWidth: constraints.maxWidth, minRequiredWidth: 200);
-          
+          final isVertical = ResponsiveUtils.shouldUseVerticalLayout(
+            context,
+            availableWidth: constraints.maxWidth,
+            minRequiredWidth: 200,
+          );
+
           final content = isVertical
               ? Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(icon, size: 40, color: isSelected ? colorScheme.primary : Colors.grey),
+                    Icon(
+                      icon,
+                      size: 40,
+                      color: isSelected ? colorScheme.primary : Colors.grey,
+                    ),
                     const SizedBox(height: AppSpacing.md),
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18), textAlign: TextAlign.center),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                     const SizedBox(height: 4),
-                    Text(description, style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6)), textAlign: TextAlign.center),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ],
                 )
               : Row(
                   children: [
-                    Icon(icon, size: 40, color: isSelected ? colorScheme.primary : Colors.grey),
+                    Icon(
+                      icon,
+                      size: 40,
+                      color: isSelected ? colorScheme.primary : Colors.grey,
+                    ),
                     const SizedBox(width: AppSpacing.lg),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
                           const SizedBox(height: 4),
-                          Text(description, style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6))),
+                          Text(
+                            description,
+                            style: TextStyle(
+                              color: colorScheme.onSurface.withValues(
+                                alpha: 0.6,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -559,8 +726,15 @@ class _RoleCard extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             padding: EdgeInsets.all(ResponsiveUtils.getCardPadding(context)),
             decoration: BoxDecoration(
-              color: isSelected ? colorScheme.primary.withValues(alpha: 0.1) : Theme.of(context).colorScheme.surface,
-              border: Border.all(color: isSelected ? colorScheme.primary : Theme.of(context).dividerColor, width: isSelected ? 2 : 1),
+              color: isSelected
+                  ? colorScheme.primary.withValues(alpha: 0.1)
+                  : Theme.of(context).colorScheme.surface,
+              border: Border.all(
+                color: isSelected
+                    ? colorScheme.primary
+                    : Theme.of(context).dividerColor,
+                width: isSelected ? 2 : 1,
+              ),
               borderRadius: BorderRadius.circular(AppRadius.lg),
             ),
             child: content,

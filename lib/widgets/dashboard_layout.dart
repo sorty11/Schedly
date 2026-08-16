@@ -26,10 +26,7 @@ class Workspace extends StatelessWidget {
       controller: scrollController,
       padding: padding ?? const EdgeInsets.all(AppSpacing.x2l),
       children: [
-        if (header != null) ...[
-          header!,
-          const SizedBox(height: AppSpacing.xl),
-        ],
+        if (header != null) ...[header!, const SizedBox(height: AppSpacing.xl)],
         ...children,
       ],
     );
@@ -64,10 +61,12 @@ class WorkspaceSection extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: children
-                  .map((child) => Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                        child: child,
-                      ))
+                  .map(
+                    (child) => Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                      child: child,
+                    ),
+                  )
                   .toList(),
             );
           }
@@ -110,7 +109,9 @@ class MetricStrip extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -122,8 +123,7 @@ class MetricStrip extends StatelessWidget {
             return Container(
               width: 1,
               height: 32,
-              margin:
-                  const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               color: sem.borderSubtle,
             );
           }
@@ -158,8 +158,7 @@ class _MetricCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor =
-        isDark ? AppColors.onSurfaceDark : AppColors.onSurface;
+    final textColor = isDark ? AppColors.onSurfaceDark : AppColors.onSurface;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,11 +205,7 @@ class GroupedList extends StatelessWidget {
   final List<Widget> children;
   final EdgeInsetsGeometry? margin;
 
-  const GroupedList({
-    super.key,
-    required this.children,
-    this.margin,
-  });
+  const GroupedList({super.key, required this.children, this.margin});
 
   @override
   Widget build(BuildContext context) {
@@ -227,20 +222,17 @@ class GroupedList extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        children: List.generate(
-          children.length * 2 - 1,
-          (i) {
-            if (i.isOdd) {
-              return Divider(
-                height: 1,
-                thickness: 1,
-                color: sem.borderSubtle,
-                indent: AppSpacing.lg,
-              );
-            }
-            return children[i ~/ 2];
-          },
-        ),
+        children: List.generate(children.length * 2 - 1, (i) {
+          if (i.isOdd) {
+            return Divider(
+              height: 1,
+              thickness: 1,
+              color: sem.borderSubtle,
+              indent: AppSpacing.lg,
+            );
+          }
+          return children[i ~/ 2];
+        }),
       ),
     );
   }
@@ -307,8 +299,9 @@ class _GroupedListTileState extends State<GroupedListTile> {
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
-                    color: (widget.leadingColor ?? sem.accent)
-                        .withValues(alpha: 0.12),
+                    color: (widget.leadingColor ?? sem.accent).withValues(
+                      alpha: 0.12,
+                    ),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   alignment: Alignment.center,
@@ -350,8 +343,11 @@ class _GroupedListTileState extends State<GroupedListTile> {
               ),
               widget.trailing ??
                   (widget.onTap != null
-                      ? Icon(Icons.chevron_right_rounded,
-                          size: 18, color: sem.onSurfaceFaint)
+                      ? Icon(
+                          Icons.chevron_right_rounded,
+                          size: 18,
+                          color: sem.onSurfaceFaint,
+                        )
                       : const SizedBox.shrink()),
             ],
           ),
@@ -366,17 +362,14 @@ class SectionLabel extends StatelessWidget {
   final String text;
   final EdgeInsetsGeometry? padding;
 
-  const SectionLabel({
-    super.key,
-    required this.text,
-    this.padding,
-  });
+  const SectionLabel({super.key, required this.text, this.padding});
 
   @override
   Widget build(BuildContext context) {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     return Padding(
-      padding: padding ??
+      padding:
+          padding ??
           const EdgeInsets.only(
             left: AppSpacing.xs,
             bottom: AppSpacing.sm,

@@ -6,8 +6,11 @@ void main() async {
   final bytes = await file.readAsBytes();
   final document = PdfDocument(inputBytes: bytes);
   final extractor = PdfTextExtractor(document);
-  final words = extractor.extractTextLines(startPageIndex: 0).expand((l) => l.wordCollection).toList();
-  
+  final words = extractor
+      .extractTextLines(startPageIndex: 0)
+      .expand((l) => l.wordCollection)
+      .toList();
+
   for (final w in words) {
     if (w.bounds.center.dy < 120) {
       print('HEADER WORD: \${w.text} at cx=\${w.bounds.center.dx}');

@@ -15,12 +15,12 @@ class AuthenticationService {
       email: email,
       password: password,
     );
-    
+
     // Always send verification email on new registration
     if (userCredential.user != null && !userCredential.user!.emailVerified) {
       await userCredential.user!.sendEmailVerification();
     }
-    
+
     return userCredential;
   }
 
@@ -45,7 +45,10 @@ class AuthenticationService {
       throw AppException('No anonymous user is currently signed in.');
     }
 
-    final credential = EmailAuthProvider.credential(email: email, password: password);
+    final credential = EmailAuthProvider.credential(
+      email: email,
+      password: password,
+    );
     final userCredential = await user.linkWithCredential(credential);
 
     if (userCredential.user != null && !userCredential.user!.emailVerified) {

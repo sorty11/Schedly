@@ -35,33 +35,32 @@ class PeriodDef {
     int? startMinutes,
     int? endMinutes,
     PeriodKind? kind,
-  }) =>
-      PeriodDef(
-        id: id,
-        name: name ?? this.name,
-        startMinutes: startMinutes ?? this.startMinutes,
-        endMinutes: endMinutes ?? this.endMinutes,
-        kind: kind ?? this.kind,
-      );
+  }) => PeriodDef(
+    id: id,
+    name: name ?? this.name,
+    startMinutes: startMinutes ?? this.startMinutes,
+    endMinutes: endMinutes ?? this.endMinutes,
+    kind: kind ?? this.kind,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'startMinutes': startMinutes,
-        'endMinutes': endMinutes,
-        'kind': kind.name,
-      };
+    'id': id,
+    'name': name,
+    'startMinutes': startMinutes,
+    'endMinutes': endMinutes,
+    'kind': kind.name,
+  };
 
   static PeriodDef fromJson(Map<String, dynamic> j) => PeriodDef(
-        id: j['id'] as String,
-        name: j['name'] as String,
-        startMinutes: j['startMinutes'] as int,
-        endMinutes: j['endMinutes'] as int,
-        kind: PeriodKind.values.firstWhere(
-          (k) => k.name == j['kind'],
-          orElse: () => PeriodKind.lecture,
-        ),
-      );
+    id: j['id'] as String,
+    name: j['name'] as String,
+    startMinutes: j['startMinutes'] as int,
+    endMinutes: j['endMinutes'] as int,
+    kind: PeriodKind.values.firstWhere(
+      (k) => k.name == j['kind'],
+      orElse: () => PeriodKind.lecture,
+    ),
+  );
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -103,39 +102,38 @@ class SlotState {
     String? room,
     String? component,
     int? durationPeriods,
-  }) =>
-      SlotState(
-        periodId: periodId ?? this.periodId,
-        type: type ?? this.type,
-        subject: subject ?? this.subject,
-        batch: batch ?? this.batch,
-        room: room ?? this.room,
-        component: component ?? this.component,
-        durationPeriods: durationPeriods ?? this.durationPeriods,
-      );
+  }) => SlotState(
+    periodId: periodId ?? this.periodId,
+    type: type ?? this.type,
+    subject: subject ?? this.subject,
+    batch: batch ?? this.batch,
+    room: room ?? this.room,
+    component: component ?? this.component,
+    durationPeriods: durationPeriods ?? this.durationPeriods,
+  );
 
   Map<String, dynamic> toJson() => {
-        'periodId': periodId,
-        'type': type.name,
-        'subject': subject,
-        'batch': batch,
-        'room': room,
-        'component': component,
-        'durationPeriods': durationPeriods,
-      };
+    'periodId': periodId,
+    'type': type.name,
+    'subject': subject,
+    'batch': batch,
+    'room': room,
+    'component': component,
+    'durationPeriods': durationPeriods,
+  };
 
   static SlotState fromJson(Map<String, dynamic> j) => SlotState(
-        periodId: j['periodId'] as String,
-        type: SlotType.values.firstWhere(
-          (t) => t.name == j['type'],
-          orElse: () => SlotType.lecture,
-        ),
-        subject: j['subject'] as String?,
-        batch: j['batch'] as String?,
-        room: j['room'] as String?,
-        component: (j['component'] as String?) ?? 'Theory',
-        durationPeriods: (j['durationPeriods'] as int?) ?? 1,
-      );
+    periodId: j['periodId'] as String,
+    type: SlotType.values.firstWhere(
+      (t) => t.name == j['type'],
+      orElse: () => SlotType.lecture,
+    ),
+    subject: j['subject'] as String?,
+    batch: j['batch'] as String?,
+    room: j['room'] as String?,
+    component: (j['component'] as String?) ?? 'Theory',
+    durationPeriods: (j['durationPeriods'] as int?) ?? 1,
+  );
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -162,27 +160,35 @@ class StudioDraftConfig {
 
   // ── Defaults ───────────────────────────────────────────────────────────────
   static StudioDraftConfig blank() => StudioDraftConfig(
-        selectedDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-        batches: ['Whole Class'],
-        periods: [],
-        slots: {},
-        lastSaved: DateTime.now(),
-      );
+    selectedDays: [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ],
+    batches: ['Whole Class'],
+    periods: [],
+    slots: {},
+    lastSaved: DateTime.now(),
+  );
 
   // ── Serialisation ──────────────────────────────────────────────────────────
   Map<String, dynamic> toJson() => {
-        'selectedDays': selectedDays,
-        'batches': batches,
-        'periods': periods.map((p) => p.toJson()).toList(),
-        'slots': slots.map((day, periodMap) => MapEntry(
-              day,
-              periodMap.map((pid, list) => MapEntry(
-                    pid,
-                    list.map((s) => s.toJson()).toList(),
-                  )),
-            )),
-        'lastSaved': lastSaved.toIso8601String(),
-      };
+    'selectedDays': selectedDays,
+    'batches': batches,
+    'periods': periods.map((p) => p.toJson()).toList(),
+    'slots': slots.map(
+      (day, periodMap) => MapEntry(
+        day,
+        periodMap.map(
+          (pid, list) => MapEntry(pid, list.map((s) => s.toJson()).toList()),
+        ),
+      ),
+    ),
+    'lastSaved': lastSaved.toIso8601String(),
+  };
 
   static StudioDraftConfig fromJson(Map<String, dynamic> j) {
     final slotsRaw = (j['slots'] as Map<String, dynamic>?) ?? {};
@@ -200,7 +206,9 @@ class StudioDraftConfig {
             final list = listRaw as List<dynamic>? ?? [];
             return MapEntry(
               pid,
-              list.map((e) => SlotState.fromJson(e as Map<String, dynamic>)).toList(),
+              list
+                  .map((e) => SlotState.fromJson(e as Map<String, dynamic>))
+                  .toList(),
             );
           }),
         );
@@ -233,7 +241,10 @@ class StudioDraftConfig {
   /// Count total lecture hours for a day (sum of duration of all filled slots)
   int lectureHourCount(String day) {
     final daySlots = slots[day] ?? {};
-    final academicPeriods = periods.where((p) => !p.isBreak).map((p) => p.id).toSet();
+    final academicPeriods = periods
+        .where((p) => !p.isBreak)
+        .map((p) => p.id)
+        .toSet();
     int count = 0;
     for (final pid in academicPeriods) {
       final periodList = daySlots[pid] ?? [];
@@ -247,7 +258,10 @@ class StudioDraftConfig {
   /// Count filled (has at least one lecture) academic periods for a day.
   int filledPeriodCount(String day) {
     final daySlots = slots[day] ?? {};
-    final academicPeriods = periods.where((p) => !p.isBreak).map((p) => p.id).toSet();
+    final academicPeriods = periods
+        .where((p) => !p.isBreak)
+        .map((p) => p.id)
+        .toSet();
     int count = 0;
     for (final pid in academicPeriods) {
       final periodList = daySlots[pid] ?? [];
@@ -267,12 +281,12 @@ class StudioDraftConfig {
     }
     return lectureHourCount(day) > 0;
   }
-  
+
   /// Checks if a day has any empty academic periods
   bool hasEmptyPeriods(String day) {
     return filledPeriodCount(day) < academicPeriodCount;
   }
-  
+
   /// Checks if any selected day has empty periods
   bool hasAnyEmptyPeriods() {
     for (final day in selectedDays) {
@@ -288,47 +302,208 @@ class StudioDraftConfig {
 
 class PeriodTemplates {
   static List<PeriodDef> nmims() => [
-        PeriodDef(id: 'p1', name: 'Period 1', startMinutes: _m(9, 15), endMinutes: _m(10, 15)),
-        PeriodDef(id: 'p2', name: 'Period 2', startMinutes: _m(10, 15), endMinutes: _m(11, 15)),
-        PeriodDef(id: 'b1', name: 'Short Break', startMinutes: _m(11, 15), endMinutes: _m(11, 30), kind: PeriodKind.breakTime),
-        PeriodDef(id: 'p3', name: 'Period 3', startMinutes: _m(11, 30), endMinutes: _m(12, 30)),
-        PeriodDef(id: 'p4', name: 'Period 4', startMinutes: _m(12, 30), endMinutes: _m(13, 30)),
-        PeriodDef(id: 'l1', name: 'Lunch', startMinutes: _m(13, 30), endMinutes: _m(14, 15), kind: PeriodKind.lunch),
-        PeriodDef(id: 'p5', name: 'Period 5', startMinutes: _m(14, 15), endMinutes: _m(15, 15)),
-        PeriodDef(id: 'p6', name: 'Period 6', startMinutes: _m(15, 15), endMinutes: _m(16, 15)),
-      ];
+    PeriodDef(
+      id: 'p1',
+      name: 'Period 1',
+      startMinutes: _m(9, 15),
+      endMinutes: _m(10, 15),
+    ),
+    PeriodDef(
+      id: 'p2',
+      name: 'Period 2',
+      startMinutes: _m(10, 15),
+      endMinutes: _m(11, 15),
+    ),
+    PeriodDef(
+      id: 'b1',
+      name: 'Short Break',
+      startMinutes: _m(11, 15),
+      endMinutes: _m(11, 30),
+      kind: PeriodKind.breakTime,
+    ),
+    PeriodDef(
+      id: 'p3',
+      name: 'Period 3',
+      startMinutes: _m(11, 30),
+      endMinutes: _m(12, 30),
+    ),
+    PeriodDef(
+      id: 'p4',
+      name: 'Period 4',
+      startMinutes: _m(12, 30),
+      endMinutes: _m(13, 30),
+    ),
+    PeriodDef(
+      id: 'l1',
+      name: 'Lunch',
+      startMinutes: _m(13, 30),
+      endMinutes: _m(14, 15),
+      kind: PeriodKind.lunch,
+    ),
+    PeriodDef(
+      id: 'p5',
+      name: 'Period 5',
+      startMinutes: _m(14, 15),
+      endMinutes: _m(15, 15),
+    ),
+    PeriodDef(
+      id: 'p6',
+      name: 'Period 6',
+      startMinutes: _m(15, 15),
+      endMinutes: _m(16, 15),
+    ),
+  ];
 
   static List<PeriodDef> nmimsHyderabad() => [
-        PeriodDef(id: 'p1', name: 'Period 1', startMinutes: _m(9, 15), endMinutes: _m(10, 15)),
-        PeriodDef(id: 'p2', name: 'Period 2', startMinutes: _m(10, 15), endMinutes: _m(11, 15)),
-        PeriodDef(id: 'p3', name: 'Period 3', startMinutes: _m(11, 15), endMinutes: _m(12, 15)),
-        PeriodDef(id: 'l1', name: 'Lunch', startMinutes: _m(12, 15), endMinutes: _m(13, 0), kind: PeriodKind.lunch),
-        PeriodDef(id: 'p4', name: 'Period 4', startMinutes: _m(13, 0), endMinutes: _m(14, 0)),
-        PeriodDef(id: 'p5', name: 'Period 5', startMinutes: _m(14, 0), endMinutes: _m(15, 0)),
-        PeriodDef(id: 'p6', name: 'Period 6', startMinutes: _m(15, 0), endMinutes: _m(16, 0)),
-      ];
+    PeriodDef(
+      id: 'p1',
+      name: 'Period 1',
+      startMinutes: _m(9, 15),
+      endMinutes: _m(10, 15),
+    ),
+    PeriodDef(
+      id: 'p2',
+      name: 'Period 2',
+      startMinutes: _m(10, 15),
+      endMinutes: _m(11, 15),
+    ),
+    PeriodDef(
+      id: 'p3',
+      name: 'Period 3',
+      startMinutes: _m(11, 15),
+      endMinutes: _m(12, 15),
+    ),
+    PeriodDef(
+      id: 'l1',
+      name: 'Lunch',
+      startMinutes: _m(12, 15),
+      endMinutes: _m(13, 0),
+      kind: PeriodKind.lunch,
+    ),
+    PeriodDef(
+      id: 'p4',
+      name: 'Period 4',
+      startMinutes: _m(13, 0),
+      endMinutes: _m(14, 0),
+    ),
+    PeriodDef(
+      id: 'p5',
+      name: 'Period 5',
+      startMinutes: _m(14, 0),
+      endMinutes: _m(15, 0),
+    ),
+    PeriodDef(
+      id: 'p6',
+      name: 'Period 6',
+      startMinutes: _m(15, 0),
+      endMinutes: _m(16, 0),
+    ),
+  ];
 
   static List<PeriodDef> jntuh() => [
-        PeriodDef(id: 'p1', name: 'Period 1', startMinutes: _m(9, 20), endMinutes: _m(10, 10)),
-        PeriodDef(id: 'p2', name: 'Period 2', startMinutes: _m(10, 10), endMinutes: _m(11, 0)),
-        PeriodDef(id: 'p3', name: 'Period 3', startMinutes: _m(11, 0), endMinutes: _m(11, 50)),
-        PeriodDef(id: 'b1', name: 'Break', startMinutes: _m(11, 50), endMinutes: _m(12, 30), kind: PeriodKind.breakTime),
-        PeriodDef(id: 'p4', name: 'Period 4', startMinutes: _m(12, 30), endMinutes: _m(13, 20)),
-        PeriodDef(id: 'p5', name: 'Period 5', startMinutes: _m(13, 20), endMinutes: _m(14, 10)),
-        PeriodDef(id: 'p6', name: 'Period 6', startMinutes: _m(14, 10), endMinutes: _m(15, 0)),
-        PeriodDef(id: 'p7', name: 'Period 7', startMinutes: _m(15, 0), endMinutes: _m(15, 50)),
-      ];
+    PeriodDef(
+      id: 'p1',
+      name: 'Period 1',
+      startMinutes: _m(9, 20),
+      endMinutes: _m(10, 10),
+    ),
+    PeriodDef(
+      id: 'p2',
+      name: 'Period 2',
+      startMinutes: _m(10, 10),
+      endMinutes: _m(11, 0),
+    ),
+    PeriodDef(
+      id: 'p3',
+      name: 'Period 3',
+      startMinutes: _m(11, 0),
+      endMinutes: _m(11, 50),
+    ),
+    PeriodDef(
+      id: 'b1',
+      name: 'Break',
+      startMinutes: _m(11, 50),
+      endMinutes: _m(12, 30),
+      kind: PeriodKind.breakTime,
+    ),
+    PeriodDef(
+      id: 'p4',
+      name: 'Period 4',
+      startMinutes: _m(12, 30),
+      endMinutes: _m(13, 20),
+    ),
+    PeriodDef(
+      id: 'p5',
+      name: 'Period 5',
+      startMinutes: _m(13, 20),
+      endMinutes: _m(14, 10),
+    ),
+    PeriodDef(
+      id: 'p6',
+      name: 'Period 6',
+      startMinutes: _m(14, 10),
+      endMinutes: _m(15, 0),
+    ),
+    PeriodDef(
+      id: 'p7',
+      name: 'Period 7',
+      startMinutes: _m(15, 0),
+      endMinutes: _m(15, 50),
+    ),
+  ];
 
   static List<PeriodDef> ou() => [
-        PeriodDef(id: 'p1', name: 'Period 1', startMinutes: _m(9, 0), endMinutes: _m(9, 50)),
-        PeriodDef(id: 'p2', name: 'Period 2', startMinutes: _m(9, 50), endMinutes: _m(10, 40)),
-        PeriodDef(id: 'p3', name: 'Period 3', startMinutes: _m(10, 40), endMinutes: _m(11, 30)),
-        PeriodDef(id: 'b1', name: 'Break', startMinutes: _m(11, 30), endMinutes: _m(11, 45), kind: PeriodKind.breakTime),
-        PeriodDef(id: 'p4', name: 'Period 4', startMinutes: _m(11, 45), endMinutes: _m(12, 35)),
-        PeriodDef(id: 'l1', name: 'Lunch', startMinutes: _m(12, 35), endMinutes: _m(13, 20), kind: PeriodKind.lunch),
-        PeriodDef(id: 'p5', name: 'Period 5', startMinutes: _m(13, 20), endMinutes: _m(14, 10)),
-        PeriodDef(id: 'p6', name: 'Period 6', startMinutes: _m(14, 10), endMinutes: _m(15, 0)),
-      ];
+    PeriodDef(
+      id: 'p1',
+      name: 'Period 1',
+      startMinutes: _m(9, 0),
+      endMinutes: _m(9, 50),
+    ),
+    PeriodDef(
+      id: 'p2',
+      name: 'Period 2',
+      startMinutes: _m(9, 50),
+      endMinutes: _m(10, 40),
+    ),
+    PeriodDef(
+      id: 'p3',
+      name: 'Period 3',
+      startMinutes: _m(10, 40),
+      endMinutes: _m(11, 30),
+    ),
+    PeriodDef(
+      id: 'b1',
+      name: 'Break',
+      startMinutes: _m(11, 30),
+      endMinutes: _m(11, 45),
+      kind: PeriodKind.breakTime,
+    ),
+    PeriodDef(
+      id: 'p4',
+      name: 'Period 4',
+      startMinutes: _m(11, 45),
+      endMinutes: _m(12, 35),
+    ),
+    PeriodDef(
+      id: 'l1',
+      name: 'Lunch',
+      startMinutes: _m(12, 35),
+      endMinutes: _m(13, 20),
+      kind: PeriodKind.lunch,
+    ),
+    PeriodDef(
+      id: 'p5',
+      name: 'Period 5',
+      startMinutes: _m(13, 20),
+      endMinutes: _m(14, 10),
+    ),
+    PeriodDef(
+      id: 'p6',
+      name: 'Period 6',
+      startMinutes: _m(14, 10),
+      endMinutes: _m(15, 0),
+    ),
+  ];
 
   static int _m(int h, int min) => h * 60 + min;
 }

@@ -19,7 +19,8 @@ class WelcomeCard extends StatefulWidget {
   State<WelcomeCard> createState() => _WelcomeCardState();
 }
 
-class _WelcomeCardState extends State<WelcomeCard> with SingleTickerProviderStateMixin {
+class _WelcomeCardState extends State<WelcomeCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
@@ -65,66 +66,75 @@ class _WelcomeCardState extends State<WelcomeCard> with SingleTickerProviderStat
                     ),
                   ),
                   child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CCCharacter(size: 100, expression: CCExpression.happy),
-                  const SizedBox(height: AppSpacing.x2l),
-                  Text(
-                    'Welcome to Schedly 👋',
-                    style: TextStyle(fontFamily: 'Outfit', 
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    widget.roleMessage,
-                    style: TextStyle(fontFamily: 'Inter', 
-                      fontSize: 16,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      height: 1.4,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: AppSpacing.x3l),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      TextButton(
-                        onPressed: widget.onSkip,
-                        child: Text(
-                          'Skip',
-                          style: TextStyle(fontFamily: 'Inter', 
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                      const CCCharacter(
+                        size: 100,
+                        expression: CCExpression.happy,
                       ),
-                      const SizedBox(width: AppSpacing.xl),
-                      FilledButton(
-                        onPressed: widget.onStartTour,
-                        style: FilledButton.styleFrom(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSpacing.x2l,
-                            vertical: AppSpacing.md,
-                          ),
+                      const SizedBox(height: AppSpacing.x2l),
+                      Text(
+                        'Welcome to Schedly 👋',
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
-                        child: Text(
-                          'Start Tour',
-                          style: TextStyle(fontFamily: 'Inter', 
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        widget.roleMessage,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 16,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.7),
+                          height: 1.4,
                         ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: AppSpacing.x3l),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          TextButton(
+                            onPressed: widget.onSkip,
+                            child: Text(
+                              'Skip',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.xl),
+                          FilledButton(
+                            onPressed: widget.onStartTour,
+                            style: FilledButton.styleFrom(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppSpacing.x2l,
+                                vertical: AppSpacing.md,
+                              ),
+                            ),
+                            child: Text(
+                              'Start Tour',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-            ),
             ),
           ),
         ),

@@ -28,12 +28,14 @@ class StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
 
-    final trendColor = trend != null 
-        ? (trend! >= 0 ? semanticColors.success : semanticColors.error) 
+    final trendColor = trend != null
+        ? (trend! >= 0 ? semanticColors.success : semanticColors.error)
         : null;
 
-    final trendIcon = trend != null 
-        ? (trend! >= 0 ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded) 
+    final trendIcon = trend != null
+        ? (trend! >= 0
+              ? Icons.arrow_upward_rounded
+              : Icons.arrow_downward_rounded)
         : null;
 
     final match = RegExp(r'^([^0-9.-]*)([0-9.-]+)(.*)$').firstMatch(value);
@@ -44,7 +46,9 @@ class StatCard extends StatelessWidget {
       fontFamily: 'Outfit',
       fontSize: value.length > 5 ? 28 : 36,
       fontWeight: FontWeight.w800,
-      color: Theme.of(context).brightness == Brightness.dark ? AppColors.onSurfaceDark : AppColors.onSurface,
+      color: Theme.of(context).brightness == Brightness.dark
+          ? AppColors.onSurfaceDark
+          : AppColors.onSurface,
       height: 1,
     );
 
@@ -53,7 +57,7 @@ class StatCard extends StatelessWidget {
       final numStr = match.group(2) ?? '0';
       final suffix = match.group(3) ?? '';
       final numericValue = double.tryParse(numStr) ?? 0.0;
-      
+
       valueWidget = CountingText(
         value: numericValue,
         prefix: prefix,
@@ -61,10 +65,7 @@ class StatCard extends StatelessWidget {
         style: valueStyle,
       );
     } else {
-      valueWidget = Text(
-        value,
-        style: valueStyle,
-      );
+      valueWidget = Text(value, style: valueStyle);
     }
 
     return WorkspaceSurface(
@@ -103,11 +104,7 @@ class StatCard extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  trendIcon,
-                  color: trendColor,
-                  size: AppIconSize.sm,
-                ),
+                Icon(trendIcon, color: trendColor, size: AppIconSize.sm),
                 const SizedBox(width: AppSpacing.xs),
                 Text(
                   '${trend!.abs().toStringAsFixed(1)}%',

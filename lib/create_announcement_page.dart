@@ -6,30 +6,22 @@ import 'app_settings.dart';
 import 'user_roles.dart';
 import 'services/network_service.dart';
 
-
 import 'widgets/animations/animated_button.dart';
 import 'widgets/app_dialogs.dart';
 import 'widgets/schedly_card.dart';
 import 'widgets/schedly_text_field.dart';
 
 class CreateAnnouncementPage extends StatefulWidget {
-  const CreateAnnouncementPage({
-    super.key,
-  });
+  const CreateAnnouncementPage({super.key});
 
   @override
-  State<CreateAnnouncementPage>
-      createState() =>
-          _CreateAnnouncementPageState();
+  State<CreateAnnouncementPage> createState() => _CreateAnnouncementPageState();
 }
 
-class _CreateAnnouncementPageState
-    extends State<CreateAnnouncementPage> {
-  final titleController =
-      TextEditingController();
+class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
+  final titleController = TextEditingController();
 
-  final messageController =
-      TextEditingController();
+  final messageController = TextEditingController();
 
   String priority = 'Normal';
   bool _isPublishing = false;
@@ -42,27 +34,25 @@ class _CreateAnnouncementPageState
       _loadCRDivision();
     }
   }
-  
+
   Future<void> _loadCRDivision() async {
     final prefs = await SharedPreferences.getInstance();
-    final sectionId = prefs.getString('section_id') ?? prefs.getString('selected_division');
+    final sectionId =
+        prefs.getString('section_id') ?? prefs.getString('selected_division');
     if (sectionId != null && mounted) {
       setState(() => _selectedDivisions.add(sectionId));
     }
-    
+
     final draftTitle = prefs.getString('draft_announcement_title');
     final draftMessage = prefs.getString('draft_announcement_message');
     if (draftTitle != null && draftMessage != null && mounted) {
       titleController.text = draftTitle;
       messageController.text = draftMessage;
-      
+
       prefs.remove('draft_announcement_title');
       prefs.remove('draft_announcement_message');
-      
-      AppDialogs.showSnackBar(
-        context: context,
-        message: 'Draft restored.',
-      );
+
+      AppDialogs.showSnackBar(context: context, message: 'Draft restored.');
     }
   }
 
@@ -75,8 +65,7 @@ class _CreateAnnouncementPageState
 
   Future<void> _publish() async {
     try {
-      if (titleController.text.isEmpty ||
-          messageController.text.isEmpty) {
+      if (titleController.text.isEmpty || messageController.text.isEmpty) {
         return;
       }
 
@@ -84,13 +73,17 @@ class _CreateAnnouncementPageState
       if (!isOnline) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('draft_announcement_title', titleController.text);
-        await prefs.setString('draft_announcement_message', messageController.text);
-        
+        await prefs.setString(
+          'draft_announcement_message',
+          messageController.text,
+        );
+
         if (mounted) {
           AppDialogs.showError(
             context: context,
             title: 'Network Required',
-            message: 'You are offline. Your draft has been saved locally. Please try publishing again when online.',
+            message:
+                'You are offline. Your draft has been saved locally. Please try publishing again when online.',
           );
         }
         return;
@@ -130,7 +123,6 @@ class _CreateAnnouncementPageState
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
@@ -138,7 +130,14 @@ class _CreateAnnouncementPageState
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Create Announcement', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, fontSize: 20)),
+        title: Text(
+          'Create Announcement',
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
+          ),
+        ),
         scrolledUnderElevation: 0,
       ),
       body: SingleChildScrollView(
@@ -154,7 +153,8 @@ class _CreateAnnouncementPageState
                 children: [
                   Text(
                     'Announcement Details',
-                    style: TextStyle(fontFamily: 'Outfit', 
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                     ),
@@ -162,9 +162,9 @@ class _CreateAnnouncementPageState
                   const SizedBox(height: AppSpacing.md),
                   Text(
                     'This will be sent as a push notification to all students in the selected divisions.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: sem.onSurfaceMuted,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: sem.onSurfaceMuted),
                   ),
                   const SizedBox(height: AppSpacing.x2l),
 
@@ -192,7 +192,11 @@ class _CreateAnnouncementPageState
                     value: priority,
                     decoration: InputDecoration(
                       labelText: 'Priority',
-                      prefixIcon: Icon(Icons.priority_high_rounded, color: sem.onSurfaceMuted, size: 20),
+                      prefixIcon: Icon(
+                        Icons.priority_high_rounded,
+                        color: sem.onSurfaceMuted,
+                        size: 20,
+                      ),
                       fillColor: sem.surfaceElevated2,
                       filled: true,
                       border: OutlineInputBorder(
@@ -205,17 +209,35 @@ class _CreateAnnouncementPageState
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppRadius.md),
-                        borderSide: BorderSide(color: sem.borderFocus, width: 1.5),
+                        borderSide: BorderSide(
+                          color: sem.borderFocus,
+                          width: 1.5,
+                        ),
                       ),
-                      labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(color: sem.onSurfaceMuted),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                      labelStyle: Theme.of(context).textTheme.bodyMedium
+                          ?.copyWith(color: sem.onSurfaceMuted),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                        vertical: AppSpacing.md,
+                      ),
                     ),
-                    icon: Icon(Icons.expand_more_rounded, color: sem.onSurfaceMuted),
-                    dropdownColor: isDark ? sem.surfaceElevated : Theme.of(context).colorScheme.surface,
+                    icon: Icon(
+                      Icons.expand_more_rounded,
+                      color: sem.onSurfaceMuted,
+                    ),
+                    dropdownColor: isDark
+                        ? sem.surfaceElevated
+                        : Theme.of(context).colorScheme.surface,
                     items: ['Low', 'Normal', 'High'].map((p) {
                       return DropdownMenuItem(
                         value: p,
-                        child: Text(p, style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
+                        child: Text(
+                          p,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
                       );
                     }).toList(),
                     onChanged: (value) {
@@ -231,39 +253,60 @@ class _CreateAnnouncementPageState
                     const SizedBox(height: AppSpacing.xl),
                     Text(
                       'Target Divisions',
-                      style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 14, color: sem.onSurfaceMuted),
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: sem.onSurfaceMuted,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Wrap(
                       spacing: AppSpacing.sm,
                       runSpacing: AppSpacing.sm,
-                      children: (AppSettings.facultyAssignedDivisions ?? []).map((div) {
-                        final isSelected = _selectedDivisions.contains(div);
-                        return FilterChip(
-                          label: Text(div.replaceAll('_', ' ')),
-                          selected: isSelected,
-                          onSelected: (val) {
-                            setState(() {
-                              if (val) _selectedDivisions.add(div);
-                              else _selectedDivisions.remove(div);
-                            });
-                          },
-                          backgroundColor: sem.surfaceElevated2,
-                          selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-                          checkmarkColor: Theme.of(context).colorScheme.primary,
-                          labelStyle: TextStyle(
-                            color: isSelected ? Theme.of(context).colorScheme.primary : sem.onSurfaceMuted,
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                            side: BorderSide(
-                              color: isSelected ? Theme.of(context).colorScheme.primary : sem.borderSubtle,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    )
+                      children: (AppSettings.facultyAssignedDivisions ?? [])
+                          .map((div) {
+                            final isSelected = _selectedDivisions.contains(div);
+                            return FilterChip(
+                              label: Text(div.replaceAll('_', ' ')),
+                              selected: isSelected,
+                              onSelected: (val) {
+                                setState(() {
+                                  if (val)
+                                    _selectedDivisions.add(div);
+                                  else
+                                    _selectedDivisions.remove(div);
+                                });
+                              },
+                              backgroundColor: sem.surfaceElevated2,
+                              selectedColor: Theme.of(
+                                context,
+                              ).colorScheme.primary.withValues(alpha: 0.15),
+                              checkmarkColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
+                              labelStyle: TextStyle(
+                                color: isSelected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : sem.onSurfaceMuted,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.sm,
+                                ),
+                                side: BorderSide(
+                                  color: isSelected
+                                      ? Theme.of(context).colorScheme.primary
+                                      : sem.borderSubtle,
+                                ),
+                              ),
+                            );
+                          })
+                          .toList(),
+                    ),
                   ],
                 ],
               ),
@@ -275,16 +318,30 @@ class _CreateAnnouncementPageState
                 onPressed: _isPublishing ? null : _publish,
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
-                child: _isPublishing 
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.send_rounded),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text('Publish Announcement', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w700)),
-                      ],
-                    ),
+                child: _isPublishing
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.send_rounded),
+                          const SizedBox(width: AppSpacing.sm),
+                          Text(
+                            'Publish Announcement',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
               ),
             ),
           ],

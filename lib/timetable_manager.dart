@@ -24,7 +24,9 @@ class TimetableManager {
     '4:00 PM - 5:00 PM',
   ];
 
-  static Future<Map<String, String>> getSubjectToFacultyIdMap(String division) async {
+  static Future<Map<String, String>> getSubjectToFacultyIdMap(
+    String division,
+  ) async {
     final snap = await FirebaseFirestore.instance
         .collection('faculty_profiles')
         .where('assignedDivisions', arrayContains: division)
@@ -44,7 +46,6 @@ class TimetableManager {
     return map;
   }
 
-
   static Future<void> addLecture({
     required String division,
     required String day,
@@ -63,40 +64,48 @@ class TimetableManager {
         .where((l) => l.id != entry.id)
         .toList();
 
-    final overlaps = activeLectures.where((l) => 
-        l.startTime < entry.endTime && l.endTime > entry.startTime
-    ).toList();
+    final overlaps = activeLectures
+        .where(
+          (l) => l.startTime < entry.endTime && l.endTime > entry.startTime,
+        )
+        .toList();
 
     if (overlaps.isNotEmpty) {
       if (entry.batch == 'Whole Class') {
-        final conflictList = overlaps.map((l) => '• ${l.batch} - ${l.displaySubject}').join('\n');
+        final conflictList = overlaps
+            .map((l) => '• ${l.batch} - ${l.displaySubject}')
+            .join('\n');
         throw ValidationException(
           'Cannot Replace Lecture',
-          'Whole Class cannot be scheduled because this period already contains:\n\n$conflictList\n\nDelete the existing batch lectures first or replace them individually.'
+          'Whole Class cannot be scheduled because this period already contains:\n\n$conflictList\n\nDelete the existing batch lectures first or replace them individually.',
         );
       } else {
-        final wholeClassConflict = overlaps.where((l) => l.batch == 'Whole Class').toList();
+        final wholeClassConflict = overlaps
+            .where((l) => l.batch == 'Whole Class')
+            .toList();
         if (wholeClassConflict.isNotEmpty) {
-           final l = wholeClassConflict.first;
-           throw ValidationException(
-             'Time Conflict',
-             'This lecture overlaps with a Whole Class lecture (${l.displaySubject}).\n\nPlease choose another period or replace the Whole Class lecture.'
-           );
+          final l = wholeClassConflict.first;
+          throw ValidationException(
+            'Time Conflict',
+            'This lecture overlaps with a Whole Class lecture (${l.displaySubject}).\n\nPlease choose another period or replace the Whole Class lecture.',
+          );
         }
-        
-        final sameBatchConflict = overlaps.where((l) => l.batch == entry.batch).toList();
+
+        final sameBatchConflict = overlaps
+            .where((l) => l.batch == entry.batch)
+            .toList();
         if (sameBatchConflict.isNotEmpty) {
-           final l = sameBatchConflict.first;
-           if (l.subject == entry.subject) {
-             throw ValidationException(
-               'Duplicate Lecture',
-               'A lecture with the same subject already exists in this slot for Batch ${entry.batch}.'
-             );
-           }
-           throw ValidationException(
-             'Time Conflict',
-             'Batch ${entry.batch} already has a lecture (${l.displaySubject}) in this period.\n\nPlease choose another period.'
-           );
+          final l = sameBatchConflict.first;
+          if (l.subject == entry.subject) {
+            throw ValidationException(
+              'Duplicate Lecture',
+              'A lecture with the same subject already exists in this slot for Batch ${entry.batch}.',
+            );
+          }
+          throw ValidationException(
+            'Time Conflict',
+            'Batch ${entry.batch} already has a lecture (${l.displaySubject}) in this period.\n\nPlease choose another period.',
+          );
         }
       }
     }
@@ -129,6 +138,7 @@ class TimetableManager {
       final hour12 = h % 12 == 0 ? 12 : h % 12;
       return '$hour12:${m.toString().padLeft(2, '0')} $suffix';
     }
+
     return '${formatMins(startTime)} - ${formatMins(endTime)}';
   }
 
@@ -166,38 +176,53 @@ class TimetableManager {
     }
   }
 
-  static Future<List<TimetableEntry>> getEntriesForDay({required String division, required String day}) async {
+  static Future<List<TimetableEntry>> getEntriesForDay({
+    required String division,
+    required String day,
+  }) async {
     final snapshot = await FirebaseFirestore.instance
         .collection('timetables')
         .doc(division)
         .collection(day)
         .get();
-        
+
     final entries = snapshot.docs
         .map((doc) => TimetableEntry.fromFirestore(doc))
         .toList();
-        
+
     entries.sort((a, b) => a.startTime.compareTo(b.startTime));
     return entries;
   }
 
-  static Stream<List<TimetableEntry>> streamEntriesForDay({required String division, required String day}) {
+  static Stream<List<TimetableEntry>> streamEntriesForDay({
+    required String division,
+    required String day,
+  }) {
     return FirebaseFirestore.instance
         .collection('timetables')
         .doc(division)
         .collection(day)
         .snapshots()
         .map((snapshot) {
-      final entries = snapshot.docs
-          .map((doc) => TimetableEntry.fromFirestore(doc))
-          .toList();
-      entries.sort((a, b) => a.startTime.compareTo(b.startTime));
-      return entries;
-    });
+          final entries = snapshot.docs
+              .map((doc) => TimetableEntry.fromFirestore(doc))
+              .toList();
+          entries.sort((a, b) => a.startTime.compareTo(b.startTime));
+          return entries;
+        });
   }
 
-  static Future<List<String>> getUniqueSubjects({required String division}) async {
-    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  static Future<List<String>> getUniqueSubjects({
+    required String division,
+  }) async {
+    final days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
     final unique = <String>{};
     for (final day in days) {
       final entries = await getEntriesForDay(division: division, day: day);
@@ -210,13 +235,26 @@ class TimetableManager {
     return unique.toList()..sort();
   }
 
-  static Future<int> getSubjectRequiredDuration({required String division, required String subject}) async {
-    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  static Future<int> getSubjectRequiredDuration({
+    required String division,
+    required String subject,
+  }) async {
+    final days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
     int maxDuration = 60; // default 1 hour
     for (final day in days) {
       final entries = await getEntriesForDay(division: division, day: day);
       for (final e in entries) {
-        if ((e.subjectCode == subject || e.subject == subject || e.displaySubject == subject) && e.durationMinutes > maxDuration) {
+        if ((e.subjectCode == subject ||
+                e.subject == subject ||
+                e.displaySubject == subject) &&
+            e.durationMinutes > maxDuration) {
           maxDuration = e.durationMinutes;
         }
       }
@@ -224,8 +262,17 @@ class TimetableManager {
     return maxDuration;
   }
 
-  static Future<List<SrIdentity>> getUniqueSrIdentities({required String division}) async {
-    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  static Future<List<SrIdentity>> getUniqueSrIdentities({
+    required String division,
+  }) async {
+    final days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
     final Map<String, SrIdentity> uniqueMap = {};
     for (final day in days) {
       final entries = await getEntriesForDay(division: division, day: day);

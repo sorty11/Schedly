@@ -22,7 +22,7 @@ class LocalNotificationService {
       settings,
       onDidReceiveNotificationResponse: (response) {
         if (response.payload == 'faculty_dashboard') {
-          // Since the app already handles default routing to the dashboard when 
+          // Since the app already handles default routing to the dashboard when
           // a faculty opens it, this just serves as an explicit tap handling stub.
         }
       },
@@ -30,7 +30,8 @@ class LocalNotificationService {
 
     final androidImplementation = notifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     await androidImplementation?.requestNotificationsPermission();
     await androidImplementation?.requestExactAlarmsPermission();
 
@@ -88,8 +89,14 @@ class LocalNotificationService {
 
     // Schedule for 9:00 PM today, or tomorrow if it's past 9 PM
     final now = tz.TZDateTime.now(tz.local);
-    var scheduledDate =
-        tz.TZDateTime(tz.local, now.year, now.month, now.day, 21, 0);
+    var scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      21,
+      0,
+    );
 
     if (scheduledDate.isBefore(now)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
@@ -114,14 +121,19 @@ class LocalNotificationService {
     );
   }
 
-  static Future<void> scheduleFacultyReminders(List<FacultyLectureContext> todayLectures, int reminderMinutes) async {
+  static Future<void> scheduleFacultyReminders(
+    List<FacultyLectureContext> todayLectures,
+    int reminderMinutes,
+  ) async {
     if (kIsWeb) {
       // Backend now handles web reminders automatically via faculty_reminders collection on lecture creation
       return;
     }
 
     if (reminderMinutes <= 0) {
-      debugPrint('Faculty Reminders: Cancelled Reason: Reminders disabled (0 mins)');
+      debugPrint(
+        'Faculty Reminders: Cancelled Reason: Reminders disabled (0 mins)',
+      );
       // Cancel all faculty reminders
       final pending = await notifications.pendingNotificationRequests();
       for (final p in pending) {
@@ -131,7 +143,7 @@ class LocalNotificationService {
       }
       return;
     }
-    
+
     if (todayLectures.isEmpty) {
       debugPrint('Faculty Reminders: Cancelled Reason: No lectures today');
       final pending = await notifications.pendingNotificationRequests();
@@ -167,39 +179,66 @@ class LocalNotificationService {
       final int notificationId = 20000 + startTimeInMins;
 
       // Construct lecture start time today
-      final lectureTime = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+      final lectureTime = tz.TZDateTime(
+        tz.local,
+        now.year,
+        now.month,
+        now.day,
+        hour,
+        minute,
+      );
 
-      debugPrint('Faculty Reminders: Lecture: ${lecture.entry.subjectCode} at $hour:$minute');
+      debugPrint(
+        'Faculty Reminders: Lecture: ${lecture.entry.subjectCode} at $hour:$minute',
+      );
       debugPrint('Faculty Reminders: Current Time: $now');
 
       // Check if it's already in progress
       if (now.isAfter(lectureTime)) {
-        debugPrint('Faculty Reminders: Skipped Reason: Lecture already started');
+        debugPrint(
+          'Faculty Reminders: Skipped Reason: Lecture already started',
+        );
         continue;
       }
 
       // Calculate exact reminder time
-      final reminderTime = lectureTime.subtract(Duration(minutes: reminderMinutes));
+      final reminderTime = lectureTime.subtract(
+        Duration(minutes: reminderMinutes),
+      );
       debugPrint('Faculty Reminders: Reminder Time: $reminderTime');
 
       final divLabel = lecture.division.replaceAll('_', ' ');
-      final roomStr = (lecture.entry.room != null && lecture.entry.room!.isNotEmpty) ? '\nRoom ${lecture.entry.room}' : '';
+      final roomStr =
+          (lecture.entry.room != null && lecture.entry.room!.isNotEmpty)
+          ? '\nRoom ${lecture.entry.room}'
+          : '';
       final title = '📚 Upcoming Class';
-      final body = '${lecture.entry.displaySubject}\n$divLabel$roomStr\nStarts in $reminderMinutes minutes.';
+      final body =
+          '${lecture.entry.displaySubject}\n$divLabel$roomStr\nStarts in $reminderMinutes minutes.';
 
       // Skip if missed (e.g., current time > reminder time)
       if (now.isAfter(reminderTime)) {
         if (now.isBefore(lectureTime)) {
-          debugPrint('Faculty Reminders: Showing immediate reminder since we missed exact schedule but class is upcoming');
-          await showNotification(title: title, body: body, payload: '/faculty_dashboard');
+          debugPrint(
+            'Faculty Reminders: Showing immediate reminder since we missed exact schedule but class is upcoming',
+          );
+          await showNotification(
+            title: title,
+            body: body,
+            payload: '/faculty_dashboard',
+          );
         } else {
-          debugPrint('Faculty Reminders: Skipped Reason: Reminder time has passed');
+          debugPrint(
+            'Faculty Reminders: Skipped Reason: Reminder time has passed',
+          );
         }
         continue;
       }
 
-      debugPrint('Faculty Reminders: Scheduled Time: $reminderTime for ID: $notificationId');
-      
+      debugPrint(
+        'Faculty Reminders: Scheduled Time: $reminderTime for ID: $notificationId',
+      );
+
       await notifications.zonedSchedule(
         notificationId,
         title,
@@ -213,12 +252,14 @@ class LocalNotificationService {
       newScheduledIds.add(notificationId);
       scheduledCount++;
     }
-    
+
     // Clean up outdated reminders
     final pending = await notifications.pendingNotificationRequests();
     for (final p in pending) {
       if (p.id >= 20000 && p.id < 25000 && !newScheduledIds.contains(p.id)) {
-        debugPrint('Faculty Reminders: Cancelled Reason: Outdated/Removed lecture (ID: ${p.id})');
+        debugPrint(
+          'Faculty Reminders: Cancelled Reason: Outdated/Removed lecture (ID: ${p.id})',
+        );
         await notifications.cancel(p.id);
       }
     }

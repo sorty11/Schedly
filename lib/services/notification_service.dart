@@ -40,7 +40,9 @@ class NotificationService {
       }
 
       if (settings.authorizationStatus != AuthorizationStatus.authorized) {
-        debugPrint('NotificationService: Permission not granted yet or denied.');
+        debugPrint(
+          'NotificationService: Permission not granted yet or denied.',
+        );
         return;
       }
 
@@ -53,12 +55,15 @@ class NotificationService {
 
       // Listen for foreground messages (all platforms)
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        final title = message.notification?.title ?? message.data['title'] ?? 'Schedly';
+        final title =
+            message.notification?.title ?? message.data['title'] ?? 'Schedly';
         final body = message.notification?.body ?? message.data['body'] ?? '';
         final link = message.data['deepLink'] ?? '/';
 
-        debugPrint('NotificationService: Foreground message received: $title (link: $link)');
-        
+        debugPrint(
+          'NotificationService: Foreground message received: $title (link: $link)',
+        );
+
         if (defaultTargetPlatform == TargetPlatform.android) {
           LocalNotificationService.showNotification(
             title: title,
@@ -76,7 +81,6 @@ class NotificationService {
 
       // After setting up listeners, trigger an initial token sync
       await reRegisterToken();
-
     } catch (e) {
       debugPrint('NotificationService: Init skipped: $e');
     }
@@ -87,7 +91,7 @@ class NotificationService {
       if (kIsWeb) {
         await _ensureAnonymousSignIn();
       }
-      
+
       String? token;
       try {
         debugPrint('[TOKEN_SYNC] getToken() called');
@@ -97,7 +101,9 @@ class NotificationService {
           token = await messaging.getToken();
         }
       } catch (e) {
-        debugPrint('NotificationService: Failed to get FCM token. This is normal if the browser (like Brave) blocks push services: $e');
+        debugPrint(
+          'NotificationService: Failed to get FCM token. This is normal if the browser (like Brave) blocks push services: $e',
+        );
       }
 
       if (token != null) {
@@ -108,23 +114,27 @@ class NotificationService {
         debugPrint('[TOKEN_SYNC] token=null');
       }
 
-
-
       // Topic subscriptions (Android/iOS only — web uses direct token dispatch)
       final prefs = await SharedPreferences.getInstance();
       final division = prefs.getString('selected_division');
       final role = prefs.getString('user_role') ?? 'student';
       final batch = prefs.getString('selected_batch');
-      
+
       String? finalDivision = division;
       if (role == 'faculty') {
         final facultyId = AppSettings.facultyId;
         final user = FirebaseAuth.instance.currentUser;
-        finalDivision = (facultyId != null && facultyId.isNotEmpty) ? facultyId : user?.uid ?? division;
+        finalDivision = (facultyId != null && facultyId.isNotEmpty)
+            ? facultyId
+            : user?.uid ?? division;
       }
-      
+
       if (finalDivision != null) {
-        await TopicSubscriptionService.updateSubscriptions(finalDivision, role, batch: batch);
+        await TopicSubscriptionService.updateSubscriptions(
+          finalDivision,
+          role,
+          batch: batch,
+        );
         debugPrint('[TOKEN_SYNC] Topic subscription SUCCESS');
       }
     } catch (e) {
@@ -158,7 +168,9 @@ class NotificationService {
   static Future<void> _ensureAnonymousSignIn() async {
     try {
       if (FirebaseAuth.instance.currentUser == null) {
-        debugPrint('NotificationService: No auth user on web — signing in anonymously');
+        debugPrint(
+          'NotificationService: No auth user on web — signing in anonymously',
+        );
         await FirebaseAuth.instance.signInAnonymously();
       }
     } catch (e) {
@@ -169,15 +181,18 @@ class NotificationService {
   static Future<void> _saveTokenToFirestore(String token) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       // [FCM_TRACE] Use strictly memory-validated role
       final role = AppSettings.currentRole.name;
       if (role.isEmpty || role == 'unknown') {
-        debugPrint('NotificationService: Registration delayed - Role is unknown');
+        debugPrint(
+          'NotificationService: Registration delayed - Role is unknown',
+        );
         return;
       }
-      
-      final division = AppSettings.sectionId ?? prefs.getString('selected_division') ?? '';
+
+      final division =
+          AppSettings.sectionId ?? prefs.getString('selected_division') ?? '';
       final batch = prefs.getString('selected_batch') ?? '';
 
       final user = FirebaseAuth.instance.currentUser;
@@ -185,15 +200,16 @@ class NotificationService {
         debugPrint('NotificationService: Registration delayed - No auth user');
         return;
       }
-      
+
       String finalDivision;
       if (role == 'faculty') {
         final facultyId = AppSettings.facultyId;
-        finalDivision = (facultyId != null && facultyId.isNotEmpty) ? facultyId : user.uid;
+        finalDivision = (facultyId != null && facultyId.isNotEmpty)
+            ? facultyId
+            : user.uid;
       } else {
         finalDivision = division;
       }
-
 
       try {
         await FirebaseFirestore.instance
@@ -202,17 +218,21 @@ class NotificationService {
             .collection('fcm_tokens')
             .doc(token)
             .set({
-          'token': token,
-          'platform': kIsWeb
-              ? 'web'
-              : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
-          'division': finalDivision,
-          'role': role,
-          'batch': batch,
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+              'token': token,
+              'platform': kIsWeb
+                  ? 'web'
+                  : (defaultTargetPlatform == TargetPlatform.iOS
+                        ? 'ios'
+                        : 'android'),
+              'division': finalDivision,
+              'role': role,
+              'batch': batch,
+              'updatedAt': FieldValue.serverTimestamp(),
+            }, SetOptions(merge: true));
       } catch (e) {
-        debugPrint('[FS_ERROR]\ncollection: users/${user.uid}/fcm_tokens\ndocument: $token\noperation: WRITE\nexception: $e');
+        debugPrint(
+          '[FS_ERROR]\ncollection: users/${user.uid}/fcm_tokens\ndocument: $token\noperation: WRITE\nexception: $e',
+        );
         rethrow;
       }
 
@@ -229,9 +249,11 @@ class NotificationService {
       if (user != null) {
         final prefs = await SharedPreferences.getInstance();
         final role = prefs.getString('user_role');
-        
+
         if (role == null || role.isEmpty) {
-          debugPrint('NotificationService: updateDivision delayed - Role is unknown');
+          debugPrint(
+            'NotificationService: updateDivision delayed - Role is unknown',
+          );
           return;
         }
 
@@ -241,17 +263,21 @@ class NotificationService {
         } else {
           token = await messaging.getToken();
         }
-        
+
         if (token != null) {
           String finalDivision;
           if (role == 'faculty') {
             final facultyId = AppSettings.facultyId;
-            finalDivision = (facultyId != null && facultyId.isNotEmpty) ? facultyId : user.uid;
+            finalDivision = (facultyId != null && facultyId.isNotEmpty)
+                ? facultyId
+                : user.uid;
           } else {
             finalDivision = newDivision;
           }
 
-          debugPrint('NotificationService: Updating Division Subscription [Role: $role] [FinalDiv: $finalDivision]');
+          debugPrint(
+            'NotificationService: Updating Division Subscription [Role: $role] [FinalDiv: $finalDivision]',
+          );
 
           await FirebaseFirestore.instance
               .collection('users')
@@ -259,15 +285,17 @@ class NotificationService {
               .collection('fcm_tokens')
               .doc(token)
               .set({
-            'token': token,
-            'platform': kIsWeb
-                ? 'web'
-                : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
-            'division': finalDivision,
-            'role': role,
-            'batch': prefs.getString('selected_batch') ?? '',
-            'updatedAt': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
+                'token': token,
+                'platform': kIsWeb
+                    ? 'web'
+                    : (defaultTargetPlatform == TargetPlatform.iOS
+                          ? 'ios'
+                          : 'android'),
+                'division': finalDivision,
+                'role': role,
+                'batch': prefs.getString('selected_batch') ?? '',
+                'updatedAt': FieldValue.serverTimestamp(),
+              }, SetOptions(merge: true));
         }
       }
 
@@ -275,9 +303,13 @@ class NotificationService {
       final prefs = await SharedPreferences.getInstance();
       final role = prefs.getString('user_role');
       if (role == null || role.isEmpty) return;
-      
+
       final batch = prefs.getString('selected_batch');
-      await TopicSubscriptionService.updateSubscriptions(newDivision, role, batch: batch);
+      await TopicSubscriptionService.updateSubscriptions(
+        newDivision,
+        role,
+        batch: batch,
+      );
     } catch (e) {
       debugPrint('NotificationService: updateDivisionSubscription failed: $e');
     }

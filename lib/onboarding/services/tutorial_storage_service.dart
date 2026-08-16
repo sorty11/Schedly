@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class TutorialStorageService {
   static const String _tourPrefix = 'tour_seen_v_';
   static const String _masteryPrefix = 'mastery_';
-  
+
   // Update this constant whenever the onboarding framework is significantly redesigned
   static const int currentFrameworkVersion = 1;
 
@@ -32,7 +32,7 @@ class TutorialStorageService {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt('last_seen_feature_version') ?? 0;
   }
-  
+
   static Future<void> setLastSeenFeatureVersion(int version) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('last_seen_feature_version', version);
@@ -42,7 +42,9 @@ class TutorialStorageService {
     final prefs = await SharedPreferences.getInstance();
     final keys = prefs.getKeys();
     for (var key in keys) {
-      if (key.startsWith(_tourPrefix) || key.startsWith(_masteryPrefix) || key.startsWith('tour_seen_')) {
+      if (key.startsWith(_tourPrefix) ||
+          key.startsWith(_masteryPrefix) ||
+          key.startsWith('tour_seen_')) {
         await prefs.remove(key);
       }
     }

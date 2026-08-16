@@ -9,15 +9,17 @@ class ResponsiveUtils {
   static const double desktopBreakpoint = 1200;
 
   /// Returns true if the current viewport is considered a mobile device (narrow width).
-  static bool isMobile(BuildContext context) => MediaQuery.of(context).size.width < mobileBreakpoint;
+  static bool isMobile(BuildContext context) =>
+      MediaQuery.of(context).size.width < mobileBreakpoint;
 
   /// Returns true if the current viewport is considered a tablet device.
-  static bool isTablet(BuildContext context) => 
-      MediaQuery.of(context).size.width >= mobileBreakpoint && 
+  static bool isTablet(BuildContext context) =>
+      MediaQuery.of(context).size.width >= mobileBreakpoint &&
       MediaQuery.of(context).size.width < desktopBreakpoint;
 
   /// Returns true if the current viewport is considered a desktop device.
-  static bool isDesktop(BuildContext context) => MediaQuery.of(context).size.width >= desktopBreakpoint;
+  static bool isDesktop(BuildContext context) =>
+      MediaQuery.of(context).size.width >= desktopBreakpoint;
 
   /// Dynamically computes the appropriate outer padding for standard pages.
   /// Uses larger padding on wide screens and tighter padding on small/mobile screens.
@@ -44,19 +46,28 @@ class ResponsiveUtils {
   /// Useful for components like Role Cards that might get compressed by text scaling and narrow screens.
   /// [availableWidth] should be the width provided by a LayoutBuilder.
   /// [minRequiredWidth] is the threshold under which the layout switches to vertical.
-  static bool shouldUseVerticalLayout(BuildContext context, {required double availableWidth, double minRequiredWidth = 250}) {
+  static bool shouldUseVerticalLayout(
+    BuildContext context, {
+    required double availableWidth,
+    double minRequiredWidth = 250,
+  }) {
     // If the physical available width is smaller than our threshold, go vertical.
     if (availableWidth < minRequiredWidth) return true;
-    
+
     // If the user has extremely large font scaling, force vertical to prevent text truncation
     final textScale = MediaQuery.textScalerOf(context).scale(1);
-    if (textScale > 1.4 && availableWidth < (minRequiredWidth * 1.5)) return true;
+    if (textScale > 1.4 && availableWidth < (minRequiredWidth * 1.5))
+      return true;
 
     return false;
   }
 
   /// Returns a standard ConstrainedBox with a maximum width, suitable for centering forms and content.
-  static Widget constrainedFormBox(BuildContext context, {required Widget child, double maxWidth = 500}) {
+  static Widget constrainedFormBox(
+    BuildContext context, {
+    required Widget child,
+    double maxWidth = 500,
+  }) {
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),
       child: child,

@@ -12,21 +12,14 @@ import 'widgets/app_dialogs.dart';
 import 'services/crash_reporting_service.dart';
 import 'theme/theme.dart';
 
-class UploadTimetablePdfPage
-    extends StatefulWidget {
-  const UploadTimetablePdfPage({
-    super.key,
-  });
+class UploadTimetablePdfPage extends StatefulWidget {
+  const UploadTimetablePdfPage({super.key});
 
   @override
-  State<UploadTimetablePdfPage>
-      createState() =>
-          _UploadTimetablePdfPageState();
+  State<UploadTimetablePdfPage> createState() => _UploadTimetablePdfPageState();
 }
 
-class _UploadTimetablePdfPageState
-    extends State<
-        UploadTimetablePdfPage> {
+class _UploadTimetablePdfPageState extends State<UploadTimetablePdfPage> {
   bool loading = false;
 
   List<String> detectedSubjects = [];
@@ -52,8 +45,7 @@ class _UploadTimetablePdfPageState
     });
 
     try {
-      final result =
-          await FilePicker.platform.pickFiles(
+      final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
         withData: true,
@@ -66,14 +58,16 @@ class _UploadTimetablePdfPageState
         return;
       }
 
-      final Uint8List bytes =
-          result.files.first.bytes!;
+      final Uint8List bytes = result.files.first.bytes!;
 
       final text = await PdfTimetableImportService.extractText(bytes);
       final pdfDivision = PdfTimetableImportService.extractDivision(text);
 
-      final previewTimetable = await PdfTimetableImportService.parseTimetable(bytes, 'L-19');
-      
+      final previewTimetable = await PdfTimetableImportService.parseTimetable(
+        bytes,
+        'L-19',
+      );
+
       final uniqueSubjects = <String>{};
       for (final entries in previewTimetable.values) {
         for (final e in entries) {
@@ -85,7 +79,8 @@ class _UploadTimetablePdfPageState
       final subjects = uniqueSubjects.toList();
 
       final prefs = await SharedPreferences.getInstance();
-      final selectedDivision = prefs.getString('section_id') ?? prefs.getString('selected_division');
+      final selectedDivision =
+          prefs.getString('section_id') ?? prefs.getString('selected_division');
 
       setState(() {
         detectedSubjects = subjects;
@@ -107,8 +102,12 @@ class _UploadTimetablePdfPageState
       );
     } catch (e, stackTrace) {
       if (!mounted) return;
-      CrashReportingService.logError(e, stackTrace, reason: 'PDF Import Failure');
-      
+      CrashReportingService.logError(
+        e,
+        stackTrace,
+        reason: 'PDF Import Failure',
+      );
+
       setState(() {
         loading = false;
       });
@@ -139,7 +138,8 @@ class _UploadTimetablePdfPageState
           children: [
             Text(
               'Import PDF (BETA)',
-              style: TextStyle(fontFamily: 'Outfit', 
+              style: TextStyle(
+                fontFamily: 'Outfit',
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
                 color: colorScheme.onSurface,
@@ -148,7 +148,8 @@ class _UploadTimetablePdfPageState
             const SizedBox(height: AppSpacing.sm),
             Text(
               'Upload the official college timetable PDF. We will automatically parse subjects, timings, and rooms.',
-              style: TextStyle(fontFamily: 'Inter', 
+              style: TextStyle(
+                fontFamily: 'Inter',
                 fontSize: 16,
                 color: sem.onSurfaceMuted,
                 height: 1.5,
@@ -163,10 +164,14 @@ class _UploadTimetablePdfPageState
                   onTap: loading ? null : _pickPdf,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: loading ? (isDark ? sem.surfaceElevated : colorScheme.surface) : sem.surfaceTinted,
+                      color: loading
+                          ? (isDark ? sem.surfaceElevated : colorScheme.surface)
+                          : sem.surfaceTinted,
                       borderRadius: BorderRadius.circular(AppRadius.x2l),
                       border: Border.all(
-                        color: loading ? sem.borderSubtle : colorScheme.primary.withValues(alpha: 0.3),
+                        color: loading
+                            ? sem.borderSubtle
+                            : colorScheme.primary.withValues(alpha: 0.3),
                         width: 2,
                         strokeAlign: BorderSide.strokeAlignOutside,
                       ),
@@ -176,11 +181,14 @@ class _UploadTimetablePdfPageState
                           ? Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                CircularProgressIndicator(color: colorScheme.primary),
+                                CircularProgressIndicator(
+                                  color: colorScheme.primary,
+                                ),
                                 const SizedBox(height: AppSpacing.x2l),
                                 Text(
                                   'Extracting data...',
-                                  style: TextStyle(fontFamily: 'Inter', 
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
                                     color: colorScheme.primary,
                                     fontWeight: FontWeight.w600,
                                     fontSize: 16,
@@ -194,14 +202,18 @@ class _UploadTimetablePdfPageState
                                 Container(
                                   padding: const EdgeInsets.all(AppSpacing.x2l),
                                   decoration: BoxDecoration(
-                                    color: isDark ? sem.surfaceElevated2 : colorScheme.surface,
+                                    color: isDark
+                                        ? sem.surfaceElevated2
+                                        : colorScheme.surface,
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: colorScheme.primary.withValues(alpha: 0.15),
+                                        color: colorScheme.primary.withValues(
+                                          alpha: 0.15,
+                                        ),
                                         blurRadius: 24,
                                         offset: const Offset(0, 8),
-                                      )
+                                      ),
                                     ],
                                   ),
                                   child: Icon(
@@ -213,7 +225,8 @@ class _UploadTimetablePdfPageState
                                 const SizedBox(height: AppSpacing.x2l),
                                 Text(
                                   'Tap to select PDF',
-                                  style: TextStyle(fontFamily: 'Outfit', 
+                                  style: TextStyle(
+                                    fontFamily: 'Outfit',
                                     fontSize: 20,
                                     fontWeight: FontWeight.w700,
                                     color: colorScheme.primary,
@@ -222,9 +235,12 @@ class _UploadTimetablePdfPageState
                                 const SizedBox(height: AppSpacing.sm),
                                 Text(
                                   'Supports standard NMIMS format',
-                                  style: TextStyle(fontFamily: 'Inter', 
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
                                     fontSize: 14,
-                                    color: colorScheme.primary.withValues(alpha: 0.7),
+                                    color: colorScheme.primary.withValues(
+                                      alpha: 0.7,
+                                    ),
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),

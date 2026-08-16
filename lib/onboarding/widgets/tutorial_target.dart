@@ -5,33 +5,36 @@ class TargetRegistry extends ChangeNotifier {
   TargetRegistry._();
 
   final Map<String, GlobalKey> _targets = {};
-  
+
   void register(String id, GlobalKey key) {
     _targets[id] = key;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       notifyListeners();
     });
   }
-  
+
   void unregister(String id) {
     _targets.remove(id);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       notifyListeners();
     });
   }
-  
+
   GlobalKey? getKey(String id) {
     return _targets[id];
   }
-  
+
   Rect? getBounds(String id) {
     final key = _targets[id];
-    if (key == null || key.currentContext == null || !key.currentContext!.mounted) return null;
-    
+    if (key == null ||
+        key.currentContext == null ||
+        !key.currentContext!.mounted)
+      return null;
+
     final renderObject = key.currentContext!.findRenderObject();
     if (renderObject is! RenderBox || !renderObject.attached) return null;
     if (!renderObject.hasSize) return null;
-    
+
     final position = renderObject.localToGlobal(Offset.zero);
     return position & renderObject.size;
   }
@@ -40,12 +43,8 @@ class TargetRegistry extends ChangeNotifier {
 class TutorialTarget extends StatefulWidget {
   final String id;
   final Widget child;
-  
-  const TutorialTarget({
-    super.key,
-    required this.id,
-    required this.child,
-  });
+
+  const TutorialTarget({super.key, required this.id, required this.child});
 
   @override
   State<TutorialTarget> createState() => _TutorialTargetState();
@@ -53,24 +52,21 @@ class TutorialTarget extends StatefulWidget {
 
 class _TutorialTargetState extends State<TutorialTarget> {
   final GlobalKey _key = GlobalKey();
-  
+
   @override
   void initState() {
     super.initState();
     TargetRegistry.instance.register(widget.id, _key);
   }
-  
+
   @override
   void dispose() {
     TargetRegistry.instance.unregister(widget.id);
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
-    return KeyedSubtree(
-      key: _key,
-      child: widget.child,
-    );
+    return KeyedSubtree(key: _key, child: widget.child);
   }
 }

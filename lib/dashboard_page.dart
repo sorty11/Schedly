@@ -21,6 +21,7 @@ import 'widgets/animations/animated_button.dart';
 import 'widgets/animations/live_lecture_card.dart';
 import 'models/timetable_entry.dart';
 import 'models/event_category.dart';
+import 'services/timetable_resolver_service.dart';
 import 'timetable_manager.dart';
 import 'manual_timetable_studio.dart';
 import 'weekly_timetable_page.dart';
@@ -31,10 +32,7 @@ import 'services/timetable_event_service.dart';
 class DashboardPage extends StatefulWidget {
   final String division;
 
-  const DashboardPage({
-    super.key,
-    required this.division,
-  });
+  const DashboardPage({super.key, required this.division});
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -79,9 +77,12 @@ class _DashboardPageState extends State<DashboardPage> {
             .collection(day)
             .limit(1)
             .get();
-        if (snap.docs.isNotEmpty) { hasAny = true; break; }
+        if (snap.docs.isNotEmpty) {
+          hasAny = true;
+          break;
+        }
       }
-      
+
       if (mounted) {
         if (!hasAny) {
           final prefs = await SharedPreferences.getInstance();
@@ -113,7 +114,10 @@ class _DashboardPageState extends State<DashboardPage> {
     final primary = theme.colorScheme.primary;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.md),
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x2l,
+        vertical: AppSpacing.md,
+      ),
       padding: const EdgeInsets.all(AppSpacing.x2l),
       decoration: BoxDecoration(
         color: isDark ? sem.surfaceElevated2 : theme.colorScheme.surface,
@@ -151,8 +155,8 @@ class _DashboardPageState extends State<DashboardPage> {
                             color: hasTimetable
                                 ? sem.success
                                 : hasDraft
-                                    ? sem.pending
-                                    : sem.onSurfaceMuted.withValues(alpha: 0.4),
+                                ? sem.pending
+                                : sem.onSurfaceMuted.withValues(alpha: 0.4),
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -161,16 +165,16 @@ class _DashboardPageState extends State<DashboardPage> {
                           hasTimetable
                               ? 'Published & active'
                               : hasDraft
-                                  ? 'Draft saved — not published'
-                                  : 'No timetable yet',
+                              ? 'Draft saved — not published'
+                              : 'No timetable yet',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                             color: hasTimetable
                                 ? sem.success
                                 : hasDraft
-                                    ? sem.pending
-                                    : sem.onSurfaceMuted,
+                                ? sem.pending
+                                : sem.onSurfaceMuted,
                           ),
                         ),
                       ],
@@ -179,8 +183,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ),
               // Stats (only when timetable exists)
-              if (hasTimetable) ...
-              [
+              if (hasTimetable) ...[
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -203,12 +206,13 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                   ],
                 ),
-                if (nextLecture != null) ...
-                [
+                if (nextLecture != null) ...[
                   Container(
                     width: 1,
                     height: 36,
-                    margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                    ),
                     color: sem.borderSubtle,
                   ),
                   Column(
@@ -252,14 +256,21 @@ class _DashboardPageState extends State<DashboardPage> {
             height: 48,
             child: FilledButton.icon(
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => ManualTimetableStudio(division: widget.division),
-                ));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        ManualTimetableStudio(division: widget.division),
+                  ),
+                );
               },
               icon: const Icon(Icons.calendar_view_week_rounded, size: 18),
               label: Text(
                 hasTimetable ? 'Bulk Edit Week' : 'Create Timetable',
-                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               style: FilledButton.styleFrom(
                 shape: RoundedRectangleBorder(
@@ -280,11 +291,21 @@ class _DashboardPageState extends State<DashboardPage> {
                   height: 44,
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(
-                        builder: (_) => WeeklyTimetablePage(division: widget.division, isEditMode: true),
-                      ));
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => WeeklyTimetablePage(
+                            division: widget.division,
+                            isEditMode: true,
+                          ),
+                        ),
+                      );
                     },
-                    icon: Icon(Icons.view_week_outlined, size: 16, color: primary),
+                    icon: Icon(
+                      Icons.view_week_outlined,
+                      size: 16,
+                      color: primary,
+                    ),
                     label: Text(
                       'Week View',
                       style: GoogleFonts.inter(
@@ -294,7 +315,10 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: primary.withValues(alpha: 0.25), width: 1),
+                      side: BorderSide(
+                        color: primary.withValues(alpha: 0.25),
+                        width: 1,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
@@ -317,7 +341,11 @@ class _DashboardPageState extends State<DashboardPage> {
                         initialDay: 'Monday',
                       );
                     },
-                    icon: Icon(Icons.add_rounded, size: 16, color: theme.colorScheme.onSurface),
+                    icon: Icon(
+                      Icons.add_rounded,
+                      size: 16,
+                      color: theme.colorScheme.onSurface,
+                    ),
                     label: Text(
                       'Quick Add',
                       style: GoogleFonts.inter(
@@ -342,16 +370,23 @@ class _DashboardPageState extends State<DashboardPage> {
           const SizedBox(height: AppSpacing.xs),
           GestureDetector(
             onTap: () {
-              Navigator.push(context, MaterialPageRoute(
-                builder: (_) => const UploadTimetablePdfPage(),
-              ));
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const UploadTimetablePdfPage(),
+                ),
+              );
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.picture_as_pdf_outlined, size: 14, color: sem.onSurfaceMuted),
+                  Icon(
+                    Icons.picture_as_pdf_outlined,
+                    size: 14,
+                    color: sem.onSurfaceMuted,
+                  ),
                   const SizedBox(width: AppSpacing.xs),
                   Text(
                     'Import from PDF',
@@ -374,8 +409,13 @@ class _DashboardPageState extends State<DashboardPage> {
 
   String _getCurrentDay() {
     const days = [
-      'Monday', 'Tuesday', 'Wednesday',
-      'Thursday', 'Friday', 'Saturday', 'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
     ];
     return days[DateTime.now().weekday - 1];
   }
@@ -390,8 +430,18 @@ class _DashboardPageState extends State<DashboardPage> {
   String _formatDay() {
     final now = DateTime.now();
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '$currentDay, ${months[now.month - 1]} ${now.day}';
   }
@@ -400,7 +450,8 @@ class _DashboardPageState extends State<DashboardPage> {
     if (entry.category != EventCategory.academic) return false;
     if (AppSettings.currentRole == UserRole.cr) return true;
     if (AppSettings.currentRole == UserRole.sr) {
-      return entry.subject == AppSettings.srSubject && entry.batch == AppSettings.srBatch;
+      return entry.subject == AppSettings.srSubject &&
+          entry.batch == AppSettings.srBatch;
     }
     return false;
   }
@@ -417,11 +468,16 @@ class _DashboardPageState extends State<DashboardPage> {
       builder: (ctx) {
         return Container(
           padding: const EdgeInsets.fromLTRB(
-            AppSpacing.x2l, AppSpacing.lg, AppSpacing.x2l, AppSpacing.x2l,
+            AppSpacing.x2l,
+            AppSpacing.lg,
+            AppSpacing.x2l,
+            AppSpacing.x2l,
           ),
           decoration: BoxDecoration(
             color: isDark ? sem.surfaceElevated2 : colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.x2l)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppRadius.x2l),
+            ),
           ),
           child: SafeArea(
             top: false,
@@ -432,7 +488,8 @@ class _DashboardPageState extends State<DashboardPage> {
                 // Drag handle
                 Center(
                   child: Container(
-                    width: 40, height: 4,
+                    width: 40,
+                    height: 4,
                     decoration: BoxDecoration(
                       color: sem.borderSubtle,
                       borderRadius: BorderRadius.circular(AppRadius.full),
@@ -445,9 +502,13 @@ class _DashboardPageState extends State<DashboardPage> {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   decoration: BoxDecoration(
-                    color: colorScheme.primary.withValues(alpha: isDark ? 0.08 : 0.05),
+                    color: colorScheme.primary.withValues(
+                      alpha: isDark ? 0.08 : 0.05,
+                    ),
                     borderRadius: BorderRadius.circular(AppRadius.lg),
-                    border: Border.all(color: colorScheme.primary.withValues(alpha: 0.15)),
+                    border: Border.all(
+                      color: colorScheme.primary.withValues(alpha: 0.15),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -457,7 +518,11 @@ class _DashboardPageState extends State<DashboardPage> {
                           color: colorScheme.primary.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(AppRadius.sm),
                         ),
-                        child: Icon(Icons.class_rounded, color: colorScheme.primary, size: 18),
+                        child: Icon(
+                          Icons.class_rounded,
+                          color: colorScheme.primary,
+                          size: 18,
+                        ),
                       ),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(
@@ -466,13 +531,22 @@ class _DashboardPageState extends State<DashboardPage> {
                           children: [
                             Text(
                               entry.displaySubject,
-                              style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 16),
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             Text(
-                              TimetableManager.formatTime(entry.startTime, entry.endTime),
-                              style: GoogleFonts.inter(fontSize: 13, color: sem.onSurfaceMuted),
+                              TimetableManager.formatTime(
+                                entry.startTime,
+                                entry.endTime,
+                              ),
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: sem.onSurfaceMuted,
+                              ),
                             ),
                           ],
                         ),
@@ -515,12 +589,16 @@ class _DashboardPageState extends State<DashboardPage> {
                           .collection(currentDay)
                           .doc(entry.id)
                           .update({'status': 'cancelled', 'isActive': false});
-                      
-                      final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
+
+                      final timeStr = TimetableManager.formatTime(
+                        entry.startTime,
+                        entry.endTime,
+                      );
                       await HistoryService.logOperation(
                         division: widget.division,
                         operation: 'Lecture Cancelled',
-                        details: '${entry.displaySubject} on $currentDay at $timeStr',
+                        details:
+                            '${entry.displaySubject} on $currentDay at $timeStr',
                         role: AppSettings.currentRole.name,
                       );
                       await TimetableEventService.handleModification(
@@ -546,12 +624,16 @@ class _DashboardPageState extends State<DashboardPage> {
                           .collection(currentDay)
                           .doc(entry.id)
                           .update({'status': 'active', 'isActive': true});
-                      
-                      final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
+
+                      final timeStr = TimetableManager.formatTime(
+                        entry.startTime,
+                        entry.endTime,
+                      );
                       await HistoryService.logOperation(
                         division: widget.division,
                         operation: 'Lecture Restored',
-                        details: '${entry.displaySubject} on $currentDay at $timeStr',
+                        details:
+                            '${entry.displaySubject} on $currentDay at $timeStr',
                         role: AppSettings.currentRole.name,
                       );
                       await TimetableEventService.handleModification(
@@ -586,11 +668,17 @@ class _DashboardPageState extends State<DashboardPage> {
                               color: sem.cancelled.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(Icons.delete_rounded, color: sem.cancelled, size: 28),
+                            child: Icon(
+                              Icons.delete_rounded,
+                              color: sem.cancelled,
+                              size: 28,
+                            ),
                           ),
                           title: Text(
                             'Delete Lecture?',
-                            style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.w700,
+                            ),
                             textAlign: TextAlign.center,
                           ),
                           content: Text(
@@ -602,12 +690,24 @@ class _DashboardPageState extends State<DashboardPage> {
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(dCtx, false),
-                              child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                              child: Text(
+                                'Cancel',
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                             FilledButton(
                               onPressed: () => Navigator.pop(dCtx, true),
-                              style: FilledButton.styleFrom(backgroundColor: sem.cancelled),
-                              child: Text('Delete', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: sem.cancelled,
+                              ),
+                              child: Text(
+                                'Delete',
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -620,12 +720,16 @@ class _DashboardPageState extends State<DashboardPage> {
                           .collection(currentDay)
                           .doc(entry.id)
                           .delete();
-                      
-                      final timeStr = TimetableManager.formatTime(entry.startTime, entry.endTime);
+
+                      final timeStr = TimetableManager.formatTime(
+                        entry.startTime,
+                        entry.endTime,
+                      );
                       await HistoryService.logOperation(
                         division: widget.division,
                         operation: 'Lecture Deleted',
-                        details: '${entry.displaySubject} on $currentDay at $timeStr',
+                        details:
+                            '${entry.displaySubject} on $currentDay at $timeStr',
                         role: AppSettings.currentRole.name,
                       );
                       await TimetableEventService.handleModification(
@@ -658,16 +762,27 @@ class _DashboardPageState extends State<DashboardPage> {
           builder: (context, recordsSnap) {
             final rawRecords = recordsSnap.data ?? [];
             final Map<String, AttendanceRecord> attendanceRecords = {};
-            
-            final List<String> mergedSubjects = ['DM', 'Discrete Mathematics', 'PnS', 'SnS', 'Python', 'PROGRAMMING WITH PYTHON', 'Signals and Systems', 'Principles of Economics and Managemen'];
-            
+
+            final List<String> mergedSubjects = [
+              'DM',
+              'Discrete Mathematics',
+              'PnS',
+              'SnS',
+              'Python',
+              'PROGRAMMING WITH PYTHON',
+              'Signals and Systems',
+              'Principles of Economics and Managemen',
+            ];
+
             for (final r in rawRecords) {
               String subjectName = r.subjectCode;
               String componentName = r.component;
-              
-              if (subjectName.toUpperCase().contains('DATA STRUCTURES') || subjectName.trim().toUpperCase() == 'DSA') {
+
+              if (subjectName.toUpperCase().contains('DATA STRUCTURES') ||
+                  subjectName.trim().toUpperCase() == 'DSA') {
                 subjectName = 'DSA';
-                if (componentName.toUpperCase().contains('LAB') || componentName.toUpperCase().contains('PRACTICAL')) {
+                if (componentName.toUpperCase().contains('LAB') ||
+                    componentName.toUpperCase().contains('PRACTICAL')) {
                   componentName = 'Lab';
                 } else {
                   componentName = 'Theory';
@@ -700,9 +815,11 @@ class _DashboardPageState extends State<DashboardPage> {
                 }
               } else {
                 String normComponent = componentName;
-                if (normComponent.isEmpty || normComponent == 'Lecture') normComponent = 'Theory';
-                else if (normComponent == 'Practical') normComponent = 'Lab';
-                
+                if (normComponent.isEmpty || normComponent == 'Lecture')
+                  normComponent = 'Theory';
+                else if (normComponent == 'Practical')
+                  normComponent = 'Lab';
+
                 attendanceRecords['${subjectName}_$normComponent'] = r;
               }
             }
@@ -710,353 +827,483 @@ class _DashboardPageState extends State<DashboardPage> {
             return StreamBuilder<QuerySnapshot>(
               stream: _lecturesStream,
               builder: (context, snapshot) {
-            final isLoading = snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData;
+                final isLoading =
+                    snapshot.connectionState == ConnectionState.waiting &&
+                    !snapshot.hasData;
 
-            final docs = snapshot.data?.docs ?? [];
-            final rawLectures = docs
-                .map((doc) => TimetableEntry.fromFirestore(doc))
-                .where((e) {
-                  if (AppSettings.currentRole == UserRole.student) {
-                    return e.shouldIncludeForUserBatch(AppSettings.studentBatch);
-                  }
-                  return true;
-                })
-                .toList();
+                final docs = snapshot.data?.docs ?? [];
+                final nowD = DateTime.now();
+                final String todayStr =
+                    '${nowD.year}-${nowD.month.toString().padLeft(2, '0')}-${nowD.day.toString().padLeft(2, '0')}';
 
-            final Map<int, List<TimetableEntry>> grouped = {};
-            for (final e in rawLectures) {
-              if (!grouped.containsKey(e.startTime)) {
-                grouped[e.startTime] = [];
-              }
-              grouped[e.startTime]!.add(e);
-            }
-            
-            final sortedKeys = grouped.keys.toList()..sort();
-            final groupedLectures = sortedKeys.map((k) => grouped[k]!).toList();
+                final userBatch = AppSettings.currentRole == UserRole.student
+                    ? AppSettings.studentBatch
+                    : null;
 
-            List<TimetableEntry>? currentGroup;
-            List<TimetableEntry>? nextGroup;
-            
-            final now = DateTime.now();
-            final nowMins = now.hour * 60 + now.minute;
+                final rawEntries = docs
+                    .map((doc) => TimetableEntry.fromFirestore(doc))
+                    .toList();
 
-            for (int i = 0; i < groupedLectures.length; i++) {
-              final group = groupedLectures[i];
-              
-              final start = group.first.startTime;
-              final end = group.map((e) => e.endTime).reduce((a, b) => a > b ? a : b);
+                final resolved = TimetableResolverService.resolve(
+                  rawEntries: rawEntries,
+                  targetDateStr: todayStr,
+                  userBatch: userBatch,
+                );
 
-              if (nowMins >= start && nowMins < end) {
-                currentGroup = group;
-              } else if (nowMins < start && currentGroup == null && nextGroup == null) {
-                nextGroup = group;
-              } else if (nowMins < start && currentGroup != null && nextGroup == null) {
-                nextGroup = group;
-              }
-            }
-
-            return CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      AppSpacing.x2l,
-                      AppSpacing.lg,
-                      AppSpacing.lg,
-                      AppSpacing.lg,
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              StaggeredListItem(
-                                index: 0,
-                                child: Text(
-                                  '${_getGreeting()}, $firstName 👋',
-                                  style: Theme.of(context).textTheme.headlineMedium,
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.xs),
-                              StaggeredListItem(
-                                index: 1,
-                                child: Text(
-                                  _formatDay(),
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                              ),
-                            ],
+                if (resolved.isHoliday) {
+                  return CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: AppSpacing.x6l),
+                          child: FloatingEmptyState(
+                            icon: Icons.celebration_rounded,
+                            title: 'Holiday',
+                            subtitle:
+                                resolved.holidayName ?? 'No classes today.',
                           ),
                         ),
-                        Row(
-                          children: [
-                            if (AppSettings.currentRole == UserRole.cr ||
-                                AppSettings.currentRole == UserRole.sr)
-                              AnimatedButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const CRPanelPage(),
-                                    ),
-                                  ).then((_) => setState(() {}));
-                                },
-                                backgroundColor: colorScheme.primary
-                                    .withValues(alpha: 0.1),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.md,
-                                  vertical: AppSpacing.sm,
-                                ),
-                                borderRadius: AppRadius.sm,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      AppSettings.currentRole == UserRole.cr
-                                          ? Icons.admin_panel_settings_rounded
-                                          : Icons.school_rounded,
-                                      size: 16,
-                                      color: colorScheme.primary,
-                                    ),
-                                    const SizedBox(width: AppSpacing.xs),
-                                    Text(
-                                      AppSettings.currentRole == UserRole.cr
-                                          ? 'CR'
-                                          : 'SR',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: colorScheme.primary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                      ),
+                    ],
+                  );
+                }
 
-                if (isLoading)
-                  const SliverToBoxAdapter(child: HeroCardSkeleton()),
-                  
-                if (!isLoading && AppSettings.currentRole == UserRole.cr && !_isLoadingTimetableCheck)
-                  SliverToBoxAdapter(
-                    child: _buildTimetableCommandCenter(
-                      Theme.of(context), 
-                      sem, 
-                      _hasTimetable,
-                      _hasDraft,
-                      rawLectures.length,
-                      nextGroup?.first,
-                    ),
-                  ),
+                final rawLectures = resolved.lectures;
 
-                if (!isLoading && _hasDraft)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l, vertical: AppSpacing.sm),
-                      child: Container(
-                        padding: EdgeInsets.all(AppSpacing.lg),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(AppRadius.lg),
-                          border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
+                final Map<int, List<TimetableEntry>> grouped = {};
+                for (final e in rawLectures) {
+                  if (!grouped.containsKey(e.startTime)) {
+                    grouped[e.startTime] = [];
+                  }
+                  grouped[e.startTime]!.add(e);
+                }
+
+                final sortedKeys = grouped.keys.toList()..sort();
+                final groupedLectures = sortedKeys
+                    .map((k) => grouped[k]!)
+                    .toList();
+
+                List<TimetableEntry>? currentGroup;
+                List<TimetableEntry>? nextGroup;
+
+                final now = DateTime.now();
+                final nowMins = now.hour * 60 + now.minute;
+
+                for (int i = 0; i < groupedLectures.length; i++) {
+                  final group = groupedLectures[i];
+
+                  final start = group.first.startTime;
+                  final end = group
+                      .map((e) => e.endTime)
+                      .reduce((a, b) => a > b ? a : b);
+
+                  if (nowMins >= start && nowMins < end) {
+                    currentGroup = group;
+                  } else if (nowMins < start &&
+                      currentGroup == null &&
+                      nextGroup == null) {
+                    nextGroup = group;
+                  } else if (nowMins < start &&
+                      currentGroup != null &&
+                      nextGroup == null) {
+                    nextGroup = group;
+                  }
+                }
+
+                return CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          AppSpacing.x2l,
+                          AppSpacing.lg,
+                          AppSpacing.lg,
+                          AppSpacing.lg,
                         ),
                         child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: EdgeInsets.all(AppSpacing.sm),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(Icons.edit_calendar_rounded, color: Theme.of(context).colorScheme.primary),
-                            ),
-                            const SizedBox(width: AppSpacing.lg),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Draft Saved', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700)),
-                                  Text('Continue building your timetable.', style: GoogleFonts.inter(fontSize: 13)),
+                                  StaggeredListItem(
+                                    index: 0,
+                                    child: Text(
+                                      '${_getGreeting()}, $firstName 👋',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.headlineMedium,
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  StaggeredListItem(
+                                    index: 1,
+                                    child: Text(
+                                      _formatDay(),
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodyMedium,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
-                            FilledButton(
-                              onPressed: () {
-                                Navigator.push(context, MaterialPageRoute(
-                                  builder: (_) => ManualTimetableStudio(division: widget.division),
-                                )).then((_) => _checkCROnboarding());
-                              },
-                              style: FilledButton.styleFrom(
-                                padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                              ),
-                              child: Text('Resume', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                            Row(
+                              children: [
+                                if (AppSettings.currentRole == UserRole.cr ||
+                                    AppSettings.currentRole == UserRole.sr)
+                                  AnimatedButton(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => const CRPanelPage(),
+                                        ),
+                                      ).then((_) => setState(() {}));
+                                    },
+                                    backgroundColor: colorScheme.primary
+                                        .withValues(alpha: 0.1),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.md,
+                                      vertical: AppSpacing.sm,
+                                    ),
+                                    borderRadius: AppRadius.sm,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          AppSettings.currentRole == UserRole.cr
+                                              ? Icons
+                                                    .admin_panel_settings_rounded
+                                              : Icons.school_rounded,
+                                          size: 16,
+                                          color: colorScheme.primary,
+                                        ),
+                                        const SizedBox(width: AppSpacing.xs),
+                                        Text(
+                                          AppSettings.currentRole == UserRole.cr
+                                              ? 'CR'
+                                              : 'SR',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: colorScheme.primary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
                             ),
                           ],
                         ),
                       ),
                     ),
-                  ),
 
-                if (!isLoading && currentGroup != null)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.x2l,
-                      ),
-                      child: StaggeredListItem(
-                        index: 2,
-                        child: LiveLectureCard(
-                          subject: currentGroup.length == 1 
-                               ? currentGroup.first.subject 
-                               : currentGroup.map((e) => e.subject).toSet().join(' / '),
-                          time: TimetableManager.formatTime(currentGroup.first.startTime, currentGroup.first.endTime),
-                          room: currentGroup.length == 1 
-                               ? (currentGroup.first.room ?? 'TBA') 
-                               : currentGroup.map((e) => e.room ?? 'TBA').toSet().join(' / '),
-                          onTap: currentGroup.length == 1 && _canEditLecture(currentGroup.first)
-                              ? () => _editLecture(currentGroup!.first)
-                              : null,
+                    if (isLoading)
+                      const SliverToBoxAdapter(child: HeroCardSkeleton()),
+
+                    if (!isLoading &&
+                        AppSettings.currentRole == UserRole.cr &&
+                        !_isLoadingTimetableCheck)
+                      SliverToBoxAdapter(
+                        child: _buildTimetableCommandCenter(
+                          Theme.of(context),
+                          sem,
+                          _hasTimetable,
+                          _hasDraft,
+                          rawLectures.length,
+                          nextGroup?.first,
                         ),
                       ),
-                    ),
-                  ),
 
-                if (!isLoading && currentGroup != null)
-                  const SliverToBoxAdapter(
-                    child: SizedBox(height: AppSpacing.x2l),
-                  ),
-
-                if (isLoading)
-                  const SliverToBoxAdapter(child: StatsRowSkeleton()),
-                  
-                if (!isLoading && groupedLectures.isNotEmpty)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.x2l,
-                      ),
-                      child: StaggeredListItem(
-                        index: 3,
-                        child: _QuickStatsRow(
-                          division: widget.division,
-                          lectureCount: rawLectures.length,
-                          cancelledCount:
-                              rawLectures.where((l) => !l.isActive).length,
-                        ),
-                      ),
-                    ),
-                  ),
-                  
-                if (isLoading) ...[
-                  const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l), child: LectureCardSkeleton(includeTime: true))),
-                  const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l), child: LectureCardSkeleton(includeTime: true))),
-                  const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.symmetric(horizontal: AppSpacing.x2l), child: LectureCardSkeleton(includeTime: true))),
-                ],
-
-                if (!isLoading && groupedLectures.isEmpty)
-                  const SliverToBoxAdapter(
-                    child: SizedBox(height: AppSpacing.x2l),
-                  ),
-
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                      left: AppSpacing.x2l,
-                      right: AppSpacing.x2l,
-                      bottom: AppSpacing.md,
-                    ),
-                    child: StaggeredListItem(
-                      index: 4,
-                      child: Row(
-                        children: [
-                          Text(
-                            "Today's Schedule",
-                            style: Theme.of(context).textTheme.titleLarge,
+                    if (!isLoading && _hasDraft)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.x2l,
+                            vertical: AppSpacing.sm,
                           ),
-                          const Spacer(),
-                          if (!isLoading && groupedLectures.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md,
-                                vertical: AppSpacing.xs,
+                          child: Container(
+                            padding: EdgeInsets.all(AppSpacing.lg),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primaryContainer
+                                  .withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(AppRadius.lg),
+                              border: Border.all(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withValues(alpha: 0.3),
                               ),
-                              decoration: BoxDecoration(
-                                // Neutral badge — not brand color
-                                color: sem.borderSubtle,
-                                borderRadius: BorderRadius.circular(AppRadius.full),
-                              ),
-                              child: Text(
-                                '${groupedLectures.length} block${groupedLectures.length == 1 ? '' : 's'}',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: sem.onSurfaceMuted,
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(AppSpacing.sm),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.primary
+                                        .withValues(alpha: 0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.edit_calendar_rounded,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                  ),
                                 ),
+                                const SizedBox(width: AppSpacing.lg),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Draft Saved',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Continue building your timetable.',
+                                        style: GoogleFonts.inter(fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                FilledButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ManualTimetableStudio(
+                                          division: widget.division,
+                                        ),
+                                      ),
+                                    ).then((_) => _checkCROnboarding());
+                                  },
+                                  style: FilledButton.styleFrom(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.lg,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        AppRadius.md,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Resume',
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    if (!isLoading && currentGroup != null)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.x2l,
+                          ),
+                          child: StaggeredListItem(
+                            index: 2,
+                            child: LiveLectureCard(
+                              subject: currentGroup.length == 1
+                                  ? currentGroup.first.subject
+                                  : currentGroup
+                                        .map((e) => e.subject)
+                                        .toSet()
+                                        .join(' / '),
+                              time: TimetableManager.formatTime(
+                                currentGroup.first.startTime,
+                                currentGroup.first.endTime,
                               ),
+                              room: currentGroup.length == 1
+                                  ? (currentGroup.first.room ?? 'TBA')
+                                  : currentGroup
+                                        .map((e) => e.room ?? 'TBA')
+                                        .toSet()
+                                        .join(' / '),
+                              onTap:
+                                  currentGroup.length == 1 &&
+                                      _canEditLecture(currentGroup.first)
+                                  ? () => _editLecture(currentGroup!.first)
+                                  : null,
                             ),
-                        ],
+                          ),
+                        ),
+                      ),
+
+                    if (!isLoading && currentGroup != null)
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: AppSpacing.x2l),
+                      ),
+
+                    if (isLoading)
+                      const SliverToBoxAdapter(child: StatsRowSkeleton()),
+
+                    if (!isLoading && groupedLectures.isNotEmpty)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.x2l,
+                          ),
+                          child: StaggeredListItem(
+                            index: 3,
+                            child: _QuickStatsRow(
+                              division: widget.division,
+                              lectureCount: rawLectures.length,
+                              cancelledCount: rawLectures
+                                  .where((l) => !l.isActive)
+                                  .length,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    if (isLoading) ...[
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.x2l,
+                          ),
+                          child: LectureCardSkeleton(includeTime: true),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.x2l,
+                          ),
+                          child: LectureCardSkeleton(includeTime: true),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.x2l,
+                          ),
+                          child: LectureCardSkeleton(includeTime: true),
+                        ),
+                      ),
+                    ],
+
+                    if (!isLoading && groupedLectures.isEmpty)
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: AppSpacing.x2l),
+                      ),
+
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                          left: AppSpacing.x2l,
+                          right: AppSpacing.x2l,
+                          bottom: AppSpacing.md,
+                        ),
+                        child: StaggeredListItem(
+                          index: 4,
+                          child: Row(
+                            children: [
+                              Text(
+                                "Today's Schedule",
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const Spacer(),
+                              if (!isLoading && groupedLectures.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.md,
+                                    vertical: AppSpacing.xs,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    // Neutral badge — not brand color
+                                    color: sem.borderSubtle,
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.full,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '${groupedLectures.length} block${groupedLectures.length == 1 ? '' : 's'}',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: sem.onSurfaceMuted,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
 
-                if (!isLoading && groupedLectures.isEmpty)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: FloatingEmptyState(
-                      icon: Icons.event_available_rounded,
-                      title: 'No classes today',
-                      subtitle: 'Enjoy your free time or catch up on studies',
-                    ),
-                  ),
-
-                if (!isLoading && groupedLectures.isNotEmpty)
-                  SliverPadding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSpacing.x2l,
-                    ),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final entries = groupedLectures[index];
-                          final isCurrent = currentGroup != null && entries.first.startTime == currentGroup.first.startTime;
-                          final isNext = nextGroup != null && entries.first.startTime == nextGroup.first.startTime;
-                          final isLast = index == groupedLectures.length - 1;
-
-                          return StaggeredListItem(
-                            index: 5 + index,
-                            child: _TimelineLectureItem(
-                              entries: entries,
-                              isCurrent: isCurrent,
-                              isNext: isNext,
-                              isLast: isLast,
-                              canEdit: _canEditLecture,
-                              onEdit: _editLecture,
-                              attendanceRecords: attendanceRecords,
-                            ),
-                          );
-                        },
-                        childCount: groupedLectures.length,
+                    if (!isLoading && groupedLectures.isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: FloatingEmptyState(
+                          icon: Icons.event_available_rounded,
+                          title: 'No classes today',
+                          subtitle:
+                              'Enjoy your free time or catch up on studies',
+                        ),
                       ),
-                    ),
-                  ),
 
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: AppSpacing.x6l),
-                ),
-              ],
+                    if (!isLoading && groupedLectures.isNotEmpty)
+                      SliverPadding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.x2l,
+                        ),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            final entries = groupedLectures[index];
+                            final isCurrent =
+                                currentGroup != null &&
+                                entries.first.startTime ==
+                                    currentGroup.first.startTime;
+                            final isNext =
+                                nextGroup != null &&
+                                entries.first.startTime ==
+                                    nextGroup.first.startTime;
+                            final isLast = index == groupedLectures.length - 1;
+
+                            return StaggeredListItem(
+                              index: 5 + index,
+                              child: _TimelineLectureItem(
+                                entries: entries,
+                                isCurrent: isCurrent,
+                                isNext: isNext,
+                                isLast: isLast,
+                                canEdit: _canEditLecture,
+                                onEdit: _editLecture,
+                                attendanceRecords: attendanceRecords,
+                              ),
+                            );
+                          }, childCount: groupedLectures.length),
+                        ),
+                      ),
+
+                    const SliverToBoxAdapter(
+                      child: SizedBox(height: AppSpacing.x6l),
+                    ),
+                  ],
+                );
+              },
             );
-          },
-        );
           },
         ),
       ),
@@ -1103,12 +1350,20 @@ class _TimelineLectureItem extends StatelessWidget {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final timeStr = TimetableManager.formatTime(entries.first.startTime, entries.first.endTime);
+    final timeStr = TimetableManager.formatTime(
+      entries.first.startTime,
+      entries.first.endTime,
+    );
     final startTime = timeStr.split('-')[0].trim();
-    
+
     final allCancelled = entries.every((e) => !e.isActive);
-    final activeEntry = entries.firstWhere((e) => e.isActive, orElse: () => entries.first);
-    final blockColor = allCancelled ? sem.cancelled : _subjectColor(activeEntry.subject, context);
+    final activeEntry = entries.firstWhere(
+      (e) => e.isActive,
+      orElse: () => entries.first,
+    );
+    final blockColor = allCancelled
+        ? sem.cancelled
+        : _subjectColor(activeEntry.subject, context);
 
     return IntrinsicHeight(
       child: Row(
@@ -1136,10 +1391,10 @@ class _TimelineLectureItem extends StatelessWidget {
                     color: allCancelled
                         ? sem.cancelled.withValues(alpha: 0.3)
                         : isCurrent
-                            ? colorScheme.primary
-                            : isDark
-                                ? sem.borderSubtle
-                                : sem.borderSubtle,
+                        ? colorScheme.primary
+                        : isDark
+                        ? sem.borderSubtle
+                        : sem.borderSubtle,
                     border: isCurrent
                         ? Border.all(
                             color: colorScheme.primary.withValues(alpha: 0.3),
@@ -1165,18 +1420,18 @@ class _TimelineLectureItem extends StatelessWidget {
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Padding(
-              padding: EdgeInsets.only(
-                bottom: isLast ? 0 : AppSpacing.md,
-              ),
+              padding: EdgeInsets.only(bottom: isLast ? 0 : AppSpacing.md),
               child: AnimatedCard(
-                onTap: (entries.length == 1 && canEdit(entries.first)) ? () => onEdit(entries.first) : null,
+                onTap: (entries.length == 1 && canEdit(entries.first))
+                    ? () => onEdit(entries.first)
+                    : null,
                 backgroundColor: isCurrent
-                    ? colorScheme.primary.withValues(alpha: isDark ? 0.12 : 0.06)
+                    ? colorScheme.primary.withValues(
+                        alpha: isDark ? 0.12 : 0.06,
+                      )
                     : allCancelled
-                        ? sem.cancelled.withValues(alpha: isDark ? 0.08 : 0.04)
-                        : (isDark
-                            ? sem.surfaceElevated2
-                            : colorScheme.surface),
+                    ? sem.cancelled.withValues(alpha: isDark ? 0.08 : 0.04)
+                    : (isDark ? sem.surfaceElevated2 : colorScheme.surface),
                 borderRadius: AppRadius.lg,
                 child: Container(
                   decoration: BoxDecoration(
@@ -1186,8 +1441,8 @@ class _TimelineLectureItem extends StatelessWidget {
                         color: allCancelled
                             ? sem.cancelled
                             : isCurrent
-                                ? colorScheme.primary
-                                : blockColor.withValues(alpha: 0.6),
+                            ? colorScheme.primary
+                            : blockColor.withValues(alpha: 0.6),
                         width: 3,
                       ),
                     ),
@@ -1218,18 +1473,27 @@ class _TimelineLectureItem extends StatelessWidget {
                                       color: isCancelled
                                           ? sem.cancelled
                                           : isCurrent
-                                              ? colorScheme.primary
-                                              : colorScheme.onSurface,
-                                      decoration: isCancelled ? TextDecoration.lineThrough : null,
+                                          ? colorScheme.primary
+                                          : colorScheme.onSurface,
+                                      decoration: isCancelled
+                                          ? TextDecoration.lineThrough
+                                          : null,
                                     ),
                                   ),
-                                  if (entry.batch != 'Whole Class' || (entry.room != null && entry.room!.isNotEmpty))
+                                  if (entry.batch != 'Whole Class' ||
+                                      (entry.room != null &&
+                                          entry.room!.isNotEmpty))
                                     Padding(
-                                      padding: const EdgeInsets.only(top: AppSpacing.xs - 2),
+                                      padding: const EdgeInsets.only(
+                                        top: AppSpacing.xs - 2,
+                                      ),
                                       child: Text(
                                         [
-                                          if (entry.batch != 'Whole Class') entry.batch,
-                                          if (entry.room != null && entry.room!.isNotEmpty) 'Room ${entry.room}',
+                                          if (entry.batch != 'Whole Class')
+                                            entry.batch,
+                                          if (entry.room != null &&
+                                              entry.room!.isNotEmpty)
+                                            'Room ${entry.room}',
                                         ].join(' · '),
                                         style: GoogleFonts.inter(
                                           fontSize: 12,
@@ -1238,57 +1502,101 @@ class _TimelineLectureItem extends StatelessWidget {
                                         ),
                                       ),
                                     ),
-                                  Builder(builder: (context) {
-                                    if (attendanceRecords == null) return const SizedBox.shrink();
-                                    
-                                    String subj = entry.subject;
-                                    String comp = entry.component;
-                                    if (subj.toUpperCase().contains('DATA STRUCTURES') || subj.trim().toUpperCase() == 'DSA') {
-                                      subj = 'DSA';
-                                      if (comp.toUpperCase().contains('LAB') || comp.toUpperCase().contains('PRACTICAL')) comp = 'Lab';
-                                      else comp = 'Theory';
-                                    }
-                                    
-                                    final merged = ['DM', 'Discrete Mathematics', 'PnS', 'SnS', 'Python', 'PROGRAMMING WITH PYTHON', 'Signals and Systems', 'Principles of Economics and Managemen'];
-                                    String key = merged.contains(subj) ? '${subj}_Merged' : '${subj}_$comp';
-                                    
-                                    final record = attendanceRecords![key];
-                                    if (record == null) return const SizedBox.shrink();
-                                    
-                                    int p = record.present;
-                                    int a = record.absent;
-                                    double attendPct = (p + 1) / (p + a + 1) * 100;
-                                    double skipPct = p / (p + a + 1) * 100;
-                                    
-                                    return Padding(
-                                      padding: const EdgeInsets.only(top: 8.0),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: isDark ? sem.surfaceElevated2 : sem.borderSubtle.withValues(alpha: 0.5),
-                                          borderRadius: BorderRadius.circular(4),
+                                  Builder(
+                                    builder: (context) {
+                                      if (attendanceRecords == null)
+                                        return const SizedBox.shrink();
+
+                                      String subj = entry.subject;
+                                      String comp = entry.component;
+                                      if (subj.toUpperCase().contains(
+                                            'DATA STRUCTURES',
+                                          ) ||
+                                          subj.trim().toUpperCase() == 'DSA') {
+                                        subj = 'DSA';
+                                        if (comp.toUpperCase().contains(
+                                              'LAB',
+                                            ) ||
+                                            comp.toUpperCase().contains(
+                                              'PRACTICAL',
+                                            ))
+                                          comp = 'Lab';
+                                        else
+                                          comp = 'Theory';
+                                      }
+
+                                      final merged = [
+                                        'DM',
+                                        'Discrete Mathematics',
+                                        'PnS',
+                                        'SnS',
+                                        'Python',
+                                        'PROGRAMMING WITH PYTHON',
+                                        'Signals and Systems',
+                                        'Principles of Economics and Managemen',
+                                      ];
+                                      String key = merged.contains(subj)
+                                          ? '${subj}_Merged'
+                                          : '${subj}_$comp';
+
+                                      final record = attendanceRecords![key];
+                                      if (record == null)
+                                        return const SizedBox.shrink();
+
+                                      int p = record.present;
+                                      int a = record.absent;
+                                      double attendPct =
+                                          (p + 1) / (p + a + 1) * 100;
+                                      double skipPct = p / (p + a + 1) * 100;
+
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 8.0,
                                         ),
-                                        child: Text(
-                                          '🟢 If attend: ${attendPct.toStringAsFixed(1)}%  |  🔴 If skip: ${skipPct.toStringAsFixed(1)}%',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                            color: isDark ? Colors.white70 : sem.onSurfaceMuted,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: isDark
+                                                ? sem.surfaceElevated2
+                                                : sem.borderSubtle.withValues(
+                                                    alpha: 0.5,
+                                                  ),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '🟢 If attend: ${attendPct.toStringAsFixed(1)}%  |  🔴 If skip: ${skipPct.toStringAsFixed(1)}%',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: isDark
+                                                  ? Colors.white70
+                                                  : sem.onSurfaceMuted,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    );
-                                  }),
+                                      );
+                                    },
+                                  ),
                                 ],
                               ),
                             ),
                             if (isCancelled && idx == 0) ...[
                               const SizedBox(width: AppSpacing.sm),
                               Container(
-                                padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.sm,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
                                   color: sem.cancelled.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(AppRadius.full),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.full,
+                                  ),
                                 ),
                                 child: Text(
                                   'CANCELLED',
@@ -1303,10 +1611,17 @@ class _TimelineLectureItem extends StatelessWidget {
                             ] else if (isCurrent && idx == 0) ...[
                               const SizedBox(width: AppSpacing.sm),
                               Container(
-                                padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.sm,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: colorScheme.primary.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(AppRadius.full),
+                                  color: colorScheme.primary.withValues(
+                                    alpha: 0.15,
+                                  ),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.full,
+                                  ),
                                 ),
                                 child: Text(
                                   'NOW',
@@ -1321,10 +1636,15 @@ class _TimelineLectureItem extends StatelessWidget {
                             ] else if (isNext && !isCurrent && idx == 0) ...[
                               const SizedBox(width: AppSpacing.sm),
                               Container(
-                                padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.sm,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
                                   color: sem.accent.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(AppRadius.full),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.full,
+                                  ),
                                 ),
                                 child: Text(
                                   'NEXT',
@@ -1339,7 +1659,11 @@ class _TimelineLectureItem extends StatelessWidget {
                             ],
                             if (canEdit(entry) && entries.length > 1) ...[
                               const SizedBox(width: AppSpacing.sm),
-                              Icon(Icons.edit_rounded, size: 14, color: sem.onSurfaceMuted),
+                              Icon(
+                                Icons.edit_rounded,
+                                size: 14,
+                                color: sem.onSurfaceMuted,
+                              ),
                             ],
                           ],
                         );
@@ -1348,11 +1672,17 @@ class _TimelineLectureItem extends StatelessWidget {
                           return GestureDetector(
                             onTap: canEdit(entry) ? () => onEdit(entry) : null,
                             child: Container(
-                              margin: EdgeInsets.only(top: idx == 0 ? 0 : AppSpacing.md),
+                              margin: EdgeInsets.only(
+                                top: idx == 0 ? 0 : AppSpacing.md,
+                              ),
                               padding: EdgeInsets.all(AppSpacing.sm),
                               decoration: BoxDecoration(
-                                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
-                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.05)
+                                    : Colors.black.withValues(alpha: 0.03),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.md,
+                                ),
                               ),
                               child: content,
                             ),
@@ -1547,7 +1877,11 @@ class _ActionTile extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right_rounded, size: 20, color: sem.onSurfaceMuted),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: sem.onSurfaceMuted,
+              ),
             ],
           ),
         ),
@@ -1555,4 +1889,3 @@ class _ActionTile extends StatelessWidget {
     );
   }
 }
-

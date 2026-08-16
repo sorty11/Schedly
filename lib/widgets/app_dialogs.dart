@@ -64,53 +64,83 @@ class AppDialogs {
       builder: (ctx) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
-        contentPadding: const EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.lg, AppSpacing.x2l, AppSpacing.x2l),
-        titlePadding: const EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.x2l, AppSpacing.x2l, AppSpacing.sm),
-        title: Text(
-          title,
-          style: TextStyle(fontFamily: 'Outfit', 
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
-            color: isDestructive ? sem.error : null,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.xl),
           ),
+          contentPadding: const EdgeInsets.fromLTRB(
+            AppSpacing.x2l,
+            AppSpacing.lg,
+            AppSpacing.x2l,
+            AppSpacing.x2l,
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(
+            AppSpacing.x2l,
+            AppSpacing.x2l,
+            AppSpacing.x2l,
+            AppSpacing.sm,
+          ),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+              color: isDestructive ? sem.error : null,
+            ),
+          ),
+          content: Text(
+            message,
+            style: TextStyle(fontFamily: 'Inter', fontSize: 14, height: 1.5),
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            0,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
+          actions: [
+            OutlinedButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(80, 40),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+              ),
+              child: Text(
+                cancelText,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: isDestructive
+                    ? sem.error
+                    : Theme.of(context).colorScheme.primary,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(80, 40),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                elevation: 0,
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(
+                confirmText,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
-        content: Text(
-          message,
-          style: TextStyle(fontFamily: 'Inter', fontSize: 14, height: 1.5),
-        ),
-        actionsPadding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
-        actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(80, 40),
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-            ),
-            child: Text(
-              cancelText,
-              style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w500),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: isDestructive ? sem.error : Theme.of(context).colorScheme.primary,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(80, 40),
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-              elevation: 0,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              confirmText,
-              style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
       ),
     );
     return result ?? false;
@@ -129,76 +159,119 @@ class AppDialogs {
       builder: (ctx) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
-        contentPadding: const EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.sm, AppSpacing.x2l, AppSpacing.x2l),
-        icon: Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: iconColor.withValues(alpha: 0.10),
-            shape: BoxShape.circle,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.xl),
           ),
-          child: Icon(icon, color: iconColor, size: 26),
-        ),
-        iconPadding: const EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.x2l, AppSpacing.x2l, AppSpacing.sm),
-        title: Text(
-          title,
-          textAlign: TextAlign.center,
-          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, fontSize: 18),
-        ),
-        titlePadding: const EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.sm, AppSpacing.x2l, AppSpacing.xs),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Inter', fontSize: 14, height: 1.5),
+          contentPadding: const EdgeInsets.fromLTRB(
+            AppSpacing.x2l,
+            AppSpacing.sm,
+            AppSpacing.x2l,
+            AppSpacing.x2l,
+          ),
+          icon: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.10),
+              shape: BoxShape.circle,
             ),
-            if (resolution != null) ...[
-              const SizedBox(height: AppSpacing.lg),
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.lightbulb_outline_rounded, color: iconColor, size: 16),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        resolution,
-                        style: TextStyle(fontFamily: 'Inter', 
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: iconColor,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
+            child: Icon(icon, color: iconColor, size: 26),
+          ),
+          iconPadding: const EdgeInsets.fromLTRB(
+            AppSpacing.x2l,
+            AppSpacing.x2l,
+            AppSpacing.x2l,
+            AppSpacing.sm,
+          ),
+          title: Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+            ),
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(
+            AppSpacing.x2l,
+            AppSpacing.sm,
+            AppSpacing.x2l,
+            AppSpacing.xs,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  height: 1.5,
                 ),
               ),
-            ]
+              if (resolution != null) ...[
+                const SizedBox(height: AppSpacing.lg),
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.lightbulb_outline_rounded,
+                        color: iconColor,
+                        size: 16,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          resolution,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: iconColor,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actionsPadding: const EdgeInsets.fromLTRB(
+            AppSpacing.x2l,
+            AppSpacing.sm,
+            AppSpacing.x2l,
+            AppSpacing.x2l,
+          ),
+          actions: [
+            FilledButton(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(140, 44),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                elevation: 0,
+              ),
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                'Got it',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ],
         ),
-        actionsAlignment: MainAxisAlignment.center,
-        actionsPadding: const EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.sm, AppSpacing.x2l, AppSpacing.x2l),
-        actions: [
-          FilledButton(
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(140, 44),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-              elevation: 0,
-            ),
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Got it', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
       ),
     );
   }
@@ -213,10 +286,12 @@ class AppDialogs {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final iconColor = isError ? sem.error : sem.success;
-    final icon = isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded;
+    final icon = isError
+        ? Icons.error_outline_rounded
+        : Icons.check_circle_outline_rounded;
 
     final bgColor = isDark
-        ? const Color(0xFF1C1C2A).withValues(alpha: 0.75) 
+        ? const Color(0xFF1C1C2A).withValues(alpha: 0.75)
         : const Color(0xFF1A1A28).withValues(alpha: 0.75);
 
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -228,7 +303,10 @@ class AppDialogs {
             filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
             child: Container(
               color: bgColor,
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.md,
+              ),
               child: Row(
                 children: [
                   Container(
@@ -243,7 +321,8 @@ class AppDialogs {
                   Expanded(
                     child: Text(
                       message,
-                      style: TextStyle(fontFamily: 'Inter', 
+                      style: TextStyle(
+                        fontFamily: 'Inter',
                         fontWeight: FontWeight.w500,
                         fontSize: 13,
                         color: Colors.white,
@@ -255,7 +334,8 @@ class AppDialogs {
             ),
           ),
         ),
-        padding: EdgeInsets.zero, // Remove default padding to allow ClipRRect to cover fully
+        padding: EdgeInsets
+            .zero, // Remove default padding to allow ClipRRect to cover fully
         backgroundColor: Colors.transparent,
         behavior: SnackBarBehavior.floating,
         elevation: 0,

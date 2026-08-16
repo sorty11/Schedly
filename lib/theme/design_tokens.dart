@@ -16,7 +16,8 @@ class AppSpacing {
   static const double x6l = 128;
 
   // Workspace Margins
-  static const double workspacePadding = 32; // Outer padding for workspace content
+  static const double workspacePadding =
+      32; // Outer padding for workspace content
   static const double sidebarGap = 24; // Gap between sidebar and workspace
 }
 
@@ -26,7 +27,7 @@ class AppRadius {
   AppRadius._();
   static const double xs = 2;
   static const double sm = 4;
-  static const double md = 8;  // Standard for inputs, small cards
+  static const double md = 8; // Standard for inputs, small cards
   static const double lg = 12; // Maximum for large panels/dialogs
   static const double xl = 16;
   static const double x2l = 24;
@@ -65,7 +66,9 @@ class AppShadow {
 
   static List<BoxShadow> level1(Color primary, {bool isDark = false}) => [
     BoxShadow(
-      color: isDark ? Colors.black.withValues(alpha: 0.8) : Colors.black.withValues(alpha: 0.02),
+      color: isDark
+          ? Colors.black.withValues(alpha: 0.8)
+          : Colors.black.withValues(alpha: 0.02),
       blurRadius: 4,
       offset: const Offset(0, 2),
     ),
@@ -73,7 +76,9 @@ class AppShadow {
 
   static List<BoxShadow> level2(Color primary, {bool isDark = false}) => [
     BoxShadow(
-      color: isDark ? Colors.black.withValues(alpha: 1.0) : Colors.black.withValues(alpha: 0.04),
+      color: isDark
+          ? Colors.black.withValues(alpha: 1.0)
+          : Colors.black.withValues(alpha: 0.04),
       blurRadius: 12,
       offset: const Offset(0, 4),
     ),
@@ -81,7 +86,9 @@ class AppShadow {
 
   static List<BoxShadow> level3(Color primary, {bool isDark = false}) => [
     BoxShadow(
-      color: isDark ? Colors.black.withValues(alpha: 1.0) : Colors.black.withValues(alpha: 0.08),
+      color: isDark
+          ? Colors.black.withValues(alpha: 1.0)
+          : Colors.black.withValues(alpha: 0.08),
       blurRadius: 24,
       offset: const Offset(0, 12),
       spreadRadius: -4,
@@ -90,7 +97,9 @@ class AppShadow {
 
   static List<BoxShadow> level4(Color primary, {bool isDark = false}) => [
     BoxShadow(
-      color: isDark ? Colors.black.withValues(alpha: 1.0) : Colors.black.withValues(alpha: 0.12),
+      color: isDark
+          ? Colors.black.withValues(alpha: 1.0)
+          : Colors.black.withValues(alpha: 0.12),
       blurRadius: 48,
       offset: const Offset(0, 24),
       spreadRadius: -8,
@@ -109,17 +118,17 @@ class AppBreakpoints {
 // ─── Touch Targets ────────────────────────────────────────────────────────────
 class AppTouchTarget {
   AppTouchTarget._();
-  static const double min = 44; 
-  static const double comfortable = 48; 
+  static const double min = 44;
+  static const double comfortable = 48;
 }
 
 // ─── Icon Sizes ───────────────────────────────────────────────────────────────
 class AppIconSize {
   AppIconSize._();
-  static const double sm = 16; 
-  static const double md = 20; 
-  static const double lg = 24; 
-  static const double xl = 32; 
+  static const double sm = 16;
+  static const double md = 20;
+  static const double lg = 24;
+  static const double xl = 32;
 }
 
 // ─── Neumorphism (DEPRECATED FOR PHOENIX) ─────────────────────────────────────
@@ -128,7 +137,9 @@ class AppIconSize {
 class AppNeumorphism {
   AppNeumorphism._();
 
-  static List<BoxShadow> elevated({bool isDark = false}) => AppShadow.level1(Colors.transparent, isDark: isDark);
+  static List<BoxShadow> elevated({bool isDark = false}) =>
+      AppShadow.level1(Colors.transparent, isDark: isDark);
   static List<BoxShadow> inset({bool isDark = false}) => [];
-  static List<BoxShadow> hero({bool isDark = false}) => AppShadow.level2(Colors.transparent, isDark: isDark);
+  static List<BoxShadow> hero({bool isDark = false}) =>
+      AppShadow.level2(Colors.transparent, isDark: isDark);
 }

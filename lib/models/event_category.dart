@@ -8,7 +8,7 @@ enum EventCategory {
   library,
   mentoring,
   sports,
-  freeSlot
+  freeSlot,
 }
 
 extension EventCategoryExtension on EventCategory {
@@ -69,12 +69,14 @@ extension EventCategoryExtension on EventCategory {
   static EventCategory inferFromSubject(String subject) {
     final l = subject.toLowerCase();
     if (l.contains('lunch')) return EventCategory.lunch;
-    if (l.contains('free slot') || l.contains('freeslot')) return EventCategory.freeSlot;
+    if (l.contains('free slot') || l.contains('freeslot'))
+      return EventCategory.freeSlot;
     if (l.contains('break')) return EventCategory.breakTime;
     if (l.contains('mentor')) return EventCategory.mentoring;
     if (l.contains('sport')) return EventCategory.sports;
     if (l.contains('library')) return EventCategory.library;
-    if (l.contains('activity') || l.contains('club')) return EventCategory.activity;
+    if (l.contains('activity') || l.contains('club'))
+      return EventCategory.activity;
     return EventCategory.academic;
   }
 }

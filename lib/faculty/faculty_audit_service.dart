@@ -23,7 +23,7 @@ class FacultyAuditService {
     try {
       final uid = AppSettings.facultyId;
       if (uid == null) return;
-      
+
       final name = AppSettings.facultyName ?? 'Unknown Faculty';
 
       await FirebaseFirestore.instance.collection('faculty_audit_log').add({

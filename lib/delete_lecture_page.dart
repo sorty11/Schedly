@@ -14,12 +14,10 @@ class DeleteLecturePage extends StatefulWidget {
   const DeleteLecturePage({super.key});
 
   @override
-  State<DeleteLecturePage> createState() =>
-      _DeleteLecturePageState();
+  State<DeleteLecturePage> createState() => _DeleteLecturePageState();
 }
 
-class _DeleteLecturePageState
-    extends State<DeleteLecturePage> {
+class _DeleteLecturePageState extends State<DeleteLecturePage> {
   String selectedDay = 'Monday';
 
   String? division;
@@ -42,8 +40,7 @@ class _DeleteLecturePageState
   }
 
   Future<void> _loadDivision() async {
-    final prefs =
-        await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
 
     division = prefs.getString('selected_division');
     if (division != null) {
@@ -61,13 +58,10 @@ class _DeleteLecturePageState
         .snapshots();
   }
 
-  Future<void> _deleteLecture(
-    String docId,
-    String subject,
-  ) async {
+  Future<void> _deleteLecture(String docId, String subject) async {
     if (_isDeleting) return;
     setState(() => _isDeleting = true);
-    
+
     final shouldDelete = await AppDialogs.showConfirm(
       context: context,
       title: 'Delete Lecture',
@@ -123,38 +117,23 @@ class _DeleteLecturePageState
   @override
   Widget build(BuildContext context) {
     if (division == null) {
-      return const Scaffold(
-        body: Center(
-          child:
-              CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Delete Lecture',
-        ),
-      ),
+      appBar: AppBar(title: const Text('Delete Lecture')),
       body: Padding(
-        padding:
-            EdgeInsets.all(AppSpacing.lg),
+        padding: EdgeInsets.all(AppSpacing.lg),
         child: Column(
           children: [
             DropdownButtonFormField<String>(
               initialValue: selectedDay,
-              decoration:
-                  const InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Day',
-                border:
-                    OutlineInputBorder(),
+                border: OutlineInputBorder(),
               ),
               items: days.map((day) {
-                return DropdownMenuItem(
-                  value: day,
-                  child: Text(day),
-                );
+                return DropdownMenuItem(value: day, child: Text(day));
               }).toList(),
               onChanged: (value) {
                 if (value != null) {
@@ -165,18 +144,13 @@ class _DeleteLecturePageState
               },
             ),
 
-            const SizedBox(
-              height: 16,
-            ),
+            const SizedBox(height: 16),
 
             Expanded(
-              child: StreamBuilder<
-                  QuerySnapshot>(
+              child: StreamBuilder<QuerySnapshot>(
                 stream: _lecturesStream,
-                builder:
-                    (context, snapshot) {
-                  if (!snapshot.hasData ||
-                      snapshot.data!.docs.isEmpty) {
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                     return const Center(
                       child: FloatingEmptyState(
                         icon: Icons.event_busy_rounded,
@@ -186,36 +160,30 @@ class _DeleteLecturePageState
                     );
                   }
 
-                  final docs =
-                      snapshot.data!.docs;
+                  final docs = snapshot.data!.docs;
 
                   return ListView.builder(
-                    itemCount:
-                        docs.length,
-                    itemBuilder:
-                        (
-                      context,
-                      index,
-                    ) {
-                      final doc =
-                          docs[index];
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                      final doc = docs[index];
 
-                      final lecture =
-                          doc.data()
-                              as Map<
-                                  String,
-                                  dynamic>;
+                      final lecture = doc.data() as Map<String, dynamic>;
 
                       return AnimatedListTile(
                         backgroundColor: Theme.of(context).colorScheme.surface,
                         title: Text(lecture['subject'] ?? ''),
-                        subtitle: Text('${lecture['time']} • ${lecture['room']}'),
+                        subtitle: Text(
+                          '${lecture['time']} • ${lecture['room']}',
+                        ),
                         trailing: AnimatedIconButton(
                           icon: Icon(
                             Icons.delete,
-                            color: Theme.of(context).extension<AppSemanticColors>()!.cancelled,
+                            color: Theme.of(
+                              context,
+                            ).extension<AppSemanticColors>()!.cancelled,
                           ),
-                          onPressed: () => _deleteLecture(doc.id, lecture['subject'] ?? ''),
+                          onPressed: () =>
+                              _deleteLecture(doc.id, lecture['subject'] ?? ''),
                         ),
                       );
                     },

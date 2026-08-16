@@ -20,7 +20,9 @@ class FeatureDiscoveryService {
       builder: (context) => _FeatureCard(
         onDismiss: () async {
           entry?.remove();
-          await TutorialStorageService.setLastSeenFeatureVersion(currentAppFeatureVersion);
+          await TutorialStorageService.setLastSeenFeatureVersion(
+            currentAppFeatureVersion,
+          );
         },
       ),
     );
@@ -30,7 +32,7 @@ class FeatureDiscoveryService {
 
 class _FeatureCard extends StatelessWidget {
   final VoidCallback onDismiss;
-  
+
   const _FeatureCard({required this.onDismiss});
 
   @override
@@ -53,17 +55,23 @@ class _FeatureCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.x2l),
               Text(
                 '✨ NEW FEATURE',
-                style: TextStyle(fontFamily: 'Inter', 
+                style: TextStyle(
+                  fontFamily: 'Inter',
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
-                  color: Theme.of(context).extension<AppSemanticColors>()?.conducted ?? Colors.green,
+                  color:
+                      Theme.of(
+                        context,
+                      ).extension<AppSemanticColors>()?.conducted ??
+                      Colors.green,
                   letterSpacing: 1.5,
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
                 'Flagship Onboarding',
-                style: TextStyle(fontFamily: 'Outfit', 
+                style: TextStyle(
+                  fontFamily: 'Outfit',
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -73,9 +81,12 @@ class _FeatureCard extends StatelessWidget {
               Text(
                 'Meet CC, your new Campus Companion! Experience the redesigned interactive tutorials.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'Inter', 
+                style: TextStyle(
+                  fontFamily: 'Inter',
                   fontSize: 15,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
                   height: 1.4,
                 ),
               ),
@@ -85,7 +96,14 @@ class _FeatureCard extends StatelessWidget {
                 style: FilledButton.styleFrom(
                   minimumSize: const Size(double.infinity, 50),
                 ),
-                child: Text('Awesome!', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
+                child: Text(
+                  'Awesome!',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),

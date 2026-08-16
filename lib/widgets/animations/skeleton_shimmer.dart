@@ -18,7 +18,9 @@ class _SkeletonShimmerState extends State<SkeletonShimmer>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2500), // Slower, more elegant sweep
+      duration: const Duration(
+        milliseconds: 2500,
+      ), // Slower, more elegant sweep
     )..repeat();
   }
 
@@ -74,7 +76,9 @@ class SkeletonBlock extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+        color: isDark
+            ? Colors.white.withOpacity(0.05)
+            : Colors.black.withOpacity(0.05),
         borderRadius: BorderRadius.circular(borderRadius),
       ),
     );

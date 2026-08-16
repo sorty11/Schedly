@@ -5,13 +5,18 @@ class AnimatedAuthBackground extends StatefulWidget {
   final Widget child;
   final bool isCenteredLogo;
 
-  const AnimatedAuthBackground({super.key, required this.child, this.isCenteredLogo = false});
+  const AnimatedAuthBackground({
+    super.key,
+    required this.child,
+    this.isCenteredLogo = false,
+  });
 
   @override
   State<AnimatedAuthBackground> createState() => _AnimatedAuthBackgroundState();
 }
 
-class _AnimatedAuthBackgroundState extends State<AnimatedAuthBackground> with TickerProviderStateMixin {
+class _AnimatedAuthBackgroundState extends State<AnimatedAuthBackground>
+    with TickerProviderStateMixin {
   late AnimationController _auroraController;
   late AnimationController _waveController;
   late AnimationController _starsController;
@@ -59,11 +64,7 @@ class _AnimatedAuthBackgroundState extends State<AnimatedAuthBackground> with Ti
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFF030712),
-                Color(0xFF071321),
-                Color(0xFF0B1D33),
-              ],
+              colors: [Color(0xFF030712), Color(0xFF071321), Color(0xFF0B1D33)],
             ),
           ),
         ),
@@ -130,7 +131,9 @@ class _AnimatedAuthBackgroundState extends State<AnimatedAuthBackground> with Ti
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF00E5FF).withValues(alpha: 0.04),
+                          color: const Color(
+                            0xFF00E5FF,
+                          ).withValues(alpha: 0.04),
                           blurRadius: 100,
                           spreadRadius: 40,
                         ),
@@ -160,20 +163,21 @@ class _AuroraPainter extends CustomPainter {
     // Primary electric blue blob
     final cx1 = size.width * (0.3 + 0.4 * math.sin(progress * math.pi));
     final cy1 = size.height * (0.4 + 0.3 * math.cos(progress * math.pi));
-    
+
     paint.color = const Color(0xFF00E5FF).withValues(alpha: 0.12);
     canvas.drawCircle(Offset(cx1, cy1), size.width * 0.45, paint);
 
     // Secondary electric blue blob (slightly darker tone of blue)
     final cx2 = size.width * (0.7 - 0.4 * math.cos(progress * math.pi));
     final cy2 = size.height * (0.6 - 0.2 * math.sin(progress * math.pi));
-    
+
     paint.color = const Color(0xFF00A2FF).withValues(alpha: 0.10);
     canvas.drawCircle(Offset(cx2, cy2), size.width * 0.4, paint);
   }
 
   @override
-  bool shouldRepaint(covariant _AuroraPainter oldDelegate) => oldDelegate.progress != progress;
+  bool shouldRepaint(covariant _AuroraPainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }
 
 class _WavePainter extends CustomPainter {
@@ -191,7 +195,7 @@ class _WavePainter extends CustomPainter {
 
     for (int i = 0; i < waveCount; i++) {
       final path = Path();
-      
+
       // Phase shifts smoothly over the 18 seconds
       final phase = progress * 2 * math.pi + (i * math.pi / waveCount);
       final amplitude = 25.0 + (i * 12.0);
@@ -201,7 +205,9 @@ class _WavePainter extends CustomPainter {
       for (double x = 0; x <= size.width; x += 10) {
         final normalizedX = x / size.width;
         // A single frequency across width, adjusted slightly per wave for depth
-        final y = heightOffset + math.sin(normalizedX * math.pi * 1.5 + phase) * amplitude;
+        final y =
+            heightOffset +
+            math.sin(normalizedX * math.pi * 1.5 + phase) * amplitude;
         path.lineTo(x, y);
       }
 
@@ -210,7 +216,7 @@ class _WavePainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.0
         ..color = baseColor.withValues(alpha: 0.2 - (i * 0.05));
-      
+
       canvas.drawPath(path, paint);
 
       // Draw the outer blurred glow for each line
@@ -219,13 +225,14 @@ class _WavePainter extends CustomPainter {
         ..strokeWidth = 4.0
         ..color = baseColor.withValues(alpha: 0.06 - (i * 0.01))
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
-        
+
       canvas.drawPath(path, glowPaint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant _WavePainter oldDelegate) => oldDelegate.progress != progress;
+  bool shouldRepaint(covariant _WavePainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }
 
 class _StarsPainter extends CustomPainter {
@@ -243,11 +250,13 @@ class _StarsPainter extends CustomPainter {
       final x = random.nextDouble() * size.width;
       final y = random.nextDouble() * size.height;
       final sizeStar = random.nextDouble() * 1.5 + 0.5;
-      
+
       final phaseOffset = random.nextDouble() * math.pi * 2;
       // Sine wave for smooth fading, never completely disappearing
-      final opacity = 0.1 + 0.4 * (0.5 * (1 + math.sin(progress * math.pi * 2 + phaseOffset)));
-      
+      final opacity =
+          0.1 +
+          0.4 * (0.5 * (1 + math.sin(progress * math.pi * 2 + phaseOffset)));
+
       // mostly white, some tinted blue
       final isBlueTint = random.nextBool();
       final starColor = isBlueTint ? const Color(0xFFD4FBFF) : Colors.white;
@@ -258,5 +267,6 @@ class _StarsPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _StarsPainter oldDelegate) => oldDelegate.progress != progress;
+  bool shouldRepaint(covariant _StarsPainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }

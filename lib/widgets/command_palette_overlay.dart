@@ -31,7 +31,7 @@ class CommandPaletteOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Center(
       child: Material(
         color: Colors.transparent,
@@ -43,7 +43,9 @@ class CommandPaletteOverlay extends StatelessWidget {
               width: 600,
               height: 400,
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF161616).withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.85),
+                color: isDark
+                    ? const Color(0xFF161616).withValues(alpha: 0.85)
+                    : Colors.white.withValues(alpha: 0.85),
                 borderRadius: BorderRadius.circular(AppRadius.lg),
                 border: Border.all(color: sem.borderSubtle, width: 1),
                 boxShadow: AppShadow.level4(sem.accent, isDark: isDark),
@@ -55,7 +57,11 @@ class CommandPaletteOverlay extends StatelessWidget {
                     padding: const EdgeInsets.all(AppSpacing.lg),
                     child: Row(
                       children: [
-                        Icon(Icons.search, color: sem.onSurfaceMuted, size: AppIconSize.lg),
+                        Icon(
+                          Icons.search,
+                          color: sem.onSurfaceMuted,
+                          size: AppIconSize.lg,
+                        ),
                         const SizedBox(width: AppSpacing.md),
                         Expanded(
                           child: Text(
@@ -68,9 +74,14 @@ class CommandPaletteOverlay extends StatelessWidget {
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF222222) : const Color(0xFFF0F0F0),
+                            color: isDark
+                                ? const Color(0xFF222222)
+                                : const Color(0xFFF0F0F0),
                             borderRadius: BorderRadius.circular(AppRadius.sm),
                           ),
                           child: Text(
@@ -82,19 +93,23 @@ class CommandPaletteOverlay extends StatelessWidget {
                               color: sem.onSurfaceMuted,
                             ),
                           ),
-                        )
+                        ),
                       ],
                     ),
                   ),
                   Divider(height: 1, color: sem.borderSubtle),
-                  
+
                   // Content Shell
                   Expanded(
                     child: Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.auto_awesome, size: 48, color: sem.onSurfaceMuted.withValues(alpha: 0.3)),
+                          Icon(
+                            Icons.auto_awesome,
+                            size: 48,
+                            color: sem.onSurfaceMuted.withValues(alpha: 0.3),
+                          ),
                           const SizedBox(height: AppSpacing.lg),
                           Text(
                             'Command Palette coming soon',
@@ -108,7 +123,7 @@ class CommandPaletteOverlay extends StatelessWidget {
                         ],
                       ),
                     ),
-                  )
+                  ),
                 ],
               ),
             ),

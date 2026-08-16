@@ -14,7 +14,8 @@ class AboutSchedlyPage extends StatefulWidget {
   State<AboutSchedlyPage> createState() => _AboutSchedlyPageState();
 }
 
-class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerProviderStateMixin {
+class _AboutSchedlyPageState extends State<AboutSchedlyPage>
+    with SingleTickerProviderStateMixin {
   String _version = 'Loading...';
   String _buildNumber = '';
   String _appName = 'Schedly';
@@ -26,12 +27,12 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
   void initState() {
     super.initState();
     _loadPackageInfo();
-    
+
     _logoController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
-    
+
     _logoFloatAnimation = Tween<double>(begin: -6.0, end: 6.0).animate(
       CurvedAnimation(parent: _logoController, curve: Curves.easeInOutSine),
     );
@@ -64,7 +65,8 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
       ),
       child: Text(
         title.toUpperCase(),
-        style: TextStyle(fontFamily: 'Inter', 
+        style: TextStyle(
+          fontFamily: 'Inter',
           fontSize: 12,
           fontWeight: FontWeight.w700,
           letterSpacing: 1.2,
@@ -74,8 +76,6 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
     );
   }
 
-
-
   Widget _buildCheckItem(String text) {
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
     return Padding(
@@ -83,12 +83,17 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.check_circle_rounded, size: 20, color: semanticColors.success),
+          Icon(
+            Icons.check_circle_rounded,
+            size: 20,
+            color: semanticColors.success,
+          ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
               text,
-              style: TextStyle(fontFamily: 'Inter', 
+              style: TextStyle(
+                fontFamily: 'Inter',
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -103,7 +108,10 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
   Widget _buildLegalTile(String title, IconData icon, VoidCallback onTap) {
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
     return AnimatedListTile(
-      contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.sm,
+      ),
       onTap: onTap,
       leading: Container(
         width: 40,
@@ -112,11 +120,16 @@ class _AboutSchedlyPageState extends State<AboutSchedlyPage> with SingleTickerPr
           color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
-        child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
+        child: Icon(
+          icon,
+          color: Theme.of(context).colorScheme.primary,
+          size: 20,
+        ),
       ),
       title: Text(
         title,
-        style: TextStyle(fontFamily: 'Inter', 
+        style: TextStyle(
+          fontFamily: 'Inter',
           fontWeight: FontWeight.w600,
           fontSize: 14,
           color: Theme.of(context).colorScheme.onSurface,
@@ -244,14 +257,19 @@ Any account found abusing the system, exploiting vulnerabilities, or harassing o
                         ],
                       ),
                       child: const Center(
-                        child: Icon(Icons.school_rounded, size: 48, color: Colors.white),
+                        child: Icon(
+                          Icons.school_rounded,
+                          size: 48,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.x2l),
                   Text(
                     _appName,
-                    style: TextStyle(fontFamily: 'Outfit', 
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
                       fontSize: 32,
                       fontWeight: FontWeight.w800,
                       color: colorScheme.onSurface,
@@ -261,7 +279,8 @@ Any account found abusing the system, exploiting vulnerabilities, or harassing o
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     'Smart Academic Companion',
-                    style: TextStyle(fontFamily: 'Inter', 
+                    style: TextStyle(
+                      fontFamily: 'Inter',
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: colorScheme.primary,
@@ -272,7 +291,8 @@ Any account found abusing the system, exploiting vulnerabilities, or harassing o
                   Text(
                     'Designed to simplify academic life by helping students, Subject Representatives (SRs), and Class Representatives (CRs) manage timetables, lectures, analytics, announcements, replacements, and academic workflows through a beautiful offline-first experience.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontFamily: 'Inter', 
+                    style: TextStyle(
+                      fontFamily: 'Inter',
                       fontSize: 14,
                       height: 1.5,
                       color: semanticColors.onSurfaceMuted,
@@ -304,7 +324,10 @@ Any account found abusing the system, exploiting vulnerabilities, or harassing o
                           color: colorScheme.primary.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.info_outline_rounded, color: colorScheme.primary),
+                        child: Icon(
+                          Icons.info_outline_rounded,
+                          color: colorScheme.primary,
+                        ),
                       ),
                       const SizedBox(width: AppSpacing.lg),
                       Expanded(
@@ -315,7 +338,8 @@ Any account found abusing the system, exploiting vulnerabilities, or harassing o
                             children: [
                               Text(
                                 'Version $_version',
-                                style: TextStyle(fontFamily: 'Outfit', 
+                                style: TextStyle(
+                                  fontFamily: 'Outfit',
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: colorScheme.onSurface,
@@ -323,7 +347,8 @@ Any account found abusing the system, exploiting vulnerabilities, or harassing o
                               ),
                               Text(
                                 'Build $_buildNumber',
-                                style: TextStyle(fontFamily: 'Inter', 
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
                                   fontSize: 13,
                                   color: semanticColors.onSurfaceMuted,
                                 ),
@@ -381,11 +406,14 @@ Any account found abusing the system, exploiting vulnerabilities, or harassing o
                   padding: EdgeInsets.all(AppSpacing.x2l),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(AppRadius.xl),
-                    border: Border.all(color: colorScheme.primary.withValues(alpha: 0.2)),
+                    border: Border.all(
+                      color: colorScheme.primary.withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Text(
                     'Schedly is built specifically for colleges to modernize timetable management, lecture tracking, communication, and analytics. It provides an intuitive experience for Students, Subject Representatives, and Class Representatives while remaining fast, reliable, and offline-capable.',
-                    style: TextStyle(fontFamily: 'Inter', 
+                    style: TextStyle(
+                      fontFamily: 'Inter',
                       fontSize: 14,
                       height: 1.6,
                       color: colorScheme.onSurface,
@@ -408,18 +436,38 @@ Any account found abusing the system, exploiting vulnerabilities, or harassing o
                 clipBehavior: Clip.antiAlias,
                 child: Column(
                   children: [
-                    _buildLegalTile('Privacy Policy', Icons.privacy_tip_outlined, _showPrivacyPolicy),
-                    Divider(height: 1, color: semanticColors.borderSubtle, indent: 64),
-                    _buildLegalTile('Terms & Conditions', Icons.gavel_rounded, _showTerms),
-                    Divider(height: 1, color: semanticColors.borderSubtle, indent: 64),
-                    _buildLegalTile('Open Source Licenses', Icons.code_rounded, () {
-                      showLicensePage(
-                        context: context,
-                        applicationName: _appName,
-                        applicationVersion: _version,
-                        applicationLegalese: '© 2026 $_appName',
-                      );
-                    }),
+                    _buildLegalTile(
+                      'Privacy Policy',
+                      Icons.privacy_tip_outlined,
+                      _showPrivacyPolicy,
+                    ),
+                    Divider(
+                      height: 1,
+                      color: semanticColors.borderSubtle,
+                      indent: 64,
+                    ),
+                    _buildLegalTile(
+                      'Terms & Conditions',
+                      Icons.gavel_rounded,
+                      _showTerms,
+                    ),
+                    Divider(
+                      height: 1,
+                      color: semanticColors.borderSubtle,
+                      indent: 64,
+                    ),
+                    _buildLegalTile(
+                      'Open Source Licenses',
+                      Icons.code_rounded,
+                      () {
+                        showLicensePage(
+                          context: context,
+                          applicationName: _appName,
+                          applicationVersion: _version,
+                          applicationLegalese: '© 2026 $_appName',
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -435,15 +483,30 @@ Any account found abusing the system, exploiting vulnerabilities, or harassing o
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('Made with ', style: TextStyle(fontFamily: 'Inter', color: semanticColors.onSurfaceMuted, fontSize: 13)),
+                      Text(
+                        'Made with ',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          color: semanticColors.onSurfaceMuted,
+                          fontSize: 13,
+                        ),
+                      ),
                       const Icon(Icons.favorite, color: Colors.red, size: 16),
-                      Text(' for Students', style: TextStyle(fontFamily: 'Inter', color: semanticColors.onSurfaceMuted, fontSize: 13)),
+                      Text(
+                        ' for Students',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          color: semanticColors.onSurfaceMuted,
+                          fontSize: 13,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     '© 2026 $_appName',
-                    style: TextStyle(fontFamily: 'Inter', 
+                    style: TextStyle(
+                      fontFamily: 'Inter',
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: semanticColors.onSurfaceMuted,
@@ -452,7 +515,8 @@ Any account found abusing the system, exploiting vulnerabilities, or harassing o
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     'Designed & Developed by Ayaan Patel',
-                    style: TextStyle(fontFamily: 'Inter', 
+                    style: TextStyle(
+                      fontFamily: 'Inter',
                       fontSize: 12,
                       color: semanticColors.onSurfaceMuted,
                     ),
@@ -478,17 +542,24 @@ class _LegalDocumentSheet extends StatelessWidget {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     final paragraphs = content.trim().split('\n\n');
 
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.85,
       ),
-      padding: EdgeInsets.fromLTRB(AppSpacing.x2l, AppSpacing.lg, AppSpacing.x2l, AppSpacing.x4l),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.x2l,
+        AppSpacing.lg,
+        AppSpacing.x2l,
+        AppSpacing.x4l,
+      ),
       decoration: BoxDecoration(
         color: isDark ? sem.surfaceElevated2 : colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.x2l)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppRadius.x2l),
+        ),
       ),
       child: SafeArea(
         top: false,
@@ -512,7 +583,8 @@ class _LegalDocumentSheet extends StatelessWidget {
                 Expanded(
                   child: Text(
                     title,
-                    style: TextStyle(fontFamily: 'Inter', 
+                    style: TextStyle(
+                      fontFamily: 'Inter',
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       color: colorScheme.onSurface,
@@ -535,20 +607,24 @@ class _LegalDocumentSheet extends StatelessWidget {
               child: ListView.separated(
                 padding: EdgeInsets.zero,
                 itemCount: paragraphs.length,
-                separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.lg),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: AppSpacing.lg),
                 itemBuilder: (context, index) {
                   final lines = paragraphs[index].trim().split('\n');
                   if (lines.isEmpty) return const SizedBox();
-                  
+
                   final sectionTitle = lines.first;
-                  final sectionBody = lines.length > 1 ? lines.sublist(1).join('\n') : '';
+                  final sectionBody = lines.length > 1
+                      ? lines.sublist(1).join('\n')
+                      : '';
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         sectionTitle,
-                        style: TextStyle(fontFamily: 'Inter', 
+                        style: TextStyle(
+                          fontFamily: 'Inter',
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                           color: colorScheme.primary,
@@ -558,7 +634,8 @@ class _LegalDocumentSheet extends StatelessWidget {
                         const SizedBox(height: AppSpacing.xs),
                         Text(
                           sectionBody,
-                          style: TextStyle(fontFamily: 'Inter', 
+                          style: TextStyle(
+                            fontFamily: 'Inter',
                             fontSize: 14,
                             height: 1.6,
                             color: colorScheme.onSurface,
