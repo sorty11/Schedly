@@ -482,7 +482,9 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                   color: isDark ? sem.surfaceElevated : colorScheme.surface,
                   border: Border(
                     bottom: BorderSide(
-                      color: isDark ? sem.borderSubtle : sem.borderSubtle.withValues(alpha: 0.5),
+                      color: isDark
+                          ? sem.borderSubtle
+                          : sem.borderSubtle.withValues(alpha: 0.5),
                       width: 1,
                     ),
                   ),
@@ -517,7 +519,9 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                               child: AnimatedContainer(
                                 duration: AppDuration.standard,
                                 curve: AppCurves.standard,
-                                margin: EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                                margin: EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.xs,
+                                ),
                                 padding: EdgeInsets.symmetric(
                                   horizontal: AppSpacing.xl,
                                   vertical: AppSpacing.md,
@@ -526,12 +530,18 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                                   color: isSelected
                                       ? colorScheme.primary
                                       : isToday
-                                      ? colorScheme.primary.withValues(alpha: 0.08)
+                                      ? colorScheme.primary.withValues(
+                                          alpha: 0.08,
+                                        )
                                       : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(AppRadius.full),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.full,
+                                  ),
                                   border: isToday && !isSelected
                                       ? Border.all(
-                                          color: colorScheme.primary.withValues(alpha: 0.3),
+                                          color: colorScheme.primary.withValues(
+                                            alpha: 0.3,
+                                          ),
                                           width: 1,
                                         )
                                       : Border.all(
@@ -546,7 +556,9 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                                       _dayShort[index],
                                       style: GoogleFonts.inter(
                                         fontSize: 15,
-                                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w700
+                                            : FontWeight.w600,
                                         color: isSelected
                                             ? colorScheme.onPrimary
                                             : isToday

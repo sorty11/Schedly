@@ -13,6 +13,7 @@ import 'widgets/animations/floating_empty_state.dart';
 import 'widgets/timetable_studio_sheet.dart';
 import 'timetable_manager.dart';
 import 'models/event_category.dart';
+import 'services/timetable_event_service.dart';
 
 import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/staggered_list_item.dart';
@@ -26,7 +27,11 @@ class MonthlyTimetablePage extends StatefulWidget {
 }
 
 class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
-  DateTime _currentMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
+  DateTime _currentMonth = DateTime(
+    DateTime.now().year,
+    DateTime.now().month,
+    1,
+  );
   DateTime _selectedDate = DateTime.now();
 
   bool _isLoading = true;
@@ -41,17 +46,29 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
   Future<void> _loadAllTimetables() async {
     setState(() => _isLoading = true);
     try {
-      final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      final days = [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+        'Sunday',
+      ];
       final Map<String, List<TimetableEntry>> loaded = {};
-      
-      await Future.wait(days.map((day) async {
-        final snap = await FirebaseFirestore.instance
-            .collection('timetables')
-            .doc(widget.division)
-            .collection(day)
-            .get();
-        loaded[day] = snap.docs.map((d) => TimetableEntry.fromFirestore(d)).toList();
-      }));
+
+      await Future.wait(
+        days.map((day) async {
+          final snap = await FirebaseFirestore.instance
+              .collection('timetables')
+              .doc(widget.division)
+              .collection(day)
+              .get();
+          loaded[day] = snap.docs
+              .map((d) => TimetableEntry.fromFirestore(d))
+              .toList();
+        }),
+      );
 
       if (mounted) {
         setState(() {
@@ -73,9 +90,11 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
   ResolvedTimetable _resolveForDate(DateTime date) {
     final dayName = DateFormat('EEEE').format(date);
     final rawEntries = _rawTimetables[dayName] ?? [];
-    
-    final userBatch = AppSettings.currentRole == UserRole.student ? AppSettings.studentBatch : null;
-    
+
+    final userBatch = AppSettings.currentRole == UserRole.student
+        ? AppSettings.studentBatch
+        : null;
+
     return TimetableResolverService.resolve(
       rawEntries: rawEntries,
       targetDateStr: _formatDateStr(date),
@@ -114,11 +133,11 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
       _loadAllTimetables();
     }
   }
-  
+
   Future<void> _declareHoliday(DateTime date) async {
     final dayName = DateFormat('EEEE').format(date);
     final dateStr = _formatDateStr(date);
-    
+
     final holidayEntry = TimetableEntry(
       id: FirebaseFirestore.instance.collection('timetables').doc().id,
       subject: 'Holiday',
@@ -131,7 +150,7 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
       validForDate: dateStr,
       hiddenOnDates: const [],
     );
-    
+
     await TimetableManager.addLecture(
       division: widget.division,
       day: dayName,
@@ -139,15 +158,28 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
     );
     _loadAllTimetables();
   }
-  
-  Future<void> _removeHoliday(DateTime date, TimetableEntry holidayEntry) async {
+
+  Future<void> _removeHoliday(
+    DateTime date,
+    TimetableEntry holidayEntry,
+  ) async {
     final dayName = DateFormat('EEEE').format(date);
     await FirebaseFirestore.instance
         .collection('timetables')
         .doc(widget.division)
         .collection(dayName)
         .doc(holidayEntry.id)
-        .delete();
+        .delete()
+        .timeout(const Duration(seconds: 3), onTimeout: () => null);
+
+    TimetableEventService.handleModification(
+      division: widget.division,
+      day: dayName,
+      oldEntry: holidayEntry,
+      newEntry: null,
+      isDelete: true,
+    ).catchError((_) {});
+
     _loadAllTimetables();
   }
 
@@ -166,7 +198,7 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
     ];
     return colors[subject.hashCode.abs() % colors.length];
   }
-  
+
   IconData _subjectIcon(String subject) {
     switch (subject.toLowerCase()) {
       case 'mathematics':
@@ -196,12 +228,20 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
   }
 
   Widget _buildCalendarGrid(AppSemanticColors sem, ColorScheme colorScheme) {
-    final daysInMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
-    final firstDayWeekday = DateTime(_currentMonth.year, _currentMonth.month, 1).weekday;
+    final daysInMonth = DateTime(
+      _currentMonth.year,
+      _currentMonth.month + 1,
+      0,
+    ).day;
+    final firstDayWeekday = DateTime(
+      _currentMonth.year,
+      _currentMonth.month,
+      1,
+    ).weekday;
 
     List<Widget> dayWidgets = [];
     final weekDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-    
+
     for (var w in weekDays) {
       dayWidgets.add(
         Center(
@@ -223,22 +263,31 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
 
     for (int i = 1; i <= daysInMonth; i++) {
       final d = DateTime(_currentMonth.year, _currentMonth.month, i);
-      final isSelected = d.year == _selectedDate.year && d.month == _selectedDate.month && d.day == _selectedDate.day;
-      final isToday = d.year == DateTime.now().year && d.month == DateTime.now().month && d.day == DateTime.now().day;
-      
+      final isSelected =
+          d.year == _selectedDate.year &&
+          d.month == _selectedDate.month &&
+          d.day == _selectedDate.day;
+      final isToday =
+          d.year == DateTime.now().year &&
+          d.month == DateTime.now().month &&
+          d.day == DateTime.now().day;
+
       final resolved = _resolveForDate(d);
-      
+
       bool hasExtra = false;
       bool hasReplacement = false;
       bool hasCancel = false;
-      
+
       if (!resolved.isHoliday) {
         final rawDay = _rawTimetables[DateFormat('EEEE').format(d)] ?? [];
         for (var e in rawDay) {
           if (e.validForDate == _formatDateStr(d)) {
-            if (e.isCancelled) hasCancel = true;
-            else if (e.hiddenOnDates.isNotEmpty) hasReplacement = true;
-            else hasExtra = true;
+            if (e.isCancelled)
+              hasCancel = true;
+            else if (e.hiddenOnDates.isNotEmpty)
+              hasReplacement = true;
+            else
+              hasExtra = true;
           }
         }
       }
@@ -256,11 +305,18 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
             child: Container(
               margin: const EdgeInsets.all(2),
               decoration: BoxDecoration(
-                color: isSelected 
-                  ? colorScheme.primary 
-                  : (isToday ? colorScheme.primary.withValues(alpha: 0.1) : Colors.transparent),
+                color: isSelected
+                    ? colorScheme.primary
+                    : (isToday
+                          ? colorScheme.primary.withValues(alpha: 0.1)
+                          : Colors.transparent),
                 borderRadius: BorderRadius.circular(AppRadius.md),
-                border: resolved.isHoliday ? Border.all(color: colorScheme.secondary.withValues(alpha: 0.5), width: 1.5) : null,
+                border: resolved.isHoliday
+                    ? Border.all(
+                        color: colorScheme.secondary.withValues(alpha: 0.5),
+                        width: 1.5,
+                      )
+                    : null,
               ),
               child: Stack(
                 alignment: Alignment.center,
@@ -268,8 +324,14 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
                   Text(
                     i.toString(),
                     style: GoogleFonts.inter(
-                      fontWeight: isSelected || isToday ? FontWeight.bold : FontWeight.normal,
-                      color: isSelected ? colorScheme.onPrimary : (isToday ? colorScheme.primary : Theme.of(context).colorScheme.onSurface),
+                      fontWeight: isSelected || isToday
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: isSelected
+                          ? colorScheme.onPrimary
+                          : (isToday
+                                ? colorScheme.primary
+                                : Theme.of(context).colorScheme.onSurface),
                     ),
                   ),
                   if (hasExtra || hasCancel || hasReplacement)
@@ -279,11 +341,12 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (hasExtra) _indicatorDot(colorScheme.primary),
-                          if (hasReplacement) _indicatorDot(colorScheme.tertiary),
+                          if (hasReplacement)
+                            _indicatorDot(colorScheme.tertiary),
                           if (hasCancel) _indicatorDot(sem.cancelled),
                         ],
                       ),
-                    )
+                    ),
                 ],
               ),
             ),
@@ -300,16 +363,13 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
       children: dayWidgets,
     );
   }
-  
+
   Widget _indicatorDot(Color color) {
     return Container(
       width: 4,
       height: 4,
       margin: const EdgeInsets.symmetric(horizontal: 1),
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 
@@ -324,7 +384,7 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
     final isCR = AppSettings.currentRole == UserRole.cr;
     final isSR = AppSettings.currentRole == UserRole.sr;
     final canEdit = isCR || isSR;
-    
+
     final isSelectedHoliday = resolvedToday?.isHoliday ?? false;
 
     // Build grouped lectures just like WeeklyTimetablePage
@@ -346,9 +406,7 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
       appBar: AppBar(
         title: Text(
           'Monthly Overview',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.w600,
-          ),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
         ),
         backgroundColor: colorScheme.surface,
         elevation: 0,
@@ -393,14 +451,14 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
                     ],
                   ),
                 ),
-                
+
                 // Date Header & Inline Actions
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.x2l, 
-                    AppSpacing.xl, 
-                    AppSpacing.x2l, 
+                    AppSpacing.x2l,
+                    AppSpacing.xl,
+                    AppSpacing.x2l,
                     AppSpacing.md,
                   ),
                   decoration: BoxDecoration(
@@ -428,18 +486,29 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
                         if (isSelectedHoliday)
                           OutlinedButton.icon(
                             onPressed: () {
-                              final dayName = DateFormat('EEEE').format(_selectedDate);
+                              final dayName = DateFormat(
+                                'EEEE',
+                              ).format(_selectedDate);
                               final dateStr = _formatDateStr(_selectedDate);
                               final rawDay = _rawTimetables[dayName] ?? [];
-                              final holiday = rawDay.firstWhere((e) => e.isHoliday && e.validForDate == dateStr);
+                              final holiday = rawDay.firstWhere(
+                                (e) => e.isHoliday && e.validForDate == dateStr,
+                              );
                               _removeHoliday(_selectedDate, holiday);
                             },
-                            icon: const Icon(Icons.remove_circle_outline_rounded, size: 18),
+                            icon: const Icon(
+                              Icons.remove_circle_outline_rounded,
+                              size: 18,
+                            ),
                             label: const Text('Remove Holiday'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: sem.error,
-                              side: BorderSide(color: sem.error.withValues(alpha: 0.5)),
-                              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                              side: BorderSide(
+                                color: sem.error.withValues(alpha: 0.5),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.lg,
+                              ),
                             ),
                           )
                         else
@@ -452,19 +521,31 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
                                   icon: const Icon(Icons.add_rounded, size: 18),
                                   label: const Text('Add / Modify'),
                                   style: FilledButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.lg,
+                                    ),
                                   ),
                                 ),
                                 if (isCR) ...[
                                   const SizedBox(width: AppSpacing.sm),
                                   OutlinedButton.icon(
-                                    onPressed: () => _declareHoliday(_selectedDate),
-                                    icon: const Icon(Icons.celebration_rounded, size: 18),
+                                    onPressed: () =>
+                                        _declareHoliday(_selectedDate),
+                                    icon: const Icon(
+                                      Icons.celebration_rounded,
+                                      size: 18,
+                                    ),
                                     label: const Text('Declare Holiday'),
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: colorScheme.secondary,
-                                      side: BorderSide(color: colorScheme.secondary.withValues(alpha: 0.5)),
-                                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                                      side: BorderSide(
+                                        color: colorScheme.secondary.withValues(
+                                          alpha: 0.5,
+                                        ),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: AppSpacing.lg,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -475,16 +556,18 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
                     ],
                   ),
                 ),
-                
+
                 // Lectures Area
                 Expanded(
                   child: isSelectedHoliday
-                    ? FloatingEmptyState(
-                        icon: Icons.celebration_rounded,
-                        title: 'Holiday',
-                        subtitle: resolvedToday!.holidayName ?? 'No classes scheduled.',
-                      )
-                    : groupedLectures.isEmpty
+                      ? FloatingEmptyState(
+                          icon: Icons.celebration_rounded,
+                          title: 'Holiday',
+                          subtitle:
+                              resolvedToday!.holidayName ??
+                              'No classes scheduled.',
+                        )
+                      : groupedLectures.isEmpty
                       ? FloatingEmptyState(
                           icon: Icons.event_available_rounded,
                           title: 'No lectures scheduled',
@@ -501,7 +584,9 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
                           itemCount: groupedLectures.length,
                           itemBuilder: (context, index) {
                             final entries = groupedLectures[index];
-                            final allCancelled = entries.every((e) => !e.isActive);
+                            final allCancelled = entries.every(
+                              (e) => !e.isActive,
+                            );
                             final activeEntry = entries.firstWhere(
                               (e) => e.isActive,
                               orElse: () => entries.first,
@@ -513,7 +598,9 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
                             return StaggeredListItem(
                               index: index,
                               child: Padding(
-                                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                                padding: const EdgeInsets.only(
+                                  bottom: AppSpacing.md,
+                                ),
                                 child: AnimatedCard(
                                   borderRadius: AppRadius.xl,
                                   backgroundColor: allCancelled
@@ -522,11 +609,16 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
                                       ? sem.surfaceElevated
                                       : colorScheme.surface,
                                   onTap: (canEdit && entries.length == 1)
-                                      ? () => _openStudio(_selectedDate, existingEntry: entries.first)
+                                      ? () => _openStudio(
+                                          _selectedDate,
+                                          existingEntry: entries.first,
+                                        )
                                       : null,
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(AppRadius.xl),
+                                      borderRadius: BorderRadius.circular(
+                                        AppRadius.xl,
+                                      ),
                                       border: Border(
                                         left: BorderSide(
                                           color: subjectColor,
@@ -535,15 +627,23 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
                                       ),
                                     ),
                                     child: Padding(
-                                      padding: const EdgeInsets.all(AppSpacing.xl),
+                                      padding: const EdgeInsets.all(
+                                        AppSpacing.xl,
+                                      ),
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                                        children: entries.asMap().entries.map((mapEntry) {
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: entries.asMap().entries.map((
+                                          mapEntry,
+                                        ) {
                                           final entry = mapEntry.value;
                                           final isCancelled = !entry.isActive;
                                           final entryColor = isCancelled
                                               ? sem.cancelled
-                                              : _subjectColor(entry.subject, context);
+                                              : _subjectColor(
+                                                  entry.subject,
+                                                  context,
+                                                );
 
                                           Widget content = Row(
                                             children: [
@@ -551,44 +651,67 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
                                                 width: 48,
                                                 height: 48,
                                                 decoration: BoxDecoration(
-                                                  color: entryColor.withValues(alpha: 0.1),
-                                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                                  color: entryColor.withValues(
+                                                    alpha: 0.1,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                        AppRadius.md,
+                                                      ),
                                                 ),
                                                 child: Icon(
                                                   isCancelled
                                                       ? Icons.cancel_rounded
-                                                      : _subjectIcon(entry.subject),
+                                                      : _subjectIcon(
+                                                          entry.subject,
+                                                        ),
                                                   color: entryColor,
                                                   size: 22,
                                                 ),
                                               ),
-                                              const SizedBox(width: AppSpacing.lg),
+                                              const SizedBox(
+                                                width: AppSpacing.lg,
+                                              ),
                                               Expanded(
                                                 child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
                                                     Row(
                                                       children: [
                                                         Expanded(
                                                           child: Text(
-                                                            entry.displaySubject,
+                                                            entry
+                                                                .displaySubject,
                                                             style: GoogleFonts.outfit(
                                                               fontSize: 17,
-                                                              fontWeight: FontWeight.w700,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w700,
                                                               color: isCancelled
                                                                   ? sem.cancelled
-                                                                  : colorScheme.onSurface,
+                                                                  : colorScheme
+                                                                        .onSurface,
                                                             ),
                                                           ),
                                                         ),
                                                         Text(
-                                                          TimetableManager.formatTime(entry.startTime, entry.endTime),
+                                                          TimetableManager.formatTime(
+                                                            entry.startTime,
+                                                            entry.endTime,
+                                                          ),
                                                           style: GoogleFonts.inter(
                                                             fontSize: 13,
-                                                            fontWeight: FontWeight.w600,
+                                                            fontWeight:
+                                                                FontWeight.w600,
                                                             color: isCancelled
-                                                                ? sem.cancelled.withValues(alpha: 0.7)
-                                                                : colorScheme.primary,
+                                                                ? sem.cancelled
+                                                                      .withValues(
+                                                                        alpha:
+                                                                            0.7,
+                                                                      )
+                                                                : colorScheme
+                                                                      .primary,
                                                           ),
                                                         ),
                                                       ],
@@ -598,14 +721,31 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
                                                       isCancelled
                                                           ? 'CANCELLED'
                                                           : [
-                                                              entry.room,
-                                                              if (entry.component.isNotEmpty) entry.component,
-                                                              if (entry.batch != 'Whole Class') entry.batch,
-                                                            ].where((e) => e != null && e.isNotEmpty).join(' • '),
+                                                                  entry.room,
+                                                                  if (entry
+                                                                      .component
+                                                                      .isNotEmpty)
+                                                                    entry
+                                                                        .component,
+                                                                  if (entry
+                                                                          .batch !=
+                                                                      'Whole Class')
+                                                                    entry.batch,
+                                                                ]
+                                                                .where(
+                                                                  (e) =>
+                                                                      e !=
+                                                                          null &&
+                                                                      e.isNotEmpty,
+                                                                )
+                                                                .join(' • '),
                                                       style: GoogleFonts.inter(
                                                         fontSize: 13,
                                                         color: isCancelled
-                                                            ? sem.cancelled.withValues(alpha: 0.7)
+                                                            ? sem.cancelled
+                                                                  .withValues(
+                                                                    alpha: 0.7,
+                                                                  )
                                                             : sem.onSurfaceMuted,
                                                       ),
                                                     ),
@@ -617,7 +757,9 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
 
                                           if (mapEntry.key > 0) {
                                             content = Padding(
-                                              padding: const EdgeInsets.only(top: AppSpacing.lg),
+                                              padding: const EdgeInsets.only(
+                                                top: AppSpacing.lg,
+                                              ),
                                               child: content,
                                             );
                                           }

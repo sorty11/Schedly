@@ -481,7 +481,8 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                   // Subject autocomplete
                   Autocomplete<String>(
                     optionsBuilder: (textEditingValue) {
-                      if (textEditingValue.text.isEmpty) return _availableSubjects;
+                      if (textEditingValue.text.isEmpty)
+                        return _availableSubjects;
                       return _availableSubjects.where(
                         (option) => option.toLowerCase().contains(
                           textEditingValue.text.toLowerCase(),
@@ -521,7 +522,9 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                               size: 20,
                               color: sem.onSurfaceMuted,
                             ),
-                            fillColor: isDark ? sem.surfaceElevated : const Color(0xFFF8F8FC),
+                            fillColor: isDark
+                                ? sem.surfaceElevated
+                                : const Color(0xFFF8F8FC),
                             filled: true,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(AppRadius.md),
@@ -544,7 +547,10 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                               .map(
                                 (b) => DropdownMenuItem(
                                   value: b,
-                                  child: Text(b, overflow: TextOverflow.ellipsis),
+                                  child: Text(
+                                    b,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                               )
                               .toList(),
@@ -562,21 +568,22 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                               ),
                             );
                           },
-                          fieldViewBuilder: (context, controller, focusNode, _) {
-                            if (controller.text.isEmpty &&
-                                _roomController.text.isNotEmpty) {
-                              controller.text = _roomController.text;
-                            }
-                            controller.addListener(
-                              () => _roomController.text = controller.text,
-                            );
-                            return SchedlyTextField(
-                              controller: controller,
-                              focusNode: focusNode,
-                              labelText: 'Room',
-                              prefixIcon: Icons.room_rounded,
-                            );
-                          },
+                          fieldViewBuilder:
+                              (context, controller, focusNode, _) {
+                                if (controller.text.isEmpty &&
+                                    _roomController.text.isNotEmpty) {
+                                  controller.text = _roomController.text;
+                                }
+                                controller.addListener(
+                                  () => _roomController.text = controller.text,
+                                );
+                                return SchedlyTextField(
+                                  controller: controller,
+                                  focusNode: focusNode,
+                                  labelText: 'Room',
+                                  prefixIcon: Icons.room_rounded,
+                                );
+                              },
                         ),
                       ),
                     ],
@@ -700,10 +707,14 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
             _buildSectionLabel('Options'),
             Container(
               decoration: BoxDecoration(
-                color: _repeatWeekly ? colorScheme.primary.withValues(alpha: 0.1) : (isDark ? sem.surfaceElevated : const Color(0xFFF8F8FC)),
+                color: _repeatWeekly
+                    ? colorScheme.primary.withValues(alpha: 0.1)
+                    : (isDark ? sem.surfaceElevated : const Color(0xFFF8F8FC)),
                 borderRadius: BorderRadius.circular(AppRadius.xl),
                 border: Border.all(
-                  color: _repeatWeekly ? colorScheme.primary.withValues(alpha: 0.3) : sem.borderSubtle,
+                  color: _repeatWeekly
+                      ? colorScheme.primary.withValues(alpha: 0.3)
+                      : sem.borderSubtle,
                   width: _repeatWeekly ? 1.5 : 1.0,
                 ),
               ),
@@ -715,9 +726,13 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                 title: Row(
                   children: [
                     Icon(
-                      _repeatWeekly ? Icons.repeat_rounded : Icons.today_rounded,
+                      _repeatWeekly
+                          ? Icons.repeat_rounded
+                          : Icons.today_rounded,
                       size: 20,
-                      color: _repeatWeekly ? colorScheme.primary : colorScheme.onSurface,
+                      color: _repeatWeekly
+                          ? colorScheme.primary
+                          : colorScheme.onSurface,
                     ),
                     const SizedBox(width: AppSpacing.md),
                     Text(
@@ -726,7 +741,9 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                         fontFamily: 'Inter',
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: _repeatWeekly ? colorScheme.primary : colorScheme.onSurface,
+                        color: _repeatWeekly
+                            ? colorScheme.primary
+                            : colorScheme.onSurface,
                       ),
                     ),
                   ],
@@ -734,11 +751,15 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                 subtitle: Padding(
                   padding: const EdgeInsets.only(left: 32.0, top: 4.0),
                   child: Text(
-                    _repeatWeekly ? 'Applies to every ${widget.initialDay}' : 'Only applies on ${widget.targetDateForOverride != null ? DateFormat('d MMM').format(widget.targetDateForOverride!) : widget.initialDay}',
+                    _repeatWeekly
+                        ? 'Applies to every ${widget.initialDay}'
+                        : 'Only applies on ${widget.targetDateForOverride != null ? DateFormat('d MMM').format(widget.targetDateForOverride!) : widget.initialDay}',
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 13,
-                      color: _repeatWeekly ? colorScheme.primary.withValues(alpha: 0.8) : sem.onSurfaceMuted,
+                      color: _repeatWeekly
+                          ? colorScheme.primary.withValues(alpha: 0.8)
+                          : sem.onSurfaceMuted,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -1125,7 +1146,9 @@ class _TimePicker extends StatelessWidget {
                         ? Icons.play_circle_fill_rounded
                         : Icons.stop_circle_rounded,
                     size: 16,
-                    color: isStart ? colorScheme.primary : colorScheme.secondary,
+                    color: isStart
+                        ? colorScheme.primary
+                        : colorScheme.secondary,
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   Text(

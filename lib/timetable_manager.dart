@@ -4,6 +4,7 @@ import 'models/timetable_entry.dart';
 import 'models/event_category.dart';
 import 'services/timetable_event_service.dart';
 import 'services/conduct_sync_service.dart';
+import 'services/timetable_resolver_service.dart';
 
 class ValidationException implements Exception {
   final String title;
@@ -59,10 +60,28 @@ class TimetableManager {
         .where('isActive', isEqualTo: true)
         .get();
 
-    final activeLectures = snap.docs
+    List<TimetableEntry> activeLectures = snap.docs
         .map((d) => TimetableEntry.fromFirestore(d))
         .where((l) => l.id != entry.id)
         .toList();
+
+    if (oldEntry != null) {
+      activeLectures = activeLectures
+          .where((l) => l.id != oldEntry.id)
+          .toList();
+    }
+
+    if (entry.validForDate != null) {
+      final resolved = TimetableResolverService.resolve(
+        rawEntries: activeLectures,
+        targetDateStr: entry.validForDate!,
+      );
+      activeLectures = resolved.lectures;
+    } else {
+      activeLectures = activeLectures
+          .where((l) => l.validForDate == null)
+          .toList();
+    }
 
     final overlaps = activeLectures
         .where(

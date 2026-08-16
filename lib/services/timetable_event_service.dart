@@ -23,6 +23,35 @@ class TimetableEventService {
     String type = '';
     bool makeAnnouncement = false;
 
+    // Helper to format date
+    String dateContext = day;
+    final targetDateStr = newEntry?.validForDate ?? oldEntry?.validForDate;
+    if (targetDateStr != null) {
+      try {
+        final parts = targetDateStr.split('-');
+        final y = int.parse(parts[0]);
+        final m = int.parse(parts[1]);
+        final d = int.parse(parts[2]);
+        final dt = DateTime(y, m, d);
+
+        const monthNames = [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec',
+        ];
+        dateContext = '${dt.day} ${monthNames[dt.month - 1]}';
+      } catch (_) {}
+    }
+
     // Determine the nature of the change
     if (isCancel && oldEntry != null) {
       final timeStr = TimetableManager.formatTime(
@@ -31,52 +60,79 @@ class TimetableEventService {
       );
       title = 'Lecture Cancelled';
       message =
-          'Today\'s ${oldEntry.displaySubject} at $timeStr has been cancelled.';
+          '${oldEntry.displaySubject} on $dateContext at $timeStr has been cancelled.';
       type = 'cancel';
       makeAnnouncement = true;
-
-      // Local notification handled directly in Cancel button, or we can do it here.
     } else if (isRestore && oldEntry != null) {
       final timeStr = TimetableManager.formatTime(
         oldEntry.startTime,
         oldEntry.endTime,
       );
       title = 'Lecture Restored';
-      message = '${oldEntry.displaySubject}\n$day • $timeStr';
+      message = '${oldEntry.displaySubject}\n$dateContext • $timeStr';
       type = 'add';
     } else if (isDelete && oldEntry != null) {
-      title = 'Lecture Deleted';
-      message = '${oldEntry.displaySubject} has been permanently removed.';
-      type = 'cancel';
+      if (oldEntry.isHoliday) {
+        title = 'Holiday Removed';
+        message = 'The holiday on $dateContext has been removed.';
+        type = 'cancel';
+      } else if (oldEntry.validForDate != null) {
+        title = 'Override Removed';
+        message =
+            'The schedule override for ${oldEntry.displaySubject} on $dateContext was removed.';
+        type = 'cancel';
+      } else {
+        title = 'Lecture Deleted';
+        message =
+            '${oldEntry.displaySubject} has been permanently removed from $day.';
+        type = 'cancel';
+      }
     } else if (oldEntry == null && newEntry != null) {
-      final timeStr = TimetableManager.formatTime(
-        newEntry.startTime,
-        newEntry.endTime,
-      );
-      title = 'New lecture added';
-      message = '${newEntry.displaySubject}\n$day • $timeStr';
-      type = 'add';
-      makeAnnouncement = true;
+      if (newEntry.isHoliday) {
+        title = 'Holiday Declared';
+        message = '${newEntry.holidayName ?? "Holiday"}\n$dateContext';
+        type = 'announcement';
+        makeAnnouncement = true;
+      } else {
+        final timeStr = TimetableManager.formatTime(
+          newEntry.startTime,
+          newEntry.endTime,
+        );
+        title = newEntry.validForDate != null
+            ? 'Extra Lecture Added'
+            : 'New Lecture Added';
+        message = '${newEntry.displaySubject}\n$dateContext • $timeStr';
+        type = 'add';
+        makeAnnouncement = true;
+      }
     } else if (oldEntry != null && newEntry != null) {
-      // Comparison logic
-      final List<String> changes = [];
+      bool statusChanged = oldEntry.status != newEntry.status;
       bool subjectChanged = oldEntry.displaySubject != newEntry.displaySubject;
       bool roomChanged = oldEntry.room != newEntry.room;
       bool timeChanged =
           oldEntry.startTime != newEntry.startTime ||
           oldEntry.endTime != newEntry.endTime;
       bool batchChanged = oldEntry.batch != newEntry.batch;
-      bool typeChanged =
-          oldEntry.component != newEntry.component; // Theory vs Lab
+      bool typeChanged = oldEntry.component != newEntry.component;
 
-      if (subjectChanged &&
+      if (statusChanged && newEntry.status == 'cancelled') {
+        final timeStr = TimetableManager.formatTime(
+          oldEntry.startTime,
+          oldEntry.endTime,
+        );
+        title = 'Lecture Cancelled';
+        message =
+            '${oldEntry.displaySubject} on $dateContext at $timeStr has been cancelled.';
+        type = 'cancel';
+        makeAnnouncement = true;
+      } else if (subjectChanged &&
           !roomChanged &&
           !timeChanged &&
           !batchChanged &&
           !typeChanged) {
         title = 'Lecture Replaced';
         message =
-            '${oldEntry.displaySubject} has been replaced with ${newEntry.displaySubject}.';
+            '${oldEntry.displaySubject} has been replaced with ${newEntry.displaySubject} on $dateContext.';
         type = 'edit';
         makeAnnouncement = true;
       } else if (roomChanged &&
@@ -90,7 +146,7 @@ class TimetableEventService {
         );
         title = 'Room Changed';
         message =
-            '${newEntry.displaySubject}\n$day • $timeStr\nRoom changed\n${oldEntry.room ?? 'TBA'} → ${newEntry.room ?? 'TBA'}';
+            '${newEntry.displaySubject}\n$dateContext • $timeStr\nRoom changed\n${oldEntry.room ?? 'TBA'} → ${newEntry.room ?? 'TBA'}';
         type = 'room_change';
       } else if (timeChanged &&
           !subjectChanged &&
@@ -106,7 +162,8 @@ class TimetableEventService {
           newEntry.endTime,
         );
         title = 'Lecture Time Updated';
-        message = '${newEntry.displaySubject}\n$oldTimeStr → $newTimeStr';
+        message =
+            '${newEntry.displaySubject} on $dateContext\n$oldTimeStr → $newTimeStr';
         type = 'time_change';
         makeAnnouncement = true;
       } else if (batchChanged &&
@@ -116,7 +173,7 @@ class TimetableEventService {
           !typeChanged) {
         title = 'Batch Updated';
         message =
-            '${newEntry.displaySubject}\nNow assigned to Batch ${newEntry.batch}';
+            '${newEntry.displaySubject} on $dateContext\nNow assigned to Batch ${newEntry.batch}';
         type = 'edit';
       } else if (typeChanged &&
           !subjectChanged &&
@@ -125,15 +182,15 @@ class TimetableEventService {
           !batchChanged) {
         title = 'Lecture Updated';
         message =
-            '${newEntry.subject} changed from ${oldEntry.component} to ${newEntry.component}.';
+            '${newEntry.subject} on $dateContext changed from ${oldEntry.component} to ${newEntry.component}.';
         type = 'edit';
       } else if (subjectChanged ||
           roomChanged ||
           timeChanged ||
           batchChanged ||
           typeChanged) {
-        // Multiple changes
-        title = '${newEntry.displaySubject} updated';
+        title = '${newEntry.displaySubject} updated on $dateContext';
+        final List<String> changes = [];
         if (subjectChanged)
           changes.add(
             '• Subject: ${oldEntry.displaySubject} → ${newEntry.displaySubject}',
@@ -161,7 +218,6 @@ class TimetableEventService {
         type = 'edit';
         makeAnnouncement = subjectChanged || timeChanged;
       } else {
-        // No meaningful change, do nothing
         return;
       }
     } else {
