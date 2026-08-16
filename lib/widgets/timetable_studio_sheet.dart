@@ -129,7 +129,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
       _room = entry.room ?? '';
       _startTime = entry.startTime;
       _endTime = entry.endTime;
-      _repeatWeekly = widget.targetDateStr == null ? (entry.validForDate == null) : false;
+      _repeatWeekly = widget.targetDateForOverride == null ? (entry.validForDate == null) : false;
     } else if (widget.duplicateFrom != null) {
       final entry = widget.duplicateFrom!;
       _subject = entry.subject;
@@ -139,7 +139,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
       _room = entry.room ?? '';
       _startTime = entry.startTime;
       _endTime = entry.endTime;
-      _repeatWeekly = widget.targetDateStr == null ? (entry.validForDate == null) : false;
+      _repeatWeekly = widget.targetDateForOverride == null ? (entry.validForDate == null) : false;
     } else {
       _subject = _lastSubject ?? '';
       _batch = _lastBatch ?? 'Whole Class';
@@ -148,7 +148,7 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
       _room = _lastRoom ?? '';
       _startTime = 9 * 60;
       _endTime = _startTime + 60;
-      _repeatWeekly = widget.targetDateStr == null;
+      _repeatWeekly = widget.targetDateForOverride == null;
     }
 
     _subjectController.text = _subject;
