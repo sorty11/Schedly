@@ -129,7 +129,9 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
       _room = entry.room ?? '';
       _startTime = entry.startTime;
       _endTime = entry.endTime;
-      _repeatWeekly = widget.targetDateForOverride == null ? (entry.validForDate == null) : false;
+      _repeatWeekly = widget.targetDateForOverride == null
+          ? (entry.validForDate == null)
+          : false;
     } else if (widget.duplicateFrom != null) {
       final entry = widget.duplicateFrom!;
       _subject = entry.subject;
@@ -139,7 +141,9 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
       _room = entry.room ?? '';
       _startTime = entry.startTime;
       _endTime = entry.endTime;
-      _repeatWeekly = widget.targetDateForOverride == null ? (entry.validForDate == null) : false;
+      _repeatWeekly = widget.targetDateForOverride == null
+          ? (entry.validForDate == null)
+          : false;
     } else {
       _subject = _lastSubject ?? '';
       _batch = _lastBatch ?? 'Whole Class';
@@ -262,7 +266,11 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
 
       String? targetDateStr;
       if (!_repeatWeekly) {
-        if (wasOneOff && _selectedDay == widget.initialDay) {
+        if (widget.targetDateForOverride != null) {
+          targetDateStr = DateFormat(
+            'yyyy-MM-dd',
+          ).format(widget.targetDateForOverride!);
+        } else if (wasOneOff && _selectedDay == widget.initialDay) {
           targetDateStr = widget.existingEntry!.validForDate;
         } else {
           targetDateStr = _getTargetDateStr(_selectedDay);
@@ -303,10 +311,20 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
       );
 
       if (replacingRecurringWithOneOff) {
+        // Compute the date on which the original recurring lecture should be hidden.
+        String originalDateStr;
+        if (widget.targetDateForOverride != null) {
+          originalDateStr = DateFormat(
+            'yyyy-MM-dd',
+          ).format(widget.targetDateForOverride!);
+        } else {
+          originalDateStr = _getTargetDateStr(widget.initialDay);
+        }
+
         // Hide original recurring lecture on this date
         final oldEntry = widget.existingEntry!;
         final updatedHiddenDates = List<String>.from(oldEntry.hiddenOnDates)
-          ..add(targetDateStr!);
+          ..add(originalDateStr);
         await FirebaseFirestore.instance
             .collection('timetables')
             .doc(widget.division)
@@ -754,8 +772,8 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                   padding: const EdgeInsets.only(left: 32.0, top: 4.0),
                   child: Text(
                     _repeatWeekly
-                        ? 'Applies to every ${widget.initialDay}'
-                        : 'Only applies on ${widget.targetDateForOverride != null ? DateFormat('d MMM').format(widget.targetDateForOverride!) : widget.initialDay}',
+                        ? 'Applies every $_selectedDay'
+                        : 'Only applies on ${widget.targetDateForOverride != null ? DateFormat('d MMM').format(widget.targetDateForOverride!) : DateFormat('d MMM').format(DateTime.parse(_getTargetDateStr(_selectedDay)))}',
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 13,
@@ -910,7 +928,9 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
 
       if (!_repeatWeekly && oldEntry.validForDate == null) {
         // One-off cancellation of a recurring lecture
-        final targetDateStr = _getTargetDateStr(_selectedDay);
+        final targetDateStr = widget.targetDateForOverride != null
+            ? DateFormat('yyyy-MM-dd').format(widget.targetDateForOverride!)
+            : _getTargetDateStr(_selectedDay);
 
         // Hide original
         final updatedHiddenDates = List<String>.from(oldEntry.hiddenOnDates)
