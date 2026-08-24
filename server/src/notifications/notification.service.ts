@@ -20,6 +20,24 @@ export function getTargetTopic(division: string, batch?: string, role?: string):
   return `division_${sanitizeTopic(division)}`;
 }
 
+export function getAllTargetTopics(division: string, batch?: string, role?: string): string[] {
+  const topics: string[] = [];
+  const normalizedRole = role?.toLowerCase();
+  
+  if (normalizedRole === 'faculty') {
+    topics.push(`faculty_${sanitizeTopic(division)}`);
+  } else {
+    topics.push(`division_${sanitizeTopic(division)}`);
+    if (normalizedRole && normalizedRole !== 'student') {
+      topics.push(`role_${normalizedRole}_${sanitizeTopic(division)}`);
+    }
+    if (batch) {
+      topics.push(`batch_${sanitizeTopic(batch)}_${sanitizeTopic(division)}`);
+    }
+  }
+  return topics;
+}
+
 export async function dispatchNotification(payload: NotificationPayload): Promise<void> {
   const topic = getTargetTopic(payload.division, payload.batch, payload.role);
   logger.info(`[TOPIC] Resolved topic: ${topic} from division=${payload.division}, batch=${payload.batch}, role=${payload.role}`);

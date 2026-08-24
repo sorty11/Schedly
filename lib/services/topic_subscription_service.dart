@@ -91,10 +91,8 @@ class TopicSubscriptionService {
       await unsubscribeDivision(oldTopic);
     }
 
-    if (oldTopic != newTopic) {
-      await subscribeToDivision(newTopic);
-      await prefs.setString('current_fcm_topic', newTopic);
-    }
+    await subscribeToDivision(newTopic);
+    await prefs.setString('current_fcm_topic', newTopic);
   }
 
   static Future<void> _updateRoleSubscription(
@@ -137,13 +135,11 @@ class TopicSubscriptionService {
       await unsubscribeBatch(oldBatchTopic);
     }
 
-    if (oldBatchTopic != newBatchTopic) {
-      debugPrint(
-        'TopicSubscriptionService: Subscribing to batch topic: $newBatchTopic',
-      );
-      await subscribeBatch(newBatchTopic);
-      await prefs.setString('current_fcm_batch_topic', newBatchTopic);
-    }
+    debugPrint(
+      'TopicSubscriptionService: Subscribing to batch topic: $newBatchTopic',
+    );
+    await subscribeBatch(newBatchTopic);
+    await prefs.setString('current_fcm_batch_topic', newBatchTopic);
   }
 
   static Future<void> subscribeToDivision(String topic) async {

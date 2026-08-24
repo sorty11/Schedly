@@ -76,7 +76,7 @@ class NotificationService {
       // Listen for token refresh
       messaging.onTokenRefresh.listen((newToken) async {
         debugPrint('NotificationService: FCM token refreshed');
-        await _saveTokenToFirestore(newToken);
+        await reRegisterToken();
       });
 
       // After setting up listeners, trigger an initial token sync
