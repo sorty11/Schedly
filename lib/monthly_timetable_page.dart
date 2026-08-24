@@ -403,186 +403,101 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        title: Text(
-          'Monthly Overview',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: colorScheme.surface,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // Calendar Area
-                Container(
-                  color: isDark ? sem.surfaceElevated : colorScheme.surface,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.x2l,
-                    vertical: AppSpacing.lg,
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.chevron_left_rounded),
-                            onPressed: _prevMonth,
-                          ),
-                          Text(
-                            DateFormat('MMMM yyyy').format(_currentMonth),
-                            style: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: colorScheme.onSurface,
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.chevron_right_rounded),
-                            onPressed: _nextMonth,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      _buildCalendarGrid(sem, colorScheme),
-                    ],
-                  ),
-                ),
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final availableWidth = constraints.maxWidth;
+                final gridPadding = AppSpacing.x2l * 2;
+                final cellWidth = (availableWidth - gridPadding) / 7.0;
 
-                // Date Header & Inline Actions
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.x2l,
-                    AppSpacing.xl,
-                    AppSpacing.x2l,
-                    AppSpacing.md,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surface,
-                    border: Border(
-                      bottom: BorderSide(
-                        color: sem.borderSubtle.withValues(alpha: 0.5),
-                        width: 1,
-                      ),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        DateFormat('EEEE, d MMMM').format(_selectedDate),
-                        style: GoogleFonts.outfit(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: colorScheme.onSurface,
+                final firstDayWeekday = DateTime(
+                  _currentMonth.year,
+                  _currentMonth.month,
+                  1,
+                ).weekday;
+                final daysInMonth = DateTime(
+                  _currentMonth.year,
+                  _currentMonth.month + 1,
+                  0,
+                ).day;
+                final totalCells = (firstDayWeekday - 1) + daysInMonth;
+                final dateRows = (totalCells / 7).ceil();
+
+                final calendarAreaHeight = 92.0 + ((1 + dateRows) * cellWidth);
+                final safeAreaTop = MediaQuery.of(context).padding.top;
+                final dhHeight = canEdit ? 120.0 : 68.0;
+
+                final expandedHeight =
+                    safeAreaTop +
+                    kToolbarHeight +
+                    calendarAreaHeight +
+                    dhHeight;
+                final collapsedHeight = safeAreaTop + kToolbarHeight + dhHeight;
+
+                return CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _MonthlyHeaderDelegate(
+                        expandedHeight: expandedHeight,
+                        collapsedHeight: collapsedHeight,
+                        safeAreaTop: safeAreaTop,
+                        dateHeaderHeight: dhHeight,
+                        currentMonth: _currentMonth,
+                        selectedDate: _selectedDate,
+                        onPrevMonth: _prevMonth,
+                        onNextMonth: _nextMonth,
+                        onToday: () {
+                          setState(() => _selectedDate = DateTime.now());
+                        },
+                        isDark: isDark,
+                        sem: sem,
+                        colorScheme: colorScheme,
+                        calendarArea: _buildCalendarArea(sem, colorScheme),
+                        dateHeader: _buildDateHeader(
+                          canEdit,
+                          isSelectedHoliday,
+                          sem,
+                          colorScheme,
+                          dhHeight,
                         ),
                       ),
-                      if (canEdit) ...[
-                        const SizedBox(height: AppSpacing.md),
-                        if (isSelectedHoliday)
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              final dayName = DateFormat(
-                                'EEEE',
-                              ).format(_selectedDate);
-                              final dateStr = _formatDateStr(_selectedDate);
-                              final rawDay = _rawTimetables[dayName] ?? [];
-                              final holiday = rawDay.firstWhere(
-                                (e) => e.isHoliday && e.validForDate == dateStr,
-                              );
-                              _removeHoliday(_selectedDate, holiday);
-                            },
-                            icon: const Icon(
-                              Icons.remove_circle_outline_rounded,
-                              size: 18,
-                            ),
-                            label: const Text('Remove Holiday'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: sem.error,
-                              side: BorderSide(
-                                color: sem.error.withValues(alpha: 0.5),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.lg,
-                              ),
-                            ),
-                          )
-                        else
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                FilledButton.icon(
-                                  onPressed: () => _openStudio(_selectedDate),
-                                  icon: const Icon(Icons.add_rounded, size: 18),
-                                  label: const Text('Add / Modify'),
-                                  style: FilledButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: AppSpacing.lg,
-                                    ),
-                                  ),
-                                ),
-                                if (isCR) ...[
-                                  const SizedBox(width: AppSpacing.sm),
-                                  OutlinedButton.icon(
-                                    onPressed: () =>
-                                        _declareHoliday(_selectedDate),
-                                    icon: const Icon(
-                                      Icons.celebration_rounded,
-                                      size: 18,
-                                    ),
-                                    label: const Text('Declare Holiday'),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: colorScheme.secondary,
-                                      side: BorderSide(
-                                        color: colorScheme.secondary.withValues(
-                                          alpha: 0.5,
-                                        ),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: AppSpacing.lg,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                      ],
-                    ],
-                  ),
-                ),
-
-                // Lectures Area
-                Expanded(
-                  child: isSelectedHoliday
-                      ? FloatingEmptyState(
+                    ),
+                    if (isSelectedHoliday)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: FloatingEmptyState(
                           icon: Icons.celebration_rounded,
                           title: 'Holiday',
                           subtitle:
                               resolvedToday!.holidayName ??
                               'No classes scheduled.',
-                        )
-                      : groupedLectures.isEmpty
-                      ? FloatingEmptyState(
+                        ),
+                      )
+                    else if (groupedLectures.isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: FloatingEmptyState(
                           icon: Icons.event_available_rounded,
                           title: 'No lectures scheduled',
                           subtitle: 'Enjoy your free day!',
-                        )
-                      : ListView.builder(
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.lg,
-                            AppSpacing.lg,
-                            AppSpacing.lg,
-                            AppSpacing.x6l,
-                          ),
-                          itemCount: groupedLectures.length,
-                          itemBuilder: (context, index) {
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.lg,
+                          AppSpacing.lg,
+                          AppSpacing.lg,
+                          AppSpacing.x6l,
+                        ),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
                             final entries = groupedLectures[index];
                             final allCancelled = entries.every(
                               (e) => !e.isActive,
@@ -771,11 +686,291 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
                                 ),
                               ),
                             );
-                          },
+                          }, childCount: groupedLectures.length),
                         ),
+                      ),
+                  ],
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _buildCalendarArea(AppSemanticColors sem, ColorScheme colorScheme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x2l,
+        vertical: AppSpacing.lg,
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left_rounded),
+                onPressed: _prevMonth,
+              ),
+              Text(
+                DateFormat('MMMM yyyy').format(_currentMonth),
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_right_rounded),
+                onPressed: _nextMonth,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _buildCalendarGrid(sem, colorScheme),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateHeader(
+    bool canEdit,
+    bool isSelectedHoliday,
+    AppSemanticColors sem,
+    ColorScheme colorScheme,
+    double height,
+  ) {
+    return Container(
+      height: height,
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.x2l,
+        AppSpacing.xl,
+        AppSpacing.x2l,
+        AppSpacing.md,
+      ),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: sem.borderSubtle.withValues(alpha: 0.5),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            DateFormat('EEEE, d MMMM').format(_selectedDate),
+            style: GoogleFonts.outfit(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          if (canEdit) ...[
+            const SizedBox(height: AppSpacing.md),
+            if (isSelectedHoliday)
+              OutlinedButton.icon(
+                onPressed: () {
+                  final dayName = DateFormat('EEEE').format(_selectedDate);
+                  final dateStr = _formatDateStr(_selectedDate);
+                  final rawDay = _rawTimetables[dayName] ?? [];
+                  final holiday = rawDay.firstWhere(
+                    (e) => e.isHoliday && e.validForDate == dateStr,
+                  );
+                  _removeHoliday(_selectedDate, holiday);
+                },
+                icon: const Icon(Icons.remove_circle_outline_rounded, size: 18),
+                label: const Text('Remove Holiday'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: sem.error,
+                  side: BorderSide(color: sem.error.withValues(alpha: 0.5)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                  ),
+                ),
+              )
+            else
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    FilledButton.icon(
+                      onPressed: () => _openStudio(_selectedDate),
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: const Text('Add / Modify'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                        ),
+                      ),
+                    ),
+                    if (AppSettings.currentRole == UserRole.cr) ...[
+                      const SizedBox(width: AppSpacing.sm),
+                      OutlinedButton.icon(
+                        onPressed: () => _declareHoliday(_selectedDate),
+                        icon: const Icon(Icons.celebration_rounded, size: 18),
+                        label: const Text('Declare Holiday'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: colorScheme.secondary,
+                          side: BorderSide(
+                            color: colorScheme.secondary.withValues(alpha: 0.5),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MonthlyHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final double expandedHeight;
+  final double collapsedHeight;
+  final double safeAreaTop;
+  final double dateHeaderHeight;
+  final Widget calendarArea;
+  final Widget dateHeader;
+  final DateTime currentMonth;
+  final DateTime selectedDate;
+  final VoidCallback onPrevMonth;
+  final VoidCallback onNextMonth;
+  final VoidCallback onToday;
+  final bool isDark;
+  final AppSemanticColors sem;
+  final ColorScheme colorScheme;
+
+  _MonthlyHeaderDelegate({
+    required this.expandedHeight,
+    required this.collapsedHeight,
+    required this.safeAreaTop,
+    required this.dateHeaderHeight,
+    required this.calendarArea,
+    required this.dateHeader,
+    required this.currentMonth,
+    required this.selectedDate,
+    required this.onPrevMonth,
+    required this.onNextMonth,
+    required this.onToday,
+    required this.isDark,
+    required this.sem,
+    required this.colorScheme,
+  });
+
+  @override
+  double get maxExtent => expandedHeight;
+
+  @override
+  double get minExtent => collapsedHeight;
+
+  @override
+  bool shouldRebuild(covariant _MonthlyHeaderDelegate old) => true;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final double progress = (shrinkOffset / (maxExtent - minExtent)).clamp(
+      0.0,
+      1.0,
+    );
+
+    return Container(
+      color: isDark ? sem.surfaceElevated : colorScheme.surface,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Calendar Area (Fades and scrolls up)
+          Positioned(
+            top:
+                safeAreaTop +
+                kToolbarHeight -
+                (shrinkOffset * 0.8), // Parallax effect
+            left: 0,
+            right: 0,
+            child: Opacity(
+              opacity: (1.0 - (progress * 2)).clamp(0.0, 1.0),
+              child: calendarArea,
+            ),
+          ),
+
+          // Top Bar (Cross-fades between Title and Compact Header)
+          Positioned(
+            top: safeAreaTop,
+            left: 0,
+            right: 0,
+            height: kToolbarHeight,
+            child: Stack(
+              children: [
+                // Expanded Title
+                Opacity(
+                  opacity: (1.0 - (progress * 2)).clamp(0.0, 1.0),
+                  child: Center(
+                    child: Text(
+                      'Monthly Overview',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 20,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                ),
+                // Collapsed Compact Header
+                Opacity(
+                  opacity: ((progress - 0.5) * 2).clamp(0.0, 1.0),
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.chevron_left_rounded),
+                          onPressed: onPrevMonth,
+                        ),
+                        GestureDetector(
+                          onTap: onToday,
+                          child: Text(
+                            '${DateFormat('MMM yyyy').format(currentMonth)}  •  ${DateFormat('d EEE').format(selectedDate)}',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.chevron_right_rounded),
+                          onPressed: onNextMonth,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
+          ),
+
+          // Date Header & Actions (Pinned at bottom)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: dateHeaderHeight,
+            child: dateHeader,
+          ),
+        ],
+      ),
     );
   }
 }
