@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'app_settings.dart';
 import 'services/app_notification_service.dart';
 import 'theme/theme.dart';
 import 'widgets/animations/animated_button.dart';
@@ -42,7 +43,7 @@ class _DeleteLecturePageState extends State<DeleteLecturePage> {
   Future<void> _loadDivision() async {
     final prefs = await SharedPreferences.getInstance();
 
-    division = prefs.getString('selected_division');
+    division = prefs.getString('selected_division') ?? AppSettings.sectionId;
     if (division != null) {
       _updateStream();
     }

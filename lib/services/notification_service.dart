@@ -116,26 +116,33 @@ class NotificationService {
 
       // Topic subscriptions (Android/iOS only — web uses direct token dispatch)
       final prefs = await SharedPreferences.getInstance();
-      final division = prefs.getString('selected_division');
-      final role = prefs.getString('user_role') ?? 'student';
-      final batch = prefs.getString('selected_batch');
+      final role = prefs.getString('user_role')?.toLowerCase() ?? 'student';
+      final batch = AppSettings.studentBatch ?? prefs.getString('selected_batch');
 
-      String? finalDivision = division;
+      String? finalDivision;
       if (role == 'faculty') {
         final facultyId = AppSettings.facultyId;
         final user = FirebaseAuth.instance.currentUser;
         finalDivision = (facultyId != null && facultyId.isNotEmpty)
             ? facultyId
-            : user?.uid ?? division;
+            : user?.uid ?? prefs.getString('selected_division');
+      } else if (role == 'cr') {
+        finalDivision = prefs.getString('selected_division') ?? AppSettings.sectionId;
+      } else if (role == 'sr') {
+        finalDivision = AppSettings.srSectionId ?? prefs.getString('selected_division') ?? AppSettings.sectionId;
+      } else {
+        finalDivision = AppSettings.sectionId ?? prefs.getString('selected_division');
       }
 
-      if (finalDivision != null) {
+      if (finalDivision != null && finalDivision.isNotEmpty) {
         await TopicSubscriptionService.updateSubscriptions(
           finalDivision,
           role,
           batch: batch,
         );
         debugPrint('[TOKEN_SYNC] Topic subscription SUCCESS');
+      } else {
+        debugPrint('[TOKEN_SYNC] Topic subscription SKIPPED: finalDivision is null or empty');
       }
     } catch (e) {
       debugPrint('NotificationService: reRegisterToken failed: $e');
@@ -191,9 +198,7 @@ class NotificationService {
         return;
       }
 
-      final division =
-          AppSettings.sectionId ?? prefs.getString('selected_division') ?? '';
-      final batch = prefs.getString('selected_batch') ?? '';
+      final batch = AppSettings.studentBatch ?? prefs.getString('selected_batch') ?? '';
 
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -202,13 +207,18 @@ class NotificationService {
       }
 
       String finalDivision;
-      if (role == 'faculty') {
+      final lowerRole = role.toLowerCase();
+      if (lowerRole == 'faculty') {
         final facultyId = AppSettings.facultyId;
         finalDivision = (facultyId != null && facultyId.isNotEmpty)
             ? facultyId
             : user.uid;
+      } else if (lowerRole == 'cr') {
+        finalDivision = prefs.getString('selected_division') ?? AppSettings.sectionId ?? '';
+      } else if (lowerRole == 'sr') {
+        finalDivision = AppSettings.srSectionId ?? prefs.getString('selected_division') ?? AppSettings.sectionId ?? '';
       } else {
-        finalDivision = division;
+        finalDivision = AppSettings.sectionId ?? prefs.getString('selected_division') ?? '';
       }
 
       try {
@@ -293,7 +303,7 @@ class NotificationService {
                           : 'android'),
                 'division': finalDivision,
                 'role': role,
-                'batch': prefs.getString('selected_batch') ?? '',
+                'batch': AppSettings.studentBatch ?? prefs.getString('selected_batch') ?? '',
                 'updatedAt': FieldValue.serverTimestamp(),
               }, SetOptions(merge: true));
         }
@@ -304,7 +314,7 @@ class NotificationService {
       final role = prefs.getString('user_role');
       if (role == null || role.isEmpty) return;
 
-      final batch = prefs.getString('selected_batch');
+      final batch = AppSettings.studentBatch ?? prefs.getString('selected_batch');
       await TopicSubscriptionService.updateSubscriptions(
         newDivision,
         role,

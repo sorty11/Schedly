@@ -332,12 +332,10 @@ class _DashboardPageState extends State<DashboardPage> {
                   height: 44,
                   child: OutlinedButton.icon(
                     onPressed: () async {
-                      final prefs = await SharedPreferences.getInstance();
-                      final division = prefs.getString('selected_division');
-                      if (!mounted || division == null) return;
+                      if (!mounted) return;
                       await TimetableStudioSheet.show(
                         context,
-                        division: division,
+                        division: widget.division,
                         initialDay: 'Monday',
                       );
                     },
