@@ -6,6 +6,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'services/notification_service.dart';
+import 'services/account_deletion_service.dart';
+import 'exceptions.dart';
 
 import 'app_settings.dart';
 import 'user_roles.dart';
@@ -723,38 +725,58 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: _buildRoleTile(
-                  icon: Icons.logout_rounded,
-                  title: 'Reset App & Logout',
-                  subtitle: 'Clear all local data and sign out',
-                  iconColor: semanticColors.cancelled,
-                  isDestructive: true,
-                  onTap: () async {
-                    final confirmed = await AppDialogs.showConfirm(
-                      context: context,
+                child: Column(
+                  children: [
+                    _buildRoleTile(
+                      icon: Icons.logout_rounded,
                       title: 'Reset App & Logout',
-                      message:
-                          'Are you sure you want to clear all local data and sign out?',
-                      confirmText: 'Logout',
+                      subtitle: 'Clear all local data and sign out',
+                      iconColor: semanticColors.cancelled,
                       isDestructive: true,
-                    );
+                      onTap: () async {
+                        final confirmed = await AppDialogs.showConfirm(
+                          context: context,
+                          title: 'Reset App & Logout',
+                          message:
+                              'Are you sure you want to clear all local data and sign out?',
+                          confirmText: 'Logout',
+                          isDestructive: true,
+                        );
 
-                    if (!confirmed) return;
+                        if (!confirmed) return;
 
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.clear();
-                    await AppSettings.resetRole();
-                    AppSettings.studentName = null;
-                    AppSettings.studentRollNo = null;
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.clear();
+                        await AppSettings.resetRole();
+                        AppSettings.studentName = null;
+                        AppSettings.studentRollNo = null;
 
-                    if (!context.mounted) return;
+                        if (!context.mounted) return;
 
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (c) => const OnboardingFlow()),
-                      (_) => false,
-                    );
-                  },
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (c) => const OnboardingFlow(),
+                          ),
+                          (_) => false,
+                        );
+                      },
+                    ),
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: semanticColors.cancelled.withValues(alpha: 0.12),
+                    ),
+                    _buildRoleTile(
+                      icon: Icons.delete_forever_rounded,
+                      title: 'Delete Account',
+                      subtitle:
+                          'Permanently delete your account and personal data',
+                      iconColor: semanticColors.error,
+                      isDestructive: true,
+                      onTap: _showDeleteAccountDialog,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -877,5 +899,245 @@ class _ProfilePageState extends State<ProfilePage> {
         ).showSnackBar(SnackBar(content: Text('Batch updated to $result')));
       }
     }
+  }
+
+  Future<void> _showDeleteAccountDialog() async {
+    final isPasswordUser = AccountDeletionService.isPasswordUser;
+    final passwordCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool obscurePassword = true;
+    bool isDeleting = false;
+    String? errorMessage;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final theme = Theme.of(context);
+          final semanticColors = theme.extension<AppSemanticColors>()!;
+          final colorScheme = theme.colorScheme;
+          return AlertDialog(
+            backgroundColor: semanticColors.surfaceElevated,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+              side: BorderSide(
+                color: semanticColors.error.withValues(alpha: 0.3),
+                width: 1,
+              ),
+            ),
+            title: Row(
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: semanticColors.error,
+                  size: 24,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'Delete Account',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w700,
+                      color: semanticColors.error,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'This action is permanent and cannot be undone.',
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      '• Your personal profile, attendance records, and notifications will be wiped.\n'
+                      '• Shared class timetables and announcements will remain safe for your peers.\n'
+                      '• You can create a fresh account later with the same email if you choose.',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: semanticColors.onSurfaceMuted,
+                        height: 1.4,
+                      ),
+                    ),
+                    if (isPasswordUser) ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      Text(
+                        'Confirm your password to proceed:',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 13,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      TextFormField(
+                        controller: passwordCtrl,
+                        obscureText: obscurePassword,
+                        enabled: !isDeleting,
+                        decoration: InputDecoration(
+                          hintText: 'Enter your password',
+                          prefixIcon: const Icon(
+                            Icons.lock_outline_rounded,
+                            size: 20,
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              size: 20,
+                            ),
+                            onPressed: () {
+                              setDialogState(
+                                () => obscurePassword = !obscurePassword,
+                              );
+                            },
+                          ),
+                          errorMaxLines: 2,
+                        ),
+                        validator: (val) {
+                          if (val == null || val.isEmpty) {
+                            return 'Please enter your password to confirm.';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                    if (errorMessage != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: semanticColors.error.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(
+                            color: semanticColors.error.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 18,
+                              color: semanticColors.error,
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Expanded(
+                              child: Text(
+                                errorMessage!,
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: semanticColors.error,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    if (isDeleting) ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      Center(
+                        child: Column(
+                          children: [
+                            const CircularProgressIndicator(),
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              'Deleting account & detaching records...',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: semanticColors.onSurfaceMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isDeleting ? null : () => Navigator.pop(dialogCtx),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: semanticColors.error,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: isDeleting
+                    ? null
+                    : () async {
+                        if (isPasswordUser &&
+                            !formKey.currentState!.validate()) {
+                          return;
+                        }
+
+                        setDialogState(() {
+                          isDeleting = true;
+                          errorMessage = null;
+                        });
+
+                        try {
+                          await AccountDeletionService.deleteAccount(
+                            password: isPasswordUser ? passwordCtrl.text : null,
+                          );
+
+                          if (!dialogCtx.mounted) return;
+                          Navigator.pop(dialogCtx);
+
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Your account and personal data were deleted.',
+                              ),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          );
+
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const OnboardingFlow(),
+                            ),
+                            (_) => false,
+                          );
+                        } on AppException catch (e) {
+                          setDialogState(() {
+                            isDeleting = false;
+                            errorMessage = e.message;
+                          });
+                        } catch (e) {
+                          setDialogState(() {
+                            isDeleting = false;
+                            errorMessage = 'An unexpected error occurred: $e';
+                          });
+                        }
+                      },
+                child: const Text('Delete Permanently'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 }
