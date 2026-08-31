@@ -6,6 +6,7 @@ import 'app_settings.dart';
 import 'user_roles.dart';
 import 'services/network_service.dart';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'widgets/animations/animated_button.dart';
 import 'widgets/app_dialogs.dart';
 import 'widgets/schedly_card.dart';
@@ -20,19 +21,67 @@ class CreateAnnouncementPage extends StatefulWidget {
 
 class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
   final titleController = TextEditingController();
-
   final messageController = TextEditingController();
 
   String priority = 'Normal';
   bool _isPublishing = false;
   final Set<String> _selectedDivisions = {};
 
+  // Faculty targeted selection
+  String? _selectedFacultyDivision;
+  String? _selectedFacultySubject;
+  String _selectedFacultyBatch = 'Whole Class';
+  List<String> _facultySubjects = [];
+  List<String> _facultyBatches = ['Whole Class'];
+
   @override
   void initState() {
     super.initState();
     if (AppSettings.currentRole != UserRole.faculty) {
       _loadCRDivision();
+    } else {
+      _initFacultyDetails();
     }
+  }
+
+  Future<void> _initFacultyDetails() async {
+    final assigned = AppSettings.facultyAssignedDivisions ?? [];
+    if (assigned.isNotEmpty) {
+      _selectedFacultyDivision = assigned.first;
+      await _loadFacultyDivisionDetails(assigned.first);
+    }
+  }
+
+  Future<void> _loadFacultyDivisionDetails(String div) async {
+    try {
+      final uid = AppSettings.facultyId;
+      if (uid != null) {
+        final profileSnap = await FirebaseFirestore.instance
+            .collection('faculty_profiles')
+            .doc(uid)
+            .get();
+        final subjectsMap =
+            (profileSnap.data()?['subjects'] as Map<String, dynamic>?) ?? {};
+        final subjects = List<String>.from(subjectsMap[div] ?? []);
+
+        final secDoc = await FirebaseFirestore.instance
+            .collection('sections')
+            .doc(div)
+            .get();
+        final batchesList = List<String>.from(secDoc.data()?['batches'] ?? []);
+
+        if (mounted) {
+          setState(() {
+            _facultySubjects = subjects;
+            _selectedFacultySubject = subjects.isNotEmpty
+                ? subjects.first
+                : null;
+            _facultyBatches = ['Whole Class', ...batchesList];
+            _selectedFacultyBatch = 'Whole Class';
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadCRDivision() async {
@@ -89,24 +138,50 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
         return;
       }
 
-      if (_selectedDivisions.isEmpty) {
-        AppDialogs.showSnackBar(
-          context: context,
-          message: 'Select at least one division',
-        );
-        return;
-      }
+      if (AppSettings.currentRole == UserRole.faculty) {
+        if (_selectedFacultyDivision == null ||
+            _selectedFacultySubject == null) {
+          AppDialogs.showSnackBar(
+            context: context,
+            message: 'Please select target section and subject',
+          );
+          return;
+        }
 
-      setState(() => _isPublishing = true);
+        setState(() => _isPublishing = true);
 
-      for (final sectionId in _selectedDivisions) {
+        final title =
+            '[${_selectedFacultySubject!}] ${titleController.text.trim()}';
+
         await AppNotificationService.dispatch(
-          title: titleController.text,
-          message: messageController.text,
+          title: title,
+          message: messageController.text.trim(),
           priority: priority,
-          division: sectionId,
+          division: _selectedFacultyDivision!,
           type: 'announcement',
+          batch: _selectedFacultyBatch,
+          subject: _selectedFacultySubject,
         );
+      } else {
+        if (_selectedDivisions.isEmpty) {
+          AppDialogs.showSnackBar(
+            context: context,
+            message: 'Select at least one division',
+          );
+          return;
+        }
+
+        setState(() => _isPublishing = true);
+
+        for (final sectionId in _selectedDivisions) {
+          await AppNotificationService.dispatch(
+            title: titleController.text.trim(),
+            message: messageController.text.trim(),
+            priority: priority,
+            division: sectionId,
+            type: 'announcement',
+          );
+        }
       }
       if (!mounted) return;
 
@@ -252,7 +327,7 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
                   if (AppSettings.currentRole == UserRole.faculty) ...[
                     const SizedBox(height: AppSpacing.xl),
                     Text(
-                      'Target Divisions',
+                      'Target Audience',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w600,
@@ -260,52 +335,71 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
                         color: sem.onSurfaceMuted,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.sm,
-                      children: (AppSettings.facultyAssignedDivisions ?? [])
-                          .map((div) {
-                            final isSelected = _selectedDivisions.contains(div);
-                            return FilterChip(
-                              label: Text(div.replaceAll('_', ' ')),
-                              selected: isSelected,
-                              onSelected: (val) {
-                                setState(() {
-                                  if (val)
-                                    _selectedDivisions.add(div);
-                                  else
-                                    _selectedDivisions.remove(div);
-                                });
-                              },
-                              backgroundColor: sem.surfaceElevated2,
-                              selectedColor: Theme.of(
-                                context,
-                              ).colorScheme.primary.withValues(alpha: 0.15),
-                              checkmarkColor: Theme.of(
-                                context,
-                              ).colorScheme.primary,
-                              labelStyle: TextStyle(
-                                color: isSelected
-                                    ? Theme.of(context).colorScheme.primary
-                                    : sem.onSurfaceMuted,
-                                fontWeight: isSelected
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  AppRadius.sm,
-                                ),
-                                side: BorderSide(
-                                  color: isSelected
-                                      ? Theme.of(context).colorScheme.primary
-                                      : sem.borderSubtle,
-                                ),
-                              ),
-                            );
-                          })
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Section Dropdown
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(
+                        labelText: 'Select Section',
+                        border: OutlineInputBorder(),
+                      ),
+                      value: _selectedFacultyDivision,
+                      items: (AppSettings.facultyAssignedDivisions ?? [])
+                          .map(
+                            (div) => DropdownMenuItem(
+                              value: div,
+                              child: Text(div.replaceAll('_', ' ')),
+                            ),
+                          )
                           .toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() => _selectedFacultyDivision = val);
+                          _loadFacultyDivisionDetails(val);
+                        }
+                      },
+                    ),
+
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Subject Dropdown
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(
+                        labelText: 'Select Subject',
+                        border: OutlineInputBorder(),
+                      ),
+                      value: _selectedFacultySubject,
+                      items: _facultySubjects
+                          .map(
+                            (s) => DropdownMenuItem(value: s, child: Text(s)),
+                          )
+                          .toList(),
+                      onChanged: (val) {
+                        setState(() => _selectedFacultySubject = val);
+                      },
+                    ),
+
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Batch Dropdown
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(
+                        labelText: 'Target Batch',
+                        border: OutlineInputBorder(),
+                      ),
+                      value: _facultyBatches.contains(_selectedFacultyBatch)
+                          ? _selectedFacultyBatch
+                          : 'Whole Class',
+                      items: _facultyBatches
+                          .map(
+                            (b) => DropdownMenuItem(value: b, child: Text(b)),
+                          )
+                          .toList(),
+                      onChanged: (val) {
+                        setState(
+                          () => _selectedFacultyBatch = val ?? 'Whole Class',
+                        );
+                      },
                     ),
                   ],
                 ],

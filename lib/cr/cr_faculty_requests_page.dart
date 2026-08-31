@@ -8,6 +8,9 @@ import '../models/faculty_request.dart';
 import '../models/timetable_entry.dart';
 import '../models/event_category.dart';
 import '../services/timetable_event_service.dart';
+import '../timetable_manager.dart';
+import '../app_settings.dart';
+import '../user_roles.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/animations/floating_empty_state.dart';
 import '../widgets/skeleton_loader.dart';
@@ -27,51 +30,25 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
     final confirmed = await _showConfirmDialog(
       title: isCancel ? 'Approve Cancellation?' : 'Approve Extra Lecture?',
       message: isCancel
-          ? 'This will cancel the lecture and notify students.'
-          : 'This will add the extra lecture to the timetable.',
+          ? 'This will cancel the lecture for this date and notify students.'
+          : 'This will add the extra lecture to the timetable for this date.',
       confirmLabel: 'Yes, Approve',
       confirmColor: Theme.of(context).extension<AppSemanticColors>()!.conducted,
     );
     if (!confirmed) return;
 
     try {
-      final docRef = FirebaseFirestore.instance
-          .collection('sections')
-          .doc(widget.division)
-          .collection('faculty_requests')
-          .doc(request.id);
+      final date = request.date ?? DateTime.now();
+      final dayStr = DateFormat('EEEE').format(date);
+      final validForDate = DateFormat('yyyy-MM-dd').format(date);
 
-      final batch = FirebaseFirestore.instance.batch();
-      batch.update(docRef, {
-        'status': FacultyRequestStatus.approved.name,
-        'resolvedAt': FieldValue.serverTimestamp(),
-      });
-
-      if (request.type == FacultyRequestType.cancel) {
-        if (request.originalLectureId != null) {
-          final dayStr = DateFormat(
-            'EEEE',
-          ).format(request.date ?? DateTime.now());
-          final lecRef = FirebaseFirestore.instance
-              .collection('timetables')
-              .doc(widget.division)
-              .collection(dayStr)
-              .doc(request.originalLectureId);
-
-          batch.update(lecRef, {'status': 'cancelled', 'isActive': false});
-        }
-      } else if (request.type == FacultyRequestType.addExtra) {
-        final dayStr = DateFormat(
-          'EEEE',
-        ).format(request.date ?? DateTime.now());
-        final newLecRef = FirebaseFirestore.instance
+      if (request.type == FacultyRequestType.addExtra) {
+        final newLecId = FirebaseFirestore.instance
             .collection('timetables')
-            .doc(widget.division)
-            .collection(dayStr)
-            .doc();
-
+            .doc()
+            .id;
         final entry = TimetableEntry(
-          id: newLecRef.id,
+          id: newLecId,
           subject: request.subject,
           category: EventCategoryExtension.inferFromSubject(request.subject),
           batch: request.batch ?? 'Whole Class',
@@ -80,36 +57,90 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
           durationMinutes: (request.endTime ?? 60) - (request.startTime ?? 0),
           room: request.room,
           facultyId: request.facultyId,
+          status: 'active',
+          validForDate: validForDate,
         );
 
-        batch.set(newLecRef, entry.toFirestore());
+        // Add lecture using the existing TimetableManager architecture
+        // which handles date-specific override validation, resolver visibility,
+        // and dispatches TimetableEventService.handleModification for student notifications.
+        await TimetableManager.addLecture(
+          division: widget.division,
+          day: dayStr,
+          entry: entry,
+        );
+      } else if (request.type == FacultyRequestType.cancel) {
+        if (request.originalLectureId != null) {
+          final lecSnap = await FirebaseFirestore.instance
+              .collection('timetables')
+              .doc(widget.division)
+              .collection(dayStr)
+              .doc(request.originalLectureId)
+              .get();
+
+          if (lecSnap.exists) {
+            final oldEntry = TimetableEntry.fromFirestore(lecSnap);
+            if (oldEntry.validForDate == null) {
+              // Recurring lecture: hide on this specific date and add cancelled entry
+              final updatedHiddenDates = List<String>.from(
+                oldEntry.hiddenOnDates,
+              )..add(validForDate);
+              await FirebaseFirestore.instance
+                  .collection('timetables')
+                  .doc(widget.division)
+                  .collection(dayStr)
+                  .doc(oldEntry.id)
+                  .update({'hiddenOnDates': updatedHiddenDates});
+
+              final cancelledEntry = oldEntry.copyWith(
+                id: FirebaseFirestore.instance
+                    .collection('timetables')
+                    .doc()
+                    .id,
+                validForDate: validForDate,
+                status: 'cancelled',
+                hiddenOnDates: [],
+              );
+              await TimetableManager.addLecture(
+                division: widget.division,
+                day: dayStr,
+                entry: cancelledEntry,
+                oldEntry: oldEntry,
+              );
+            } else {
+              // Already a one-off override: update status to cancelled
+              final cancelledEntry = oldEntry.copyWith(status: 'cancelled');
+              await TimetableManager.addLecture(
+                division: widget.division,
+                day: dayStr,
+                entry: cancelledEntry,
+                oldEntry: oldEntry,
+              );
+            }
+          }
+        }
       }
 
-      await batch.commit();
+      // Mark request approved
+      await FirebaseFirestore.instance
+          .collection('sections')
+          .doc(widget.division)
+          .collection('faculty_requests')
+          .doc(request.id)
+          .update({
+            'status': FacultyRequestStatus.approved.name,
+            'resolvedAt': FieldValue.serverTimestamp(),
+          });
 
+      // Notify Faculty that request was approved
       final String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
-
       try {
-        await FirebaseFirestore.instance.collection('notification_outbox').add({
-          'division': widget.division,
-          'role': 'student',
-          'title': 'Timetable Update',
-          'body':
-              '${request.type == FacultyRequestType.cancel ? 'Cancelled' : 'Extra'} ${request.subject} lecture by Prof. ${request.facultyName}.',
-          'createdAt': FieldValue.serverTimestamp(),
-          'uid': uid,
-          'type': request.type == FacultyRequestType.cancel ? 'cancel' : 'add',
-          'processed': false,
-          'attempts': 0,
-          'nextRetryAt': FieldValue.serverTimestamp(),
-        });
-
         await FirebaseFirestore.instance.collection('notification_outbox').add({
           'division': request.facultyId,
           'role': 'faculty',
           'title': 'Request Approved',
           'body':
-              'Your request for ${request.subject} has been approved by the CR.',
+              'Your request for ${request.subject} on $validForDate has been approved by the CR.',
           'createdAt': FieldValue.serverTimestamp(),
           'uid': uid,
           'type': 'add',
@@ -124,7 +155,7 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
       if (mounted) {
         AppDialogs.showSnackBar(
           context: context,
-          message: 'Request approved. Timetable updated.',
+          message: 'Request approved. Timetable override applied.',
         );
       }
     } catch (e) {
@@ -299,28 +330,47 @@ class _CRFacultyRequestsPageState extends State<CRFacultyRequestsPage> {
             );
           }
 
-          final docs = snapshot.data!.docs;
+          var requests = snapshot.data!.docs
+              .map((d) => FacultyRequest.fromFirestore(d))
+              .toList();
+
+          final isSR = AppSettings.currentRole == UserRole.sr;
+          if (isSR && AppSettings.srSubject != null) {
+            requests = requests
+                .where(
+                  (r) =>
+                      r.subject.toLowerCase() ==
+                          AppSettings.srSubject!.toLowerCase() ||
+                      r.subject.toLowerCase().contains(
+                        AppSettings.srSubject!.toLowerCase(),
+                      ),
+                )
+                .toList();
+          }
 
           // Empty state
-          if (docs.isEmpty) {
-            return const FloatingEmptyState(
+          if (requests.isEmpty) {
+            return FloatingEmptyState(
               icon: Icons.check_circle_outline_rounded,
               title: 'All caught up!',
-              subtitle: 'No pending faculty requests.',
+              subtitle: isSR
+                  ? 'No pending faculty requests for ${AppSettings.srSubject}.'
+                  : 'No pending faculty requests.',
             );
           }
 
           return ListView.separated(
             padding: const EdgeInsets.all(AppSpacing.x2l),
-            itemCount: docs.length,
+            itemCount: requests.length,
             separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.lg),
             itemBuilder: (context, index) {
-              final request = FacultyRequest.fromFirestore(docs[index]);
+              final request = requests[index];
               return _RequestCard(
                 request: request,
                 isDark: isDark,
                 sem: sem,
                 colorScheme: colorScheme,
+                isSR: isSR,
                 formatTime: _formatTime,
                 onApprove: () => _approveRequest(request),
                 onDeny: () => _denyRequest(request),
@@ -339,6 +389,7 @@ class _RequestCard extends StatelessWidget {
   final bool isDark;
   final AppSemanticColors sem;
   final ColorScheme colorScheme;
+  final bool isSR;
   final String Function(int?) formatTime;
   final VoidCallback onApprove;
   final VoidCallback onDeny;
@@ -348,6 +399,7 @@ class _RequestCard extends StatelessWidget {
     required this.isDark,
     required this.sem,
     required this.colorScheme,
+    required this.isSR,
     required this.formatTime,
     required this.onApprove,
     required this.onDeny,
@@ -499,6 +551,12 @@ class _RequestCard extends StatelessWidget {
                             '${formatTime(request.startTime)} – ${formatTime(request.endTime)}',
                         sem: sem,
                       ),
+                    if (request.batch != null && request.batch!.isNotEmpty)
+                      _DetailChip(
+                        icon: Icons.groups_rounded,
+                        label: request.batch!,
+                        sem: sem,
+                      ),
                     if (request.room != null && request.room!.isNotEmpty)
                       _DetailChip(
                         icon: Icons.room_rounded,
@@ -545,55 +603,90 @@ class _RequestCard extends StatelessWidget {
 
                 const SizedBox(height: AppSpacing.lg),
 
-                // Action buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: onDeny,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: sem.cancelled,
-                          side: BorderSide(
-                            color: sem.cancelled.withValues(alpha: 0.5),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.lg),
-                          ),
+                // Action buttons (CR can approve/deny, SR has visibility and status)
+                if (isSR)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.md,
+                      horizontal: AppSpacing.lg,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                      border: Border.all(
+                        color: colorScheme.primary.withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.shield_outlined,
+                          size: 16,
+                          color: colorScheme.primary,
                         ),
-                        child: Text(
-                          'Deny',
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(
+                          'Subject Representative View • Awaiting CR Decision',
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: onDeny,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: sem.cancelled,
+                            side: BorderSide(
+                              color: sem.cancelled.withValues(alpha: 0.5),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.lg),
+                            ),
+                          ),
+                          child: Text(
+                            'Deny',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: onApprove,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: isCancel
-                              ? sem.conducted
-                              : colorScheme.primary,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: onApprove,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: isCancel
+                                ? sem.conducted
+                                : colorScheme.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.lg),
+                            ),
                           ),
-                        ),
-                        child: Text(
-                          'Approve',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
+                          child: Text(
+                            'Approve',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
               ],
             ),
           ),

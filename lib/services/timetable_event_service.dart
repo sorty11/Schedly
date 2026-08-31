@@ -255,15 +255,27 @@ class TimetableEventService {
           ? 'high'
           : 'normal';
 
+      // Resolve faculty mappings using facultyId or subject assignment
+      final subjectToFacMap = await TimetableManager.getSubjectToFacultyIdMap(
+        division,
+      );
+      final oldFacId = oldEntry?.facultyId?.isNotEmpty == true
+          ? oldEntry!.facultyId
+          : (oldEntry != null ? subjectToFacMap[oldEntry.subjectCode] : null);
+      final newFacId = newEntry?.facultyId?.isNotEmpty == true
+          ? newEntry!.facultyId
+          : (newEntry != null ? subjectToFacMap[newEntry.subjectCode] : null);
+
       // If assigned to a faculty, also notify the faculty specifically
-      final facultyId = newEntry?.facultyId ?? oldEntry?.facultyId;
-      if (facultyId != null && facultyId.isNotEmpty) {
-        final Map<String, dynamic> facultyPayload = {
-          'notificationId': '${baseNotificationId}_fac',
-          'type': type,
-          'title': title,
-          'body': message,
-          'division': facultyId,
+      if (oldFacId != null && newFacId != null && oldFacId != newFacId) {
+        // Old faculty: lecture replaced/removed
+        final Map<String, dynamic> oldFacultyPayload = {
+          'notificationId': '${baseNotificationId}_fac_old',
+          'type': 'cancel',
+          'title': 'Lecture Replaced / Removed',
+          'body':
+              '${oldEntry!.displaySubject} in ${division.replaceAll('_', ' ')} on $dateContext has been replaced.',
+          'division': oldFacId,
           'role': 'faculty',
           'priority': priorityStr,
           'processed': false,
@@ -272,42 +284,108 @@ class TimetableEventService {
           'createdAt': FieldValue.serverTimestamp(),
           'uid': uid,
         };
-
-        final facultyOutboxRef = FirebaseFirestore.instance
+        await FirebaseFirestore.instance
             .collection('notification_outbox')
-            .doc();
-        await facultyOutboxRef.set(facultyPayload);
-      }
+            .add(oldFacultyPayload);
 
-      // Automatically create a backend faculty reminder if it's an add or edit
-      if (newEntry != null &&
-          newEntry.facultyId != null &&
-          newEntry.facultyId!.isNotEmpty) {
-        // Only schedule if it's not a cancellation/deletion
-        if (type != 'cancel' && type != 'delete') {
-          final lectureTime = _getNextOccurrence(day, newEntry.startTime);
-          final scheduledFor = lectureTime.subtract(const Duration(minutes: 5));
-
-          final reminderPayload = {
-            'facultyId': newEntry.facultyId,
-            'lectureId': newEntry.id,
-            'division': division,
-            'title': '📚 Upcoming Class',
-            'body':
-                '${newEntry.displaySubject}\n${division.replaceAll('_', ' ')}\nRoom ${newEntry.room}\nStarts in 5 minutes.',
-            'scheduledFor': Timestamp.fromDate(scheduledFor),
+        // New faculty: lecture added/scheduled
+        final Map<String, dynamic> newFacultyPayload = {
+          'notificationId': '${baseNotificationId}_fac_new',
+          'type': 'add',
+          'title': 'New Lecture Assigned',
+          'body':
+              '${newEntry!.displaySubject} in ${division.replaceAll('_', ' ')} on $dateContext has been added.',
+          'division': newFacId,
+          'role': 'faculty',
+          'priority': priorityStr,
+          'processed': false,
+          'attempts': 0,
+          'nextRetryAt': FieldValue.serverTimestamp(),
+          'createdAt': FieldValue.serverTimestamp(),
+          'uid': uid,
+        };
+        await FirebaseFirestore.instance
+            .collection('notification_outbox')
+            .add(newFacultyPayload);
+      } else {
+        final targetFacId = newFacId ?? oldFacId;
+        if (targetFacId != null && targetFacId.isNotEmpty) {
+          final Map<String, dynamic> facultyPayload = {
+            'notificationId': '${baseNotificationId}_fac',
+            'type': type,
+            'title': title,
+            'body': message,
+            'division': targetFacId,
+            'role': 'faculty',
+            'priority': priorityStr,
             'processed': false,
+            'attempts': 0,
+            'nextRetryAt': FieldValue.serverTimestamp(),
             'createdAt': FieldValue.serverTimestamp(),
             'uid': uid,
           };
+          await FirebaseFirestore.instance
+              .collection('notification_outbox')
+              .add(facultyPayload);
+        }
+      }
 
-          // Use a deterministic ID so edits overwrite the existing reminder rather than duplicating
-          final reminderDocId = '${division}_${newEntry.id}';
+      // Automatically manage backend faculty reminders
+      if (isCancel ||
+          isDelete ||
+          type == 'cancel' ||
+          type == 'delete' ||
+          (newEntry != null && newEntry.isHoliday)) {
+        // Cancelled lecture or Holiday: NO reminder (remove existing reminder)
+        final targetLecId = oldEntry?.id ?? newEntry?.id;
+        if (targetLecId != null) {
+          final reminderDocId = '${division}_$targetLecId';
           await FirebaseFirestore.instance
               .collection('faculty_reminders')
               .doc(reminderDocId)
-              .set(reminderPayload);
+              .delete();
         }
+      } else if (newEntry != null && newFacId != null && newFacId.isNotEmpty) {
+        // Effective reminder calculation (respects date-specific override time)
+        DateTime lectureTime;
+        if (targetDateStr != null) {
+          try {
+            final parts = targetDateStr.split('-');
+            lectureTime = DateTime(
+              int.parse(parts[0]),
+              int.parse(parts[1]),
+              int.parse(parts[2]),
+              newEntry.startTime ~/ 60,
+              newEntry.startTime % 60,
+            );
+          } catch (_) {
+            lectureTime = _getNextOccurrence(day, newEntry.startTime);
+          }
+        } else {
+          lectureTime = _getNextOccurrence(day, newEntry.startTime);
+        }
+
+        final scheduledFor = lectureTime.subtract(const Duration(minutes: 5));
+
+        final reminderPayload = {
+          'facultyId': newFacId,
+          'lectureId': newEntry.id,
+          'division': division,
+          'title': '📚 Upcoming Class',
+          'body':
+              '${newEntry.displaySubject}\n${division.replaceAll('_', ' ')}\nRoom ${newEntry.room ?? 'TBA'}\nStarts in 5 minutes.',
+          'scheduledFor': Timestamp.fromDate(scheduledFor),
+          'processed': false,
+          'createdAt': FieldValue.serverTimestamp(),
+          'uid': uid,
+        };
+
+        // Deterministic ID overwrites existing reminder so replacement lectures follow the new time
+        final reminderDocId = '${division}_${newEntry.id}';
+        await FirebaseFirestore.instance
+            .collection('faculty_reminders')
+            .doc(reminderDocId)
+            .set(reminderPayload);
       }
     } catch (e) {
       // Non-fatal: push notification outbox failure should never block timetable saves

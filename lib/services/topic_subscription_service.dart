@@ -13,6 +13,7 @@ class TopicSubscriptionService {
     String division,
     String role, {
     String? batch,
+    String? srSubject,
   }) async {
     if (kIsWeb) return; // FCM topics are not supported natively on Flutter Web
 
@@ -24,7 +25,7 @@ class TopicSubscriptionService {
         await _updateRoleSubscription(division, role);
       } else {
         await _updateDivisionSubscription(division);
-        await _updateRoleSubscription(division, role);
+        await _updateRoleSubscription(division, role, srSubject: srSubject);
         if (batch != null) {
           await _updateBatchSubscription(division, batch);
         }
@@ -49,6 +50,12 @@ class TopicSubscriptionService {
       if (oldRoleTopic != null) {
         await unsubscribeRole(oldRoleTopic);
         await prefs.remove('current_fcm_role_topic');
+      }
+
+      final oldSrTopic = prefs.getString('current_fcm_sr_topic');
+      if (oldSrTopic != null) {
+        await unsubscribeRole(oldSrTopic);
+        await prefs.remove('current_fcm_sr_topic');
       }
 
       final oldBatchTopic = prefs.getString('current_fcm_batch_topic');
@@ -97,14 +104,20 @@ class TopicSubscriptionService {
 
   static Future<void> _updateRoleSubscription(
     String division,
-    String role,
-  ) async {
+    String role, {
+    String? srSubject,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final oldRoleTopic = prefs.getString('current_fcm_role_topic');
+    final oldSrSubjectTopic = prefs.getString('current_fcm_sr_topic');
 
     if (oldRoleTopic != null) {
       await unsubscribeRole(oldRoleTopic);
       await prefs.remove('current_fcm_role_topic');
+    }
+    if (oldSrSubjectTopic != null) {
+      await unsubscribeRole(oldSrSubjectTopic);
+      await prefs.remove('current_fcm_sr_topic');
     }
 
     if (role == 'faculty') {
@@ -114,6 +127,17 @@ class TopicSubscriptionService {
         final newRoleTopic = 'faculty_${sanitizeTopic(facultyId)}';
         await subscribeRole(newRoleTopic);
         await prefs.setString('current_fcm_role_topic', newRoleTopic);
+      }
+    } else if (role == 'sr') {
+      final newRoleTopic = 'role_sr_${sanitizeTopic(division)}';
+      await subscribeRole(newRoleTopic);
+      await prefs.setString('current_fcm_role_topic', newRoleTopic);
+
+      if (srSubject != null && srSubject.isNotEmpty) {
+        final srSubjTopic =
+            'role_sr_${sanitizeTopic(division)}_${sanitizeTopic(srSubject)}';
+        await subscribeRole(srSubjTopic);
+        await prefs.setString('current_fcm_sr_topic', srSubjTopic);
       }
     } else if (role != 'student') {
       final newRoleTopic = 'role_${role}_${sanitizeTopic(division)}';

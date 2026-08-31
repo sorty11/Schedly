@@ -3,7 +3,7 @@ import 'package:schedly/services/feedback_service.dart';
 import 'package:schedly/theme/theme.dart';
 
 class BugReportSheet extends StatefulWidget {
-  const BugReportSheet({Key? key}) : super(key: key);
+  const BugReportSheet({super.key});
 
   @override
   State<BugReportSheet> createState() => _BugReportSheetState();

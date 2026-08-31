@@ -141,10 +141,13 @@ class NotificationService {
       }
 
       if (finalDivision != null && finalDivision.isNotEmpty) {
+        final srSubject =
+            AppSettings.srSubject ?? prefs.getString('sr_subject');
         await TopicSubscriptionService.updateSubscriptions(
           finalDivision,
           role,
           batch: batch,
+          srSubject: srSubject,
         );
         debugPrint('[TOKEN_SYNC] Topic subscription SUCCESS');
       } else {
@@ -334,10 +337,12 @@ class NotificationService {
 
       final batch =
           AppSettings.studentBatch ?? prefs.getString('selected_batch');
+      final srSubject = AppSettings.srSubject ?? prefs.getString('sr_subject');
       await TopicSubscriptionService.updateSubscriptions(
         newDivision,
         role,
         batch: batch,
+        srSubject: srSubject,
       );
     } catch (e) {
       debugPrint('NotificationService: updateDivisionSubscription failed: $e');

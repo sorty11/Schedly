@@ -35,16 +35,20 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sanitizeTopic = sanitizeTopic;
 exports.getTargetTopic = getTargetTopic;
+exports.getAllTargetTopics = getAllTargetTopics;
 exports.dispatchNotification = dispatchNotification;
 const admin = __importStar(require("firebase-admin"));
 const logger_1 = require("../utils/logger");
 function sanitizeTopic(topic) {
     return topic.replace(/[^a-zA-Z0-9-_.~%]/g, '_');
 }
-function getTargetTopic(division, batch, role) {
+function getTargetTopic(division, batch, role, subject) {
     const normalizedRole = role?.toLowerCase();
     if (normalizedRole === 'faculty') {
         return `faculty_${sanitizeTopic(division)}`;
+    }
+    if (normalizedRole === 'sr' && subject) {
+        return `role_sr_${sanitizeTopic(division)}_${sanitizeTopic(subject)}`;
     }
     if (normalizedRole && normalizedRole !== 'student') {
         return `role_${normalizedRole}_${sanitizeTopic(division)}`;
@@ -54,9 +58,29 @@ function getTargetTopic(division, batch, role) {
     }
     return `division_${sanitizeTopic(division)}`;
 }
+function getAllTargetTopics(division, batch, role, subject) {
+    const topics = [];
+    const normalizedRole = role?.toLowerCase();
+    if (normalizedRole === 'faculty') {
+        topics.push(`faculty_${sanitizeTopic(division)}`);
+    }
+    else {
+        topics.push(`division_${sanitizeTopic(division)}`);
+        if (normalizedRole === 'sr' && subject) {
+            topics.push(`role_sr_${sanitizeTopic(division)}_${sanitizeTopic(subject)}`);
+        }
+        else if (normalizedRole && normalizedRole !== 'student') {
+            topics.push(`role_${normalizedRole}_${sanitizeTopic(division)}`);
+        }
+        if (batch) {
+            topics.push(`batch_${sanitizeTopic(batch)}_${sanitizeTopic(division)}`);
+        }
+    }
+    return topics;
+}
 async function dispatchNotification(payload) {
-    const topic = getTargetTopic(payload.division, payload.batch, payload.role);
-    logger_1.logger.info(`[TOPIC] Resolved topic: ${topic} from division=${payload.division}, batch=${payload.batch}, role=${payload.role}`);
+    const topic = getTargetTopic(payload.division, payload.batch, payload.role, payload.subject);
+    logger_1.logger.info(`[TOPIC] Resolved topic: ${topic} from division=${payload.division}, batch=${payload.batch}, role=${payload.role}, subject=${payload.subject}`);
     const priority = payload.priority || 'normal';
     const ttlSeconds = priority === 'high' ? 3600 : 86400; // 1 hour high, 24 hours normal
     const androidConfig = {

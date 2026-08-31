@@ -12,8 +12,10 @@ class AppNotificationService {
     required String division,
     required String type, // 'announcement', 'reschedule', 'cancellation'
     String priority = 'Normal',
+    String? batch,
+    String? subject,
   }) async {
-    final batch = db.batch();
+    final firestoreBatch = db.batch();
 
     // 1. In-app notification (for Updates tab)
     final notifRef = db
@@ -21,10 +23,12 @@ class AppNotificationService {
         .doc(division)
         .collection('notifications')
         .doc();
-    batch.set(notifRef, {
+    firestoreBatch.set(notifRef, {
       'title': title,
       'message': message,
       'type': type,
+      if (batch != null && batch != 'Whole Class') 'batch': batch,
+      'subject': ?subject,
       'createdAt': FieldValue.serverTimestamp(),
     });
 
@@ -35,10 +39,12 @@ class AppNotificationService {
           .doc(division)
           .collection('announcements')
           .doc();
-      batch.set(annRef, {
+      firestoreBatch.set(annRef, {
         'title': title,
         'message': message,
         'priority': priority,
+        if (batch != null && batch != 'Whole Class') 'batch': batch,
+        'subject': ?subject,
         'createdAt': FieldValue.serverTimestamp(),
       });
     }
@@ -51,12 +57,14 @@ class AppNotificationService {
     }
 
     final outboxRef = db.collection('notification_outbox').doc();
-    batch.set(outboxRef, {
+    firestoreBatch.set(outboxRef, {
       'notificationId': '${type}_${DateTime.now().millisecondsSinceEpoch}',
       'type': type,
       'title': title,
       'body': message,
       'division': division,
+      if (batch != null && batch != 'Whole Class') 'batch': batch,
+      'subject': ?subject,
       'priority': priority.toLowerCase() == 'high' ? 'high' : 'normal',
       'processed': false,
       'attempts': 0,
@@ -65,6 +73,6 @@ class AppNotificationService {
       'uid': uid,
     });
 
-    await batch.commit();
+    await firestoreBatch.commit();
   }
 }

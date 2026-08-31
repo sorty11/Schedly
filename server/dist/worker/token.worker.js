@@ -86,11 +86,13 @@ class TokenWorker {
             const token = data.token;
             if (!token)
                 return;
-            const topic = (0, notification_service_1.getTargetTopic)(data.division, data.batch, data.role);
-            this.tokenTopicMap.set(token, topic);
-            if (!topicMap[topic])
-                topicMap[topic] = [];
-            topicMap[topic].push(token);
+            const topics = (0, notification_service_1.getAllTargetTopics)(data.division, data.batch, data.role);
+            this.tokenTopicMap.set(token, topics);
+            for (const topic of topics) {
+                if (!topicMap[topic])
+                    topicMap[topic] = [];
+                topicMap[topic].push(token);
+            }
         });
         for (const [topic, tokens] of Object.entries(topicMap)) {
             for (let i = 0; i < tokens.length; i += 1000) {
@@ -112,68 +114,79 @@ class TokenWorker {
             const token = data.token;
             if (!token)
                 continue;
-            const newTopic = (0, notification_service_1.getTargetTopic)(data.division, data.batch, data.role);
+            const newTopics = (0, notification_service_1.getAllTargetTopics)(data.division, data.batch, data.role);
             if (change.type === 'added') {
-                this.tokenTopicMap.set(token, newTopic);
-                try {
-                    await admin.messaging().subscribeToTopic(token, newTopic);
-                    logger_1.logger.info(JSON.stringify({
-                        event: 'token_subscribed',
-                        token: token.substring(0, 10) + '...',
-                        topic: newTopic,
-                        timestamp: new Date().toISOString()
-                    }));
-                }
-                catch (error) {
-                    logger_1.logger.error(`Failed to subscribe token to ${newTopic}: ${error.message}`);
-                }
-            }
-            else if (change.type === 'modified') {
-                const oldTopic = this.tokenTopicMap.get(token);
-                if (oldTopic && oldTopic !== newTopic) {
+                this.tokenTopicMap.set(token, newTopics);
+                for (const topic of newTopics) {
                     try {
-                        await admin.messaging().unsubscribeFromTopic(token, oldTopic);
-                        logger_1.logger.info(JSON.stringify({
-                            event: 'token_unsubscribed',
-                            token: token.substring(0, 10) + '...',
-                            topic: oldTopic,
-                            reason: 'topic_changed',
-                            timestamp: new Date().toISOString()
-                        }));
-                    }
-                    catch (error) {
-                        logger_1.logger.error(`Failed to unsubscribe token from old topic ${oldTopic}: ${error.message}`);
-                    }
-                    try {
-                        await admin.messaging().subscribeToTopic(token, newTopic);
-                        this.tokenTopicMap.set(token, newTopic);
+                        await admin.messaging().subscribeToTopic(token, topic);
                         logger_1.logger.info(JSON.stringify({
                             event: 'token_subscribed',
                             token: token.substring(0, 10) + '...',
-                            topic: newTopic,
+                            topic: topic,
+                            timestamp: new Date().toISOString()
+                        }));
+                    }
+                    catch (error) {
+                        logger_1.logger.error(`Failed to subscribe token to ${topic}: ${error.message}`);
+                    }
+                }
+            }
+            else if (change.type === 'modified') {
+                const oldTopics = this.tokenTopicMap.get(token) || [];
+                // Find topics to unsubscribe from (in old but not in new)
+                const topicsToRemove = oldTopics.filter(t => !newTopics.includes(t));
+                // Find topics to subscribe to (in new but not in old)
+                const topicsToAdd = newTopics.filter(t => !oldTopics.includes(t));
+                for (const topic of topicsToRemove) {
+                    try {
+                        await admin.messaging().unsubscribeFromTopic(token, topic);
+                        logger_1.logger.info(JSON.stringify({
+                            event: 'token_unsubscribed',
+                            token: token.substring(0, 10) + '...',
+                            topic: topic,
                             reason: 'topic_changed',
                             timestamp: new Date().toISOString()
                         }));
                     }
                     catch (error) {
-                        logger_1.logger.error(`Failed to subscribe token to new topic ${newTopic}: ${error.message}`);
+                        logger_1.logger.error(`Failed to unsubscribe token from old topic ${topic}: ${error.message}`);
                     }
                 }
+                for (const topic of topicsToAdd) {
+                    try {
+                        await admin.messaging().subscribeToTopic(token, topic);
+                        logger_1.logger.info(JSON.stringify({
+                            event: 'token_subscribed',
+                            token: token.substring(0, 10) + '...',
+                            topic: topic,
+                            reason: 'topic_changed',
+                            timestamp: new Date().toISOString()
+                        }));
+                    }
+                    catch (error) {
+                        logger_1.logger.error(`Failed to subscribe token to new topic ${topic}: ${error.message}`);
+                    }
+                }
+                this.tokenTopicMap.set(token, newTopics);
             }
             else if (change.type === 'removed') {
+                const topics = this.tokenTopicMap.get(token) || newTopics;
                 this.tokenTopicMap.delete(token);
-                try {
-                    await admin.messaging().unsubscribeFromTopic(token, newTopic);
-                    logger_1.logger.info(JSON.stringify({
-                        event: 'token_unsubscribed',
-                        token: token.substring(0, 10) + '...',
-                        topic: newTopic,
-                        reason: 'document_deleted',
-                        timestamp: new Date().toISOString()
-                    }));
-                }
-                catch (error) {
-                    logger_1.logger.error(`Failed to unsubscribe token from ${newTopic}: ${error.message}`);
+                for (const topic of topics) {
+                    try {
+                        await admin.messaging().unsubscribeFromTopic(token, topic);
+                        logger_1.logger.info(JSON.stringify({
+                            event: 'token_unsubscribed',
+                            token: token.substring(0, 10) + '...',
+                            topic: topic,
+                            reason: 'document_deleted',
+                            timestamp: new Date().toISOString()
+                        }));
+                    }
+                    catch (error) {
+                        logger_1.logger.error(`Failed to unsubscribe token from ${topic}: ${error.message}`);
+                    }
                 }
             }
         }

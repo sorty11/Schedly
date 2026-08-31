@@ -6,10 +6,13 @@ export function sanitizeTopic(topic: string): string {
   return topic.replace(/[^a-zA-Z0-9-_.~%]/g, '_');
 }
 
-export function getTargetTopic(division: string, batch?: string, role?: string): string {
+export function getTargetTopic(division: string, batch?: string, role?: string, subject?: string): string {
   const normalizedRole = role?.toLowerCase();
   if (normalizedRole === 'faculty') {
     return `faculty_${sanitizeTopic(division)}`;
+  }
+  if (normalizedRole === 'sr' && subject) {
+    return `role_sr_${sanitizeTopic(division)}_${sanitizeTopic(subject)}`;
   }
   if (normalizedRole && normalizedRole !== 'student') {
     return `role_${normalizedRole}_${sanitizeTopic(division)}`;
@@ -20,7 +23,7 @@ export function getTargetTopic(division: string, batch?: string, role?: string):
   return `division_${sanitizeTopic(division)}`;
 }
 
-export function getAllTargetTopics(division: string, batch?: string, role?: string): string[] {
+export function getAllTargetTopics(division: string, batch?: string, role?: string, subject?: string): string[] {
   const topics: string[] = [];
   const normalizedRole = role?.toLowerCase();
   
@@ -28,7 +31,9 @@ export function getAllTargetTopics(division: string, batch?: string, role?: stri
     topics.push(`faculty_${sanitizeTopic(division)}`);
   } else {
     topics.push(`division_${sanitizeTopic(division)}`);
-    if (normalizedRole && normalizedRole !== 'student') {
+    if (normalizedRole === 'sr' && subject) {
+      topics.push(`role_sr_${sanitizeTopic(division)}_${sanitizeTopic(subject)}`);
+    } else if (normalizedRole && normalizedRole !== 'student') {
       topics.push(`role_${normalizedRole}_${sanitizeTopic(division)}`);
     }
     if (batch) {
@@ -39,8 +44,8 @@ export function getAllTargetTopics(division: string, batch?: string, role?: stri
 }
 
 export async function dispatchNotification(payload: NotificationPayload): Promise<void> {
-  const topic = getTargetTopic(payload.division, payload.batch, payload.role);
-  logger.info(`[TOPIC] Resolved topic: ${topic} from division=${payload.division}, batch=${payload.batch}, role=${payload.role}`);
+  const topic = getTargetTopic(payload.division, payload.batch, payload.role, payload.subject);
+  logger.info(`[TOPIC] Resolved topic: ${topic} from division=${payload.division}, batch=${payload.batch}, role=${payload.role}, subject=${payload.subject}`);
   
   const priority = payload.priority || 'normal';
   const ttlSeconds = priority === 'high' ? 3600 : 86400; // 1 hour high, 24 hours normal

@@ -3,7 +3,7 @@ import 'package:schedly/services/feedback_service.dart';
 import 'package:schedly/theme/theme.dart';
 
 class FeatureRequestSheet extends StatefulWidget {
-  const FeatureRequestSheet({Key? key}) : super(key: key);
+  const FeatureRequestSheet({super.key});
 
   @override
   State<FeatureRequestSheet> createState() => _FeatureRequestSheetState();
