@@ -98,7 +98,59 @@ class AttendanceLog {
     };
   }
 
-  // Idempotent key for deduplication
-  String get deduplicationKey =>
-      '${date.year}-${date.month}-${date.day}_${startTime}_${subjectCode}_$component';
+  /// Deterministic identity: date + start + end + course + component.
+  String get deduplicationKey => buildDeduplicationKey(
+    date: date,
+    startTime: startTime,
+    endTime: endTime,
+    subjectCode: subjectCode,
+    component: component,
+  );
+
+  static String canonicalSubjectCode(String rawCode) {
+    final trimmed = rawCode.trim();
+    if (trimmed.isEmpty) return trimmed;
+    final upper = trimmed.toUpperCase();
+
+    if (upper == 'DSA' || upper.contains('DATA STRUCTURES')) return 'DSA';
+    if (upper == 'COA' || upper.contains('ORGANIZATION AND ARCHITECTUR')) {
+      return 'COA';
+    }
+    if (upper == 'PEM' || upper.contains('ECONOMICS AND MANAGEMEN')) {
+      return 'PEM';
+    }
+    if (upper == 'DM' || upper.contains('DISCRETE MATHEMATICS')) return 'DM';
+    if (upper == 'SNS' || upper.contains('SIGNALS AND SYSTEMS')) return 'SnS';
+    if (upper == 'PNS' || upper.contains('PROBABILITY AND STATISTICS')) {
+      return 'PnS';
+    }
+    if (upper == 'PYTHON' || upper.contains('PYTHON')) return 'Python';
+    if (upper == 'TC' || upper.contains('TECHNICAL COMMUNICATION')) return 'TC';
+    if (upper == 'PE' || upper.contains('PROMPT ENGINEERING')) {
+      return 'Prompt Engineering for ChatGPT';
+    }
+
+    return trimmed;
+  }
+
+  static bool isDsa(String subjectCode) {
+    final upper = subjectCode.trim().toUpperCase();
+    return upper == 'DSA' || upper.contains('DATA STRUCTURES');
+  }
+
+  /// Deterministic identity:
+  /// For DSA: course + component + date + start/end
+  /// For merged courses: course + date + start/end
+  static String buildDeduplicationKey({
+    required DateTime date,
+    required int startTime,
+    required int endTime,
+    required String subjectCode,
+    required String component,
+  }) {
+    final canonSubj = canonicalSubjectCode(subjectCode);
+    final compPart = isDsa(canonSubj) ? '_$component' : '';
+    return '${date.year}-${date.month}-${date.day}_${startTime}_${endTime}_$canonSubj$compPart'
+        .replaceAll(RegExp(r'\s+'), '_');
+  }
 }

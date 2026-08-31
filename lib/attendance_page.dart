@@ -15,6 +15,8 @@ import 'services/attendance_service.dart';
 import 'timetable_manager.dart';
 import 'theme/theme.dart';
 import 'services/progress_calculator_service.dart';
+import 'attendance_import_review_page.dart';
+import 'models/attendance_import_models.dart';
 import 'services/attendance_parser.dart';
 import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/staggered_list_item.dart';
@@ -73,26 +75,15 @@ class _AttendancePageState extends State<AttendancePage> {
   }
 
   Future<void> _handlePdfImport() async {
-    // Show beta warning first
     if (!mounted) return;
     await AppDialogs.showWarning(
       context: context,
-      title: 'Beta Feature Warning',
+      title: 'Import Official Attendance Report',
       message:
-          'PDF Import is currently in Beta. It may extract incorrect subjects (like "CE C" instead of the actual subject name). We recommend NOT using this feature until it is fully stable.',
-      resolution: 'Tap Import to proceed anyway, or Cancel to exit.',
+          'Attendance import is a Beta feature. Data comes from your uploaded institutional PDF — not verified by Schedly. Smart Attendance is separate and not affected.',
+      resolution: 'Tap Continue to select your PDF, or Cancel to exit.',
     );
     if (!mounted) return;
-    final proceed = await AppDialogs.showConfirm(
-      context: context,
-      title: 'Proceed with Import?',
-      message:
-          'This will attempt to parse your attendance PDF. Results may be inaccurate in Beta.',
-      confirmText: 'Import Anyway',
-      isDestructive: false,
-    );
-
-    if (!proceed) return;
 
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -116,28 +107,91 @@ class _AttendancePageState extends State<AttendancePage> {
 
       if (!mounted) return;
 
-      // Show loading indicator
+      var parsePage = 0;
+      var parseTotal = 0;
+      var detectedRows = 0;
+
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (c) => const Center(child: CircularProgressIndicator()),
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              title: const Text('Parsing PDF…'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text(
+                    parseTotal > 0
+                        ? 'Page $parsePage / $parseTotal'
+                        : 'Reading document…',
+                  ),
+                  if (detectedRows > 0) Text('$detectedRows records detected'),
+                ],
+              ),
+            );
+          },
+        ),
       );
 
-      await AttendanceParserService.parsePDFAndUpload(bytes, widget.division);
+      final preview = await AttendanceParserService.parseForPreview(
+        bytes: bytes,
+        division: widget.division,
+        onProgress:
+            ({
+              required currentPage,
+              required totalPages,
+              required rowsDetected,
+              required message,
+            }) {
+              parsePage = currentPage;
+              parseTotal = totalPages;
+              detectedRows = rowsDetected;
+            },
+      );
 
       if (!mounted) return;
-      Navigator.pop(context); // hide loading
-      AppDialogs.showSnackBar(
-        context: context,
-        message: 'Attendance imported successfully!',
-      );
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context); // hide loading
+      Navigator.pop(context);
+
+      if (preview.isImageOnly ||
+          (preview.errors.isNotEmpty && preview.logs.isEmpty)) {
         AppDialogs.showError(
           context: context,
           title: 'Import Failed',
-          message: e.toString(),
+          message: preview.errors.isNotEmpty
+              ? preview.errors.join('\n')
+              : 'Could not extract text from this PDF.',
+        );
+        return;
+      }
+
+      final importResult = await Navigator.push<AttendanceImportResult>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AttendanceImportReviewPage(
+            preview: preview,
+            division: widget.division,
+          ),
+        ),
+      );
+
+      if (!mounted || importResult == null) return;
+
+      final total = importResult.imported + importResult.updated;
+      AppDialogs.showSnackBar(
+        context: context,
+        message:
+            'Successfully imported $total records (${importResult.imported} new, ${importResult.updated} updated).',
+      );
+    } catch (e) {
+      if (mounted) {
+        if (Navigator.canPop(context)) Navigator.pop(context);
+        AppDialogs.showError(
+          context: context,
+          title: 'Import Failed',
+          message: e.toString().replaceAll('Exception: ', ''),
         );
       }
     }
@@ -148,7 +202,7 @@ class _AttendancePageState extends State<AttendancePage> {
       context: context,
       title: 'Undo PDF Import',
       message:
-          'This will delete all attendance records that were imported via PDF. Your manually marked attendance will not be affected.',
+          'This will delete all attendance records imported from official PDF reports. Manually marked attendance will not be affected.',
       confirmText: 'Undo Import',
       isDestructive: true,
     );
@@ -162,24 +216,15 @@ class _AttendancePageState extends State<AttendancePage> {
     );
 
     try {
-      final snap = await FirebaseFirestore.instance
-          .collection('sections')
-          .doc(widget.division)
-          .collection('attendance_logs')
-          .where('source', isEqualTo: 'pdf_import')
-          .get();
-
-      final batch = FirebaseFirestore.instance.batch();
-      for (final doc in snap.docs) {
-        batch.delete(doc.reference);
-      }
-      await batch.commit();
+      final count = await AttendanceParserService.undoPdfImport(
+        widget.division,
+      );
 
       if (mounted) {
         Navigator.pop(context);
         AppDialogs.showSnackBar(
           context: context,
-          message: 'Successfully undid PDF imports.',
+          message: 'Removed $count imported records.',
         );
       }
     } catch (e) {
@@ -245,118 +290,205 @@ class _AttendancePageState extends State<AttendancePage> {
                     final logs = logsSnap.data ?? <AttendanceLog>[];
 
                     final Map<String, AttendanceRecord> records = {};
-                    final List<String> mergedSubjects = [
-                      'DSA',
-                      'DATA STRUCTURES',
-                      'DM',
-                      'Discrete Mathematics',
-                      'PnS',
-                      'SnS',
-                      'Python',
-                      'PROGRAMMING WITH PYTHON',
-                      'Signals and Systems',
-                      'Principles of Economics and Managemen',
-                    ];
-
                     final Map<String, List<AttendanceRecord>> rawGrouped = {};
 
-                    for (final r in rawRecords) {
-                      String subjectName = r.subjectCode;
-                      String componentName = r.component;
+                    // Clean and normalize component names to human-readable form
+                    String normalizeComponent(String comp) {
+                      final lower = comp.trim().toLowerCase();
+                      if (lower.isEmpty ||
+                          lower == 'lecture' ||
+                          lower == 'theory') {
+                        return 'Theory';
+                      }
+                      if (lower.contains('lab') ||
+                          lower.contains('practical')) {
+                        return 'Lab';
+                      }
+                      if (lower.contains('tutorial')) return 'Tutorial';
+                      if (lower.contains('project')) return 'Project';
+                      return comp.trim();
+                    }
 
-                      if (subjectName.toUpperCase().contains(
-                            'DATA STRUCTURES',
-                          ) ||
-                          subjectName.trim().toUpperCase() == 'DSA') {
-                        subjectName = 'DSA';
-                        if (componentName.toUpperCase().contains('LAB') ||
-                            componentName.toUpperCase().contains('PRACTICAL')) {
-                          componentName = 'Lab';
-                        } else {
-                          componentName = 'Theory';
+                    // 1. If logs exist, they are the ground truth for imported lectures
+                    if (logs.isNotEmpty) {
+                      // Deduplicate logs by stable lecture identity:
+                      // For DSA: course + component + date + start/end
+                      // For merged courses: course + date + start/end
+                      final uniqueLogs = <String, AttendanceLog>{};
+                      for (final log in logs) {
+                        if (log.subjectCode.isEmpty) continue;
+                        final key = log.deduplicationKey;
+                        final existing = uniqueLogs[key];
+                        if (existing == null ||
+                            log.importedAt.isAfter(existing.importedAt)) {
+                          uniqueLogs[key] = log;
                         }
                       }
+                      final deduplicatedLogs = uniqueLogs.values.toList();
 
-                      if (mergedSubjects.contains(subjectName)) {
-                        final key = '${subjectName}_Merged';
-                        if (records.containsKey(key)) {
-                          final existing = records[key]!;
-                          records[key] = AttendanceRecord(
-                            id: existing.id,
-                            division: existing.division,
-                            subjectCode: subjectName,
-                            component: 'Merged',
-                            present: existing.present + r.present,
-                            absent: existing.absent + r.absent,
-                            cancelled: existing.cancelled + r.cancelled,
-                          );
+                      final compsBySubject = <String, Set<String>>{};
+                      for (final log in deduplicatedLogs) {
+                        final canonSubj = AttendanceLog.canonicalSubjectCode(
+                          log.subjectCode,
+                        );
+                        compsBySubject
+                            .putIfAbsent(canonSubj, () => {})
+                            .add(normalizeComponent(log.component));
+                      }
+
+                      // Aggregate logs: ONLY DSA splits Theory and Lab.
+                      // All other multi-component subjects merge into ONE card.
+                      final aggregatedLogs =
+                          <
+                            String,
+                            ({
+                              String subjectCode,
+                              String component,
+                              int present,
+                              int absent,
+                              int cancelled,
+                            })
+                          >{};
+
+                      for (final log in deduplicatedLogs) {
+                        final canonSubj = AttendanceLog.canonicalSubjectCode(
+                          log.subjectCode,
+                        );
+                        final isDsa = AttendanceLog.isDsa(canonSubj);
+                        final normComp = normalizeComponent(log.component);
+                        final hasMultiple =
+                            (compsBySubject[canonSubj]?.length ?? 0) > 1;
+
+                        final String groupKey;
+                        final String displayComponent;
+
+                        if (isDsa) {
+                          groupKey = '${canonSubj}_$normComp';
+                          displayComponent = normComp;
+                        } else if (hasMultiple) {
+                          groupKey = '${canonSubj}_Merged';
+                          displayComponent = 'Merged';
                         } else {
-                          records[key] = AttendanceRecord(
-                            id: r.id,
-                            division: r.division,
-                            subjectCode: subjectName,
-                            component: 'Merged',
-                            present: r.present,
-                            absent: r.absent,
-                            cancelled: r.cancelled,
-                          );
+                          groupKey = '${canonSubj}_$normComp';
+                          displayComponent = normComp;
                         }
-                        rawGrouped
-                            .putIfAbsent(key, () => [])
-                            .add(
-                              AttendanceRecord(
-                                id: r.id,
-                                division: r.division,
-                                subjectCode: subjectName,
-                                component: componentName,
-                                present: r.present,
-                                absent: r.absent,
-                                cancelled: r.cancelled,
-                              ),
-                            );
-                      } else {
-                        String normComponent = componentName;
-                        if (normComponent.isEmpty || normComponent == 'Lecture')
-                          normComponent = 'Theory';
-                        else if (normComponent == 'Practical')
-                          normComponent = 'Lab';
 
-                        final key = '${subjectName}_$normComponent';
-                        if (records.containsKey(key)) {
-                          final existing = records[key]!;
-                          records[key] = AttendanceRecord(
+                        final cur =
+                            aggregatedLogs[groupKey] ??
+                            (
+                              subjectCode: canonSubj,
+                              component: displayComponent,
+                              present: 0,
+                              absent: 0,
+                              cancelled: 0,
+                            );
+
+                        int p = cur.present;
+                        int a = cur.absent;
+                        if (log.status == 'present') {
+                          p++;
+                        } else if (log.status == 'absent') {
+                          a++;
+                        }
+
+                        aggregatedLogs[groupKey] = (
+                          subjectCode: canonSubj,
+                          component: displayComponent,
+                          present: p,
+                          absent: a,
+                          cancelled: cur.cancelled,
+                        );
+                      }
+
+                      for (final entry in aggregatedLogs.entries) {
+                        final val = entry.value;
+                        final division = rawRecords.isNotEmpty
+                            ? rawRecords.first.division
+                            : 'CE';
+                        final rec = AttendanceRecord(
+                          id: '${division}_${val.subjectCode}_${val.component}',
+                          division: division,
+                          subjectCode: val.subjectCode,
+                          component: val.component,
+                          present: val.present,
+                          absent: val.absent,
+                          cancelled: val.cancelled,
+                        );
+                        records[entry.key] = rec;
+                        rawGrouped[entry.key] = [rec];
+                      }
+
+                      // Include any subject that exists in rawRecords but not in logs
+                      for (final r in rawRecords) {
+                        final canonSubj = AttendanceLog.canonicalSubjectCode(
+                          r.subjectCode,
+                        );
+                        final isDsa = AttendanceLog.isDsa(canonSubj);
+                        final normComp = normalizeComponent(r.component);
+                        final hasMultiple =
+                            (compsBySubject[canonSubj]?.length ?? 0) > 1;
+                        final groupKey = isDsa
+                            ? '${canonSubj}_$normComp'
+                            : (hasMultiple
+                                  ? '${canonSubj}_Merged'
+                                  : '${canonSubj}_$normComp');
+                        if (!records.containsKey(groupKey)) {
+                          records[groupKey] = r;
+                          rawGrouped[groupKey] = [r];
+                        }
+                      }
+                    } else {
+                      // Fallback when no logs exist: aggregate directly from rawRecords
+                      final compsBySubject = <String, Set<String>>{};
+                      for (final r in rawRecords) {
+                        compsBySubject
+                            .putIfAbsent(r.subjectCode, () => {})
+                            .add(normalizeComponent(r.component));
+                      }
+
+                      for (final r in rawRecords) {
+                        final isDsa = AttendanceLog.isDsa(r.subjectCode);
+                        final normComp = normalizeComponent(r.component);
+                        final hasMultiple =
+                            (compsBySubject[r.subjectCode]?.length ?? 0) > 1;
+
+                        final String groupKey;
+                        final String displayComponent;
+
+                        if (isDsa) {
+                          groupKey = '${r.subjectCode}_$normComp';
+                          displayComponent = normComp;
+                        } else if (hasMultiple || r.component == 'Merged') {
+                          groupKey = '${r.subjectCode}_Merged';
+                          displayComponent = 'Merged';
+                        } else {
+                          groupKey = '${r.subjectCode}_$normComp';
+                          displayComponent = normComp;
+                        }
+
+                        if (records.containsKey(groupKey)) {
+                          final existing = records[groupKey]!;
+                          records[groupKey] = AttendanceRecord(
                             id: existing.id,
                             division: existing.division,
-                            subjectCode: existing.subjectCode,
-                            component: normComponent,
+                            subjectCode: r.subjectCode,
+                            component: displayComponent,
                             present: existing.present + r.present,
                             absent: existing.absent + r.absent,
                             cancelled: existing.cancelled + r.cancelled,
                           );
                         } else {
-                          records[key] = AttendanceRecord(
+                          records[groupKey] = AttendanceRecord(
                             id: r.id,
                             division: r.division,
                             subjectCode: r.subjectCode,
-                            component: normComponent,
+                            component: displayComponent,
                             present: r.present,
                             absent: r.absent,
                             cancelled: r.cancelled,
                           );
                         }
-                        rawGrouped
-                            .putIfAbsent(key, () => [])
-                            .add(
-                              AttendanceRecord(
-                                id: r.id,
-                                division: r.division,
-                                subjectCode: r.subjectCode,
-                                component: normComponent,
-                                present: r.present,
-                                absent: r.absent,
-                                cancelled: r.cancelled,
-                              ),
-                            );
+                        rawGrouped.putIfAbsent(groupKey, () => []).add(r);
                       }
                     }
 
@@ -411,7 +543,7 @@ class _AttendancePageState extends State<AttendancePage> {
                             ),
                             IconButton(
                               icon: const Icon(Icons.picture_as_pdf_rounded),
-                              tooltip: 'Import PDF',
+                              tooltip: 'Import Attendance PDF',
                               onPressed: _handlePdfImport,
                             ),
                             const SizedBox(width: AppSpacing.sm),
@@ -640,15 +772,18 @@ class _SubjectAttendanceCard extends StatelessWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          entry.subjectCode,
-                          style: GoogleFonts.outfit(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: isDark
-                                ? Colors.white
-                                : colorScheme.onSurface,
-                            height: 1.2,
+                        Flexible(
+                          child: Text(
+                            entry.subjectCode,
+                            style: GoogleFonts.outfit(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: isDark
+                                  ? Colors.white
+                                  : colorScheme.onSurface,
+                              height: 1.2,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: AppSpacing.sm),
@@ -684,61 +819,11 @@ class _SubjectAttendanceCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (entry.subjectCode != 'DSA') _SkipBadge(skipsLeft: skipsLeft),
+              const SizedBox(width: AppSpacing.sm),
+              _SkipBadge(skipsLeft: skipsLeft),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
-
-          if (entry.subjectCode == 'DSA')
-            Builder(
-              builder: (context) {
-                // Calculate independent theory and lab skips
-                int theoryAbsent = 0;
-                int labAbsent = 0;
-                for (final r in entry.rawRecords) {
-                  if (r.component.toLowerCase().contains('lab') ||
-                      r.component.toLowerCase().contains('practical')) {
-                    labAbsent += r.absent;
-                  } else {
-                    theoryAbsent += r.absent;
-                  }
-                }
-
-                final int theoryTotal = calculator.getTotalProjectedHours(
-                  'DSA',
-                  'Theory',
-                );
-                final int labTotal = calculator.getTotalProjectedHours(
-                  'DSA',
-                  'Lab',
-                );
-
-                final int theoryMin = (theoryTotal * 0.8).ceil();
-                final int labMin = (labTotal * 0.8).ceil();
-
-                final int theorySkips =
-                    (theoryTotal - theoryMin) - theoryAbsent;
-                final int labSkips = (labTotal - labMin) - labAbsent;
-
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _SkipBadge(
-                          skipsLeft: theorySkips,
-                          prefix: 'Theory: ',
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: _SkipBadge(skipsLeft: labSkips, prefix: 'Lab: '),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
 
           Text(
             "Total: $total  •  Present: $present  •  Absent: $absent",
@@ -774,9 +859,8 @@ class _SubjectAttendanceCard extends StatelessWidget {
 
 class _SkipBadge extends StatelessWidget {
   final int skipsLeft;
-  final String prefix;
 
-  const _SkipBadge({required this.skipsLeft, this.prefix = ''});
+  const _SkipBadge({required this.skipsLeft});
 
   @override
   Widget build(BuildContext context) {
@@ -786,13 +870,13 @@ class _SkipBadge extends StatelessWidget {
     Color col;
 
     if (skipsLeft > 0) {
-      msg = '${prefix}Can miss $skipsLeft more';
+      msg = 'Can miss $skipsLeft more';
       col = sem.conducted;
     } else if (skipsLeft == 0) {
-      msg = '${prefix}0 skips left';
+      msg = '0 skips left';
       col = sem.warning;
     } else {
-      msg = '${prefix}Defaulter (Attend ${skipsLeft.abs()} more)';
+      msg = 'Defaulter (Attend ${skipsLeft.abs()} more)';
       col = sem.cancelled;
     }
 

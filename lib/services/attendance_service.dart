@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/attendance_record.dart';
 import '../models/attendance_log.dart';
+import '../models/attendance_import_models.dart';
 import 'package:schedly/exceptions.dart';
 
 class AttendanceService {
@@ -180,111 +181,218 @@ class AttendanceService {
     }, SetOptions(merge: true));
   }
 
-  /// Atomically batches new imported logs and updates aggregate counts
-  static Future<Map<String, int>> batchImportAttendance({
+  /// Safely commits PDF-imported logs with upsert + aggregate recomputation.
+  /// Existing attendance is unchanged if this throws before any batch commit.
+  static Future<AttendanceImportResult> commitPdfImport({
     required String division,
     required List<AttendanceLog> logs,
   }) async {
-    int newCount = 0;
-    int dupCount = 0;
+    if (logs.isEmpty) {
+      return const AttendanceImportResult(imported: 0);
+    }
 
-    // Get all existing logs to check duplicates
-    final existingLogsSnap = await _logsCol().get();
-    final existingKeys = existingLogsSnap.docs.map((d) => d.id).toSet();
+    final existingSnap = await _logsCol().get();
+    final existingByKey = <String, AttendanceLog>{};
+    final staleDocRefsToDelete = <DocumentReference>[];
 
-    // Group new logs by their composite deduplication key
-    final Map<String, AttendanceLog> uniqueNewLogs = {};
-    for (final log in logs) {
+    for (final doc in existingSnap.docs) {
+      final log = AttendanceLog.fromFirestore(doc);
       final key = log.deduplicationKey;
-      if (!existingKeys.contains(key)) {
-        uniqueNewLogs[key] = log;
+      if (existingByKey.containsKey(key)) {
+        staleDocRefsToDelete.add(doc.reference);
       } else {
-        dupCount++;
+        existingByKey[key] = log;
+        if (doc.id != key) {
+          staleDocRefsToDelete.add(doc.reference);
+        }
       }
     }
 
-    if (uniqueNewLogs.isEmpty) {
-      return {'new': 0, 'duplicates': dupCount};
-    }
+    var imported = 0;
+    var updated = 0;
+    var skippedDuplicates = 0;
 
-    // We need to update aggregate records too. First read them.
-    final aggregatesSnap = await _col()
-        .where('division', isEqualTo: division)
-        .get();
-    final aggregates = <String, Map<String, dynamic>>{};
-    for (final doc in aggregatesSnap.docs) {
-      aggregates[doc.id] = doc.data() as Map<String, dynamic>;
-    }
-
-    // Prepare deltas
-    final aggregateDeltas = <String, Map<String, int>>{};
-
-    // Chunk into 400 operations (Firebase limit is 500 per batch)
-    // 1 op for log insert, 1 op for aggregate update
     WriteBatch? currentBatch;
-    int opCount = 0;
+    var opCount = 0;
     final batches = <WriteBatch>[];
 
-    void commitOp() {
+    void queueWrite(void Function(WriteBatch batch) write) {
       if (currentBatch == null) {
         currentBatch = _db.batch();
         batches.add(currentBatch!);
       }
+      write(currentBatch!);
       opCount++;
-      if (opCount >= 400) {
+      if (opCount >= 450) {
         currentBatch = null;
         opCount = 0;
       }
     }
 
-    for (final key in uniqueNewLogs.keys) {
-      final log = uniqueNewLogs[key]!;
-      commitOp();
-      final logRef = _logsCol().doc(key);
-      currentBatch!.set(logRef, log.toFirestore());
-      newCount++;
+    for (final ref in staleDocRefsToDelete) {
+      queueWrite((batch) => batch.delete(ref));
+    }
+
+    final affectedComponents = <({String subjectCode, String component})>{};
+    final seenInThisImport = <String>{};
+    for (final log in logs) {
+      final key = log.deduplicationKey;
+      if (seenInThisImport.contains(key)) {
+        skippedDuplicates++;
+        continue;
+      }
+      seenInThisImport.add(key);
+
+      final existing = existingByKey[key];
+
+      if (existing != null &&
+          existing.status == log.status &&
+          !staleDocRefsToDelete.any((r) => r.id == existing.id)) {
+        skippedDuplicates++;
+        continue;
+      }
+
+      queueWrite((batch) {
+        batch.set(
+          _logsCol().doc(key),
+          log.toFirestore(),
+          SetOptions(merge: true),
+        );
+      });
+
+      if (existing != null) {
+        updated++;
+      } else {
+        imported++;
+      }
 
       if (log.subjectCode.isNotEmpty) {
-        final aggId = _recordId(division, log.subjectCode, log.component);
-        aggregateDeltas.putIfAbsent(aggId, () => {'present': 0, 'absent': 0});
-        if (log.status == 'present' || log.status == 'P')
-          aggregateDeltas[aggId]!['present'] =
-              aggregateDeltas[aggId]!['present']! + 1;
-        if (log.status == 'absent' || log.status == 'A')
-          aggregateDeltas[aggId]!['absent'] =
-              aggregateDeltas[aggId]!['absent']! + 1;
+        final groupComp = AttendanceLog.isDsa(log.subjectCode)
+            ? log.component
+            : 'Merged';
+        affectedComponents.add((
+          subjectCode: log.subjectCode,
+          component: groupComp,
+        ));
       }
     }
 
-    // Apply aggregate deltas
-    for (final aggId in aggregateDeltas.keys) {
-      commitOp();
-      final aggRef = _col().doc(aggId);
-      final delta = aggregateDeltas[aggId]!;
-
-      final currentData = aggregates[aggId];
-      final currPresent = (currentData?['present'] as num?)?.toInt() ?? 0;
-      final currAbsent = (currentData?['absent'] as num?)?.toInt() ?? 0;
-
-      // If it's a new aggregate, set division and component
-      final splits = aggId.split('_');
-      final subj = splits.length > 1 ? splits[1] : '';
-      final comp = splits.length > 2 ? splits[2] : 'Theory';
-
-      currentBatch!.set(aggRef, {
-        'division': division,
-        'subjectCode': subj,
-        'component': comp,
-        'present': currPresent + delta['present']!,
-        'absent': currAbsent + delta['absent']!,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+    if (batches.isEmpty) {
+      return AttendanceImportResult(
+        imported: 0,
+        updated: 0,
+        skippedDuplicates: skippedDuplicates,
+      );
     }
 
-    for (final b in batches) {
-      await b.commit();
+    try {
+      for (final batch in batches) {
+        await batch.commit();
+      }
+    } catch (e) {
+      throw AppException(
+        'Import failed — existing attendance was not changed. $e',
+      );
     }
 
-    return {'new': newCount, 'duplicates': dupCount};
+    var aggregatesUpdated = 0;
+    for (final item in affectedComponents) {
+      await recomputeAggregateForSubject(
+        division: division,
+        subjectCode: item.subjectCode,
+        component: item.component,
+      );
+      aggregatesUpdated++;
+    }
+
+    return AttendanceImportResult(
+      imported: imported,
+      updated: updated,
+      skippedDuplicates: skippedDuplicates,
+      aggregatesUpdated: aggregatesUpdated,
+    );
+  }
+
+  /// Recomputes all aggregate records for a division from stored attendance logs.
+  static Future<void> recomputeAllAggregates(String division) async {
+    final logsSnap = await _logsCol().get();
+    final pairs = <({String subjectCode, String component})>{};
+    for (final doc in logsSnap.docs) {
+      final log = AttendanceLog.fromFirestore(doc);
+      if (log.subjectCode.isNotEmpty) {
+        final groupComp = AttendanceLog.isDsa(log.subjectCode)
+            ? log.component
+            : 'Merged';
+        pairs.add((subjectCode: log.subjectCode, component: groupComp));
+      }
+    }
+    for (final pair in pairs) {
+      await recomputeAggregateForSubject(
+        division: division,
+        subjectCode: pair.subjectCode,
+        component: pair.component,
+      );
+    }
+  }
+
+  /// Recomputes present/absent counts from attendance_logs for one subject.
+  static Future<void> recomputeAggregateForSubject({
+    required String division,
+    required String subjectCode,
+    required String component,
+  }) async {
+    final canonSubj = AttendanceLog.canonicalSubjectCode(subjectCode);
+    final snapshot = await _logsCol().get();
+
+    // Deduplicate in memory by stable lecture identity to ensure 100% data accuracy
+    final uniqueLogs = <String, AttendanceLog>{};
+    for (final doc in snapshot.docs) {
+      final log = AttendanceLog.fromFirestore(doc);
+      final logCanon = AttendanceLog.canonicalSubjectCode(log.subjectCode);
+      if (logCanon != canonSubj) continue;
+
+      if (AttendanceLog.isDsa(canonSubj) && component != 'Merged') {
+        if (log.component.toLowerCase() != component.toLowerCase()) {
+          continue;
+        }
+      }
+      final existing = uniqueLogs[log.deduplicationKey];
+      if (existing == null || log.importedAt.isAfter(existing.importedAt)) {
+        uniqueLogs[log.deduplicationKey] = log;
+      }
+    }
+
+    var present = 0;
+    var absent = 0;
+    for (final log in uniqueLogs.values) {
+      if (log.status == 'present') {
+        present++;
+      } else if (log.status == 'absent') {
+        absent++;
+      }
+    }
+
+    final recordId = _recordId(division, canonSubj, component);
+    await _col().doc(recordId).set({
+      'division': division,
+      'subjectCode': subjectCode,
+      'component': component,
+      'present': present,
+      'absent': absent,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Legacy batch import — delegates to commitPdfImport.
+  static Future<Map<String, int>> batchImportAttendance({
+    required String division,
+    required List<AttendanceLog> logs,
+  }) async {
+    final result = await commitPdfImport(division: division, logs: logs);
+    return {
+      'new': result.imported,
+      'duplicates': result.skippedDuplicates,
+      'updated': result.updated,
+    };
   }
 }

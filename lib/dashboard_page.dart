@@ -761,64 +761,21 @@ class _DashboardPageState extends State<DashboardPage> {
             final rawRecords = recordsSnap.data ?? [];
             final Map<String, AttendanceRecord> attendanceRecords = {};
 
-            final List<String> mergedSubjects = [
-              'DM',
-              'Discrete Mathematics',
-              'PnS',
-              'SnS',
-              'Python',
-              'PROGRAMMING WITH PYTHON',
-              'Signals and Systems',
-              'Principles of Economics and Managemen',
-            ];
-
             for (final r in rawRecords) {
               String subjectName = r.subjectCode;
               String componentName = r.component;
 
-              if (subjectName.toUpperCase().contains('DATA STRUCTURES') ||
-                  subjectName.trim().toUpperCase() == 'DSA') {
-                subjectName = 'DSA';
-                if (componentName.toUpperCase().contains('LAB') ||
-                    componentName.toUpperCase().contains('PRACTICAL')) {
-                  componentName = 'Lab';
-                } else {
-                  componentName = 'Theory';
-                }
+              String normComponent = componentName;
+              if (normComponent.isEmpty || normComponent == 'Lecture') {
+                normComponent = 'Theory';
+              } else if (normComponent == 'Practical') {
+                normComponent = 'Lab';
               }
 
-              if (mergedSubjects.contains(subjectName)) {
-                final key = '${subjectName}_Merged';
-                if (attendanceRecords.containsKey(key)) {
-                  final existing = attendanceRecords[key]!;
-                  attendanceRecords[key] = AttendanceRecord(
-                    id: existing.id,
-                    division: existing.division,
-                    subjectCode: subjectName,
-                    component: 'Merged',
-                    present: existing.present + r.present,
-                    absent: existing.absent + r.absent,
-                    cancelled: existing.cancelled + r.cancelled,
-                  );
-                } else {
-                  attendanceRecords[key] = AttendanceRecord(
-                    id: r.id,
-                    division: r.division,
-                    subjectCode: subjectName,
-                    component: 'Merged',
-                    present: r.present,
-                    absent: r.absent,
-                    cancelled: r.cancelled,
-                  );
-                }
-              } else {
-                String normComponent = componentName;
-                if (normComponent.isEmpty || normComponent == 'Lecture')
-                  normComponent = 'Theory';
-                else if (normComponent == 'Practical')
-                  normComponent = 'Lab';
-
-                attendanceRecords['${subjectName}_$normComponent'] = r;
+              attendanceRecords['${subjectName}_$normComponent'] = r;
+              attendanceRecords[subjectName] = r;
+              if (r.component == 'Merged') {
+                attendanceRecords['${subjectName}_Merged'] = r;
               }
             }
 
@@ -1316,7 +1273,6 @@ class _TimelineLectureItem extends StatelessWidget {
   final bool isLast;
   final bool Function(TimetableEntry) canEdit;
   final void Function(TimetableEntry) onEdit;
-  final Map<String, String>? batchNames;
   final Map<String, AttendanceRecord>? attendanceRecords;
 
   const _TimelineLectureItem({
@@ -1326,7 +1282,6 @@ class _TimelineLectureItem extends StatelessWidget {
     required this.isLast,
     required this.canEdit,
     required this.onEdit,
-    this.batchNames,
     this.attendanceRecords,
   });
 
@@ -1523,21 +1478,19 @@ class _TimelineLectureItem extends StatelessWidget {
                                           comp = 'Theory';
                                       }
 
-                                      final merged = [
-                                        'DM',
-                                        'Discrete Mathematics',
-                                        'PnS',
-                                        'SnS',
-                                        'Python',
-                                        'PROGRAMMING WITH PYTHON',
-                                        'Signals and Systems',
-                                        'Principles of Economics and Managemen',
-                                      ];
-                                      String key = merged.contains(subj)
-                                          ? '${subj}_Merged'
-                                          : '${subj}_$comp';
+                                      final isDsa =
+                                          subj.toUpperCase() == 'DSA' ||
+                                          subj.toUpperCase().contains(
+                                            'DATA STRUCTURES',
+                                          );
+                                      final String key = isDsa
+                                          ? '${subj}_$comp'
+                                          : '${subj}_Merged';
 
-                                      final record = attendanceRecords![key];
+                                      final record =
+                                          attendanceRecords?[key] ??
+                                          attendanceRecords?['${subj}_$comp'] ??
+                                          attendanceRecords?[subj];
                                       if (record == null)
                                         return const SizedBox.shrink();
 
