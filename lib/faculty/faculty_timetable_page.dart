@@ -8,11 +8,30 @@ import 'package:rxdart/rxdart.dart';
 import '../app_settings.dart';
 import '../theme/theme.dart';
 import '../models/timetable_entry.dart';
+import '../models/event_category.dart';
 import '../timetable_manager.dart';
 import '../widgets/animations/staggered_list_item.dart';
 import '../widgets/animations/animated_card.dart';
 import '../widgets/skeleton_loader.dart';
 import '../models/faculty_lecture_context.dart';
+import 'package:file_picker/file_picker.dart';
+import 'faculty_excel_import_service.dart';
+
+class _FacultyConflictPair {
+  final _FacultyTimetableEntry entryA;
+  final _FacultyTimetableEntry entryB;
+
+  _FacultyConflictPair({required this.entryA, required this.entryB});
+
+  bool involvesDivision(String div) =>
+      entryA.division == div || entryB.division == div;
+
+  _FacultyTimetableEntry otherFor(String div) =>
+      entryA.division == div ? entryB : entryA;
+
+  _FacultyTimetableEntry currentFor(String div) =>
+      entryA.division == div ? entryA : entryB;
+}
 
 class FacultyTimetablePage extends StatefulWidget {
   const FacultyTimetablePage({super.key});
@@ -34,6 +53,7 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
   ];
 
   bool _hasConflict = false;
+  List<_FacultyConflictPair> _currentConflicts = [];
   late Stream<List<_FacultyTimetableEntry>> _timetableStream;
 
   @override
@@ -84,26 +104,88 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
         });
       }).toList();
 
+      final excelList =
+          (profileSnap.data()?['excelSchedule'] as List<dynamic>? ?? [])
+              .map(
+                (m) => FacultyExcelEntry.fromMap(Map<String, dynamic>.from(m)),
+              )
+              .where((e) => e.day.toLowerCase() == _selectedDay.toLowerCase())
+              .map(
+                (e) => _FacultyTimetableEntry(
+                  division: e.division,
+                  entry: TimetableEntry(
+                    id: 'excel_${e.division}_${e.startTime}',
+                    subject: e.subject,
+                    category: EventCategory.academic,
+                    batch: e.batch ?? 'Whole Class',
+                    startTime: e.startTime,
+                    endTime: e.endTime,
+                    durationMinutes: e.endTime - e.startTime,
+                    room: e.room,
+                    facultyId: uid,
+                  ),
+                ),
+              )
+              .toList();
+
       yield* CombineLatestStream.list(streams).map((listOfLists) {
-        final allLectures = listOfLists.expand((l) => l).toList();
+        final streamedLectures = listOfLists.expand((l) => l).toList();
+
+        // Merge streamed division lectures and personal excel entries
+        final allLectures = [...streamedLectures];
+        for (final xl in excelList) {
+          final exists = allLectures.any(
+            (l) =>
+                l.division == xl.division &&
+                l.entry.subjectCode == xl.entry.subjectCode &&
+                l.entry.startTime == xl.entry.startTime,
+          );
+          if (!exists) {
+            allLectures.add(xl);
+          }
+        }
+
         allLectures.sort(
           (a, b) => a.entry.startTime.compareTo(b.entry.startTime),
         );
 
-        // Conflict Detection
-        bool conflict = false;
-        for (int i = 0; i < allLectures.length - 1; i++) {
-          final current = allLectures[i].entry;
-          final next = allLectures[i + 1].entry;
-          if (next.startTime < current.endTime) {
-            conflict = true;
-            break;
+        // Accurate Overlap & Partial Overlap Conflict Detection
+        final detectedConflicts = <_FacultyConflictPair>[];
+        for (int i = 0; i < allLectures.length; i++) {
+          for (int j = i + 1; j < allLectures.length; j++) {
+            final a = allLectures[i];
+            final b = allLectures[j];
+
+            if (a.entry.isCancelled ||
+                b.entry.isCancelled ||
+                a.entry.isHoliday ||
+                b.entry.isHoliday) {
+              continue;
+            }
+
+            final isDifferentAssignment =
+                a.division != b.division ||
+                (a.entry.id != b.entry.id && a.entry.batch != b.entry.batch);
+
+            if (!isDifferentAssignment) continue;
+
+            // Two intervals [startA, endA) and [startB, endB) overlap if startA < endB and startB < endA
+            final hasOverlap =
+                a.entry.startTime < b.entry.endTime &&
+                b.entry.startTime < a.entry.endTime;
+
+            if (hasOverlap) {
+              detectedConflicts.add(_FacultyConflictPair(entryA: a, entryB: b));
+            }
           }
         }
 
         Future.microtask(() {
-          if (mounted && _hasConflict != conflict) {
-            setState(() => _hasConflict = conflict);
+          if (mounted) {
+            setState(() {
+              _hasConflict = detectedConflicts.isNotEmpty;
+              _currentConflicts = detectedConflicts;
+            });
           }
         });
 
@@ -121,16 +203,38 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
   void _notifyCRsOfConflict() async {
     final uid = AppSettings.facultyId;
     final name = AppSettings.facultyName ?? 'Faculty';
-    final divisions = AppSettings.facultyAssignedDivisions ?? [];
 
-    for (final div in divisions) {
+    // Identify ALL affected sections in the detected conflict(s)
+    final affectedDivisions = <String>{};
+    for (final c in _currentConflicts) {
+      affectedDivisions.add(c.entryA.division);
+      affectedDivisions.add(c.entryB.division);
+    }
+
+    if (affectedDivisions.isEmpty) return;
+
+    for (final div in affectedDivisions) {
+      final divConflicts = _currentConflicts
+          .where((c) => c.involvesDivision(div))
+          .toList();
+
+      final conflictDetails = divConflicts
+          .map((c) {
+            final myLec = c.currentFor(div);
+            final otherLec = c.otherFor(div);
+            return '${myLec.entry.subjectCode} (${_formatTime(myLec.entry.startTime)}–${_formatTime(myLec.entry.endTime)}) with Section ${otherLec.division.replaceAll('_', ' ')} (${otherLec.entry.subjectCode} at ${_formatTime(otherLec.entry.startTime)}–${_formatTime(otherLec.entry.endTime)})';
+          })
+          .join('; ');
+
+      final message =
+          'Timetable conflict detected on $_selectedDay: You are scheduled with Prof. $name at overlapping time ($conflictDetails).';
+
       final Map<String, dynamic> crPayload = {
         'notificationId':
             'conflict_${DateTime.now().millisecondsSinceEpoch}_$div',
         'type': 'faculty_conflict',
-        'title': 'Faculty Schedule Conflict',
-        'body':
-            'Prof. $name has reported a schedule conflict on $_selectedDay. Please check your timetables.',
+        'title': 'Schedule Conflict: Prof. $name',
+        'body': message,
         'division': div,
         'role': 'cr',
         'uid': uid ?? '',
@@ -152,9 +256,133 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
     }
 
     if (mounted) {
+      final divNames = affectedDivisions
+          .map((d) => d.replaceAll('_', ' '))
+          .join(', ');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('CRs notified of conflict.')),
+        SnackBar(
+          content: Text('CRs of affected section(s) ($divNames) notified.'),
+        ),
       );
+    }
+  }
+
+  Future<void> _importExcelTimetable() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['xlsx', 'xls', 'csv'],
+      withData: true,
+    );
+
+    if (result == null ||
+        result.files.isEmpty ||
+        result.files.first.bytes == null) {
+      return;
+    }
+
+    final file = result.files.first;
+    try {
+      final entries = FacultyExcelImportService.parseBytes(
+        bytes: file.bytes!,
+        fileName: file.name,
+      );
+
+      if (entries.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No timetable entries could be parsed from the file.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Import Faculty Timetable'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Found ${entries.length} scheduled lectures across sections.',
+              ),
+              const SizedBox(height: AppSpacing.md),
+              const Text(
+                'This updates your personal faculty timetable without modifying student section timetables.',
+                style: TextStyle(fontSize: 13),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 200),
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: entries
+                        .take(8)
+                        .map(
+                          (e) => ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            leading: Text(
+                              e.day.length >= 3 ? e.day.substring(0, 3) : e.day,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            title: Text(e.subject),
+                            subtitle: Text(
+                              '${e.division.replaceAll('_', ' ')} • ${_formatTime(e.startTime)}–${_formatTime(e.endTime)}',
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Confirm Import'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) return;
+
+      final uid = AppSettings.facultyId;
+      if (uid != null) {
+        await FacultyExcelImportService.saveToFacultyProfile(
+          facultyId: uid,
+          entries: entries,
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Successfully imported ${entries.length} lectures to faculty schedule.',
+            ),
+          ),
+        );
+        setState(() {
+          _timetableStream = _streamTimetable();
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to import timetable: $e')));
     }
   }
 
@@ -306,21 +534,43 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
             // Header
             Padding(
               padding: const EdgeInsets.all(AppSpacing.x2l),
-              child: Column(
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Consolidated Timetable',
-                    style: GoogleFonts.outfit(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w700,
-                      color: colorScheme.onSurface,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Consolidated Timetable',
+                          style: GoogleFonts.outfit(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          'Viewing all your classes across assigned divisions',
+                          style: TextStyle(color: sem.onSurfaceMuted),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'Viewing all your classes across assigned divisions',
-                    style: TextStyle(color: sem.onSurfaceMuted),
+                  const SizedBox(width: AppSpacing.sm),
+                  FilledButton.tonalIcon(
+                    onPressed: _importExcelTimetable,
+                    icon: const Icon(Icons.upload_file_rounded, size: 18),
+                    label: const Text('Import Excel'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.sm,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.full),
+                      ),
+                    ),
                   ),
                 ],
               ),

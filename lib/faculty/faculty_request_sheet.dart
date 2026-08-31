@@ -33,6 +33,8 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
 
   String? _selectedDivision;
   String? _selectedSubject;
+  String _selectedBatch = 'Whole Class';
+  List<String> _availableBatches = ['Whole Class'];
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
 
@@ -50,6 +52,9 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
     if (widget.requestType == FacultyRequestType.cancel &&
         widget.prefillEntry != null) {
       _selectedSubject = widget.prefillEntry!.subjectCode;
+      _selectedBatch = widget.prefillEntry!.batch.isNotEmpty
+          ? widget.prefillEntry!.batch
+          : 'Whole Class';
       _selectedDate = DateTime.now(); // Usually cancelling today's lecture
     } else {
       _selectedDate = DateTime.now();
@@ -58,6 +63,7 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
 
     if (_selectedDivision != null) {
       _loadSubjectsForDivision(_selectedDivision!);
+      _loadBatchesForDivision(_selectedDivision!);
     }
   }
 
@@ -67,6 +73,26 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
     _roomController.dispose();
     _reasonController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadBatchesForDivision(String div) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('sections')
+          .doc(div)
+          .get();
+      if (doc.exists && doc.data() != null) {
+        final batchesList = List<String>.from(doc.data()!['batches'] ?? []);
+        if (mounted) {
+          setState(() {
+            _availableBatches = ['Whole Class', ...batchesList];
+            if (!_availableBatches.contains(_selectedBatch)) {
+              _selectedBatch = 'Whole Class';
+            }
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadSubjectsForDivision(String div) async {
@@ -140,6 +166,7 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
         type: widget.requestType,
         status: FacultyRequestStatus.pending,
         subject: _selectedSubject!,
+        batch: _selectedBatch,
         reason: _reasonController.text.trim().isEmpty
             ? null
             : _reasonController.text.trim(),
@@ -165,18 +192,25 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
           'requestId': request.id,
           'division': _selectedDivision,
           'subject': _selectedSubject,
+          'batch': _selectedBatch,
         },
       );
 
-      // Notify CR — wrapped in try-catch so failures never block request submission
+      final batchSuffix =
+          (_selectedBatch != 'Whole Class' && _selectedBatch.isNotEmpty)
+          ? ' (Batch $_selectedBatch)'
+          : '';
+
+      // 1. Notify Target Section CR
       try {
         await FirebaseFirestore.instance.collection('notification_outbox').add({
           'division': _selectedDivision,
-          'topic': 'cr_$_selectedDivision',
-          'role': 'CR',
+          'role': 'cr',
+          'subject': _selectedSubject,
+          'batch': _selectedBatch,
           'title': 'New Faculty Request',
           'body':
-              'Prof. $name requested to ${widget.requestType == FacultyRequestType.cancel ? 'cancel' : 'add'} a $_selectedSubject lecture.',
+              'Prof. $name requested to ${widget.requestType == FacultyRequestType.cancel ? 'cancel' : 'add'} a $_selectedSubject lecture$batchSuffix.',
           'type': 'faculty_request',
           'uid': uid,
           'data': {'requestId': request.id},
@@ -186,13 +220,41 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
           'nextRetryAt': FieldValue.serverTimestamp(),
         });
       } catch (outboxErr) {
-        debugPrint('OUTBOX WARNING (non-fatal, faculty request): $outboxErr');
+        debugPrint(
+          'OUTBOX WARNING (non-fatal, CR faculty request): $outboxErr',
+        );
+      }
+
+      // 2. Notify Target Subject SR (responsible for that subject & section)
+      try {
+        await FirebaseFirestore.instance.collection('notification_outbox').add({
+          'division': _selectedDivision,
+          'role': 'sr',
+          'subject': _selectedSubject,
+          'batch': _selectedBatch,
+          'title': 'New Faculty Request',
+          'body':
+              'Prof. $name requested to ${widget.requestType == FacultyRequestType.cancel ? 'cancel' : 'add'} a $_selectedSubject lecture for ${_selectedDivision!.replaceAll('_', ' ')}$batchSuffix.',
+          'type': 'faculty_request',
+          'uid': uid,
+          'data': {'requestId': request.id},
+          'createdAt': FieldValue.serverTimestamp(),
+          'processed': false,
+          'attempts': 0,
+          'nextRetryAt': FieldValue.serverTimestamp(),
+        });
+      } catch (outboxErr) {
+        debugPrint(
+          'OUTBOX WARNING (non-fatal, SR faculty request): $outboxErr',
+        );
       }
 
       if (!mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Request submitted to CR successfully.')),
+        const SnackBar(
+          content: Text('Request submitted to CR and Subject SR successfully.'),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -240,7 +302,10 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
                   .toList(),
               onChanged: (val) {
                 setState(() => _selectedDivision = val);
-                if (val != null) _loadSubjectsForDivision(val);
+                if (val != null) {
+                  _loadSubjectsForDivision(val);
+                  _loadBatchesForDivision(val);
+                }
               },
             )
           else
@@ -277,6 +342,24 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
                 border: OutlineInputBorder(),
               ),
             ),
+
+          const SizedBox(height: AppSpacing.md),
+
+          // Batch Selector
+          DropdownButtonFormField<String>(
+            decoration: const InputDecoration(
+              labelText: 'Batch',
+              border: OutlineInputBorder(),
+            ),
+            value: _availableBatches.contains(_selectedBatch)
+                ? _selectedBatch
+                : 'Whole Class',
+            items: _availableBatches
+                .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                .toList(),
+            onChanged: (val) =>
+                setState(() => _selectedBatch = val ?? 'Whole Class'),
+          ),
 
           const SizedBox(height: AppSpacing.md),
 

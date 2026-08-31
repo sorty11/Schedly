@@ -16,6 +16,7 @@ import 'faculty_request_sheet.dart';
 import '../create_announcement_page.dart';
 import '../models/faculty_lecture_context.dart';
 import '../services/local_notification_service.dart';
+import '../services/timetable_resolver_service.dart';
 
 class FacultyDashboardPage extends StatefulWidget {
   const FacultyDashboardPage({super.key});
@@ -90,8 +91,18 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
         division: div,
         day: today,
       ).map((entries) {
-        return entries
-            .where((e) => mySubjects.contains(e.subjectCode))
+        final todayDateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+        final resolved = TimetableResolverService.resolve(
+          rawEntries: entries,
+          targetDateStr: todayDateStr,
+        );
+
+        if (resolved.isHoliday) {
+          return <FacultyLectureContext>[];
+        }
+
+        return resolved.lectures
+            .where((e) => mySubjects.contains(e.subjectCode) && e.isActive)
             .map((e) => FacultyLectureContext(division: div, entry: e))
             .toList();
       });
