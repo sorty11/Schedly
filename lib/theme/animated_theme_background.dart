@@ -37,10 +37,10 @@ class AnimatedThemeBackground extends StatelessWidget {
                   center: const Alignment(0.0, -0.2),
                   radius: 1.25,
                   colors: [
-                    (isDark ? Colors.black : Colors.white).withValues(alpha: isDark ? 0.25 : 0.65),
-                    (isDark ? Colors.black : Colors.white).withValues(alpha: isDark ? 0.65 : 0.85),
+                    Colors.transparent,
+                    (isDark ? Colors.black : Colors.white).withValues(alpha: isDark ? 0.25 : 0.40),
                   ],
-                  stops: const [0.2, 1.0],
+                  stops: const [0.35, 1.0],
                 ),
               ),
             ),
@@ -649,15 +649,15 @@ class ArcadeThemePainter extends CustomPainter {
     canvas.drawRect(rect, bgPaint);
 
     // Neon horizon sun arc
-    final horizonY = size.height * 0.58;
-    final sunRadius = math.min(size.width * 0.35, 120.0);
+    final horizonY = size.height * 0.46;
+    final sunRadius = math.min(size.width * 0.40, 150.0);
     final sunPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          const Color(0xFFFF007F).withValues(alpha: 0.35),
-          const Color(0xFFFF8C00).withValues(alpha: 0.15),
+          const Color(0xFFFF007F).withValues(alpha: 0.50),
+          const Color(0xFFFF8C00).withValues(alpha: 0.25),
           Colors.transparent,
         ],
       ).createShader(
@@ -667,13 +667,13 @@ class ArcadeThemePainter extends CustomPainter {
 
     // Retro horizon grid
     final gridPaint = Paint()
-      ..color = const Color(0xFFFF007F).withValues(alpha: 0.14)
-      ..strokeWidth = 1.0;
+      ..color = const Color(0xFFFF007F).withValues(alpha: 0.28)
+      ..strokeWidth = 1.2;
 
-    const gridLines = 8;
+    const gridLines = 10;
     for (int i = 0; i < gridLines; i++) {
       final t = (i + (progress * 2.5) % 1.0) / gridLines;
-      final y = horizonY + math.pow(t, 2.0) * (size.height - horizonY);
+      final y = horizonY + math.pow(t, 1.8) * (size.height - horizonY);
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
 

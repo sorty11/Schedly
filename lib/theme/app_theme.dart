@@ -306,12 +306,19 @@ class AppTheme {
       colorScheme: colorScheme,
       textTheme: textTheme,
       fontFamily: 'Inter', // Default fallback
-      pageTransitionsTheme: const PageTransitionsTheme(
+      pageTransitionsTheme: PageTransitionsTheme(
         builders: {
-          TargetPlatform.android: FadeThroughPageTransitionsBuilder(),
-          TargetPlatform.iOS: FadeThroughPageTransitionsBuilder(),
+          TargetPlatform.android: FadeThroughPageTransitionsBuilder(
+            fillColor: transparentScaffold ? Colors.transparent : null,
+          ),
+          TargetPlatform.iOS: FadeThroughPageTransitionsBuilder(
+            fillColor: transparentScaffold ? Colors.transparent : null,
+          ),
         },
       ),
+      canvasColor: transparentScaffold
+          ? Colors.transparent
+          : AppColors.surface,
       scaffoldBackgroundColor: transparentScaffold
           ? Colors.transparent
           : AppColors.background,
@@ -529,12 +536,19 @@ class AppTheme {
       colorScheme: colorScheme,
       textTheme: textTheme,
       fontFamily: 'Inter', // Default fallback
-      pageTransitionsTheme: const PageTransitionsTheme(
+      pageTransitionsTheme: PageTransitionsTheme(
         builders: {
-          TargetPlatform.android: FadeThroughPageTransitionsBuilder(),
-          TargetPlatform.iOS: FadeThroughPageTransitionsBuilder(),
+          TargetPlatform.android: FadeThroughPageTransitionsBuilder(
+            fillColor: transparentScaffold ? Colors.transparent : null,
+          ),
+          TargetPlatform.iOS: FadeThroughPageTransitionsBuilder(
+            fillColor: transparentScaffold ? Colors.transparent : null,
+          ),
         },
       ),
+      canvasColor: transparentScaffold
+          ? Colors.transparent
+          : AppColors.surfaceDark,
       scaffoldBackgroundColor: transparentScaffold
           ? Colors.transparent
           : AppColors.backgroundDark,
