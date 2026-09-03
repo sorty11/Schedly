@@ -76,7 +76,7 @@ service cloud.firestore {
       }
       match /notifications/{notificationId} {
         allow read: if request.auth != null;
-        allow write: if isCRForSection(sectionId);
+        allow write: if isCRorSRForSection(sectionId);
       }
       match /faculty_requests/{requestId} {
         allow read: if request.auth != null;
@@ -128,7 +128,10 @@ service cloud.firestore {
     }
     match /faculty_reminders/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && exists(/databases/$(database)/documents/faculty_profiles/$(request.auth.uid));
+      allow write: if request.auth != null && (
+        exists(/databases/$(database)/documents/faculty_profiles/$(request.auth.uid))
+        || isCRorSR()
+      );
     }
     match /feedback/{docId} {
       allow create: if request.auth != null;

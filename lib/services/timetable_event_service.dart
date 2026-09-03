@@ -330,67 +330,74 @@ class TimetableEventService {
         }
       }
 
-      // Automatically manage backend faculty reminders
-      if (isCancel ||
-          isDelete ||
-          type == 'cancel' ||
-          type == 'delete' ||
-          (newEntry != null && newEntry.isHoliday)) {
-        // Cancelled lecture or Holiday: NO reminder (remove existing reminder)
-        final targetLecId = oldEntry?.id ?? newEntry?.id;
-        if (targetLecId != null) {
-          final reminderDocId = '${division}_$targetLecId';
+      // Automatically manage backend faculty reminders in an isolated try-catch
+      try {
+        if (isCancel ||
+            isDelete ||
+            type == 'cancel' ||
+            type == 'delete' ||
+            (newEntry != null && newEntry.isHoliday)) {
+          // Cancelled lecture or Holiday: NO reminder (remove existing reminder)
+          final targetLecId = oldEntry?.id ?? newEntry?.id;
+          if (targetLecId != null) {
+            final reminderDocId = '${division}_$targetLecId';
+            await FirebaseFirestore.instance
+                .collection('faculty_reminders')
+                .doc(reminderDocId)
+                .delete();
+          }
+        } else if (newEntry != null &&
+            newFacId != null &&
+            newFacId.isNotEmpty) {
+          // Effective reminder calculation (respects date-specific override time)
+          DateTime lectureTime;
+          if (targetDateStr != null) {
+            try {
+              final parts = targetDateStr.split('-');
+              lectureTime = DateTime(
+                int.parse(parts[0]),
+                int.parse(parts[1]),
+                int.parse(parts[2]),
+                newEntry.startTime ~/ 60,
+                newEntry.startTime % 60,
+              );
+            } catch (_) {
+              lectureTime = _getNextOccurrence(day, newEntry.startTime);
+            }
+          } else {
+            lectureTime = _getNextOccurrence(day, newEntry.startTime);
+          }
+
+          final scheduledFor = lectureTime.subtract(const Duration(minutes: 5));
+
+          final reminderPayload = {
+            'facultyId': newFacId,
+            'lectureId': newEntry.id,
+            'division': division,
+            'title': '📚 Upcoming Class',
+            'body':
+                '${newEntry.displaySubject}\n${division.replaceAll('_', ' ')}\nRoom ${newEntry.room ?? 'TBA'}\nStarts in 5 minutes.',
+            'scheduledFor': Timestamp.fromDate(scheduledFor),
+            'processed': false,
+            'createdAt': FieldValue.serverTimestamp(),
+            'uid': uid,
+          };
+
+          // Deterministic ID overwrites existing reminder so replacement lectures follow the new time
+          final reminderDocId = '${division}_${newEntry.id}';
           await FirebaseFirestore.instance
               .collection('faculty_reminders')
               .doc(reminderDocId)
-              .delete();
+              .set(reminderPayload);
         }
-      } else if (newEntry != null && newFacId != null && newFacId.isNotEmpty) {
-        // Effective reminder calculation (respects date-specific override time)
-        DateTime lectureTime;
-        if (targetDateStr != null) {
-          try {
-            final parts = targetDateStr.split('-');
-            lectureTime = DateTime(
-              int.parse(parts[0]),
-              int.parse(parts[1]),
-              int.parse(parts[2]),
-              newEntry.startTime ~/ 60,
-              newEntry.startTime % 60,
-            );
-          } catch (_) {
-            lectureTime = _getNextOccurrence(day, newEntry.startTime);
-          }
-        } else {
-          lectureTime = _getNextOccurrence(day, newEntry.startTime);
-        }
-
-        final scheduledFor = lectureTime.subtract(const Duration(minutes: 5));
-
-        final reminderPayload = {
-          'facultyId': newFacId,
-          'lectureId': newEntry.id,
-          'division': division,
-          'title': '📚 Upcoming Class',
-          'body':
-              '${newEntry.displaySubject}\n${division.replaceAll('_', ' ')}\nRoom ${newEntry.room ?? 'TBA'}\nStarts in 5 minutes.',
-          'scheduledFor': Timestamp.fromDate(scheduledFor),
-          'processed': false,
-          'createdAt': FieldValue.serverTimestamp(),
-          'uid': uid,
-        };
-
-        // Deterministic ID overwrites existing reminder so replacement lectures follow the new time
-        final reminderDocId = '${division}_${newEntry.id}';
-        await FirebaseFirestore.instance
-            .collection('faculty_reminders')
-            .doc(reminderDocId)
-            .set(reminderPayload);
+      } catch (reminderErr, reminderSt) {
+        debugPrint(
+          '[FACULTY_REMINDERS_WARNING] Failed to update faculty_reminders (non-fatal): $reminderErr\n$reminderSt',
+        );
       }
-    } catch (e) {
-      // Non-fatal: push notification outbox failure should never block timetable saves
+    } catch (e, st) {
       debugPrint(
-        'OUTBOX WARNING (non-fatal): Failed to write notification outbox: $e',
+        '[TIMETABLE_NOTIFICATION_ERROR] Failed during timetable event dispatch: $e\n$st',
       );
     }
     // 3. Local Push Notification

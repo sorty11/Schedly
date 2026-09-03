@@ -155,14 +155,6 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
         await prefs.setBool('has_logged_in', true);
         await prefs.setString('selected_division', _sectionId!);
 
-        // DO NOT AWAIT notification setup
-        debugPrint('CR_VERIFY: Starting FCM subscription asynchronously');
-        NotificationService.updateDivisionSubscription(_sectionId!).catchError((
-          e,
-        ) {
-          debugPrint('CR_VERIFY: Notification error (ignored): $e');
-        });
-
         HapticFeedback.mediumImpact();
 
         await AppSettings.saveRole(UserRole.cr);
@@ -174,6 +166,14 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
           div: _selectedDivision!,
           secId: _sectionId!,
         );
+
+        // Update notification & topic subscriptions after role is saved
+        debugPrint('CR_VERIFY: Starting FCM subscription asynchronously');
+        NotificationService.updateDivisionSubscription(_sectionId!).catchError((
+          e,
+        ) {
+          debugPrint('CR_VERIFY: Notification error (ignored): $e');
+        });
 
         debugPrint('CR_VERIFY: Role updated locally');
 

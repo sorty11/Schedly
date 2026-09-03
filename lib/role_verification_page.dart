@@ -94,13 +94,13 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('selected_division', widget.division);
 
+        await AppSettings.saveRole(UserRole.cr);
+
         NotificationService.updateDivisionSubscription(
           widget.division,
         ).catchError((e) {
           debugPrint('Notification error (ignored): $e');
         });
-
-        await AppSettings.saveRole(UserRole.cr);
 
         if (!mounted) return;
         Navigator.pushAndRemoveUntil(
@@ -276,12 +276,6 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('selected_division', widget.division);
 
-      NotificationService.updateDivisionSubscription(
-        widget.division,
-      ).catchError((e) {
-        debugPrint('Notification error (ignored): $e');
-      });
-
       await AppSettings.saveRole(UserRole.sr);
       await AppSettings.saveSRSection(sectionId: widget.division);
 
@@ -292,6 +286,12 @@ class _RoleVerificationPageState extends State<RoleVerificationPage> {
         component: null,
         batch: null,
       );
+
+      NotificationService.updateDivisionSubscription(
+        widget.division,
+      ).catchError((e) {
+        debugPrint('Notification error (ignored): $e');
+      });
 
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(
