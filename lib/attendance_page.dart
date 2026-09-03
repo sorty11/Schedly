@@ -737,15 +737,13 @@ class _SubjectAttendanceCard extends StatelessWidget {
     final pct = total == 0 ? 0.0 : present / total;
     final color = _color(context, pct);
 
-    // Skip Bank Math
-    final int semesterTotal = calculator.getTotalProjectedHours(
+    // Skip Bank Math based on fixed semester course hours from Course Details
+    final int skipsLeft = calculator.getRemainingSkips(
       entry.subjectCode,
       entry.component,
+      absent,
+      requiredAttendance: 0.80,
     );
-    final int minRequiredPresent = (semesterTotal * 0.8).ceil();
-    final int maxAllowedAbsencesForSemester =
-        semesterTotal - minRequiredPresent;
-    final int skipsLeft = maxAllowedAbsencesForSemester - absent;
 
     return Container(
       decoration: BoxDecoration(

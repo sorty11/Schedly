@@ -1,7 +1,10 @@
 import 'dart:math' as math;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/timetable_entry.dart';
 import '../models/course_component.dart';
+import '../models/attendance_log.dart';
+import 'course_configuration_service.dart';
 
 import '../app_settings.dart';
 import '../user_roles.dart';
@@ -10,11 +13,13 @@ class ProgressCalculatorService {
   final Map<int, List<TimetableEntry>> weeklyTimetable;
   final DateTime semesterStartDate;
   final Map<String, CourseComponent> subjectMetadata;
+  final List<CourseComponent> courseComponents;
 
   ProgressCalculatorService({
     required this.weeklyTimetable,
     required this.semesterStartDate,
     required this.subjectMetadata,
+    this.courseComponents = const [],
   });
 
   static Future<ProgressCalculatorService?> build(String division) async {
@@ -53,23 +58,136 @@ class ProgressCalculatorService {
           .toList();
     }
 
-    // 3. Fetch course components (subject config)
-    final metaSnap = await db
-        .collection('sections')
-        .doc(division)
-        .collection('subject_metadata')
-        .get();
+    // 3. Fetch course components (subject config from Course Details)
+    List<CourseComponent> courseComponents = [];
+    try {
+      courseComponents = await CourseConfigurationService.getMetadata(division);
+    } catch (e) {
+      debugPrint(
+        'ProgressCalculatorService: Error fetching from CourseConfigurationService: $e',
+      );
+    }
+
+    if (courseComponents.isEmpty) {
+      try {
+        final metaSnap = await db
+            .collection('sections')
+            .doc(division)
+            .collection('subjects')
+            .get();
+        courseComponents = metaSnap.docs
+            .map((d) => CourseComponent.fromFirestore(d))
+            .toList();
+      } catch (e) {
+        debugPrint('ProgressCalculatorService: Error fetching subjects: $e');
+      }
+    }
+
     final subjectMetadata = <String, CourseComponent>{};
-    for (var doc in metaSnap.docs) {
-      final comp = CourseComponent.fromFirestore(doc);
-      // Map using the composite key since components are stored per subject-component type
-      subjectMetadata[comp.subjectName] = comp;
+    for (var comp in courseComponents) {
+      subjectMetadata[comp.componentId] = comp;
+      if (comp.courseName.isNotEmpty) {
+        subjectMetadata.putIfAbsent(comp.courseName, () => comp);
+      }
     }
 
     return ProgressCalculatorService(
       weeklyTimetable: weeklyTimetable,
       semesterStartDate: semesterStartDate,
       subjectMetadata: subjectMetadata,
+      courseComponents: courseComponents,
+    );
+  }
+
+  static bool _eq(String a, String b) =>
+      a.trim().toUpperCase() == b.trim().toUpperCase();
+
+  /// Returns the fixed total course hours for the semester from Course Details configuration.
+  int getFixedTotalCourseHours(String subjectCode, String component) {
+    if (courseComponents.isEmpty && subjectMetadata.isEmpty) {
+      return _getEstimatedTimetableHours(subjectCode, component);
+    }
+
+    final canonSubj = AttendanceLog.canonicalSubjectCode(subjectCode);
+    final normComp = component.trim().toLowerCase();
+
+    bool matchCourseName(CourseComponent c) {
+      final compCanon = AttendanceLog.canonicalSubjectCode(c.courseName);
+      final idCanon = AttendanceLog.canonicalSubjectCode(c.componentId);
+      return _eq(compCanon, canonSubj) ||
+          _eq(idCanon, canonSubj) ||
+          _eq(c.courseName, subjectCode) ||
+          _eq(c.componentId, subjectCode);
+    }
+
+    // 1. Specific component lookup (e.g. Theory or Lab for split courses like DSA)
+    if (normComp != 'merged' && normComp != 'all' && normComp.isNotEmpty) {
+      for (final comp in courseComponents) {
+        if (matchCourseName(comp)) {
+          final type = comp.componentType.toLowerCase();
+          final matchesType =
+              type == normComp ||
+              (normComp.contains('lab') && comp.isLab) ||
+              (normComp.contains('theory') &&
+                  (type == 'theory' || type == 'lecture'));
+          if (matchesType && comp.targetHours > 0) {
+            return comp.targetHours;
+          }
+        }
+      }
+    }
+
+    // 2. Merged or course-level lookup: Sum all components of this course
+    final matchingComps = courseComponents.where(matchCourseName).toList();
+    if (matchingComps.isNotEmpty) {
+      final sum = matchingComps.fold<int>(0, (acc, c) => acc + c.targetHours);
+      if (sum > 0) return sum;
+    }
+
+    // 3. Fallback to direct key lookup in subjectMetadata
+    final direct =
+        subjectMetadata[subjectCode] ??
+        subjectMetadata[canonSubj] ??
+        subjectMetadata['$subjectCode $component'] ??
+        subjectMetadata['${canonSubj}_$component'];
+    if (direct != null && direct.targetHours > 0) {
+      return direct.targetHours;
+    }
+
+    // 4. Fallback to timetable estimation if Course Details is unconfigured
+    return _getEstimatedTimetableHours(subjectCode, component);
+  }
+
+  /// Calculates maximum remaining skips/missable hours for a course in the semester.
+  ///
+  /// Formula:
+  /// allowedAbsenceHours = (totalCourseHours * (1 - requiredAttendance)).floor()
+  /// remainingSkipHours = max(0, allowedAbsenceHours - absentHours)
+  static int calculateSkips({
+    required int totalCourseHours,
+    required int absentHours,
+    double requiredAttendance = 0.80,
+  }) {
+    if (totalCourseHours <= 0) return 0;
+    final double allowedAbsenceExact =
+        totalCourseHours * (1.0 - requiredAttendance);
+    final int allowedAbsenceHours = (allowedAbsenceExact + 1e-9).floor();
+    final int remaining = allowedAbsenceHours - absentHours;
+    return remaining < 0 ? 0 : remaining;
+  }
+
+  /// Convenience method to compute remaining skips for a given subject & component.
+  int getRemainingSkips(
+    String subjectCode,
+    String component,
+    int absentHours, {
+    double requiredAttendance = 0.80,
+  }) {
+    final totalHours = getFixedTotalCourseHours(subjectCode, component);
+    return calculateSkips(
+      totalCourseHours: totalHours,
+      absentHours: absentHours,
+      requiredAttendance: requiredAttendance,
     );
   }
 
@@ -106,7 +224,15 @@ class ProgressCalculatorService {
         getCancelledHours(subjectCode, component);
   }
 
+  /// Returns total projected hours. Uses fixed Course Details hours if configured,
+  /// otherwise falls back to estimating from the weekly timetable.
   int getTotalProjectedHours(String subjectCode, String component) {
+    final fixedHours = getFixedTotalCourseHours(subjectCode, component);
+    if (fixedHours > 0) return fixedHours;
+    return _getEstimatedTimetableHours(subjectCode, component);
+  }
+
+  int _getEstimatedTimetableHours(String subjectCode, String component) {
     int wholeClassHours = 0;
     // Structure: { 'Lab': {'C1': 2, 'C2': 2}, 'Tutorial': {'T1': 1, 'T2': 1} }
     Map<String, Map<String, int>> splitComponentHours = {};
@@ -137,16 +263,18 @@ class ProgressCalculatorService {
         } else {
           // Split Subject -> Must match BOTH subject and specific component
           String normEntryComp = entryComp;
-          if (normEntryComp.isEmpty || normEntryComp == 'Lecture')
+          if (normEntryComp.isEmpty || normEntryComp == 'Lecture') {
             normEntryComp = 'Theory';
-          else if (normEntryComp == 'Practical')
+          } else if (normEntryComp == 'Practical') {
             normEntryComp = 'Lab';
+          }
 
           String normTargetComp = component;
-          if (normTargetComp.isEmpty || normTargetComp == 'Lecture')
+          if (normTargetComp.isEmpty || normTargetComp == 'Lecture') {
             normTargetComp = 'Theory';
-          else if (normTargetComp == 'Practical')
+          } else if (normTargetComp == 'Practical') {
             normTargetComp = 'Lab';
+          }
 
           isMatch =
               (entrySubj == subjectCode && normEntryComp == normTargetComp);
@@ -157,10 +285,11 @@ class ProgressCalculatorService {
           String batch = entry.batch.isEmpty ? "Whole Class" : entry.batch;
 
           String comp = entryComp;
-          if (comp.isEmpty || comp == 'Lecture')
+          if (comp.isEmpty || comp == 'Lecture') {
             comp = 'Theory';
-          else if (comp == 'Practical')
+          } else if (comp == 'Practical') {
             comp = 'Lab';
+          }
 
           if (batch == "Whole Class") {
             // Everyone attends these (Theory)
