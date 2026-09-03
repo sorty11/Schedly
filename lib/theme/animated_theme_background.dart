@@ -172,7 +172,7 @@ class SpaceThemePainter extends CustomPainter {
     required this.isPreview,
   });
 
-  static final List<_Star> _stars = List.generate(isPreview ? 30 : 65, (i) {
+  static final List<_Star> _stars = List.generate(65, (i) {
     final rand = math.Random(i * 101 + 7);
     return _Star(
       x: rand.nextDouble(),
@@ -223,7 +223,9 @@ class SpaceThemePainter extends CustomPainter {
     // Drifting twinkling starfield
     final starPaint = Paint()..style = PaintingStyle.fill;
 
-    for (final s in _stars) {
+    final starCount = isPreview ? 25 : _stars.length;
+    for (int i = 0; i < starCount; i++) {
+      final s = _stars[i];
       final currentY = (s.y + progress * s.speed) % 1.0 * size.height;
       final currentX = s.x * size.width;
       final blink = (math.sin(progress * math.pi * 6 + s.blinkOffset) + 1.0) / 2.0;
@@ -311,7 +313,7 @@ class CatsThemePainter extends CustomPainter {
     required this.isPreview,
   });
 
-  static final List<_CatItem> _items = List.generate(isPreview ? 6 : 14, (i) {
+  static final List<_CatItem> _items = List.generate(14, (i) {
     final rand = math.Random(i * 97 + 13);
     return _CatItem(
       x: 0.08 + (i / 14.0) * 0.84 + (rand.nextDouble() * 0.08 - 0.04),
@@ -362,7 +364,9 @@ class CatsThemePainter extends CustomPainter {
 
     final fillPaint = Paint()..style = PaintingStyle.fill;
 
-    for (final item in _items) {
+    final itemCount = isPreview ? 6 : _items.length;
+    for (int i = 0; i < itemCount; i++) {
+      final item = _items[i];
       final y = (item.initialY - progress * item.speed) % 1.0 * size.height;
       final sway = math.sin(progress * math.pi * 4 + item.swayOffset) * 12.0;
       final x = (item.x * size.width + sway).clamp(16.0, size.width - 16.0);
@@ -616,7 +620,7 @@ class ArcadeThemePainter extends CustomPainter {
     required this.isPreview,
   });
 
-  static final List<_PixelParticle> _pixels = List.generate(isPreview ? 12 : 28, (i) {
+  static final List<_PixelParticle> _pixels = List.generate(28, (i) {
     final rand = math.Random(i * 131 + 47);
     return _PixelParticle(
       x: rand.nextDouble(),
