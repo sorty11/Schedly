@@ -262,8 +262,19 @@ class AppTheme {
     );
   }
 
+  static ThemeData buildTheme({
+    required bool isDark,
+    bool transparentScaffold = false,
+  }) {
+    return isDark
+        ? _buildDarkTheme(transparentScaffold: transparentScaffold)
+        : _buildLightTheme(transparentScaffold: transparentScaffold);
+  }
+
   // ─── Light Theme ─────────────────────────────────────────────────────────
-  static ThemeData get lightTheme {
+  static ThemeData get lightTheme => _buildLightTheme(transparentScaffold: false);
+
+  static ThemeData _buildLightTheme({bool transparentScaffold = false}) {
     const colorScheme = ColorScheme.light(
       primary: AppColors.primary,
       primaryContainer: Color(0xFFF3F8FF),
@@ -301,12 +312,16 @@ class AppTheme {
           TargetPlatform.iOS: FadeThroughPageTransitionsBuilder(),
         },
       ),
-      scaffoldBackgroundColor: AppColors.background,
+      scaffoldBackgroundColor: transparentScaffold
+          ? Colors.transparent
+          : AppColors.background,
 
       typography: Typography.material2021(colorScheme: colorScheme),
 
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.background,
+        backgroundColor: transparentScaffold
+            ? Colors.transparent
+            : AppColors.background,
         foregroundColor: AppColors.onSurface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -483,7 +498,9 @@ class AppTheme {
   }
 
   // ─── Dark Theme ──────────────────────────────────────────────────────────
-  static ThemeData get darkTheme {
+  static ThemeData get darkTheme => _buildDarkTheme(transparentScaffold: false);
+
+  static ThemeData _buildDarkTheme({bool transparentScaffold = false}) {
     const colorScheme = ColorScheme.dark(
       primary: AppColors.primaryDark,
       primaryContainer: Color(0xFF0D1524),
@@ -518,12 +535,16 @@ class AppTheme {
           TargetPlatform.iOS: FadeThroughPageTransitionsBuilder(),
         },
       ),
-      scaffoldBackgroundColor: AppColors.backgroundDark,
+      scaffoldBackgroundColor: transparentScaffold
+          ? Colors.transparent
+          : AppColors.backgroundDark,
 
       typography: Typography.material2021(colorScheme: colorScheme),
 
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.backgroundDark,
+        backgroundColor: transparentScaffold
+            ? Colors.transparent
+            : AppColors.backgroundDark,
         foregroundColor: AppColors.onSurfaceDark,
         surfaceTintColor: Colors.transparent,
         elevation: 0,

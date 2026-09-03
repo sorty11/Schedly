@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'visual_theme.dart';
 
 class ThemeController extends ChangeNotifier {
   static const String _themePrefKey = 'theme_preference';
+  static const String _visualThemePrefKey = 'visual_theme_preference';
 
   late ThemeMode _themeMode;
   ThemeMode get themeMode => _themeMode;
+
+  late SchedlyVisualTheme _visualTheme;
+  SchedlyVisualTheme get visualTheme => _visualTheme;
 
   final SharedPreferences prefs;
 
@@ -27,6 +32,9 @@ class ThemeController extends ChangeNotifier {
     } else {
       _themeMode = ThemeMode.system;
     }
+
+    final savedVisualTheme = prefs.getString(_visualThemePrefKey);
+    _visualTheme = SchedlyVisualTheme.fromId(savedVisualTheme);
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
@@ -40,5 +48,14 @@ class ThemeController extends ChangeNotifier {
     if (mode == ThemeMode.dark) saveVal = 'dark';
 
     await prefs.setString(_themePrefKey, saveVal);
+  }
+
+  Future<void> setVisualTheme(SchedlyVisualTheme theme) async {
+    if (_visualTheme == theme) return;
+
+    _visualTheme = theme;
+    notifyListeners();
+
+    await prefs.setString(_visualThemePrefKey, theme.id);
   }
 }

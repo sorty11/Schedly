@@ -16,6 +16,7 @@ import 'widgets/animations/animated_card.dart';
 import 'widgets/schedly_card.dart';
 import 'onboarding/widgets/tutorial_target.dart';
 import 'widgets/app_dialogs.dart';
+import 'cr/sr_faculty_view_page.dart';
 
 class SrConductDashboard extends StatefulWidget {
   final String division;
@@ -322,6 +323,21 @@ class _SrConductDashboardState extends State<SrConductDashboard> {
       appBar: AppBar(
         title: Text('${widget.subject} Dashboard'),
         scrolledUnderElevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.school_rounded),
+            tooltip: 'Assigned Faculty',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => SRFacultyViewPage(
+                  division: widget.division,
+                  subject: widget.subject,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance

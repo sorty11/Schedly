@@ -27,6 +27,7 @@ import 'services/course_configuration_service.dart';
 import 'course_details_setup_page.dart';
 import 'cr/cr_faculty_requests_page.dart';
 import 'cr/cr_faculty_view_page.dart';
+import 'cr/sr_faculty_view_page.dart';
 import 'cr/cr_password_management_page.dart';
 import 'settings/batch_management_page.dart';
 
@@ -556,6 +557,51 @@ class _CRPanelPageState extends State<CRPanelPage> {
                 subtitle: 'Permanently remove the entire published timetable',
                 color: Colors.red,
                 onTap: () => _deleteTimetable(context, sectionId),
+              ),
+            ],
+
+            if (!isCR) ...[
+              _buildSectionLabel('Faculty Connection', staggerIndex: 8),
+              _buildActionCard(
+                staggerIndex: 9,
+                icon: Icons.school_rounded,
+                title: 'Assigned Faculty',
+                subtitle:
+                    'View faculty teaching ${AppSettings.srSubject ?? 'your subject'}',
+                color: colorScheme.primary,
+                onTap: () {
+                  final division =
+                      AppSettings.sectionId ?? AppSettings.division;
+                  if (division == null) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SRFacultyViewPage(
+                        division: division,
+                        subject: AppSettings.srSubject ?? '',
+                      ),
+                    ),
+                  );
+                },
+              ),
+              _buildActionCard(
+                staggerIndex: 10,
+                icon: Icons.hourglass_empty_rounded,
+                title: 'Faculty Requests',
+                subtitle:
+                    'View lecture requests for ${AppSettings.srSubject ?? 'your subject'}',
+                color: semanticColors.pending,
+                onTap: () {
+                  final division =
+                      AppSettings.sectionId ?? AppSettings.division;
+                  if (division == null) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CRFacultyRequestsPage(division: division),
+                    ),
+                  );
+                },
               ),
             ],
 

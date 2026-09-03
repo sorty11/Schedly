@@ -1094,6 +1094,29 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                     index: staggerIndex++,
                     child: _buildAppearanceSegment(),
                   ),
+                  const SizedBox(height: AppSpacing.sm),
+                  StaggeredListItem(
+                    index: staggerIndex++,
+                    child: AnimatedBuilder(
+                      animation: themeController,
+                      builder: (context, _) => _buildTileGroup([
+                        _buildRoleTile(
+                          icon: Icons.palette_outlined,
+                          title: 'Themes',
+                          subtitle: themeController.visualTheme.displayName,
+                          iconColor: colorScheme.primary,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ThemesPage(),
+                              ),
+                            );
+                          },
+                        ),
+                      ]),
+                    ),
+                  ),
 
                   // ── Notification Preferences ──────────────────────────────────
                   _sectionHeader('Notification Preferences'),

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/theme.dart';
 import 'faculty_dashboard_page.dart';
 import 'faculty_timetable_page.dart';
+import 'faculty_panel_page.dart';
 import 'faculty_profile_page.dart';
 
 class FacultyHomePage extends StatefulWidget {
@@ -22,6 +23,7 @@ class _FacultyHomePageState extends State<FacultyHomePage> {
     final pages = [
       const FacultyDashboardPage(),
       const FacultyTimetablePage(),
+      const FacultyPanelPage(),
       const FacultyProfilePage(),
     ];
 
@@ -72,6 +74,11 @@ class _FacultyNavBar extends StatelessWidget {
         Icons.calendar_month_outlined,
         Icons.calendar_month_rounded,
         'Timetable',
+      ),
+      _NavItem(
+        Icons.dashboard_customize_outlined,
+        Icons.dashboard_customize_rounded,
+        'Panel',
       ),
       _NavItem(
         Icons.account_circle_outlined,

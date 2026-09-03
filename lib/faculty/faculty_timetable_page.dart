@@ -16,6 +16,7 @@ import '../widgets/skeleton_loader.dart';
 import '../models/faculty_lecture_context.dart';
 import 'package:file_picker/file_picker.dart';
 import 'faculty_excel_import_service.dart';
+import '../services/timetable_resolver_service.dart';
 
 class _FacultyConflictPair {
   final _FacultyTimetableEntry entryA;
@@ -68,6 +69,15 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
     _timetableStream = _streamTimetable();
   }
 
+  DateTime _getTargetDateForDay(String dayName) {
+    final now = DateTime.now();
+    final currentWeekday = now.weekday; // 1 = Monday, 7 = Sunday
+    final targetWeekday = _days.indexOf(dayName) + 1;
+    if (targetWeekday < 1 || targetWeekday > 7) return now;
+    final diff = targetWeekday - currentWeekday;
+    return now.add(Duration(days: diff));
+  }
+
   Stream<List<_FacultyTimetableEntry>> _streamTimetable() async* {
     try {
       final uid = AppSettings.facultyId;
@@ -89,6 +99,9 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
         return;
       }
 
+      final targetDate = _getTargetDateForDay(_selectedDay);
+      final targetDateStr = DateFormat('yyyy-MM-dd').format(targetDate);
+
       final streams = divisions.map((div) {
         final mySubjects = List<String>.from(subjectsMap[div] ?? []);
         if (mySubjects.isEmpty) return Stream.value(<_FacultyTimetableEntry>[]);
@@ -97,8 +110,17 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
           division: div,
           day: _selectedDay,
         ).map((entries) {
-          return entries
-              .where((e) => mySubjects.contains(e.subjectCode))
+          final resolved = TimetableResolverService.resolve(
+            rawEntries: entries,
+            targetDateStr: targetDateStr,
+          );
+
+          if (resolved.isHoliday) {
+            return <_FacultyTimetableEntry>[];
+          }
+
+          return resolved.lectures
+              .where((e) => mySubjects.contains(e.subjectCode) && e.isActive)
               .map((e) => _FacultyTimetableEntry(division: div, entry: e))
               .toList();
         });
@@ -200,7 +222,25 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
     }
   }
 
+  static DateTime? _lastConflictNotifiedTime;
+
   void _notifyCRsOfConflict() async {
+    // Deduplication check: prevent spamming notifications within 60s
+    if (_lastConflictNotifiedTime != null &&
+        DateTime.now().difference(_lastConflictNotifiedTime!) <
+            const Duration(seconds: 60)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'CRs were already notified recently. Please wait a moment.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
     final uid = AppSettings.facultyId;
     final name = AppSettings.facultyName ?? 'Faculty';
 
@@ -229,9 +269,11 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
       final message =
           'Timetable conflict detected on $_selectedDay: You are scheduled with Prof. $name at overlapping time ($conflictDetails).';
 
+      final deterministicNotifId =
+          'conflict_${DateFormat('yyyyMMdd').format(DateTime.now())}_${div}_${uid ?? 'fac'}';
+
       final Map<String, dynamic> crPayload = {
-        'notificationId':
-            'conflict_${DateTime.now().millisecondsSinceEpoch}_$div',
+        'notificationId': deterministicNotifId,
         'type': 'faculty_conflict',
         'title': 'Schedule Conflict: Prof. $name',
         'body': message,
@@ -249,11 +291,14 @@ class _FacultyTimetablePageState extends State<FacultyTimetablePage> {
       try {
         await FirebaseFirestore.instance
             .collection('notification_outbox')
-            .add(crPayload);
+            .doc(deterministicNotifId)
+            .set(crPayload);
       } catch (outboxErr) {
         debugPrint('OUTBOX WARNING (non-fatal, conflict notify): $outboxErr');
       }
     }
+
+    _lastConflictNotifiedTime = DateTime.now();
 
     if (mounted) {
       final divNames = affectedDivisions

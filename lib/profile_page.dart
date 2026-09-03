@@ -473,6 +473,29 @@ class _ProfilePageState extends State<ProfilePage> {
             // ── Appearance section ────────────────────────────────────────
             _sectionHeader('Appearance'),
             StaggeredListItem(index: 1, child: _buildAppearanceSegment()),
+            const SizedBox(height: AppSpacing.sm),
+            StaggeredListItem(
+              index: 2,
+              child: AnimatedBuilder(
+                animation: themeController,
+                builder: (context, _) => _buildTileGroup([
+                  _buildRoleTile(
+                    icon: Icons.palette_outlined,
+                    title: 'Themes',
+                    subtitle: themeController.visualTheme.displayName,
+                    iconColor: colorScheme.primary,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ThemesPage(),
+                        ),
+                      );
+                    },
+                  ),
+                ]),
+              ),
+            ),
 
             // ── My Role section ───────────────────────────────────────────
             _sectionHeader('My Role'),

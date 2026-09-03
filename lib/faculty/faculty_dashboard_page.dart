@@ -13,6 +13,7 @@ import '../widgets/animations/staggered_list_item.dart';
 import '../widgets/animations/animated_button.dart';
 import '../widgets/skeleton_loader.dart';
 import 'faculty_request_sheet.dart';
+import 'faculty_panel_page.dart';
 import '../create_announcement_page.dart';
 import '../models/faculty_lecture_context.dart';
 import '../services/local_notification_service.dart';
@@ -188,9 +189,21 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
                       Row(
                         children: [
                           _HeaderAction(
+                            icon: Icons.dashboard_customize_rounded,
+                            label: 'Panel',
+                            color: colorScheme.primary,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const FacultyPanelPage(),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          _HeaderAction(
                             icon: Icons.add_circle_outline_rounded,
                             label: 'Extra Class',
-                            color: colorScheme.primary,
+                            color: colorScheme.secondary,
                             onTap: () => showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
@@ -204,7 +217,7 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
                           _HeaderAction(
                             icon: Icons.campaign_outlined,
                             label: 'Announce',
-                            color: colorScheme.secondary,
+                            color: sem.conducted,
                             onTap: () => Navigator.push(
                               context,
                               MaterialPageRoute(

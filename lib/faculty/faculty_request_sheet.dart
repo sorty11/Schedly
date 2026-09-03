@@ -203,22 +203,27 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
 
       // 1. Notify Target Section CR
       try {
-        await FirebaseFirestore.instance.collection('notification_outbox').add({
-          'division': _selectedDivision,
-          'role': 'cr',
-          'subject': _selectedSubject,
-          'batch': _selectedBatch,
-          'title': 'New Faculty Request',
-          'body':
-              'Prof. $name requested to ${widget.requestType == FacultyRequestType.cancel ? 'cancel' : 'add'} a $_selectedSubject lecture$batchSuffix.',
-          'type': 'faculty_request',
-          'uid': uid,
-          'data': {'requestId': request.id},
-          'createdAt': FieldValue.serverTimestamp(),
-          'processed': false,
-          'attempts': 0,
-          'nextRetryAt': FieldValue.serverTimestamp(),
-        });
+        final crNotifId = 'req_cr_${request.id}';
+        await FirebaseFirestore.instance
+            .collection('notification_outbox')
+            .doc(crNotifId)
+            .set({
+              'notificationId': crNotifId,
+              'division': _selectedDivision,
+              'role': 'cr',
+              'subject': _selectedSubject,
+              'batch': _selectedBatch,
+              'title': 'New Faculty Request',
+              'body':
+                  'Prof. $name requested to ${widget.requestType == FacultyRequestType.cancel ? 'cancel' : 'add'} a $_selectedSubject lecture$batchSuffix.',
+              'type': 'faculty_request',
+              'uid': uid,
+              'data': {'requestId': request.id},
+              'createdAt': FieldValue.serverTimestamp(),
+              'processed': false,
+              'attempts': 0,
+              'nextRetryAt': FieldValue.serverTimestamp(),
+            });
       } catch (outboxErr) {
         debugPrint(
           'OUTBOX WARNING (non-fatal, CR faculty request): $outboxErr',
@@ -227,22 +232,27 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
 
       // 2. Notify Target Subject SR (responsible for that subject & section)
       try {
-        await FirebaseFirestore.instance.collection('notification_outbox').add({
-          'division': _selectedDivision,
-          'role': 'sr',
-          'subject': _selectedSubject,
-          'batch': _selectedBatch,
-          'title': 'New Faculty Request',
-          'body':
-              'Prof. $name requested to ${widget.requestType == FacultyRequestType.cancel ? 'cancel' : 'add'} a $_selectedSubject lecture for ${_selectedDivision!.replaceAll('_', ' ')}$batchSuffix.',
-          'type': 'faculty_request',
-          'uid': uid,
-          'data': {'requestId': request.id},
-          'createdAt': FieldValue.serverTimestamp(),
-          'processed': false,
-          'attempts': 0,
-          'nextRetryAt': FieldValue.serverTimestamp(),
-        });
+        final srNotifId = 'req_sr_${request.id}';
+        await FirebaseFirestore.instance
+            .collection('notification_outbox')
+            .doc(srNotifId)
+            .set({
+              'notificationId': srNotifId,
+              'division': _selectedDivision,
+              'role': 'sr',
+              'subject': _selectedSubject,
+              'batch': _selectedBatch,
+              'title': 'New Faculty Request',
+              'body':
+                  'Prof. $name requested to ${widget.requestType == FacultyRequestType.cancel ? 'cancel' : 'add'} a $_selectedSubject lecture for ${_selectedDivision!.replaceAll('_', ' ')}$batchSuffix.',
+              'type': 'faculty_request',
+              'uid': uid,
+              'data': {'requestId': request.id},
+              'createdAt': FieldValue.serverTimestamp(),
+              'processed': false,
+              'attempts': 0,
+              'nextRetryAt': FieldValue.serverTimestamp(),
+            });
       } catch (outboxErr) {
         debugPrint(
           'OUTBOX WARNING (non-fatal, SR faculty request): $outboxErr',
