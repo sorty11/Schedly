@@ -156,28 +156,24 @@ class OutboxWorker {
     async processPendingFeedbackEmails() {
         try {
             const db = admin.firestore();
-            const nowMs = admin.firestore.Timestamp.now().toMillis();
-            // Query documents with emailStatus in ['pending', 'failed'] without requiring composite indexes
-            const snap = await db.collection('feedback')
-                .where('emailStatus', 'in', ['pending', 'failed'])
-                .limit(25)
+            const now = admin.firestore.Timestamp.now();
+            // Query documents with emailStatus == 'pending'
+            const pendingSnap = await db.collection('feedback')
+                .where('emailStatus', '==', 'pending')
+                .limit(10)
                 .get();
-            if (snap.empty) {
-                return;
-            }
-            for (const doc of snap.docs) {
+            // Query documents with emailStatus == 'failed' eligible for retry
+            const failedSnap = await db.collection('feedback')
+                .where('emailStatus', '==', 'failed')
+                .where('nextRetryAt', '<=', now)
+                .orderBy('nextRetryAt', 'asc')
+                .limit(10)
+                .get();
+            const docsToProcess = [...pendingSnap.docs, ...failedSnap.docs];
+            for (const doc of docsToProcess) {
                 const data = doc.data();
                 if ((data.emailAttempts || 0) >= 5) {
                     continue;
-                }
-                // If emailStatus is 'failed', filter nextRetryAt in-memory to prevent requiring a Firestore composite index
-                if (data.emailStatus === 'failed' && data.nextRetryAt) {
-                    const retryMs = typeof data.nextRetryAt.toMillis === 'function'
-                        ? data.nextRetryAt.toMillis()
-                        : new Date(data.nextRetryAt).getTime();
-                    if (retryMs > nowMs) {
-                        continue;
-                    }
                 }
                 logger_1.logger.info('Worker processing pending feedback email', { id: doc.id, type: data.type });
                 await feedback_service_1.FeedbackEmailService.dispatchFeedbackEmail(doc.id, data);
