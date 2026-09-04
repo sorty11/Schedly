@@ -1,16 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'app_settings.dart';
-import 'user_roles.dart';
-
 import 'models/attendance_record.dart';
-import 'models/timetable_entry.dart';
-import 'models/event_category.dart';
 import 'services/attendance_service.dart';
 import 'timetable_manager.dart';
 import 'theme/theme.dart';
@@ -38,39 +32,13 @@ class AttendancePage extends StatefulWidget {
 class _AttendancePageState extends State<AttendancePage> {
   late Stream<List<AttendanceRecord>> _recordsStream;
   late Stream<List<AttendanceLog>> _logsStream;
-  late Stream<QuerySnapshot> _lecturesStream;
   late Future<ProgressCalculatorService?> _calculatorFuture;
-  late String currentDay;
-
-  String _getCurrentDay() {
-    final now = DateTime.now();
-    switch (now.weekday) {
-      case 1:
-        return 'Monday';
-      case 2:
-        return 'Tuesday';
-      case 3:
-        return 'Wednesday';
-      case 4:
-        return 'Thursday';
-      case 5:
-        return 'Friday';
-      default:
-        return 'Monday'; // Default to Monday for weekends
-    }
-  }
 
   @override
   void initState() {
     super.initState();
-    currentDay = _getCurrentDay();
     _recordsStream = AttendanceService.streamAll(widget.division);
     _logsStream = AttendanceService.streamLogs();
-    _lecturesStream = FirebaseFirestore.instance
-        .collection('timetables')
-        .doc(widget.division)
-        .collection(currentDay)
-        .snapshots();
     _calculatorFuture = ProgressCalculatorService.build(widget.division);
   }
 
@@ -554,13 +522,6 @@ class _AttendancePageState extends State<AttendancePage> {
                           child: SizedBox(height: AppSpacing.md),
                         ),
 
-                        _TodayLecturesSliver(
-                          division: widget.division,
-                          lecturesStream: _lecturesStream,
-                          logsStream: _logsStream,
-                          currentDay: currentDay,
-                        ),
-
                         if (subjects.isEmpty &&
                             snapshot.connectionState != ConnectionState.waiting)
                           SliverFillRemaining(
@@ -964,292 +925,6 @@ class _TimelineLogCard extends StatelessWidget {
               log.confidence != MatchConfidence.normalized)
             Icon(Icons.warning_amber_rounded, color: sem.warning, size: 16),
         ],
-      ),
-    );
-  }
-}
-
-class _TodayLecturesSliver extends StatelessWidget {
-  final String division;
-  final Stream<QuerySnapshot> lecturesStream;
-  final Stream<List<AttendanceLog>> logsStream;
-  final String currentDay;
-
-  const _TodayLecturesSliver({
-    required this.division,
-    required this.lecturesStream,
-    required this.logsStream,
-    required this.currentDay,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: lecturesStream,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData)
-          return const SliverToBoxAdapter(child: SizedBox.shrink());
-
-        final rawLectures = snapshot.data!.docs
-            .map((doc) => TimetableEntry.fromFirestore(doc))
-            .where((e) {
-              if (AppSettings.currentRole == UserRole.student) {
-                return e.shouldIncludeForUserBatch(AppSettings.studentBatch);
-              }
-              return true;
-            })
-            .toList();
-
-        if (rawLectures.isEmpty)
-          return const SliverToBoxAdapter(child: SizedBox.shrink());
-
-        // Sort by start time
-        rawLectures.sort((a, b) => a.startTime.compareTo(b.startTime));
-
-        return StreamBuilder<List<AttendanceLog>>(
-          stream: logsStream,
-          builder: (context, logsSnap) {
-            final logs = logsSnap.data ?? [];
-            final now = DateTime.now();
-            final todayLogs = logs
-                .where(
-                  (l) =>
-                      l.date.year == now.year &&
-                      l.date.month == now.month &&
-                      l.date.day == now.day &&
-                      l.source == 'manual',
-                )
-                .toList();
-
-            return SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  if (index == 0) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                      child: Text(
-                        'Today\'s Lectures',
-                        style: GoogleFonts.outfit(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    );
-                  }
-
-                  final entry = rawLectures[index - 1];
-                  final logForEntry = todayLogs.firstWhere(
-                    (l) =>
-                        l.timetableEntryId == entry.id ||
-                        (l.startTime == entry.startTime &&
-                            l.subjectCode == entry.subjectCode),
-                    orElse: () => AttendanceLog(
-                      id: '',
-                      subjectCode: '',
-                      component: '',
-                      rawSubjectText: '',
-                      date: now,
-                      startTime: 0,
-                      endTime: 0,
-                      status: '',
-                      source: '',
-                      confidence: MatchConfidence.unknown,
-                      importedAt: now,
-                    ),
-                  );
-
-                  final isMarked = logForEntry.id.isNotEmpty;
-                  final status = logForEntry.status;
-
-                  return AnimatedCard(
-                    margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                    borderRadius: AppRadius.xl,
-                    backgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  entry.subjectCode,
-                                  style: GoogleFonts.outfit(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                TimetableManager.formatTime(
-                                  entry.startTime,
-                                  entry.endTime,
-                                ),
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: Theme.of(
-                                    context,
-                                  ).textTheme.bodySmall?.color,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Column(
-                            children: [
-                              Row(
-                                children: [
-                                  _StatusButton(
-                                    label: 'Present',
-                                    icon: Icons.check_circle_outline,
-                                    color: Colors.green,
-                                    isSelected:
-                                        isMarked &&
-                                        (status == 'present' || status == 'P'),
-                                    onTap: () => _markLog(entry, 'present'),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  _StatusButton(
-                                    label: 'Absent',
-                                    icon: Icons.cancel_outlined,
-                                    color: Colors.red,
-                                    isSelected:
-                                        isMarked &&
-                                        (status == 'absent' || status == 'A'),
-                                    onTap: () => _markLog(entry, 'absent'),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  _StatusButton(
-                                    label: 'Cancelled',
-                                    icon: Icons.block,
-                                    color: Colors.orange,
-                                    isSelected:
-                                        isMarked && status == 'cancelled',
-                                    onTap: () => _markLog(entry, 'cancelled'),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  _StatusButton(
-                                    label: 'Not Mine',
-                                    icon: Icons.not_interested,
-                                    color: Colors.grey,
-                                    isSelected:
-                                        isMarked && status == 'not_mine',
-                                    onTap: () => _markLog(entry, 'not_mine'),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }, childCount: rawLectures.length + 1),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _markLog(TimetableEntry entry, String status) async {
-    final now = DateTime.now();
-    final dateStr =
-        '${now.year}_${now.month.toString().padLeft(2, '0')}_${now.day.toString().padLeft(2, '0')}';
-    final instanceId =
-        '${entry.subjectCode}_${entry.component}_${dateStr}_${entry.startTime}_${entry.endTime}'
-            .replaceAll(RegExp(r'\s+'), '_');
-
-    await AttendanceService.markLog(
-      subjectCode: entry.subjectCode,
-      component: entry.component,
-      date: now,
-      startTime: entry.startTime,
-      endTime: entry.endTime,
-      status: status,
-      entryId: entry.id,
-    );
-
-    // Update the aggregate record
-    await AttendanceService.mark(
-      division: division,
-      subjectCode: entry.subjectCode,
-      component: entry.component,
-      instanceId: instanceId,
-      markType: (status == 'present' || status == 'absent') ? status : null,
-    );
-  }
-}
-
-class _StatusButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _StatusButton({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Material(
-        color: isSelected ? color.withOpacity(0.2) : Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: BorderSide(
-            color: isSelected ? color : Theme.of(context).dividerColor,
-          ),
-        ),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  size: 16,
-                  color: isSelected ? color : Theme.of(context).iconTheme.color,
-                ),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    label,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      color: isSelected
-                          ? color
-                          : Theme.of(context).textTheme.bodySmall?.color,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
