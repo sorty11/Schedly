@@ -52,7 +52,7 @@ class ThemesPage extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'Choose an ambient animated wallpaper for Schedly. All your timetable cards and actions remain completely clear and readable.',
+                  'Choose your preferred visual aesthetic. All timetable information, attendance calculations, and permissions remain completely identical.',
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     color: sem.onSurfaceMuted,
@@ -98,6 +98,39 @@ class _ThemeCard extends StatelessWidget {
     required this.sem,
     required this.onTap,
   });
+
+  List<Color> _swatches(SchedlyVisualTheme theme) {
+    switch (theme) {
+      case SchedlyVisualTheme.defaultTheme:
+        return const [
+          Color(0xFF0066FF),
+          Color(0xFF007A5A),
+          Color(0xFF5E548E),
+          Color(0xFFE5A000),
+        ];
+      case SchedlyVisualTheme.heritage:
+        return const [
+          Color(0xFFC86432),
+          Color(0xFF5E8B4E),
+          Color(0xFFD48827),
+          Color(0xFF9E3B33),
+        ];
+      case SchedlyVisualTheme.future:
+        return const [
+          Color(0xFF00D8FF),
+          Color(0xFF8B5CF6),
+          Color(0xFF06D6A0),
+          Color(0xFFFF3366),
+        ];
+      case SchedlyVisualTheme.bloom:
+        return const [
+          Color(0xFFE11D74),
+          Color(0xFFC084FC),
+          Color(0xFF34D399),
+          Color(0xFFFB923C),
+        ];
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -251,6 +284,26 @@ class _ThemeCard extends StatelessWidget {
                             fontSize: 12,
                             color: sem.onSurfaceMuted,
                           ),
+                        ),
+                        const SizedBox(height: 6),
+                        // Signature Palette Swatches
+                        Row(
+                          children: [
+                            for (final color in _swatches(theme))
+                              Container(
+                                width: 12,
+                                height: 12,
+                                margin: const EdgeInsets.only(right: 6),
+                                decoration: BoxDecoration(
+                                  color: color,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                    width: 1,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),
