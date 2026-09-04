@@ -10,12 +10,16 @@ const cors_1 = __importDefault(require("cors"));
 const compression_1 = __importDefault(require("compression"));
 const morgan_1 = __importDefault(require("morgan"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const dns_1 = __importDefault(require("dns"));
 const logger_1 = require("./utils/logger");
 const outbox_worker_1 = require("./worker/outbox.worker");
 const token_worker_1 = require("./worker/token.worker");
 const env_config_1 = require("./config/env.config");
 const api_v1_routes_1 = __importDefault(require("./routes/api.v1.routes"));
 const feedback_1 = __importDefault(require("./routes/feedback"));
+if (typeof dns_1.default.setDefaultResultOrder === 'function') {
+    dns_1.default.setDefaultResultOrder('ipv4first');
+}
 dotenv_1.default.config();
 require("./config/firebase"); // Ensure firebase is initialized
 const app = (0, express_1.default)();

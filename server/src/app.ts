@@ -4,12 +4,17 @@ import cors from 'cors';
 import compression from 'compression';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import dns from 'dns';
 import { logger } from './utils/logger';
 import { OutboxWorker } from './worker/outbox.worker';
 import { TokenWorker } from './worker/token.worker';
 import { AppConfig } from './config/env.config';
 import apiV1Routes from './routes/api.v1.routes';
 import feedbackRoutes from './routes/feedback';
+
+if (typeof dns.setDefaultResultOrder === 'function') {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 dotenv.config();
 import './config/firebase'; // Ensure firebase is initialized
