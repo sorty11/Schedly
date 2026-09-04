@@ -94,10 +94,8 @@ class _LiveLectureCardState extends State<LiveLectureCard> {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final cardBg = isDark ? colorScheme.surfaceContainerHighest : Colors.white;
-    final borderColor = isDark
-        ? const Color(0xFF2E2E2E)
-        : const Color(0xFFE5E7EB);
+    final cardBg = sem.surfaceElevated;
+    final borderColor = sem.borderSubtle;
 
     return GestureDetector(
       onTap: widget.onTap,
@@ -105,7 +103,8 @@ class _LiveLectureCardState extends State<LiveLectureCard> {
         decoration: BoxDecoration(
           color: cardBg,
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(color: borderColor, width: 1),
+          border: Border.all(color: borderColor, width: 0.9),
+          boxShadow: AppShadow.level1(colorScheme.primary, isDark: isDark),
         ),
         child: IntrinsicHeight(
           child: Row(

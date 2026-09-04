@@ -17,13 +17,13 @@ class HeroCardSkeleton extends StatelessWidget {
         padding: EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
           color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withOpacity(0.02)
-              : Colors.black.withOpacity(0.02),
+              ? Colors.white.withValues(alpha: 0.03)
+              : Colors.black.withValues(alpha: 0.02),
           borderRadius: BorderRadius.circular(AppRadius.x2l),
           border: Border.all(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withOpacity(0.05)
-                : Colors.black.withOpacity(0.05),
+                ? Colors.white.withValues(alpha: 0.06)
+                : Colors.black.withValues(alpha: 0.04),
           ),
         ),
         child: Row(
@@ -33,9 +33,17 @@ class HeroCardSkeleton extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const SkeletonBlock(width: 120, height: 16, borderRadius: 4),
+                  const SkeletonBlock(
+                    width: 120,
+                    height: 16,
+                    borderRadius: AppRadius.xs,
+                  ),
                   const SizedBox(height: AppSpacing.sm),
-                  const SkeletonBlock(width: 200, height: 28, borderRadius: 6),
+                  const SkeletonBlock(
+                    width: 200,
+                    height: 28,
+                    borderRadius: AppRadius.sm,
+                  ),
                   const SizedBox(height: AppSpacing.lg),
                   Row(
                     children: [
@@ -87,18 +95,23 @@ class StatsRowSkeleton extends StatelessWidget {
       padding: EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
-            ? Colors.white.withOpacity(0.02)
-            : Colors.black.withOpacity(0.02),
-        borderRadius: BorderRadius.circular(AppRadius.xl),
+            ? Colors.white.withValues(alpha: 0.03)
+            : Colors.black.withValues(alpha: 0.02),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.black.withValues(alpha: 0.04),
+        ),
       ),
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SkeletonBlock(width: 32, height: 32, borderRadius: 8),
+          SkeletonBlock(width: 32, height: 32, borderRadius: AppRadius.sm),
           SizedBox(height: AppSpacing.md),
-          SkeletonBlock(width: 60, height: 24, borderRadius: 4),
+          SkeletonBlock(width: 60, height: 24, borderRadius: AppRadius.xs),
           SizedBox(height: AppSpacing.xs),
-          SkeletonBlock(width: 100, height: 12, borderRadius: 4),
+          SkeletonBlock(width: 100, height: 12, borderRadius: AppRadius.xs),
         ],
       ),
     );
@@ -119,9 +132,14 @@ class LectureCardSkeleton extends StatelessWidget {
           padding: EdgeInsets.all(AppSpacing.xl),
           decoration: BoxDecoration(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withOpacity(0.02)
-                : Colors.black.withOpacity(0.02),
-            borderRadius: BorderRadius.circular(AppRadius.xl),
+                ? Colors.white.withValues(alpha: 0.03)
+                : Colors.black.withValues(alpha: 0.02),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.black.withValues(alpha: 0.04),
+            ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,21 +158,29 @@ class LectureCardSkeleton extends StatelessWidget {
                       const SkeletonBlock(
                         width: 60,
                         height: 12,
-                        borderRadius: 4,
+                        borderRadius: AppRadius.xs,
                       ),
                       const SizedBox(height: AppSpacing.xs),
                     ],
                     const SkeletonBlock(
                       width: double.infinity,
                       height: 18,
-                      borderRadius: 4,
+                      borderRadius: AppRadius.xs,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     const Row(
                       children: [
-                        SkeletonBlock(width: 80, height: 14, borderRadius: 4),
+                        SkeletonBlock(
+                          width: 80,
+                          height: 14,
+                          borderRadius: AppRadius.xs,
+                        ),
                         SizedBox(width: AppSpacing.md),
-                        SkeletonBlock(width: 50, height: 14, borderRadius: 4),
+                        SkeletonBlock(
+                          width: 50,
+                          height: 14,
+                          borderRadius: AppRadius.xs,
+                        ),
                       ],
                     ),
                   ],
@@ -180,9 +206,14 @@ class SubjectCardSkeleton extends StatelessWidget {
           padding: EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withOpacity(0.02)
-                : Colors.black.withOpacity(0.02),
-            borderRadius: BorderRadius.circular(AppRadius.xl),
+                ? Colors.white.withValues(alpha: 0.03)
+                : Colors.black.withValues(alpha: 0.02),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.black.withValues(alpha: 0.04),
+            ),
           ),
           child: const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -190,14 +221,30 @@ class SubjectCardSkeleton extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  SkeletonBlock(width: 120, height: 16, borderRadius: 4),
-                  SkeletonBlock(width: 40, height: 16, borderRadius: 4),
+                  SkeletonBlock(
+                    width: 120,
+                    height: 16,
+                    borderRadius: AppRadius.xs,
+                  ),
+                  SkeletonBlock(
+                    width: 40,
+                    height: 16,
+                    borderRadius: AppRadius.xs,
+                  ),
                 ],
               ),
               SizedBox(height: AppSpacing.md),
-              SkeletonBlock(width: double.infinity, height: 8, borderRadius: 4),
+              SkeletonBlock(
+                width: double.infinity,
+                height: 8,
+                borderRadius: AppRadius.xs,
+              ),
               SizedBox(height: AppSpacing.sm),
-              SkeletonBlock(width: 200, height: 12, borderRadius: 4),
+              SkeletonBlock(
+                width: 200,
+                height: 12,
+                borderRadius: AppRadius.xs,
+              ),
             ],
           ),
         ),
@@ -218,9 +265,14 @@ class AnnouncementCardSkeleton extends StatelessWidget {
           padding: EdgeInsets.all(AppSpacing.xl),
           decoration: BoxDecoration(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withOpacity(0.02)
-                : Colors.black.withOpacity(0.02),
-            borderRadius: BorderRadius.circular(AppRadius.xl),
+                ? Colors.white.withValues(alpha: 0.03)
+                : Colors.black.withValues(alpha: 0.02),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.black.withValues(alpha: 0.04),
+            ),
           ),
           child: const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,15 +293,23 @@ class AnnouncementCardSkeleton extends StatelessWidget {
                 ],
               ),
               SizedBox(height: AppSpacing.md),
-              SkeletonBlock(width: 250, height: 20, borderRadius: 4),
+              SkeletonBlock(
+                width: 250,
+                height: 20,
+                borderRadius: AppRadius.xs,
+              ),
               SizedBox(height: AppSpacing.sm),
               SkeletonBlock(
                 width: double.infinity,
                 height: 14,
-                borderRadius: 4,
+                borderRadius: AppRadius.xs,
               ),
               SizedBox(height: 4),
-              SkeletonBlock(width: 200, height: 14, borderRadius: 4),
+              SkeletonBlock(
+                width: 200,
+                height: 14,
+                borderRadius: AppRadius.xs,
+              ),
             ],
           ),
         ),
@@ -357,9 +417,14 @@ class AnalyticsSkeleton extends StatelessWidget {
         padding: EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
           color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withOpacity(0.02)
-              : Colors.black.withOpacity(0.02),
-          borderRadius: BorderRadius.circular(AppRadius.xl),
+              ? Colors.white.withValues(alpha: 0.03)
+              : Colors.black.withValues(alpha: 0.02),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: 0.05)
+                : Colors.black.withValues(alpha: 0.04),
+          ),
         ),
         child: const Center(
           child: SkeletonBlock(width: 100, height: 100, borderRadius: 50),

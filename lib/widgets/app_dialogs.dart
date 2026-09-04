@@ -64,8 +64,10 @@ class AppDialogs {
       builder: (ctx) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: AlertDialog(
+          backgroundColor: sem.surfaceElevated,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.xl),
+            borderRadius: BorderRadius.circular(AppRadius.x2l),
+            side: BorderSide(color: sem.borderSubtle, width: 0.8),
           ),
           contentPadding: const EdgeInsets.fromLTRB(
             AppSpacing.x2l,
@@ -90,7 +92,12 @@ class AppDialogs {
           ),
           content: Text(
             message,
-            style: TextStyle(fontFamily: 'Inter', fontSize: 14, height: 1.5),
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              height: 1.5,
+              color: sem.onSurfaceMuted,
+            ),
           ),
           actionsPadding: const EdgeInsets.fromLTRB(
             AppSpacing.lg,
@@ -102,7 +109,7 @@ class AppDialogs {
             OutlinedButton(
               onPressed: () => Navigator.pop(ctx, false),
               style: OutlinedButton.styleFrom(
-                minimumSize: const Size(80, 40),
+                minimumSize: const Size(88, 44),
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -123,7 +130,7 @@ class AppDialogs {
                     ? sem.error
                     : Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
-                minimumSize: const Size(80, 40),
+                minimumSize: const Size(88, 44),
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -154,13 +161,16 @@ class AppDialogs {
     required String message,
     String? resolution,
   }) {
+    final sem = Theme.of(context).extension<AppSemanticColors>()!;
     return showModal(
       context: context,
       builder: (ctx) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: AlertDialog(
+          backgroundColor: sem.surfaceElevated,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.xl),
+            borderRadius: BorderRadius.circular(AppRadius.x2l),
+            side: BorderSide(color: sem.borderSubtle, width: 0.8),
           ),
           contentPadding: const EdgeInsets.fromLTRB(
             AppSpacing.x2l,
@@ -173,7 +183,11 @@ class AppDialogs {
             height: 52,
             decoration: BoxDecoration(
               color: iconColor.withValues(alpha: 0.10),
-              shape: BoxShape.circle,
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+              border: Border.all(
+                color: iconColor.withValues(alpha: 0.15),
+                width: 0.8,
+              ),
             ),
             child: Icon(icon, color: iconColor, size: 26),
           ),
@@ -208,6 +222,7 @@ class AppDialogs {
                   fontFamily: 'Inter',
                   fontSize: 14,
                   height: 1.5,
+                  color: sem.onSurfaceMuted,
                 ),
               ),
               if (resolution != null) ...[
@@ -217,6 +232,10 @@ class AppDialogs {
                   decoration: BoxDecoration(
                     color: iconColor.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(
+                      color: iconColor.withValues(alpha: 0.15),
+                      width: 0.8,
+                    ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,

@@ -58,8 +58,13 @@ class SchedlyBottomSheet extends StatelessWidget {
       decoration: BoxDecoration(
         color: semanticColors.surfaceElevated,
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(AppRadius.xl),
-          topRight: Radius.circular(AppRadius.xl),
+          topLeft: Radius.circular(AppRadius.x2l),
+          topRight: Radius.circular(AppRadius.x2l),
+        ),
+        border: Border(
+          top: BorderSide(color: semanticColors.borderSubtle, width: 0.8),
+          left: BorderSide(color: semanticColors.borderSubtle, width: 0.8),
+          right: BorderSide(color: semanticColors.borderSubtle, width: 0.8),
         ),
       ),
       child: Column(
@@ -67,11 +72,11 @@ class SchedlyBottomSheet extends StatelessWidget {
         children: [
           // Drag handle
           Container(
-            margin: const EdgeInsets.only(top: AppSpacing.md),
-            width: 36,
-            height: 4,
+            margin: const EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.xs),
+            width: 40,
+            height: 4.5,
             decoration: BoxDecoration(
-              color: semanticColors.onSurfaceFaint.withValues(alpha: 0.3),
+              color: semanticColors.onSurfaceFaint.withValues(alpha: 0.25),
               borderRadius: BorderRadius.circular(AppRadius.full),
             ),
           ),

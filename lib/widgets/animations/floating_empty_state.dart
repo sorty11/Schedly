@@ -41,13 +41,19 @@ class FloatingEmptyState extends StatelessWidget {
                       StaggeredListItem(
                         index: 0,
                         child: Container(
-                          width: 64,
-                          height: 64,
+                          width: 68,
+                          height: 68,
                           decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF2E2E2E)
-                                : const Color(0xFFF3F4F6),
-                            shape: BoxShape.circle,
+                            color: semanticColors.surfaceElevated,
+                            borderRadius: BorderRadius.circular(AppRadius.xl),
+                            border: Border.all(
+                              color: semanticColors.borderSubtle,
+                              width: 0.8,
+                            ),
+                            boxShadow: AppShadow.level1(
+                              colorScheme.primary,
+                              isDark: isDark,
+                            ),
                           ),
                           child: Icon(
                             icon,
@@ -98,41 +104,28 @@ class FloatingEmptyState extends StatelessWidget {
                           index: 3,
                           child: AnimatedButton(
                             onPressed: onAction,
-                            backgroundColor: colorScheme.surface,
-                            foregroundColor: colorScheme.onSurface,
+                            backgroundColor: semanticColors.surfaceElevated,
+                            foregroundColor: colorScheme.primary,
                             borderRadius: AppRadius.md,
                             padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
+                              horizontal: AppSpacing.xl,
                               vertical: AppSpacing.md,
                             ),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: semanticColors.borderSubtle,
-                                ),
-                                borderRadius: BorderRadius.circular(
-                                  AppRadius.md,
-                                ),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.lg,
-                                vertical: AppSpacing.sm,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.add_rounded, size: 18),
-                                  const SizedBox(width: AppSpacing.sm),
-                                  Text(
-                                    actionLabel!,
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                    ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.add_rounded, size: 18),
+                                const SizedBox(width: AppSpacing.sm),
+                                Text(
+                                  actionLabel!,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    color: colorScheme.primary,
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
