@@ -112,21 +112,29 @@ class SchedlyApp extends StatelessWidget {
         return MaterialApp(
           title: 'Schedly',
           debugShowCheckedModeBanner: false,
+          scrollBehavior: const SchedlyScrollBehavior(),
           themeMode: themeController.themeMode,
           theme: AppTheme.buildTheme(
             isDark: false,
+            visualTheme: themeController.visualTheme,
             transparentScaffold: isCustomTheme,
           ),
           darkTheme: AppTheme.buildTheme(
             isDark: true,
+            visualTheme: themeController.visualTheme,
             transparentScaffold: isCustomTheme,
           ),
           builder: (context, child) {
             // Pass-through: no global width constraint.
             // Each screen is responsible for its own responsive layout.
-            return AnimatedThemeBackground(
-              theme: themeController.visualTheme,
-              child: child!,
+            return AnimatedTheme(
+              data: Theme.of(context),
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              child: AnimatedThemeBackground(
+                theme: themeController.visualTheme,
+                child: child!,
+              ),
             );
           },
           home: const StartupRouter(),
