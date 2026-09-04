@@ -368,89 +368,179 @@ class _CRPanelPageState extends State<CRPanelPage> {
               ),
               const SizedBox(height: AppSpacing.md),
             ],
-            // ── Gradient header card ────────────────────────────────────────
-            StaggeredListItem(
-              index: 0,
-              child: Container(
-                padding: EdgeInsets.all(AppSpacing.x2l),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: isCR
-                        ? [AppColors.primary, AppColors.secondary]
-                        : [AppColors.secondary, AppColors.accent],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(AppRadius.xl),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (isCR ? AppColors.primary : AppColors.secondary)
-                          .withValues(alpha: 0.3),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
+            // ── Header card: Clean modern surface card for SR; gradient card for CR ──
+            if (!isCR)
+              StaggeredListItem(
+                index: 0,
+                child: AnimatedCard(
+                  borderRadius: AppRadius.xl,
+                  backgroundColor: semanticColors.surfaceElevated,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.md,
                     ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(AppRadius.lg),
-                      ),
-                      child: Icon(
-                        isCR
-                            ? Icons.star_rounded
-                            : Icons.assignment_ind_rounded,
-                        color: Colors.white,
-                        size: 28,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(AppRadius.xl),
+                      border: Border.all(
+                        color: semanticColors.borderSubtle,
+                        width: 1,
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.lg),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            sectionId,
-                            style: GoogleFonts.outfit(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: colorScheme.secondary.withValues(
+                              alpha: 0.12,
                             ),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
                           ),
-                          const SizedBox(height: AppSpacing.xs),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: AppSpacing.sm,
-                              vertical: AppSpacing.xs,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(
-                                AppRadius.full,
+                          child: Icon(
+                            Icons.assignment_ind_rounded,
+                            color: colorScheme.secondary,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                sectionId,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: colorScheme.onSurface,
+                                  letterSpacing: -0.2,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            child: Text(
-                              isCR
-                                  ? 'Class Representative'
-                                  : 'Subject Representative${AppSettings.srSubject != null ? ' · ${AppSettings.srSubject}' : ''}',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                              const SizedBox(height: AppSpacing.xs),
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: AppSpacing.sm,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.secondary.withValues(
+                                          alpha: 0.08,
+                                        ),
+                                        borderRadius: BorderRadius.circular(
+                                          AppRadius.full,
+                                        ),
+                                        border: Border.all(
+                                          color: colorScheme.secondary
+                                              .withValues(alpha: 0.18),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Subject Representative${AppSettings.srSubject != null ? ' · ${AppSettings.srSubject}' : ''}',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: colorScheme.secondary,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            else
+              StaggeredListItem(
+                index: 0,
+                child: Container(
+                  padding: EdgeInsets.all(AppSpacing.x2l),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.primary, AppColors.secondary],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(AppRadius.xl),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.3),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                        ),
+                        child: const Icon(
+                          Icons.star_rounded,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              sectionId,
+                              style: GoogleFonts.outfit(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
                                 color: Colors.white,
                               ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: AppSpacing.xs),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.sm,
+                                vertical: AppSpacing.xs,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.full,
+                                ),
+                              ),
+                              child: Text(
+                                'Class Representative',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
 
             // ── Timetable section ────────────────────────────────────────────
             _buildSectionLabel('Timetable', staggerIndex: 1),
