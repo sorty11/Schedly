@@ -252,7 +252,7 @@ class _ChangesTabState extends State<_ChangesTab> {
         }
 
         return ListView.builder(
-          physics: const BouncingScrollPhysics(),
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.symmetric(
             horizontal: AppSpacing.x2l,
             vertical: AppSpacing.sm,
@@ -417,7 +417,7 @@ class _AnnouncementsTabState extends State<_AnnouncementsTab> {
         }
 
         return ListView.builder(
-          physics: const BouncingScrollPhysics(),
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.symmetric(
             horizontal: AppSpacing.x2l,
             vertical: AppSpacing.sm,

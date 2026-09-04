@@ -1130,7 +1130,6 @@ class _DayPillSelector extends StatelessWidget {
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
       child: Row(
         children: days.map((day) {
           final isSelected = selected == day;

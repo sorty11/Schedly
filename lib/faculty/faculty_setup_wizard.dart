@@ -409,7 +409,7 @@ class _FacultySetupWizardState extends State<FacultySetupWizard> {
         const SizedBox(height: AppSpacing.lg),
         Expanded(
           child: ListView.builder(
-            physics: const BouncingScrollPhysics(),
+            physics: const AlwaysScrollableScrollPhysics(),
             itemCount: _selectedDivisions.length,
             padding: const EdgeInsets.only(bottom: 24),
             itemBuilder: (context, index) {

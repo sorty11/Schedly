@@ -159,9 +159,7 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
         child: RefreshIndicator(
           onRefresh: () async => _refresh(),
           child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
-            ),
+            physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               // ── Greeting header ──────────────────────────────────────────
               SliverToBoxAdapter(

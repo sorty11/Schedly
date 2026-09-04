@@ -100,15 +100,18 @@ class _AnimatedListTileState extends State<AnimatedListTile>
         if (!disabled) _hoverController.reverse();
       },
       child: GestureDetector(
-        onTapDown: _handleTapDown,
-        onTapUp: _handleTapUp,
-        onTapCancel: _handleTapCancel,
-        onTap: () {
-          if (!disabled) {
-            HapticFeedback.mediumImpact();
-            widget.onTap!();
-          }
-        },
+        behavior: disabled
+            ? HitTestBehavior.deferToChild
+            : HitTestBehavior.opaque,
+        onTapDown: disabled ? null : _handleTapDown,
+        onTapUp: disabled ? null : _handleTapUp,
+        onTapCancel: disabled ? null : _handleTapCancel,
+        onTap: disabled
+            ? null
+            : () {
+                HapticFeedback.mediumImpact();
+                widget.onTap!();
+              },
         child: AnimatedBuilder(
           animation: Listenable.merge([_pressController, _hoverController]),
           builder: (context, child) {

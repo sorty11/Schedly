@@ -807,7 +807,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
                 if (resolved.isHoliday) {
                   return CustomScrollView(
-                    physics: const BouncingScrollPhysics(),
+                    physics: const AlwaysScrollableScrollPhysics(),
                     slivers: [
                       SliverToBoxAdapter(
                         child: Padding(
@@ -867,7 +867,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 }
 
                 return CustomScrollView(
-                  physics: const BouncingScrollPhysics(),
+                  physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
                     SliverToBoxAdapter(
                       child: Padding(
@@ -1285,22 +1285,23 @@ class _TimelineLectureItem extends StatelessWidget {
     this.attendanceRecords,
   });
 
-  Color _subjectColor(String subject, BuildContext context) {
-    if (subject.toLowerCase().contains('lunch')) return Colors.amber;
-    final colors = [
-      Theme.of(context).colorScheme.primary,
-      Theme.of(context).colorScheme.secondary,
-      Theme.of(context).extension<AppSemanticColors>()!.accent,
-      Theme.of(context).extension<AppSemanticColors>()!.conducted,
-      Theme.of(context).extension<AppSemanticColors>()!.rescheduled,
-    ];
-    return colors[subject.hashCode.abs() % colors.length];
+  Color _subjectColor(
+    String subject,
+    BuildContext context, {
+    String? component,
+  }) {
+    return AppTheme.lectureTypeColor(
+      context,
+      subject: subject,
+      component: component,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
+    final skin = context.skin;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final timeStr = TimetableManager.formatTime(
@@ -1316,7 +1317,11 @@ class _TimelineLectureItem extends StatelessWidget {
     );
     final blockColor = allCancelled
         ? sem.cancelled
-        : _subjectColor(activeEntry.subject, context);
+        : _subjectColor(
+            activeEntry.subject,
+            context,
+            component: activeEntry.component,
+          );
 
     return IntrinsicHeight(
       child: Row(
@@ -1418,20 +1423,50 @@ class _TimelineLectureItem extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    entry.displaySubject,
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                      color: isCancelled
-                                          ? sem.cancelled
-                                          : isCurrent
-                                          ? colorScheme.primary
-                                          : colorScheme.onSurface,
-                                      decoration: isCancelled
-                                          ? TextDecoration.lineThrough
-                                          : null,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          entry.displaySubject,
+                                          style: TextStyle(
+                                            fontFamily:
+                                                skin.visualTheme ==
+                                                    SchedlyVisualTheme.heritage
+                                                ? 'Newsreader'
+                                                : skin.visualTheme ==
+                                                      SchedlyVisualTheme.future
+                                                ? 'Space Grotesk'
+                                                : skin.visualTheme ==
+                                                      SchedlyVisualTheme.bloom
+                                                ? 'Plus Jakarta Sans'
+                                                : 'Outfit',
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w700,
+                                            color: isCancelled
+                                                ? sem.cancelled
+                                                : isCurrent
+                                                ? colorScheme.primary
+                                                : colorScheme.onSurface,
+                                            decoration: isCancelled
+                                                ? TextDecoration.lineThrough
+                                                : null,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      skin.badgeRecipe.buildBadge(
+                                        context,
+                                        label: isCancelled
+                                            ? 'CANCELLED'
+                                            : (entry.component.isEmpty
+                                                  ? 'Theory'
+                                                  : entry.component),
+                                        color: isCancelled
+                                            ? sem.cancelled
+                                            : blockColor,
+                                        isCancelled: isCancelled,
+                                      ),
+                                    ],
                                   ),
                                   if (entry.batch != 'Whole Class' ||
                                       (entry.room != null &&

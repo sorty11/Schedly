@@ -54,13 +54,16 @@ class _AnimatedCardState extends State<AnimatedCard>
     super.dispose();
   }
 
-  void _onPanDown(DragDownDetails details) {
+  void _onTapDown(TapDownDetails details) {
     if (widget.onTap == null && widget.onLongPress == null) return;
-    HapticFeedback.lightImpact();
     _pressController.forward();
   }
 
-  void _onPanCancel() {
+  void _onTapUp(TapUpDetails details) {
+    _pressController.reverse();
+  }
+
+  void _onTapCancel() {
     _pressController.reverse();
   }
 
@@ -75,18 +78,18 @@ class _AnimatedCardState extends State<AnimatedCard>
       child: Container(
         margin: widget.margin,
         child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onPanDown: isInteractive ? _onPanDown : null,
-          onPanCancel: isInteractive ? _onPanCancel : null,
-          onPanEnd: (_) => isInteractive ? _onPanCancel() : null,
-          onTap: () {
-            if (widget.onTap != null) {
-              _pressController.forward().then((_) {
-                _pressController.reverse();
-                widget.onTap!();
-              });
-            }
-          },
+          behavior: isInteractive
+              ? HitTestBehavior.opaque
+              : HitTestBehavior.deferToChild,
+          onTapDown: isInteractive ? _onTapDown : null,
+          onTapUp: isInteractive ? _onTapUp : null,
+          onTapCancel: isInteractive ? _onTapCancel : null,
+          onTap: widget.onTap != null
+              ? () {
+                  HapticFeedback.lightImpact();
+                  widget.onTap!();
+                }
+              : null,
           onLongPress: widget.onLongPress != null
               ? () {
                   HapticFeedback.mediumImpact();

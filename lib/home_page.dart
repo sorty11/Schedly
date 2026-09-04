@@ -165,27 +165,7 @@ class _HomePageState extends State<HomePage>
     ];
 
     return Scaffold(
-      body: AnimatedSwitcher(
-        duration: AppDuration.enter,
-        switchInCurve: AppCurves.standard,
-        switchOutCurve: AppCurves.exit,
-        transitionBuilder: (child, animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0.0, 0.03),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            ),
-          );
-        },
-        child: KeyedSubtree(
-          key: ValueKey<int>(_currentIndex),
-          child: pages[_currentIndex],
-        ),
-      ),
+      body: IndexedStack(index: _currentIndex, children: pages),
       bottomNavigationBar: _SchedlyNavBar(
         selectedIndex: _currentIndex,
         unreadCount: _unreadCount,
@@ -266,21 +246,12 @@ class _SchedlyNavBar extends StatelessWidget {
       ),
     ];
 
+    final skin = VisualSkin.of(context);
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-          decoration: BoxDecoration(
-            color: isDark
-                ? AppColors.surfaceDark.withValues(alpha: 0.88)
-                : Colors.white.withValues(alpha: 0.88),
-            border: Border(
-              top: BorderSide(
-                color: isDark ? sem.borderSubtle : const Color(0xFFE8E8F0),
-                width: 0.8,
-              ),
-            ),
-          ),
+          decoration: skin.navigationRecipe.decoration(context),
           child: SafeArea(
             top: false,
             child: Padding(
@@ -382,6 +353,9 @@ class _NavBarItemState extends State<_NavBarItem>
     final colorScheme = Theme.of(context).colorScheme;
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final skin = VisualSkin.of(context);
+    final activeColor = skin.navigationRecipe.activeItemColor;
+    final inactiveColor = skin.navigationRecipe.inactiveItemColor;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -410,9 +384,9 @@ class _NavBarItemState extends State<_NavBarItem>
                     ),
                     decoration: BoxDecoration(
                       color: widget.isSelected
-                          ? colorScheme.primary.withValues(alpha: 0.12)
+                          ? activeColor.withValues(alpha: 0.12)
                           : _isHovered
-                          ? colorScheme.primary.withValues(alpha: 0.06)
+                          ? activeColor.withValues(alpha: 0.06)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(AppRadius.full),
                     ),
@@ -427,8 +401,8 @@ class _NavBarItemState extends State<_NavBarItem>
                                 : widget.item.icon,
                             key: ValueKey(widget.isSelected),
                             color: widget.isSelected
-                                ? colorScheme.primary
-                                : sem.onSurfaceMuted,
+                                ? activeColor
+                                : inactiveColor,
                             size: 24,
                           ),
                         ),
@@ -476,9 +450,7 @@ class _NavBarItemState extends State<_NavBarItem>
                       fontWeight: widget.isSelected
                           ? FontWeight.w700
                           : FontWeight.w500,
-                      color: widget.isSelected
-                          ? colorScheme.primary
-                          : sem.onSurfaceMuted,
+                      color: widget.isSelected ? activeColor : inactiveColor,
                     ),
                     child: Text(widget.item.label),
                   ),

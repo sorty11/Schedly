@@ -202,7 +202,7 @@ class _PeriodConfigSheetState extends State<PeriodConfigSheet> {
 
           Expanded(
             child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
+              physics: const AlwaysScrollableScrollPhysics(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [

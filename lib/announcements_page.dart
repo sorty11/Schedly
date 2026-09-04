@@ -91,7 +91,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
               }
 
               return ListView.builder(
-                physics: const BouncingScrollPhysics(),
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.fromLTRB(
                   AppSpacing.x2l,
                   AppSpacing.lg,

@@ -22,22 +22,20 @@ class StaggeredListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Determine translation values (flutter_animate takes translation in pixels/percent,
-    // since we used an offset before, we will use small pixel offsets for subtlety)
-    final double dx = axis == Axis.horizontal ? 20.0 : 0.0;
-    final double dy = axis == Axis.vertical ? 20.0 : 0.0;
+    // Stagger only the first 4 items upon initial screen entrance (max ~100ms cascade).
+    // Items at index 4 and beyond, or items constructed during fast scrolling, appear
+    // immediately with 0ms delay, eliminating blank/delayed card rendering during scrolls.
+    final effectiveIndex = index.clamp(0, 3);
+    final effectiveDelayMs = (effectiveIndex * (delayMs.clamp(0, 35)));
 
     return child
-        .animate(delay: (index * delayMs).ms)
-        .fade(duration: 220.ms, curve: Curves.easeOut)
+        .animate(delay: effectiveDelayMs.ms)
+        .fade(duration: 180.ms, curve: Curves.easeOut)
         .slide(
-          begin: Offset(
-            slideOffset.dx * 10,
-            slideOffset.dy * 10,
-          ), // Scale offset for precise flutter_animate pixel/fraction handling
+          begin: Offset(slideOffset.dx * 8, slideOffset.dy * 8),
           end: Offset.zero,
-          duration: 300.ms,
-          curve: Curves.easeOutCubic, // Elegant physics feel
+          duration: 220.ms,
+          curve: Curves.easeOutCubic,
         );
   }
 }

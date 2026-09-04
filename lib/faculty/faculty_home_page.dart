@@ -28,27 +28,7 @@ class _FacultyHomePageState extends State<FacultyHomePage> {
     ];
 
     return Scaffold(
-      body: AnimatedSwitcher(
-        duration: AppDuration.enter,
-        switchInCurve: AppCurves.standard,
-        switchOutCurve: AppCurves.exit,
-        transitionBuilder: (child, animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0.0, 0.03),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            ),
-          );
-        },
-        child: KeyedSubtree(
-          key: ValueKey<int>(_currentIndex),
-          child: pages[_currentIndex],
-        ),
-      ),
+      body: IndexedStack(index: _currentIndex, children: pages),
       bottomNavigationBar: _FacultyNavBar(
         selectedIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),

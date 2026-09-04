@@ -1058,7 +1058,7 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                 horizontal: AppSpacing.lg,
                 vertical: AppSpacing.md,
               ),
-              physics: const BouncingScrollPhysics(),
+              physics: const AlwaysScrollableScrollPhysics(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -1988,7 +1988,7 @@ class _AddDivisionSheetState extends State<_AddDivisionSheet> {
                   )
                 : ListView.builder(
                     itemCount: filtered.length,
-                    physics: const BouncingScrollPhysics(),
+                    physics: const AlwaysScrollableScrollPhysics(),
                     itemBuilder: (ctx, i) {
                       final div = filtered[i];
                       final isSelected = _selected.contains(div);
@@ -2174,7 +2174,7 @@ class _ManageSubjectsSheetState extends State<_ManageSubjectsSheet> {
                   )
                 : ListView.builder(
                     itemCount: filtered.length,
-                    physics: const BouncingScrollPhysics(),
+                    physics: const AlwaysScrollableScrollPhysics(),
                     itemBuilder: (ctx, i) {
                       final subj = filtered[i];
                       final isSelected = _selected.contains(subj);

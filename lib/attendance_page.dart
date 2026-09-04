@@ -472,7 +472,7 @@ class _AttendancePageState extends State<AttendancePage> {
                     }).toList();
 
                     return CustomScrollView(
-                      physics: const BouncingScrollPhysics(),
+                      physics: const AlwaysScrollableScrollPhysics(),
                       slivers: [
                         SliverAppBar(
                           floating: true,
