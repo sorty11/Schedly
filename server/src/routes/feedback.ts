@@ -69,6 +69,7 @@ router.get('/diag', async (req: Request, res: Response): Promise<void> => {
     const idToken = authHeader.split('Bearer ')[1];
     await admin.auth().verifyIdToken(idToken);
 
+    const hasResend = Boolean(process.env.RESEND_API_KEY);
     const hasUser = Boolean(process.env.SMTP_USER);
     const hasPass = Boolean(process.env.SMTP_PASS);
     const host = process.env.SMTP_HOST || 'smtp.gmail.com';
@@ -77,15 +78,31 @@ router.get('/diag', async (req: Request, res: Response): Promise<void> => {
     let verifyStatus = 'untested';
     let verifyError: string | null = null;
 
-    if (hasUser && hasPass) {
+    if (hasResend) {
+      try {
+        const testRes = await fetch('https://api.resend.com/api-keys', {
+          headers: { 'Authorization': `Bearer ${process.env.RESEND_API_KEY?.trim()}` }
+        });
+        if (testRes.ok) {
+          verifyStatus = 'resend_verified_success';
+        } else {
+          verifyStatus = 'resend_verify_failed';
+          const errData: any = await testRes.json().catch(() => ({}));
+          verifyError = errData.message || `Resend HTTP ${testRes.status}`;
+        }
+      } catch (e: any) {
+        verifyStatus = 'resend_verify_failed';
+        verifyError = e.message;
+      }
+    } else if (hasUser && hasPass) {
       try {
         const transporter = FeedbackEmailService.createTransporter();
         if (transporter) {
           await transporter.verify();
-          verifyStatus = 'verified_success';
+          verifyStatus = 'smtp_verified_success';
         }
       } catch (e: any) {
-        verifyStatus = 'verify_failed';
+        verifyStatus = 'smtp_verify_failed';
         verifyError = e.message;
       }
     } else {
@@ -93,7 +110,9 @@ router.get('/diag', async (req: Request, res: Response): Promise<void> => {
     }
 
     res.status(200).json({
-      smtpConfigured: hasUser && hasPass,
+      configured: hasResend || (hasUser && hasPass),
+      provider: hasResend ? 'resend_https' : 'smtp',
+      hasResend,
       hasUser,
       hasPass,
       host,

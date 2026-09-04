@@ -15,7 +15,10 @@ try {
 
 export class FeedbackEmailService {
   public static isSmtpConfigured(): boolean {
-    return Boolean(process.env.SMTP_USER && process.env.SMTP_PASS);
+    return Boolean(
+      process.env.RESEND_API_KEY ||
+      (process.env.SMTP_USER && process.env.SMTP_PASS)
+    );
   }
 
   public static createTransporter(): nodemailer.Transporter | null {
@@ -72,51 +75,39 @@ export class FeedbackEmailService {
           <p style="margin: 6px 0 0 0; font-size: 16px; opacity: 0.95;">${data.title || 'Untitled'}</p>
         </div>
 
-        <div style="padding: 24px; background: #ffffff; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px;">
-          <h2 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-top: 0;">Description</h2>
-          <div style="background: #f8fafc; border-left: 4px solid #4f46e5; padding: 14px 16px; border-radius: 4px; font-size: 14px; line-height: 1.6; margin-bottom: 24px; white-space: pre-wrap;">
+        <div style="background: #ffffff; padding: 24px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px;">
+          <h2 style="font-size: 14px; font-weight: 600; color: #64748b; text-transform: uppercase; margin: 0 0 8px 0; letter-spacing: 0.05em;">Description</h2>
+          <div style="background: #f8fafc; border: 1px solid #f1f5f9; padding: 16px; border-radius: 8px; font-size: 15px; line-height: 1.6; color: #334155; margin-bottom: 24px;">
             ${safeDescription}
           </div>
 
-          <h2 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-top: 0;">Reporter Details</h2>
-          <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;">
-            <tr>
-              <td style="padding: 6px 0; color: #64748b; width: 120px;"><strong>Name:</strong></td>
-              <td style="padding: 6px 0; color: #0f172a;">${data.name || 'Anonymous'}</td>
+          <h2 style="font-size: 14px; font-weight: 600; color: #64748b; text-transform: uppercase; margin: 0 0 12px 0; letter-spacing: 0.05em;">Reporter Context</h2>
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 24px;">
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+              <td style="padding: 6px 0; color: #64748b; width: 120px;"><strong>Reporter:</strong></td>
+              <td style="padding: 6px 0; color: #0f172a;">${data.name || 'Anonymous'} (${data.email || 'No email'})</td>
             </tr>
-            <tr>
-              <td style="padding: 6px 0; color: #64748b;"><strong>Email:</strong></td>
-              <td style="padding: 6px 0; color: #0f172a;"><strong>${data.email || 'No email provided'}</strong></td>
-            </tr>
-            <tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;">
               <td style="padding: 6px 0; color: #64748b;"><strong>Role:</strong></td>
-              <td style="padding: 6px 0; color: #0f172a;">${data.role || 'Student'}</td>
+              <td style="padding: 6px 0; color: #0f172a;"><span style="display: inline-block; background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 4px; font-weight: 500; font-size: 12px;">${data.role || 'Student'}</span></td>
             </tr>
-            <tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;">
               <td style="padding: 6px 0; color: #64748b;"><strong>Section:</strong></td>
-              <td style="padding: 6px 0; color: #0f172a;">${data.section || data.division || 'N/A'}</td>
+              <td style="padding: 6px 0; color: #0f172a;">${data.section || 'N/A'}</td>
             </tr>
-            <tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;">
               <td style="padding: 6px 0; color: #64748b;"><strong>Category:</strong></td>
               <td style="padding: 6px 0; color: #0f172a;">${data.category || 'General'}</td>
             </tr>
-          </table>
-
-          <h2 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-top: 0;">Environment & Device</h2>
-          <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;">
-            <tr>
-              <td style="padding: 6px 0; color: #64748b; width: 120px;"><strong>Platform:</strong></td>
-              <td style="padding: 6px 0; color: #0f172a;">${data.platform || 'Unknown'}</td>
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+              <td style="padding: 6px 0; color: #64748b;"><strong>Platform:</strong></td>
+              <td style="padding: 6px 0; color: #0f172a;">${data.platform || 'Unknown'} (${data.device || 'Unknown'})</td>
             </tr>
-            <tr>
-              <td style="padding: 6px 0; color: #64748b;"><strong>Device:</strong></td>
-              <td style="padding: 6px 0; color: #0f172a;">${data.device || 'Unknown'}</td>
-            </tr>
-            <tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;">
               <td style="padding: 6px 0; color: #64748b;"><strong>App Version:</strong></td>
               <td style="padding: 6px 0; color: #0f172a;">${data.appVersion || 'Unknown'}</td>
             </tr>
-            <tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;">
               <td style="padding: 6px 0; color: #64748b;"><strong>UID:</strong></td>
               <td style="padding: 6px 0; color: #64748b; font-family: monospace;">${data.uid || 'N/A'}</td>
             </tr>
@@ -194,10 +185,61 @@ export class FeedbackEmailService {
       return { success: true, skipped: true };
     }
 
-    // 2. Check SMTP Transporter
+    const subject = FeedbackEmailService.formatSubject(docData.type, docData.title);
+    const html = FeedbackEmailService.formatHtmlBody({ ...docData, id: reportId });
+
+    // 2. Option A: Resend HTTPS API (Port 443 - Bypasses Render Free SMTP blocking)
+    if (process.env.RESEND_API_KEY) {
+      try {
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.RESEND_API_KEY.trim()}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: 'Schedly App <onboarding@resend.dev>',
+            to: ['sorty797@gmail.com'],
+            subject,
+            html,
+          }),
+        });
+
+        const resJson: any = await res.json();
+        if (!res.ok) {
+          throw new Error(resJson.message || `Resend HTTP ${res.status}`);
+        }
+
+        logger.info('Feedback email delivered successfully via Resend HTTPS API', {
+          reportId,
+          emailId: resJson.id,
+        });
+
+        await docRef.update({
+          emailStatus: 'sent',
+          emailSentAt: admin.firestore.FieldValue.serverTimestamp(),
+          messageId: resJson.id || null,
+          provider: 'resend',
+          lastEmailError: admin.firestore.FieldValue.delete(),
+        });
+
+        return { success: true };
+      } catch (err: any) {
+        logger.error('Failed to send feedback email via Resend API', { reportId, error: err.message });
+        await docRef.update({
+          emailStatus: 'failed',
+          lastEmailError: err.message,
+          emailAttempts: admin.firestore.FieldValue.increment(1),
+          nextRetryAt: admin.firestore.Timestamp.fromMillis(Date.now() + 60000),
+        });
+        return { success: false, error: err.message };
+      }
+    }
+
+    // 2. Option B: Standard SMTP via Nodemailer
     const transporter = FeedbackEmailService.createTransporter();
     if (!transporter) {
-      const errorMsg = 'SMTP credentials not configured on server (SMTP_USER or SMTP_PASS missing)';
+      const errorMsg = 'Email credentials not configured on server (RESEND_API_KEY or SMTP_USER/PASS missing)';
       logger.warn(errorMsg, { reportId });
       await docRef.update({
         emailStatus: 'pending',
@@ -206,11 +248,8 @@ export class FeedbackEmailService {
       return { success: false, error: errorMsg };
     }
 
-    // 3. Send Email
+    // 3. Send Email via SMTP
     try {
-      const subject = FeedbackEmailService.formatSubject(docData.type, docData.title);
-      const html = FeedbackEmailService.formatHtmlBody({ ...docData, id: reportId });
-
       const sendResult = await transporter.sendMail({
         from: `"Schedly App" <${process.env.SMTP_USER}>`,
         to: 'sorty797@gmail.com',
