@@ -12,6 +12,8 @@ import 'faculty_sr_connection_service.dart';
 import '../widgets/animations/animated_card.dart';
 import '../widgets/animations/staggered_list_item.dart';
 import '../widgets/animations/floating_empty_state.dart';
+import '../onboarding/widgets/tutorial_target.dart';
+import '../onboarding/services/feature_discovery_service.dart';
 
 class FacultySrConnectionsPage extends StatefulWidget {
   const FacultySrConnectionsPage({super.key});
@@ -113,6 +115,11 @@ class _FacultySrConnectionsPageState extends State<FacultySrConnectionsPage> {
           _connections = items;
           _isLoading = false;
         });
+        if (items.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            FeatureDiscoveryService.checkSrConnectionsDiscovery(context);
+          });
+        }
       }
     } catch (e) {
       debugPrint('[FacultySrConnectionsPage] Error loading connections: $e');
@@ -403,7 +410,7 @@ class _FacultySrConnectionsPageState extends State<FacultySrConnectionsPage> {
                 itemBuilder: (context, index) {
                   final item = _connections[index];
 
-                  return StaggeredListItem(
+                  final card = StaggeredListItem(
                     index: index,
                     child: FutureBuilder<List<String>>(
                       future: FacultySrConnectionService.getAssignedSRs(
@@ -548,6 +555,14 @@ class _FacultySrConnectionsPageState extends State<FacultySrConnectionsPage> {
                       },
                     ),
                   );
+
+                  if (index == 0) {
+                    return TutorialTarget(
+                      id: 'faculty_sr_connection_view',
+                      child: card,
+                    );
+                  }
+                  return card;
                 },
               ),
             ),

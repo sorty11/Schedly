@@ -20,6 +20,8 @@ import 'widgets/animations/counting_text.dart';
 import 'package:file_picker/file_picker.dart';
 import 'models/attendance_log.dart';
 import 'widgets/app_dialogs.dart';
+import 'onboarding/widgets/tutorial_target.dart';
+import 'onboarding/services/feature_discovery_service.dart';
 
 class AttendancePage extends StatefulWidget {
   final String division;
@@ -40,6 +42,9 @@ class _AttendancePageState extends State<AttendancePage> {
     _recordsStream = AttendanceService.streamAll(widget.division);
     _logsStream = AttendanceService.streamLogs();
     _calculatorFuture = ProgressCalculatorService.build(widget.division);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FeatureDiscoveryService.checkAttendanceDiscovery(context);
+    });
   }
 
   Future<void> _handlePdfImport() async {
@@ -482,9 +487,12 @@ class _AttendancePageState extends State<AttendancePage> {
                           surfaceTintColor: Colors.transparent,
                           elevation: 0,
                           scrolledUnderElevation: 0,
-                          title: Text(
-                            'My Attendance',
-                            style: Theme.of(context).appBarTheme.titleTextStyle,
+                          title: TutorialTarget(
+                            id: 'attendance_page_header',
+                            child: Text(
+                              'My Attendance',
+                              style: Theme.of(context).appBarTheme.titleTextStyle,
+                            ),
                           ),
                           actions: [
                             IconButton(

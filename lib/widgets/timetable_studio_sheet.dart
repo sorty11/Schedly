@@ -15,6 +15,8 @@ import '../services/permission_service.dart';
 import 'app_dialogs.dart';
 import 'schedly_text_field.dart';
 import 'schedly_bottom_sheet.dart';
+import '../onboarding/widgets/tutorial_target.dart';
+import '../onboarding/services/feature_discovery_service.dart';
 
 class TimetableStudioSheet extends StatefulWidget {
   final String division;
@@ -165,6 +167,10 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
 
     _subjectController.text = _subject;
     _roomController.text = _room;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FeatureDiscoveryService.checkStudioRecurrenceDiscovery(context);
+    });
   }
 
   Future<void> _fetchMetadata() async {
@@ -840,15 +846,18 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
                           ),
                         ),
                         const SizedBox(width: AppSpacing.md),
-                        Transform.scale(
-                          scale: 0.85,
-                          child: Switch.adaptive(
-                            value: _repeatWeekly,
-                            activeColor: colorScheme.primary,
-                            onChanged: (val) {
-                              HapticFeedback.lightImpact();
-                              setState(() => _repeatWeekly = val);
-                            },
+                        TutorialTarget(
+                          id: 'studio_recurrence_switch',
+                          child: Transform.scale(
+                            scale: 0.85,
+                            child: Switch.adaptive(
+                              value: _repeatWeekly,
+                              activeColor: colorScheme.primary,
+                              onChanged: (val) {
+                                HapticFeedback.lightImpact();
+                                setState(() => _repeatWeekly = val);
+                              },
+                            ),
                           ),
                         ),
                       ],

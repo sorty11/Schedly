@@ -17,6 +17,8 @@ import 'services/timetable_event_service.dart';
 
 import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/staggered_list_item.dart';
+import 'onboarding/widgets/tutorial_target.dart';
+import 'onboarding/services/feature_discovery_service.dart';
 
 class MonthlyTimetablePage extends StatefulWidget {
   final String division;
@@ -41,6 +43,9 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
   void initState() {
     super.initState();
     _loadAllTimetables();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FeatureDiscoveryService.checkMonthlyTimetableDiscovery(context);
+    });
   }
 
   Future<void> _loadAllTimetables() async {
@@ -499,32 +504,35 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
         horizontal: AppSpacing.x2l,
         vertical: AppSpacing.lg,
       ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.chevron_left_rounded),
-                onPressed: _prevMonth,
-              ),
-              Text(
-                DateFormat('MMMM yyyy').format(_currentMonth),
-                style: GoogleFonts.outfit(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: colorScheme.onSurface,
+      child: TutorialTarget(
+        id: 'monthly_calendar_view',
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.chevron_left_rounded),
+                  onPressed: _prevMonth,
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.chevron_right_rounded),
-                onPressed: _nextMonth,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _buildCalendarGrid(sem, colorScheme),
-        ],
+                Text(
+                  DateFormat('MMMM yyyy').format(_currentMonth),
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.chevron_right_rounded),
+                  onPressed: _nextMonth,
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _buildCalendarGrid(sem, colorScheme),
+          ],
+        ),
       ),
     );
   }

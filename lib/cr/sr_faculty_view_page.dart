@@ -6,6 +6,8 @@ import '../faculty/faculty_sr_connection_service.dart';
 import '../widgets/animations/animated_card.dart';
 import '../widgets/animations/staggered_list_item.dart';
 import '../widgets/animations/floating_empty_state.dart';
+import '../onboarding/widgets/tutorial_target.dart';
+import '../onboarding/services/feature_discovery_service.dart';
 
 class SRFacultyViewPage extends StatefulWidget {
   final String division;
@@ -41,6 +43,11 @@ class _SRFacultyViewPageState extends State<SRFacultyViewPage> {
         _facultyList = list;
         _isLoading = false;
       });
+      if (list.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          FeatureDiscoveryService.checkSrConnectionsDiscovery(context);
+        });
+      }
     }
   }
 
@@ -80,7 +87,7 @@ class _SRFacultyViewPageState extends State<SRFacultyViewPage> {
                   final department = f['department'] ?? '';
                   final designation = f['designation'] ?? 'Professor';
 
-                  return StaggeredListItem(
+                  final card = StaggeredListItem(
                     index: index,
                     child: AnimatedCard(
                       borderRadius: AppRadius.xl,
@@ -207,6 +214,14 @@ class _SRFacultyViewPageState extends State<SRFacultyViewPage> {
                       ),
                     ),
                   );
+
+                  if (index == 0) {
+                    return TutorialTarget(
+                      id: 'faculty_sr_connection_view',
+                      child: card,
+                    );
+                  }
+                  return card;
                 },
               ),
             ),

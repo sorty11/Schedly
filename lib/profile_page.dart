@@ -26,6 +26,7 @@ import 'onboarding/widgets/tutorial_target.dart';
 import 'onboarding/services/tutorial_storage_service.dart';
 import 'onboarding/services/onboarding_service.dart';
 import 'onboarding/services/tutorial_controller.dart';
+import 'onboarding/pages/tutorials_help_page.dart';
 import 'widgets/app_dialogs.dart';
 
 import 'about_schedly_page.dart';
@@ -627,16 +628,15 @@ class _ProfilePageState extends State<ProfilePage> {
               index: 3,
               child: _buildTileGroup([
                 _buildRoleTile(
-                  icon: Icons.help_outline_rounded,
-                  title: 'Replay Tutorial',
-                  subtitle: 'Replay the interactive guide',
+                  icon: Icons.menu_book_rounded,
+                  title: 'Tutorials & Help Center',
+                  subtitle: 'Interactive guides, What’s New & tips',
                   iconColor: semanticColors.accent,
-                  onTap: () async {
-                    await TutorialStorageService.resetAll();
-                    if (!context.mounted) return;
-                    OnboardingService.instance.startRoleTour(
-                      context,
-                      AppSettings.currentRole,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const TutorialsHelpPage(),
+                      ),
                     );
                   },
                 ),

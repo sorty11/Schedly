@@ -28,6 +28,7 @@ import '../widgets/animations/animated_card.dart';
 import '../widgets/animations/staggered_list_item.dart';
 import '../onboarding/services/tutorial_storage_service.dart';
 import '../onboarding/services/onboarding_service.dart';
+import '../onboarding/pages/tutorials_help_page.dart';
 import '../about_schedly_page.dart';
 import '../widgets/app_dialogs.dart';
 import '../services/account_deletion_service.dart';
@@ -287,7 +288,7 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
           return AlertDialog(
             backgroundColor: semanticColors.surfaceElevated,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.xl),
+              borderRadius: BorderRadius.circular(AppRadius.x2l),
               side: BorderSide(
                 color: destructiveColor.withValues(alpha: 0.3),
                 width: 1,
@@ -1563,16 +1564,15 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                     index: staggerIndex++,
                     child: _buildTileGroup([
                       _buildRoleTile(
-                        icon: Icons.help_outline_rounded,
-                        title: 'Replay Tutorial',
-                        subtitle: 'Replay the interactive guide',
+                        icon: Icons.menu_book_rounded,
+                        title: 'Tutorials & Help Center',
+                        subtitle: 'Interactive guides, What’s New & tips',
                         iconColor: sem.accent,
-                        onTap: () async {
-                          await TutorialStorageService.resetAll();
-                          if (!context.mounted) return;
-                          OnboardingService.instance.startRoleTour(
-                            context,
-                            AppSettings.currentRole,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const TutorialsHelpPage(),
+                            ),
                           );
                         },
                       ),

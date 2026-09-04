@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/theme.dart';
+import '../user_roles.dart';
+import '../onboarding/services/onboarding_service.dart';
+import '../onboarding/services/feature_discovery_service.dart';
+import '../onboarding/widgets/tutorial_target.dart';
 import 'faculty_dashboard_page.dart';
 import 'faculty_timetable_page.dart';
 import 'faculty_panel_page.dart';
@@ -17,6 +21,18 @@ class FacultyHomePage extends StatefulWidget {
 
 class _FacultyHomePageState extends State<FacultyHomePage> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      OnboardingService.instance.initializeAndCheckFirstLaunch(
+        context,
+        UserRole.faculty,
+      );
+      FeatureDiscoveryService.checkNewFeatures(context);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,21 +65,29 @@ class _FacultyNavBar extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final items = [
-      _NavItem(Icons.home_outlined, Icons.home_rounded, 'Home'),
+      _NavItem(
+        Icons.home_outlined,
+        Icons.home_rounded,
+        'Home',
+        'faculty_home_tab',
+      ),
       _NavItem(
         Icons.calendar_month_outlined,
         Icons.calendar_month_rounded,
         'Timetable',
+        'faculty_timetable_tab',
       ),
       _NavItem(
         Icons.dashboard_customize_outlined,
         Icons.dashboard_customize_rounded,
         'Panel',
+        'faculty_panel_tab',
       ),
       _NavItem(
         Icons.account_circle_outlined,
         Icons.account_circle_rounded,
         'Profile',
+        'faculty_profile_tab',
       ),
     ];
 
@@ -77,7 +101,7 @@ class _FacultyNavBar extends StatelessWidget {
                 : Colors.white.withValues(alpha: 0.88),
             border: Border(
               top: BorderSide(
-                color: isDark ? sem.borderSubtle : const Color(0xFFE8E8F0),
+                color: sem.borderSubtle,
                 width: 0.8,
               ),
             ),
@@ -93,10 +117,13 @@ class _FacultyNavBar extends StatelessWidget {
                 children: List.generate(
                   items.length,
                   (i) => Expanded(
-                    child: _NavBarItem(
-                      item: items[i],
-                      isSelected: selectedIndex == i,
-                      onTap: () => onTap(i),
+                    child: TutorialTarget(
+                      id: items[i].targetId,
+                      child: _NavBarItem(
+                        item: items[i],
+                        isSelected: selectedIndex == i,
+                        onTap: () => onTap(i),
+                      ),
                     ),
                   ),
                 ),
@@ -113,8 +140,9 @@ class _NavItem {
   final IconData icon;
   final IconData selectedIcon;
   final String label;
+  final String targetId;
 
-  const _NavItem(this.icon, this.selectedIcon, this.label);
+  const _NavItem(this.icon, this.selectedIcon, this.label, this.targetId);
 }
 
 class _NavBarItem extends StatefulWidget {

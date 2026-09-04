@@ -236,15 +236,15 @@ class AttendanceIntelligenceService {
 
       if (pct < thresholdCritical) {
         level = RecommendationLevel.mustAttend;
-        reason = 'Attendance is below 75%. Every class is critical.';
+        reason = 'Attendance is critically low. Every class is essential.';
         priority = 1;
       } else if (pct < thresholdWarning) {
         level = RecommendationLevel.stronglyRecommended;
-        if (safeMargin75 <= 1) {
-          reason = 'One absence will reduce attendance below 75%.';
+        if (safeMargin80 <= 1) {
+          reason = 'One absence will reduce attendance below the 80% requirement.';
         } else {
           reason =
-              'Attendance is in the warning zone. Missing classes increases risk rapidly.';
+              'Attendance is below the 80% goal. Missing classes increases risk rapidly.';
         }
         priority = 2;
       } else if (pct < thresholdSafe) {
