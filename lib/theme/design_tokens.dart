@@ -22,20 +22,24 @@ class AppSpacing {
 }
 
 // ─── Corner Radii ─────────────────────────────────────────────────────────────
-// Phoenix demands sharp, architectural borders. Huge bubbly radii are removed.
+// Schedly V11 Cohesive Radius Scale:
+// - Small controls, chips, input inner: 10–12px (md)
+// - Standard cards, list items: 16px (lg)
+// - Elevated cards, hero surfaces: 20px (xl)
+// - Large sheets, dialogs, modals: 28px (x2l)
 class AppRadius {
   AppRadius._();
-  static const double xs = 2;
-  static const double sm = 4;
-  static const double md = 8; // Standard for inputs, small cards
-  static const double lg = 12; // Maximum for large panels/dialogs
-  static const double xl = 16;
-  static const double x2l = 24;
+  static const double xs = 4;
+  static const double sm = 8;
+  static const double md = 12; // Standard for inputs, small controls, chips
+  static const double lg = 16; // Standard for cards, list items
+  static const double xl = 20; // Elevated cards, hero modules
+  static const double x2l = 28; // Bottom sheets, dialogs, large panels
   static const double full = 999;
 }
 
 // ─── Animation Durations ──────────────────────────────────────────────────────
-// Phoenix motion is instantaneous, snappy, and physics-based. Long fades are banned.
+// Schedly motion is instantaneous, snappy, and physics-based. Long fades are banned.
 class AppDuration {
   AppDuration._();
   static const Duration micro = Duration(milliseconds: 50);
@@ -59,17 +63,17 @@ class AppCurves {
 }
 
 // ─── Elevation / Shadows ──────────────────────────────────────────────────────
-// Shadows in Phoenix are almost non-existent. Depth comes from 1px borders.
-// When shadows are used (e.g. modals), they are highly dispersed.
+// Shadows in Schedly are soft, calm, and diffused. Depth comes from subtle borders
+// complemented by gentle ambient occlusion.
 class AppShadow {
   AppShadow._();
 
   static List<BoxShadow> level1(Color primary, {bool isDark = false}) => [
     BoxShadow(
       color: isDark
-          ? Colors.black.withValues(alpha: 0.8)
-          : Colors.black.withValues(alpha: 0.02),
-      blurRadius: 4,
+          ? Colors.black.withValues(alpha: 0.25)
+          : Colors.black.withValues(alpha: 0.03),
+      blurRadius: 6,
       offset: const Offset(0, 2),
     ),
   ];
@@ -77,9 +81,9 @@ class AppShadow {
   static List<BoxShadow> level2(Color primary, {bool isDark = false}) => [
     BoxShadow(
       color: isDark
-          ? Colors.black.withValues(alpha: 1.0)
-          : Colors.black.withValues(alpha: 0.04),
-      blurRadius: 12,
+          ? Colors.black.withValues(alpha: 0.35)
+          : Colors.black.withValues(alpha: 0.05),
+      blurRadius: 14,
       offset: const Offset(0, 4),
     ),
   ];
@@ -87,22 +91,22 @@ class AppShadow {
   static List<BoxShadow> level3(Color primary, {bool isDark = false}) => [
     BoxShadow(
       color: isDark
-          ? Colors.black.withValues(alpha: 1.0)
-          : Colors.black.withValues(alpha: 0.08),
-      blurRadius: 24,
-      offset: const Offset(0, 12),
-      spreadRadius: -4,
+          ? Colors.black.withValues(alpha: 0.45)
+          : Colors.black.withValues(alpha: 0.07),
+      blurRadius: 26,
+      offset: const Offset(0, 8),
+      spreadRadius: -2,
     ),
   ];
 
   static List<BoxShadow> level4(Color primary, {bool isDark = false}) => [
     BoxShadow(
       color: isDark
-          ? Colors.black.withValues(alpha: 1.0)
-          : Colors.black.withValues(alpha: 0.12),
-      blurRadius: 48,
-      offset: const Offset(0, 24),
-      spreadRadius: -8,
+          ? Colors.black.withValues(alpha: 0.55)
+          : Colors.black.withValues(alpha: 0.10),
+      blurRadius: 40,
+      offset: const Offset(0, 16),
+      spreadRadius: -4,
     ),
   ];
 }

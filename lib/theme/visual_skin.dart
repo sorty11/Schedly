@@ -1214,22 +1214,22 @@ class BloomSkin extends VisualSkin {
     : super(visualTheme: SchedlyVisualTheme.bloom);
 
   @override
-  Color get primaryAccent => const Color(0xFFFF5376); // Vibrant rose
+  Color get primaryAccent => const Color(0xFFDE527B); // French blush rose
   @override
   Color get surfaceBase =>
-      isDark ? const Color(0xFF1B121C) : const Color(0xFFFFF6F8);
+      isDark ? const Color(0xFF140D17) : const Color(0xFFFFF9FA);
   @override
   Color get surfaceElevated =>
-      isDark ? const Color(0xFF271A29) : const Color(0xFFFFFFFF);
+      isDark ? const Color(0xFF1E1422) : const Color(0xFFFFFFFF);
   @override
   Color get textPrimary =>
-      isDark ? const Color(0xFFFDF2F7) : const Color(0xFF2A1221);
+      isDark ? const Color(0xFFFDF4F8) : const Color(0xFF281424);
   @override
   Color get textMuted =>
-      isDark ? const Color(0xFFBAA3B5) : const Color(0xFF826278);
+      isDark ? const Color(0xFFBAA3BC) : const Color(0xFF7E6678);
   @override
   Color get borderLine =>
-      isDark ? const Color(0xFF452B41) : const Color(0xFFF5DDE7);
+      isDark ? const Color(0xFF3E2844) : const Color(0xFFF4DEE7);
 
   @override
   SkinCardRecipe get cardRecipe => _BloomCardRecipe(isDark: isDark);
@@ -1292,10 +1292,10 @@ class _BloomCardRecipe extends SkinCardRecipe {
     bool isCancelled = false,
     bool isHighlighted = false,
   }) {
-    final surfaceColor = isDark ? const Color(0xFF261928) : Colors.white;
+    final surfaceColor = isDark ? const Color(0xFF1E1422) : Colors.white;
     final borderColor = isDark
-        ? const Color(0xFF452B41)
-        : const Color(0xFFF9E4EC);
+        ? const Color(0xFF3E2844)
+        : const Color(0xFFF4DEE7);
 
     return BoxDecoration(
       color: surfaceColor,
@@ -1303,8 +1303,8 @@ class _BloomCardRecipe extends SkinCardRecipe {
       border: Border.all(color: borderColor, width: 1.0),
       boxShadow: [
         BoxShadow(
-          color: (isDark ? Colors.black : const Color(0xFFFF699A)).withOpacity(
-            isDark ? 0.35 : 0.08,
+          color: (isDark ? Colors.black : const Color(0xFFDE527B)).withOpacity(
+            isDark ? 0.30 : 0.05,
           ),
           blurRadius: 16,
           offset: const Offset(0, 4),
@@ -1328,7 +1328,7 @@ class _BloomBadgeRecipe extends SkinBadgeRecipe {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
       decoration: BoxDecoration(
-        color: color.withOpacity(isDark ? 0.22 : 0.16),
+        color: color.withOpacity(isDark ? 0.22 : 0.14),
         borderRadius: BorderRadius.circular(20.0),
       ),
       child: Text(
@@ -1361,11 +1361,11 @@ class _BloomIconRecipe extends SkinIconContainerRecipe {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: color.withOpacity(isDark ? 0.22 : 0.16),
+        color: color.withOpacity(isDark ? 0.20 : 0.14),
         borderRadius: BorderRadius.circular(18.0),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(isDark ? 0.20 : 0.12),
+            color: color.withOpacity(isDark ? 0.18 : 0.10),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1390,7 +1390,7 @@ class _BloomDaySelectorRecipe extends SkinDaySelectorRecipe {
     required bool isToday,
     required VoidCallback onTap,
   }) {
-    final activeColor = const Color(0xFFFF5376); // Berry rose
+    final activeColor = const Color(0xFFDE527B); // French blush rose
 
     return GestureDetector(
       onTap: onTap,
@@ -1410,7 +1410,7 @@ class _BloomDaySelectorRecipe extends SkinDaySelectorRecipe {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: activeColor.withOpacity(0.40),
+                    color: activeColor.withOpacity(0.35),
                     blurRadius: 10,
                     offset: const Offset(0, 3),
                   ),

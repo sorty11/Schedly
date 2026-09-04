@@ -155,28 +155,28 @@ class AppTheme {
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
         borderSide: BorderSide(
-          color: isLight ? const Color(0xFFEBEBEB) : const Color(0xFF222222),
-          width: 1,
+          color: isLight ? const Color(0xFFE2E4E9) : const Color(0xFF2E3238),
+          width: 0.8,
         ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
         borderSide: BorderSide(
-          color: isLight ? const Color(0xFFEBEBEB) : const Color(0xFF222222),
-          width: 1,
+          color: isLight ? const Color(0xFFE2E4E9) : const Color(0xFF2E3238),
+          width: 0.8,
         ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
-        borderSide: BorderSide(color: colors.primary, width: 1.5),
+        borderSide: BorderSide(color: colors.primary, width: 1.2),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
-        borderSide: BorderSide(color: colors.error, width: 1),
+        borderSide: BorderSide(color: colors.error, width: 0.8),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
-        borderSide: BorderSide(color: colors.error, width: 1.5),
+        borderSide: BorderSide(color: colors.error, width: 1.2),
       ),
       labelStyle: TextStyle(
         fontFamily: 'Inter',
@@ -197,10 +197,10 @@ class AppTheme {
   static FilledButtonThemeData _filledButtonTheme(ColorScheme colors) {
     return FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        minimumSize: const Size(0, 44),
+        minimumSize: const Size(0, 48),
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.sm,
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.md,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -208,7 +208,8 @@ class AppTheme {
         textStyle: const TextStyle(
           fontFamily: 'Inter',
           fontSize: 14,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.1,
         ),
         elevation: 0,
         shadowColor: Colors.transparent,
@@ -221,23 +222,24 @@ class AppTheme {
     final isLight = colors.brightness == Brightness.light;
     return OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 44),
+        minimumSize: const Size(0, 48),
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.sm,
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.md,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         side: BorderSide(
-          color: isLight ? const Color(0xFFEBEBEB) : const Color(0xFF222222),
+          color: isLight ? const Color(0xFFE2E4E9) : const Color(0xFF2E3238),
           width: 1,
         ),
         foregroundColor: colors.onSurface,
         textStyle: const TextStyle(
           fontFamily: 'Inter',
           fontSize: 14,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.1,
         ),
         elevation: 0,
         splashFactory: NoSplash.splashFactory,
@@ -249,16 +251,20 @@ class AppTheme {
     return TextButtonThemeData(
       style: TextButton.styleFrom(
         minimumSize: const Size(0, 44),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.sm,
+        ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.sm),
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         textStyle: const TextStyle(
           fontFamily: 'Inter',
           fontSize: 14,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.1,
         ),
-        foregroundColor: colors.onSurface,
+        foregroundColor: colors.primary,
         splashFactory: NoSplash.splashFactory,
       ),
     );
@@ -1672,39 +1678,39 @@ class AppTheme {
   }) {
     final colorScheme = isDark
         ? const ColorScheme.dark(
-            primary: Color(0xFFF472B6),
-            primaryContainer: Color(0xFF33162C),
-            onPrimaryContainer: Color(0xFFF472B6),
+            primary: Color(0xFFEC729C),
+            primaryContainer: Color(0xFF351A2E),
+            onPrimaryContainer: Color(0xFFEC729C),
             secondary: Color(0xFFC084FC),
-            secondaryContainer: Color(0xFF22182B),
-            tertiary: Color(0xFF34D399),
-            surface: Color(0xFF18111E),
+            secondaryContainer: Color(0xFF231728),
+            tertiary: Color(0xFF2DD4BF),
+            surface: Color(0xFF19111C),
             onPrimary: Colors.white,
             onSecondary: Colors.white,
             onTertiary: Colors.black,
             onSurface: Color(0xFFFDF4F8),
-            error: Color(0xFFFB7185),
+            error: Color(0xFFE8607A),
             onError: Colors.white,
-            outline: Color(0xFF362443),
-            outlineVariant: Color(0xFF22182B),
-            surfaceContainerHighest: Color(0xFF22182B),
+            outline: Color(0xFF3E2844),
+            outlineVariant: Color(0xFF231728),
+            surfaceContainerHighest: Color(0xFF231728),
             scrim: Color(0x66000000),
           )
         : const ColorScheme.light(
-            primary: Color(0xFFE11D74),
-            primaryContainer: Color(0xFFFCE7F3),
-            onPrimaryContainer: Color(0xFFE11D74),
-            secondary: Color(0xFF9333EA),
+            primary: Color(0xFFDE527B),
+            primaryContainer: Color(0xFFFCEBF1),
+            onPrimaryContainer: Color(0xFFDE527B),
+            secondary: Color(0xFF9855D4),
             secondaryContainer: Color(0xFFFAF2F6),
-            tertiary: Color(0xFF0D9488),
+            tertiary: Color(0xFF16A390),
             surface: Color(0xFFFFFFFF),
             onPrimary: Colors.white,
             onSecondary: Colors.white,
             onTertiary: Colors.white,
-            onSurface: Color(0xFF281423),
-            error: Color(0xFFE11D48),
+            onSurface: Color(0xFF281424),
+            error: Color(0xFFD9465B),
             onError: Colors.white,
-            outline: Color(0xFFF1DEE7),
+            outline: Color(0xFFF1DEE6),
             outlineVariant: Color(0xFFFAF2F6),
             surfaceContainerHighest: Color(0xFFFAF2F6),
             scrim: Color(0x1A000000),
@@ -1717,7 +1723,7 @@ class AppTheme {
 
     final sem = isDark ? bloomDarkSemanticColors : bloomLightSemanticColors;
     final lecture = isDark ? bloomDarkLectureColors : bloomLightLectureColors;
-    final bgColor = isDark ? const Color(0xFF120C17) : const Color(0xFFFDF6F8);
+    final bgColor = isDark ? const Color(0xFF140D17) : const Color(0xFFFFF9FA);
 
     return ThemeData(
       useMaterial3: true,

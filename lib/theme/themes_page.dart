@@ -7,9 +7,24 @@ import 'app_colors.dart';
 import 'visual_theme.dart';
 import 'animated_theme_background.dart';
 import '../widgets/animations/animated_card.dart';
+import '../onboarding/widgets/tutorial_target.dart';
+import '../onboarding/services/feature_discovery_service.dart';
 
-class ThemesPage extends StatelessWidget {
+class ThemesPage extends StatefulWidget {
   const ThemesPage({super.key});
+
+  @override
+  State<ThemesPage> createState() => _ThemesPageState();
+}
+
+class _ThemesPageState extends State<ThemesPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FeatureDiscoveryService.checkThemesDiscovery(context);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,17 +77,24 @@ class ThemesPage extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xl),
 
                 // Theme Cards
-                for (final theme in SchedlyVisualTheme.values) ...[
-                  _ThemeCard(
-                    theme: theme,
-                    isSelected: activeTheme == theme,
-                    isDark: isDark,
-                    colorScheme: colorScheme,
-                    sem: sem,
-                    onTap: () => themeController.setVisualTheme(theme),
+                TutorialTarget(
+                  id: 'theme_skin_gallery',
+                  child: Column(
+                    children: [
+                      for (final theme in SchedlyVisualTheme.values) ...[
+                        _ThemeCard(
+                          theme: theme,
+                          isSelected: activeTheme == theme,
+                          isDark: isDark,
+                          colorScheme: colorScheme,
+                          sem: sem,
+                          onTap: () => themeController.setVisualTheme(theme),
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                ],
+                ),
               ],
             );
           },

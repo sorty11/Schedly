@@ -385,67 +385,67 @@ const futureDarkLectureColors = SchedlyLectureTypeColors(
   lunch: Color(0xFFFBBF24),
 );
 
-// ─── 4. BLOOM PALETTES (Vibrant Modern Warmth & Pastel Playfulness) ──────────
+// ─── 4. BLOOM PALETTES (Chic Feminine Boutique & Soft Pastel Sophistication) ──
 const bloomLightSemanticColors = AppSemanticColors(
-  pending: Color(0xFFD97706),
-  conducted: Color(0xFF0D9488), // Fresh mint
-  cancelled: Color(0xFFE11D48), // Berry
-  rescheduled: Color(0xFF9333EA), // Radiant lavender
-  success: Color(0xFF0D9488),
-  warning: Color(0xFFD97706),
-  error: Color(0xFFE11D48),
-  accent: Color(0xFFE11D74), // Berry rose
+  pending: Color(0xFFD97736), // Warm peach amber
+  conducted: Color(0xFF16A390), // Soft mint seafoam
+  cancelled: Color(0xFFD9465B), // Dusty raspberry
+  rescheduled: Color(0xFF9855D4), // Soft wisteria lavender
+  success: Color(0xFF16A390), // Soft mint
+  warning: Color(0xFFD97736), // Peach warning
+  error: Color(0xFFD9465B), // Dusty raspberry
+  accent: Color(0xFFDE527B), // French blush / dusty rose
   surfaceElevated: Color(0xFFFFFFFF),
-  surfaceElevated2: Color(0xFFFAF2F6), // Soft blush card
-  surfaceTinted: Color(0xFFFFF0F5),
-  borderSubtle: Color(0xFFF1DEE7), // Soft pastel border
-  borderFocus: Color(0xFFE11D74),
-  onSurfaceMuted: Color(0xFF7A6475),
-  onSurfaceFaint: Color(0xFFA693A2),
+  surfaceElevated2: Color(0xFFFAF2F5), // Delicate blush card
+  surfaceTinted: Color(0xFFFBF4F7), // Porcelain blush
+  borderSubtle: Color(0xFFF1DEE6), // Delicate pastel rose border
+  borderFocus: Color(0xFFDE527B),
+  onSurfaceMuted: Color(0xFF7E6678), // Mauve charcoal
+  onSurfaceFaint: Color(0xFFAA95A6),
 );
 
 const bloomDarkSemanticColors = AppSemanticColors(
-  pending: Color(0xFFFBBF24),
-  conducted: Color(0xFF34D399), // Soft mint
-  cancelled: Color(0xFFFB7185), // Coral rose
-  rescheduled: Color(0xFFC084FC), // Lavender
-  success: Color(0xFF34D399),
-  warning: Color(0xFFFBBF24),
-  error: Color(0xFFFB7185),
-  accent: Color(0xFFF472B6), // Radiant pink
-  surfaceElevated: Color(0xFF18111E), // Velvet bloom night
-  surfaceElevated2: Color(0xFF22182B),
-  surfaceTinted: Color(0xFF271733),
-  borderSubtle: Color(0xFF362443), // Plum border
-  borderFocus: Color(0xFFF472B6),
-  onSurfaceMuted: Color(0xFFBCA6BF),
-  onSurfaceFaint: Color(0xFF88738C),
+  pending: Color(0xFFF59E0B), // Honey amber
+  conducted: Color(0xFF2DD4BF), // Soft mint
+  cancelled: Color(0xFFE8607A), // Muted berry rose
+  rescheduled: Color(0xFFC084FC), // Soft lavender
+  success: Color(0xFF2DD4BF),
+  warning: Color(0xFFF59E0B),
+  error: Color(0xFFE8607A),
+  accent: Color(0xFFEC729C), // Glowing blush rose
+  surfaceElevated: Color(0xFF19111C), // Velvet mulberry night
+  surfaceElevated2: Color(0xFF231728), // Raised plum surface
+  surfaceTinted: Color(0xFF291A2E),
+  borderSubtle: Color(0xFF3E2844), // Subtle wine plum rule
+  borderFocus: Color(0xFFEC729C),
+  onSurfaceMuted: Color(0xFFBAA3BC), // Dusty mauve
+  onSurfaceFaint: Color(0xFF8B738D),
 );
 
 const bloomLightLectureColors = SchedlyLectureTypeColors(
-  theory: Color(0xFFE11D74), // Berry Rose
-  lab: Color(0xFF0D9488), // Mint Teal
-  tutorial: Color(0xFF9333EA), // Lavender
-  practical: Color(0xFF0284C7), // Sky
-  project: Color(0xFFEA580C), // Peach Coral
-  seminar: Color(0xFFDB2777), // Coral Punch
-  viva: Color(0xFFBE123C), // Rosewood
-  event: Color(0xFF8B5CF6), // Periwinkle
-  other: Color(0xFF7A6475),
+  theory: Color(0xFFD94877), // Dusty rose
+  lab: Color(0xFF16A390), // Soft mint
+  tutorial: Color(0xFF8B5CF6), // Soft lavender
+  practical: Color(0xFF3B82F6), // Soft periwinkle
+  project: Color(0xFFE86C45), // Peach coral
+  seminar: Color(0xFFC04B8C), // Mauve plum
+  viva: Color(0xFFB52E52), // Rosewood
+  event: Color(0xFF7C3AED), // Violet
+  other: Color(0xFF7E6678),
   lunch: Color(0xFFF59E0B),
 );
 
 const bloomDarkLectureColors = SchedlyLectureTypeColors(
-  theory: Color(0xFFF472B6), // Berry Rose
-  lab: Color(0xFF34D399), // Mint
+  theory: Color(0xFFEC729C), // Blush rose
+  lab: Color(0xFF2DD4BF), // Soft mint
   tutorial: Color(0xFFC084FC), // Lavender
   practical: Color(0xFF38BDF8), // Sky
   project: Color(0xFFFB923C), // Peach
   seminar: Color(0xFFF43F5E), // Coral
   viva: Color(0xFFFB7185), // Rose
   event: Color(0xFFA78BFA), // Periwinkle
-  other: Color(0xFFBCA6BF),
-  lunch: Color(0xFFFBBF24),
+  other: Color(0xFFBAA3BC),
+  lunch: Color(0xFFF59E0B),
 );
 
 // ─── Named Color Palette ──────────────────────────────────────────────────────
