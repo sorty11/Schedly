@@ -99,7 +99,10 @@ class AttendanceCourseNormalizer {
     var normalized = name.toUpperCase();
     normalized = normalized.replaceAll(_semesterRegex, '');
     normalized = normalized.replaceAll(_batchRegex, '');
-    normalized = normalized.replaceAll(RegExp(r'\bCE\b'), '');
+    normalized = normalized.replaceAll(
+      RegExp(r'\b(CE|CS|CSDS|IT|DS|AIDS|AIML|EXTC|ME)\b'),
+      '',
+    );
     normalized = normalized.replaceAll(RegExp(r'[^A-Z0-9\s&]'), ' ');
     normalized = normalized.replaceAll(RegExp(r'\s+'), ' ').trim();
     return normalized;

@@ -134,6 +134,18 @@ class AttendanceCourseMatcher {
     for (final entry in courseAliases.entries) {
       if (upper.contains(entry.value.toUpperCase()) ||
           upper == entry.key.toUpperCase()) {
+        if (configuredCourses.isNotEmpty) {
+          final exists = configuredCourses.any((c) {
+            final cleanId = _cleanSubjectCode(c).toUpperCase();
+            final cName = c.courseName.toUpperCase();
+            final cCode = c.courseCode.toUpperCase();
+            return cleanId == entry.key.toUpperCase() ||
+                cName.contains(entry.value.toUpperCase()) ||
+                (cCode.isNotEmpty && cCode == entry.key.toUpperCase());
+          });
+          if (!exists) continue;
+        }
+
         return CourseMatchResult(
           subjectCode: entry.key,
           component: componentType,

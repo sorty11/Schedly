@@ -372,7 +372,7 @@ class _AttendancePageState extends State<AttendancePage> {
                         final val = entry.value;
                         final division = rawRecords.isNotEmpty
                             ? rawRecords.first.division
-                            : 'CE';
+                            : widget.division;
                         final rec = AttendanceRecord(
                           id: '${division}_${val.subjectCode}_${val.component}',
                           division: division,

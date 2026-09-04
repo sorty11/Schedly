@@ -117,7 +117,8 @@ class ProgressCalculatorService {
       return _eq(compCanon, canonSubj) ||
           _eq(idCanon, canonSubj) ||
           _eq(c.courseName, subjectCode) ||
-          _eq(c.componentId, subjectCode);
+          _eq(c.componentId, subjectCode) ||
+          (c.courseCode.isNotEmpty && _eq(c.courseCode, subjectCode));
     }
 
     // 1. Specific component lookup (e.g. Theory or Lab for split courses like DSA)
