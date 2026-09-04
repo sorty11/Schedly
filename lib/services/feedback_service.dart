@@ -176,6 +176,7 @@ class FeedbackService {
       'emailStatus': 'pending',
       'emailAttempts': 0,
       'timestamp': FieldValue.serverTimestamp(),
+      'submittedAt': DateTime.now().toIso8601String(),
     };
 
     // 1. Save to Firestore with deterministic ID (always succeeds even offline)
