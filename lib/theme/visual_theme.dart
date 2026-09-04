@@ -3,33 +3,27 @@ import 'package:flutter/material.dart';
 enum SchedlyVisualTheme {
   defaultTheme(
     'default',
-    'Default',
+    'Classic Schedly',
     'Standard clean Schedly look',
     Icons.brightness_auto_rounded,
   ),
-  space(
-    'space',
-    'Space 🌌',
-    'Dark cosmic nebula with drifting starfield',
-    Icons.auto_awesome_rounded,
+  heritage(
+    'heritage',
+    'Old School Rust',
+    'Aged copper, rust, antique brass & academic elegance',
+    Icons.auto_stories_rounded,
   ),
-  cats(
-    'cats',
-    'Cats 🐱',
-    'Cozy ambient cats & gentle floating paws',
-    Icons.pets_rounded,
+  future(
+    'future',
+    'Neo Future',
+    'Deep graphite, glowing cyan & precision tech',
+    Icons.terminal_rounded,
   ),
-  cyberRobo(
-    'cyber_robo',
-    'Cyber Robo 🤖',
-    'Futuristic circuit traces & glowing grid',
-    Icons.smart_toy_rounded,
-  ),
-  arcade(
-    'arcade',
-    'Arcade 🎮',
-    'Retro synthwave grid & 8-bit shimmer',
-    Icons.sports_esports_rounded,
+  bloom(
+    'bloom',
+    'Vibrant',
+    'Soft berry, coral, lavender, mint & rounded warmth',
+    Icons.palette_rounded,
   );
 
   final String id;
@@ -45,9 +39,17 @@ enum SchedlyVisualTheme {
   );
 
   static SchedlyVisualTheme fromId(String? id) {
-    if (id == null) return SchedlyVisualTheme.defaultTheme;
+    if (id == null || id.isEmpty) return SchedlyVisualTheme.defaultTheme;
     for (final theme in SchedlyVisualTheme.values) {
       if (theme.id == id) return theme;
+    }
+    // Legacy theme migration as per requirement 12:
+    // space, cyber_robo, arcade -> future; cats -> bloom
+    if (id == 'space' || id == 'cyber_robo' || id == 'arcade') {
+      return SchedlyVisualTheme.future;
+    }
+    if (id == 'cats') {
+      return SchedlyVisualTheme.bloom;
     }
     return SchedlyVisualTheme.defaultTheme;
   }

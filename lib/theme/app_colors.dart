@@ -100,8 +100,103 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
   }
 }
 
-// ─── Light Theme Palette (Project Phoenix) ───────────────────────────────────
-// Inspired by Vercel/Linear: Pure whites, very subtle grays, vibrant electric blue.
+// ─── Curated Lecture Type Colors Extension ────────────────────────────────────
+class SchedlyLectureTypeColors
+    extends ThemeExtension<SchedlyLectureTypeColors> {
+  final Color theory;
+  final Color lab;
+  final Color tutorial;
+  final Color practical;
+  final Color project;
+  final Color seminar;
+  final Color viva;
+  final Color event;
+  final Color other;
+  final Color lunch;
+
+  const SchedlyLectureTypeColors({
+    required this.theory,
+    required this.lab,
+    required this.tutorial,
+    required this.practical,
+    required this.project,
+    required this.seminar,
+    required this.viva,
+    required this.event,
+    required this.other,
+    required this.lunch,
+  });
+
+  Color resolve({String? component, String? subject}) {
+    final s = (subject ?? '').toLowerCase();
+    if (s.contains('lunch') || s.contains('break')) {
+      return lunch;
+    }
+    final c = (component ?? '').trim().toLowerCase();
+    if (c.contains('theor') || c.contains('lect') || c == 'th') return theory;
+    if (c.contains('lab') || c == 'la') return lab;
+    if (c.contains('tut') || c == 'tu') return tutorial;
+    if (c.contains('prac') || c == 'pr') return practical;
+    if (c.contains('proj')) return project;
+    if (c.contains('sem')) return seminar;
+    if (c.contains('viva')) return viva;
+    if (c.contains('event') || c.contains('activ')) return event;
+
+    // Deterministic subject hash fallback within the theme's core harmonious type palette
+    final palette = [theory, lab, tutorial, practical, project, seminar];
+    final hash = (subject ?? 'schedly').hashCode.abs();
+    return palette[hash % palette.length];
+  }
+
+  @override
+  SchedlyLectureTypeColors copyWith({
+    Color? theory,
+    Color? lab,
+    Color? tutorial,
+    Color? practical,
+    Color? project,
+    Color? seminar,
+    Color? viva,
+    Color? event,
+    Color? other,
+    Color? lunch,
+  }) {
+    return SchedlyLectureTypeColors(
+      theory: theory ?? this.theory,
+      lab: lab ?? this.lab,
+      tutorial: tutorial ?? this.tutorial,
+      practical: practical ?? this.practical,
+      project: project ?? this.project,
+      seminar: seminar ?? this.seminar,
+      viva: viva ?? this.viva,
+      event: event ?? this.event,
+      other: other ?? this.other,
+      lunch: lunch ?? this.lunch,
+    );
+  }
+
+  @override
+  SchedlyLectureTypeColors lerp(
+    ThemeExtension<SchedlyLectureTypeColors>? other,
+    double t,
+  ) {
+    if (other is! SchedlyLectureTypeColors) return this;
+    return SchedlyLectureTypeColors(
+      theory: Color.lerp(theory, other.theory, t)!,
+      lab: Color.lerp(lab, other.lab, t)!,
+      tutorial: Color.lerp(tutorial, other.tutorial, t)!,
+      practical: Color.lerp(practical, other.practical, t)!,
+      project: Color.lerp(project, other.project, t)!,
+      seminar: Color.lerp(seminar, other.seminar, t)!,
+      viva: Color.lerp(viva, other.viva, t)!,
+      event: Color.lerp(event, other.event, t)!,
+      other: Color.lerp(this.other, other.other, t)!,
+      lunch: Color.lerp(lunch, other.lunch, t)!,
+    );
+  }
+}
+
+// ─── 1. DEFAULT PALETTES (Classic Schedly - Unchanged Baseline) ───────────────
 const lightSemanticColors = AppSemanticColors(
   pending: Color(0xFFE5A000), // Crisp Amber
   conducted: Color(0xFF007A5A), // Deep crisp green
@@ -120,8 +215,6 @@ const lightSemanticColors = AppSemanticColors(
   onSurfaceFaint: Color(0xFF999999), // Light text
 );
 
-// ─── Dark Theme Palette (Project Phoenix) ────────────────────────────────────
-// Pure blacks, sharp borders, highly legible typography.
 const darkSemanticColors = AppSemanticColors(
   pending: Color(0xFFF5B014),
   conducted: Color(0xFF10B981),
@@ -130,16 +223,229 @@ const darkSemanticColors = AppSemanticColors(
   success: Color(0xFF10B981),
   warning: Color(0xFFF5B014),
   error: Color(0xFFF87171),
-  accent: Color(0xFF0066FF), // Unchanged Electric Blue, pops on black
-  surfaceElevated: Color(
-    0xFF0A0A0A,
-  ), // True dark, but not OLED black to allow borders
-  surfaceElevated2: Color(0xFF111111), // Slightly raised
-  surfaceTinted: Color(0xFF0D1524), // Extremely faint blue tint
-  borderSubtle: Color(0xFF222222), // Sharp hairline border
+  accent: Color(0xFF0066FF), // Unchanged Electric Blue
+  surfaceElevated: Color(0xFF0A0A0A),
+  surfaceElevated2: Color(0xFF111111),
+  surfaceTinted: Color(0xFF0D1524),
+  borderSubtle: Color(0xFF222222),
   borderFocus: Color(0xFF0066FF),
   onSurfaceMuted: Color(0xFFA1A1A1),
   onSurfaceFaint: Color(0xFF737373),
+);
+
+const defaultLightLectureColors = SchedlyLectureTypeColors(
+  theory: Color(0xFF0066FF),
+  lab: Color(0xFF007A5A),
+  tutorial: Color(0xFF5E548E),
+  practical: Color(0xFF0284C7),
+  project: Color(0xFFE5A000),
+  seminar: Color(0xFF8B5CF6),
+  viva: Color(0xFFE5484D),
+  event: Color(0xFF2563EB),
+  other: Color(0xFF666666),
+  lunch: Color(0xFFF59E0B),
+);
+
+const defaultDarkLectureColors = SchedlyLectureTypeColors(
+  theory: Color(0xFF3B82F6),
+  lab: Color(0xFF10B981),
+  tutorial: Color(0xFF818CF8),
+  practical: Color(0xFF38BDF8),
+  project: Color(0xFFF5B014),
+  seminar: Color(0xFFA78BFA),
+  viva: Color(0xFFF87171),
+  event: Color(0xFF60A5FA),
+  other: Color(0xFFA1A1A1),
+  lunch: Color(0xFFFBBF24),
+);
+
+// ─── 2. HERITAGE PALETTES (Old School Rust & Academic Editorial) ─────────────
+const heritageLightSemanticColors = AppSemanticColors(
+  pending: Color(0xFFB87010), // Warm amber brass
+  conducted: Color(0xFF406B33), // Olive grove
+  cancelled: Color(0xFF8E2C24), // Rich oxblood
+  rescheduled: Color(0xFF693D53), // Dusty plum
+  success: Color(0xFF406B33),
+  warning: Color(0xFFB87010),
+  error: Color(0xFF8E2C24),
+  accent: Color(0xFFA34820), // Aged rust copper
+  surfaceElevated: Color(0xFFFFFFFF),
+  surfaceElevated2: Color(0xFFF7F3EB), // Antique parchment card
+  surfaceTinted: Color(0xFFFAF5ED),
+  borderSubtle: Color(0xFFE5DDD0), // Warm bookbinder rule
+  borderFocus: Color(0xFFA34820),
+  onSurfaceMuted: Color(0xFF6B6154), // Sepia graphite
+  onSurfaceFaint: Color(0xFF9C9182),
+);
+
+const heritageDarkSemanticColors = AppSemanticColors(
+  pending: Color(0xFFD48827), // Antique brass
+  conducted: Color(0xFF5E8B4E), // Deep olive
+  cancelled: Color(0xFF9E3B33), // Oxblood
+  rescheduled: Color(0xFF7D5265), // Dusty plum
+  success: Color(0xFF5E8B4E),
+  warning: Color(0xFFD48827),
+  error: Color(0xFF9E3B33),
+  accent: Color(0xFFC86432), // Rust copper
+  surfaceElevated: Color(0xFF1A1715), // Deep warm charcoal slate
+  surfaceElevated2: Color(0xFF221F1C), // Slightly raised leather plate
+  surfaceTinted: Color(0xFF241D17),
+  borderSubtle: Color(0xFF332D27), // Subtle aged brass rule
+  borderFocus: Color(0xFFC86432),
+  onSurfaceMuted: Color(0xFFA89F91), // Weathered antique ink
+  onSurfaceFaint: Color(0xFF786F63),
+);
+
+const heritageLightLectureColors = SchedlyLectureTypeColors(
+  theory: Color(0xFFA34820), // Rust copper
+  lab: Color(0xFF406B33), // Olive
+  tutorial: Color(0xFF693D53), // Dusty plum
+  practical: Color(0xFF336360), // Verdigris
+  project: Color(0xFFB87010), // Antique amber
+  seminar: Color(0xFF7A5C3E), // Saddle leather
+  viva: Color(0xFF8E2C24), // Oxblood
+  event: Color(0xFF8C5329), // Tobacco bronze
+  other: Color(0xFF6B6154),
+  lunch: Color(0xFFB87010),
+);
+
+const heritageDarkLectureColors = SchedlyLectureTypeColors(
+  theory: Color(0xFFC86432), // Rust copper
+  lab: Color(0xFF5E8B4E), // Aged olive
+  tutorial: Color(0xFF7D5265), // Dusty plum
+  practical: Color(0xFF467B78), // Oxidized verdigris
+  project: Color(0xFFD48827), // Antique brass amber
+  seminar: Color(0xFFA37B55), // Tobacco brown
+  viva: Color(0xFF9E3B33), // Oxblood
+  event: Color(0xFFB37340), // Warm clay
+  other: Color(0xFF8C8172),
+  lunch: Color(0xFFD48827),
+);
+
+// ─── 3. FUTURE PALETTES (Neo Future & Luminous Cybernetic Precision) ─────────
+const futureLightSemanticColors = AppSemanticColors(
+  pending: Color(0xFFD97706),
+  conducted: Color(0xFF059669),
+  cancelled: Color(0xFFE11D48),
+  rescheduled: Color(0xFF7C3AED),
+  success: Color(0xFF059669),
+  warning: Color(0xFFD97706),
+  error: Color(0xFFE11D48),
+  accent: Color(0xFF0284C7), // High-tech azure
+  surfaceElevated: Color(0xFFFFFFFF),
+  surfaceElevated2: Color(0xFFF0F5FA),
+  surfaceTinted: Color(0xFFEAF2FB),
+  borderSubtle: Color(0xFFD6E2EE),
+  borderFocus: Color(0xFF0284C7),
+  onSurfaceMuted: Color(0xFF53647B),
+  onSurfaceFaint: Color(0xFF8A9BAE),
+);
+
+const futureDarkSemanticColors = AppSemanticColors(
+  pending: Color(0xFFFBBF24), // Cyber amber
+  conducted: Color(0xFF06D6A0), // Neon emerald
+  cancelled: Color(0xFFFF3366), // Laser crimson
+  rescheduled: Color(0xFF8B5CF6), // Ultraviolet
+  success: Color(0xFF06D6A0),
+  warning: Color(0xFFFBBF24),
+  error: Color(0xFFFF3366),
+  accent: Color(0xFF00D8FF), // Electric cyan
+  surfaceElevated: Color(0xFF0B111D), // Abyssal gunmetal
+  surfaceElevated2: Color(0xFF121B2C),
+  surfaceTinted: Color(0xFF0F1E36),
+  borderSubtle: Color(0xFF1E2F48), // Thin luminous gunmetal border
+  borderFocus: Color(0xFF00D8FF),
+  onSurfaceMuted: Color(0xFF8899B0),
+  onSurfaceFaint: Color(0xFF53647B),
+);
+
+const futureLightLectureColors = SchedlyLectureTypeColors(
+  theory: Color(0xFF0284C7), // High-tech Azure
+  lab: Color(0xFF059669), // Emerald
+  tutorial: Color(0xFF7C3AED), // Violet
+  practical: Color(0xFF0EA5E9), // Cyan
+  project: Color(0xFFD97706), // Amber
+  seminar: Color(0xFFC026D3), // Magenta
+  viva: Color(0xFFE11D48), // Laser red
+  event: Color(0xFF4F46E5), // Indigo
+  other: Color(0xFF53647B),
+  lunch: Color(0xFFD97706),
+);
+
+const futureDarkLectureColors = SchedlyLectureTypeColors(
+  theory: Color(0xFF00D8FF), // Electric Cyan
+  lab: Color(0xFF06D6A0), // Neon Emerald
+  tutorial: Color(0xFF8B5CF6), // Ultraviolet
+  practical: Color(0xFF38BDF8), // Azure
+  project: Color(0xFFFBBF24), // Cyber Amber
+  seminar: Color(0xFFE879F9), // Neon Magenta
+  viva: Color(0xFFFF3366), // Laser Crimson
+  event: Color(0xFF6366F1), // Electric Indigo
+  other: Color(0xFF64748B),
+  lunch: Color(0xFFFBBF24),
+);
+
+// ─── 4. BLOOM PALETTES (Vibrant Modern Warmth & Pastel Playfulness) ──────────
+const bloomLightSemanticColors = AppSemanticColors(
+  pending: Color(0xFFD97706),
+  conducted: Color(0xFF0D9488), // Fresh mint
+  cancelled: Color(0xFFE11D48), // Berry
+  rescheduled: Color(0xFF9333EA), // Radiant lavender
+  success: Color(0xFF0D9488),
+  warning: Color(0xFFD97706),
+  error: Color(0xFFE11D48),
+  accent: Color(0xFFE11D74), // Berry rose
+  surfaceElevated: Color(0xFFFFFFFF),
+  surfaceElevated2: Color(0xFFFAF2F6), // Soft blush card
+  surfaceTinted: Color(0xFFFFF0F5),
+  borderSubtle: Color(0xFFF1DEE7), // Soft pastel border
+  borderFocus: Color(0xFFE11D74),
+  onSurfaceMuted: Color(0xFF7A6475),
+  onSurfaceFaint: Color(0xFFA693A2),
+);
+
+const bloomDarkSemanticColors = AppSemanticColors(
+  pending: Color(0xFFFBBF24),
+  conducted: Color(0xFF34D399), // Soft mint
+  cancelled: Color(0xFFFB7185), // Coral rose
+  rescheduled: Color(0xFFC084FC), // Lavender
+  success: Color(0xFF34D399),
+  warning: Color(0xFFFBBF24),
+  error: Color(0xFFFB7185),
+  accent: Color(0xFFF472B6), // Radiant pink
+  surfaceElevated: Color(0xFF18111E), // Velvet bloom night
+  surfaceElevated2: Color(0xFF22182B),
+  surfaceTinted: Color(0xFF271733),
+  borderSubtle: Color(0xFF362443), // Plum border
+  borderFocus: Color(0xFFF472B6),
+  onSurfaceMuted: Color(0xFFBCA6BF),
+  onSurfaceFaint: Color(0xFF88738C),
+);
+
+const bloomLightLectureColors = SchedlyLectureTypeColors(
+  theory: Color(0xFFE11D74), // Berry Rose
+  lab: Color(0xFF0D9488), // Mint Teal
+  tutorial: Color(0xFF9333EA), // Lavender
+  practical: Color(0xFF0284C7), // Sky
+  project: Color(0xFFEA580C), // Peach Coral
+  seminar: Color(0xFFDB2777), // Coral Punch
+  viva: Color(0xFFBE123C), // Rosewood
+  event: Color(0xFF8B5CF6), // Periwinkle
+  other: Color(0xFF7A6475),
+  lunch: Color(0xFFF59E0B),
+);
+
+const bloomDarkLectureColors = SchedlyLectureTypeColors(
+  theory: Color(0xFFF472B6), // Berry Rose
+  lab: Color(0xFF34D399), // Mint
+  tutorial: Color(0xFFC084FC), // Lavender
+  practical: Color(0xFF38BDF8), // Sky
+  project: Color(0xFFFB923C), // Peach
+  seminar: Color(0xFFF43F5E), // Coral
+  viva: Color(0xFFFB7185), // Rose
+  event: Color(0xFFA78BFA), // Periwinkle
+  other: Color(0xFFBCA6BF),
+  lunch: Color(0xFFFBBF24),
 );
 
 // ─── Named Color Palette ──────────────────────────────────────────────────────
