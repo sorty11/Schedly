@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -20,6 +21,7 @@ class FacultySectionsPage extends StatefulWidget {
 
 class _FacultySectionsPageState extends State<FacultySectionsPage> {
   bool _isLoading = true;
+  String? _errorMessage;
   List<String> _assignedDivisions = [];
   Map<String, List<String>> _subjectsMap = {};
 
@@ -30,9 +32,23 @@ class _FacultySectionsPageState extends State<FacultySectionsPage> {
   }
 
   Future<void> _loadSections() async {
-    final uid = AppSettings.facultyId;
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
+
+    final uid = AppSettings.facultyId ?? FirebaseAuth.instance.currentUser?.uid;
+    final fallbackDivisions = AppSettings.facultyAssignedDivisions ?? [];
+
     if (uid == null) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _assignedDivisions = fallbackDivisions;
+          _isLoading = false;
+        });
+      }
       return;
     }
 
@@ -44,28 +60,45 @@ class _FacultySectionsPageState extends State<FacultySectionsPage> {
 
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
-        final divisions = List<String>.from(data['assignedDivisions'] ?? []);
-        final rawSubjects = (data['subjects'] as Map<String, dynamic>?) ?? {};
+        final divisions = FacultySrConnectionService.parseDivisions(
+          data['assignedDivisions'],
+        );
+        final parsedSubjects = FacultySrConnectionService.parseSubjectsMap(
+          data['subjects'],
+        );
 
-        final parsedSubjects = <String, List<String>>{};
-        rawSubjects.forEach((k, v) {
-          if (v is List) {
-            parsedSubjects[k] = List<String>.from(v);
-          }
-        });
+        final combinedDivisions = <String>{
+          ...divisions,
+          ...parsedSubjects.keys,
+          ...fallbackDivisions,
+        }.toList();
 
         if (mounted) {
           setState(() {
-            _assignedDivisions = divisions;
+            _assignedDivisions = combinedDivisions;
             _subjectsMap = parsedSubjects;
             _isLoading = false;
           });
         }
       } else {
-        if (mounted) setState(() => _isLoading = false);
+        if (mounted) {
+          setState(() {
+            _assignedDivisions = fallbackDivisions;
+            _isLoading = false;
+          });
+        }
       }
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+    } catch (e) {
+      debugPrint('[FacultySectionsPage] Error loading sections: $e');
+      if (mounted) {
+        setState(() {
+          _assignedDivisions = fallbackDivisions;
+          if (fallbackDivisions.isEmpty) {
+            _errorMessage = 'Failed to load sections. Tap retry to reload.';
+          }
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -83,6 +116,34 @@ class _FacultySectionsPageState extends State<FacultySectionsPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
+          : _errorMessage != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.x2l),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline_rounded,
+                      size: 48,
+                      color: sem.cancelled,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: sem.onSurfaceMuted),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    FilledButton.icon(
+                      onPressed: _loadSections,
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            )
           : _assignedDivisions.isEmpty
           ? const FloatingEmptyState(
               icon: Icons.groups_outlined,
@@ -98,7 +159,11 @@ class _FacultySectionsPageState extends State<FacultySectionsPage> {
                     const SizedBox(height: AppSpacing.lg),
                 itemBuilder: (context, index) {
                   final div = _assignedDivisions[index];
-                  final subjects = _subjectsMap[div] ?? [];
+                  final subjects =
+                      FacultySrConnectionService.getSubjectsForDivision(
+                        _subjectsMap,
+                        div,
+                      );
 
                   return StaggeredListItem(
                     index: index,
@@ -252,8 +317,25 @@ class _SubjectSrItem extends StatelessWidget {
         subject: subject,
       ),
       builder: (context, snapshot) {
+        final isLoading = snapshot.connectionState == ConnectionState.waiting;
+        final hasError = snapshot.hasError;
         final srs = snapshot.data ?? [];
         final hasSR = srs.isNotEmpty;
+
+        final String srLabel;
+        if (isLoading) {
+          srLabel = 'Loading SR...';
+        } else if (hasError) {
+          srLabel = 'SR unavailable';
+        } else if (hasSR) {
+          srLabel = srs.join(', ');
+        } else {
+          srLabel = 'No SR assigned';
+        }
+
+        final badgeColor = hasSR
+            ? colorScheme.primary
+            : (hasError ? sem.warning : sem.onSurfaceMuted);
 
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
@@ -290,30 +372,38 @@ class _SubjectSrItem extends StatelessWidget {
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: hasSR
-                        ? colorScheme.primary.withValues(alpha: 0.12)
-                        : sem.onSurfaceMuted.withValues(alpha: 0.1),
+                    color: badgeColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(AppRadius.full),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        hasSR
-                            ? Icons.person_rounded
-                            : Icons.person_off_outlined,
-                        size: 12,
-                        color: hasSR ? colorScheme.primary : sem.onSurfaceMuted,
-                      ),
+                      if (isLoading)
+                        SizedBox(
+                          width: 10,
+                          height: 10,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            color: badgeColor,
+                          ),
+                        )
+                      else
+                        Icon(
+                          hasSR
+                              ? Icons.person_rounded
+                              : (hasError
+                                    ? Icons.error_outline_rounded
+                                    : Icons.person_off_outlined),
+                          size: 12,
+                          color: badgeColor,
+                        ),
                       const SizedBox(width: 4),
                       Text(
-                        hasSR ? srs.join(', ') : 'No SR assigned',
+                        srLabel,
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: hasSR
-                              ? colorScheme.primary
-                              : sem.onSurfaceMuted,
+                          color: badgeColor,
                         ),
                       ),
                     ],

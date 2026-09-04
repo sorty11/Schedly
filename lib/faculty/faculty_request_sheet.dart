@@ -11,6 +11,7 @@ import '../models/faculty_request.dart';
 import '../widgets/animations/animated_button.dart';
 import '../widgets/schedly_bottom_sheet.dart';
 import 'faculty_audit_service.dart';
+import 'faculty_sr_connection_service.dart';
 
 class FacultyRequestSheet extends StatefulWidget {
   final FacultyRequestType requestType;
@@ -104,11 +105,15 @@ class _FacultyRequestSheetState extends State<FacultyRequestSheet> {
         .doc(uid)
         .get();
     final profileData = profileSnap.data() ?? {};
-    final subjectsMap =
-        (profileData['subjects'] as Map<String, dynamic>?) ?? {};
+    final subjectsMap = FacultySrConnectionService.parseSubjectsMap(
+      profileData['subjects'],
+    );
 
     setState(() {
-      _availableSubjects = List<String>.from(subjectsMap[div] ?? []);
+      _availableSubjects = FacultySrConnectionService.getSubjectsForDivision(
+        subjectsMap,
+        div,
+      );
       if (!_availableSubjects.contains(_selectedSubject)) {
         _selectedSubject = _availableSubjects.isNotEmpty
             ? _availableSubjects.first

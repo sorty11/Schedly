@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:schedly/faculty/faculty_excel_import_service.dart';
+import 'package:schedly/faculty/faculty_sr_connection_service.dart';
 import 'package:schedly/models/timetable_entry.dart';
 import 'package:schedly/models/event_category.dart';
 import 'package:schedly/services/timetable_resolver_service.dart';
@@ -263,4 +264,149 @@ Friday,09:00 - 10:00,Database Systems,IT_A,Room 101,
       );
     });
   });
+
+  group(
+    'Faculty ↔ SR Connections Production Regression Tests (COA, Swapnil, SecondYear_CE_C)',
+    () {
+      test(
+        'matches COA across acronyms, full names, cases, and component suffixes',
+        () {
+          expect(
+            FacultySrConnectionService.isSameSubject(
+              'COA',
+              'Computer Organization and Architecture',
+            ),
+            isTrue,
+          );
+          expect(
+            FacultySrConnectionService.isSameSubject(
+              'Computer Organization and Architecture',
+              'COA',
+            ),
+            isTrue,
+          );
+          expect(
+            FacultySrConnectionService.isSameSubject('COA Theory', 'coa'),
+            isTrue,
+          );
+          expect(
+            FacultySrConnectionService.isSameSubject('coa', 'COA'),
+            isTrue,
+          );
+          expect(
+            FacultySrConnectionService.isSameSubject('coa_theory', 'COA'),
+            isTrue,
+          );
+          expect(
+            FacultySrConnectionService.isSameSubject('COA', 'Database Systems'),
+            isFalse,
+          );
+        },
+      );
+
+      test(
+        'matches CE_C with SecondYear_CE_C bidirectionally without crashing',
+        () {
+          expect(
+            FacultySrConnectionService.matchesDivision(
+              'CE_C',
+              'SecondYear_CE_C',
+            ),
+            isTrue,
+          );
+          expect(
+            FacultySrConnectionService.matchesDivision(
+              'SecondYear_CE_C',
+              'CE_C',
+            ),
+            isTrue,
+          );
+          expect(
+            FacultySrConnectionService.matchesDivision(
+              'CE C',
+              'SecondYear_CE_C',
+            ),
+            isTrue,
+          );
+          expect(
+            FacultySrConnectionService.matchesDivision(
+              'CE_A',
+              'SecondYear_CE_C',
+            ),
+            isFalse,
+          );
+        },
+      );
+
+      test(
+        'parses untyped Firestore subjects map safely without throwing TypeError',
+        () {
+          // Simulates Dart _Map<Object?, Object?> deserialized by Firestore SDK
+          final untypedRaw = <dynamic, dynamic>{
+            'SecondYear_CE_C': <dynamic>['COA', 'OS'],
+            'CE_A': <dynamic>['Data Structures'],
+          };
+
+          final parsed = FacultySrConnectionService.parseSubjectsMap(
+            untypedRaw,
+          );
+
+          expect(parsed.containsKey('SecondYear_CE_C'), isTrue);
+          expect(parsed['SecondYear_CE_C'], contains('COA'));
+          expect(parsed['SecondYear_CE_C'], contains('OS'));
+          expect(parsed['CE_A'], contains('Data Structures'));
+
+          // Handles null and empty safely
+          expect(FacultySrConnectionService.parseSubjectsMap(null), isEmpty);
+          expect(
+            FacultySrConnectionService.parseSubjectsMap('invalid_type'),
+            isEmpty,
+          );
+        },
+      );
+
+      test('parses divisions list safely including mixed types and nulls', () {
+        final rawDivs = <dynamic>['SecondYear_CE_C', null, 'CE_A', 123];
+        final parsed = FacultySrConnectionService.parseDivisions(rawDivs);
+
+        expect(parsed, ['SecondYear_CE_C', 'CE_A', '123']);
+        expect(FacultySrConnectionService.parseDivisions(null), isEmpty);
+      });
+
+      test(
+        'getSubjectsForDivision resolves subjects across canonical division variations',
+        () {
+          final subjectsMap = {
+            'SecondYear_CE_C': ['COA', 'Computer Graphics'],
+            'ThirdYear_IT_A': ['Cloud Computing'],
+          };
+
+          // Querying using 'CE_C' must find subjects assigned to 'SecondYear_CE_C'
+          final subjectsForCeC =
+              FacultySrConnectionService.getSubjectsForDivision(
+                subjectsMap,
+                'CE_C',
+              );
+          expect(subjectsForCeC, contains('COA'));
+          expect(subjectsForCeC, contains('Computer Graphics'));
+
+          // Querying using 'SecondYear_CE_C' must also find them
+          final subjectsForCanonical =
+              FacultySrConnectionService.getSubjectsForDivision(
+                subjectsMap,
+                'SecondYear_CE_C',
+              );
+          expect(subjectsForCanonical, contains('COA'));
+
+          // Querying unassigned division returns empty list
+          final emptySubjects =
+              FacultySrConnectionService.getSubjectsForDivision(
+                subjectsMap,
+                'CE_B',
+              );
+          expect(emptySubjects, isEmpty);
+        },
+      );
+    },
+  );
 }

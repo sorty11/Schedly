@@ -1,0 +1,253 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.FeedbackEmailService = void 0;
+const admin = __importStar(require("firebase-admin"));
+const nodemailer = __importStar(require("nodemailer"));
+const logger_1 = require("../utils/logger");
+class FeedbackEmailService {
+    static isSmtpConfigured() {
+        return Boolean(process.env.SMTP_USER && process.env.SMTP_PASS);
+    }
+    static createTransporter() {
+        const user = process.env.SMTP_USER;
+        const pass = process.env.SMTP_PASS;
+        if (!user || !pass) {
+            return null;
+        }
+        const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+        const port = parseInt(process.env.SMTP_PORT || '587', 10);
+        return nodemailer.createTransport({
+            host,
+            port,
+            secure: port === 465,
+            auth: { user, pass },
+        });
+    }
+    static formatSubject(type, title) {
+        const cleanTitle = (title || 'No Title').trim();
+        const lower = (type || '').toLowerCase();
+        if (lower.includes('bug')) {
+            return `[Schedly Bug] ${cleanTitle}`;
+        }
+        else if (lower.includes('feature')) {
+            return `[Schedly Feature] ${cleanTitle}`;
+        }
+        else {
+            return `[Schedly Feedback] ${cleanTitle}`;
+        }
+    }
+    static formatHtmlBody(data) {
+        const typeLabel = data.type === 'bug' || data.type === 'bug_report'
+            ? 'Bug Report 🐞'
+            : data.type === 'feature' || data.type === 'feature_request'
+                ? 'Feature Suggestion 💡'
+                : 'General Feedback 💬';
+        const safeDescription = (data.description || 'No description provided')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/\n/g, '<br/>');
+        return `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b;">
+        <div style="background: linear-gradient(135deg, #4f46e5, #6366f1); padding: 24px; border-radius: 12px 12px 0 0; color: #ffffff;">
+          <h1 style="margin: 0; font-size: 20px; font-weight: 700;">${typeLabel}</h1>
+          <p style="margin: 6px 0 0 0; font-size: 16px; opacity: 0.95;">${data.title || 'Untitled'}</p>
+        </div>
+
+        <div style="padding: 24px; background: #ffffff; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px;">
+          <h2 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-top: 0;">Description</h2>
+          <div style="background: #f8fafc; border-left: 4px solid #4f46e5; padding: 14px 16px; border-radius: 4px; font-size: 14px; line-height: 1.6; margin-bottom: 24px; white-space: pre-wrap;">
+            ${safeDescription}
+          </div>
+
+          <h2 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-top: 0;">Reporter Details</h2>
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;">
+            <tr>
+              <td style="padding: 6px 0; color: #64748b; width: 120px;"><strong>Name:</strong></td>
+              <td style="padding: 6px 0; color: #0f172a;">${data.name || 'Anonymous'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;"><strong>Email:</strong></td>
+              <td style="padding: 6px 0; color: #0f172a;"><strong>${data.email || 'No email provided'}</strong></td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;"><strong>Role:</strong></td>
+              <td style="padding: 6px 0; color: #0f172a;">${data.role || 'Student'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;"><strong>Section:</strong></td>
+              <td style="padding: 6px 0; color: #0f172a;">${data.section || data.division || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;"><strong>Category:</strong></td>
+              <td style="padding: 6px 0; color: #0f172a;">${data.category || 'General'}</td>
+            </tr>
+          </table>
+
+          <h2 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-top: 0;">Environment & Device</h2>
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;">
+            <tr>
+              <td style="padding: 6px 0; color: #64748b; width: 120px;"><strong>Platform:</strong></td>
+              <td style="padding: 6px 0; color: #0f172a;">${data.platform || 'Unknown'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;"><strong>Device:</strong></td>
+              <td style="padding: 6px 0; color: #0f172a;">${data.device || 'Unknown'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;"><strong>App Version:</strong></td>
+              <td style="padding: 6px 0; color: #0f172a;">${data.appVersion || 'Unknown'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;"><strong>UID:</strong></td>
+              <td style="padding: 6px 0; color: #64748b; font-family: monospace;">${data.uid || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;"><strong>Timestamp:</strong></td>
+              <td style="padding: 6px 0; color: #0f172a;">${data.timestamp || new Date().toISOString()}</td>
+            </tr>
+          </table>
+
+          <div style="font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 12px;">
+            Sent automatically by Schedly Backend Service • Report ID: <code>${data.id || 'N/A'}</code>
+          </div>
+        </div>
+      </div>
+    `;
+    }
+    /**
+     * Dispatches the feedback email with atomic concurrency lock to prevent duplicate emails.
+     */
+    static async dispatchFeedbackEmail(reportId, providedData) {
+        const db = admin.firestore();
+        const docRef = db.collection('feedback').doc(reportId);
+        // 1. Concurrency Lock / Claim via Transaction
+        let docData = providedData;
+        let claimed = false;
+        try {
+            claimed = await db.runTransaction(async (transaction) => {
+                const snap = await transaction.get(docRef);
+                if (!snap.exists) {
+                    if (!providedData)
+                        return false;
+                    // Document might not have synced yet, create or set it
+                    transaction.set(docRef, {
+                        ...providedData,
+                        emailStatus: 'processing',
+                        emailProcessingAt: admin.firestore.FieldValue.serverTimestamp(),
+                    }, { merge: true });
+                    return true;
+                }
+                const current = snap.data() || {};
+                docData = { ...current, ...(providedData || {}) };
+                // Duplicate guard: already sent
+                if (current.emailStatus === 'sent') {
+                    return false;
+                }
+                // Concurrency guard: currently being processed by worker/route (lock TTL: 2 mins)
+                if (current.emailStatus === 'processing') {
+                    const procTime = current.emailProcessingAt?.toMillis?.() || 0;
+                    if (Date.now() - procTime < 120000) {
+                        return false;
+                    }
+                }
+                transaction.update(docRef, {
+                    emailStatus: 'processing',
+                    emailProcessingAt: admin.firestore.FieldValue.serverTimestamp(),
+                });
+                return true;
+            });
+        }
+        catch (lockErr) {
+            logger_1.logger.error('Error claiming feedback document for email dispatch', { reportId, error: lockErr.message });
+            return { success: false, error: lockErr.message };
+        }
+        if (!claimed) {
+            logger_1.logger.info('Skipping feedback email dispatch: already sent or currently being processed', { reportId });
+            return { success: true, skipped: true };
+        }
+        // 2. Check SMTP Transporter
+        const transporter = FeedbackEmailService.createTransporter();
+        if (!transporter) {
+            const errorMsg = 'SMTP credentials not configured on server (SMTP_USER or SMTP_PASS missing)';
+            logger_1.logger.warn(errorMsg, { reportId });
+            await docRef.update({
+                emailStatus: 'pending',
+                lastEmailError: errorMsg,
+            });
+            return { success: false, error: errorMsg };
+        }
+        // 3. Send Email
+        try {
+            const subject = FeedbackEmailService.formatSubject(docData.type, docData.title);
+            const html = FeedbackEmailService.formatHtmlBody({ ...docData, id: reportId });
+            const sendResult = await transporter.sendMail({
+                from: `"Schedly App" <${process.env.SMTP_USER}>`,
+                to: 'sorty797@gmail.com',
+                subject,
+                html,
+            });
+            logger_1.logger.info('Feedback email delivered successfully', {
+                reportId,
+                subject,
+                messageId: sendResult.messageId,
+                accepted: sendResult.accepted,
+                rejected: sendResult.rejected,
+                response: sendResult.response,
+            });
+            // 4. Mark Sent
+            await docRef.update({
+                emailStatus: 'sent',
+                emailSentAt: admin.firestore.FieldValue.serverTimestamp(),
+                messageId: sendResult.messageId || null,
+                smtpResponse: sendResult.response || null,
+                lastEmailError: admin.firestore.FieldValue.delete(),
+            });
+            return { success: true };
+        }
+        catch (sendErr) {
+            logger_1.logger.error('Failed to send feedback email via SMTP', { reportId, error: sendErr.message });
+            await docRef.update({
+                emailStatus: 'failed',
+                lastEmailError: sendErr.message,
+                emailAttempts: admin.firestore.FieldValue.increment(1),
+                nextRetryAt: admin.firestore.Timestamp.fromMillis(Date.now() + 60000), // retry after 1 min
+            });
+            return { success: false, error: sendErr.message };
+        }
+    }
+}
+exports.FeedbackEmailService = FeedbackEmailService;

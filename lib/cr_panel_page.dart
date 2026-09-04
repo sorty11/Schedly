@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'diagnostic_service.dart';
+import 'home_page.dart';
+import 'services/notification_service.dart';
 
 import 'upload_timetable_pdf_page.dart';
 import 'app_settings.dart';
@@ -69,10 +72,106 @@ class _CRPanelPageState extends State<CRPanelPage> {
   }
 
   Future<void> _logoutCR(BuildContext context) async {
-    await AppSettings.resetRole();
-    if (!context.mounted) return;
-    AppDialogs.showSnackBar(context: context, message: 'Exited role mode');
-    Navigator.pop(context);
+    final isCR = AppSettings.currentRole == UserRole.cr;
+    final division = AppSettings.sectionId ?? AppSettings.division;
+
+    final confirmed = await AppDialogs.showConfirm(
+      context: context,
+      title: isCR ? 'Exit CR Mode?' : 'Exit SR Mode?',
+      message: isCR
+          ? 'You will return to student mode for this division. You can switch back to CR mode anytime with your section password.'
+          : 'You will return to student mode for this division.',
+      confirmText: 'Exit',
+      isDestructive: false,
+    );
+
+    if (!confirmed || !context.mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+    );
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // 1. Update Firestore user role to Student
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'role': 'Student',
+          'srSubject': FieldValue.delete(),
+          'srComponent': FieldValue.delete(),
+          'srBatch': FieldValue.delete(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        // 2. Update section membership role to Student if division is known
+        if (division != null && division.isNotEmpty) {
+          await FirebaseFirestore.instance
+              .collection('section_memberships')
+              .doc('${division}_${user.uid}')
+              .set({
+                'role': 'Student',
+                'updatedAt': FieldValue.serverTimestamp(),
+              }, SetOptions(merge: true));
+        }
+      }
+
+      // 3. Save local role as Student
+      await AppSettings.saveRole(UserRole.student);
+
+      // 4. Clear SR-specific local fields
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('sr_division');
+      await prefs.remove('sr_subject');
+      await prefs.remove('sr_component');
+      await prefs.remove('sr_section_id');
+      await prefs.remove('sr_batch');
+      AppSettings.srDivision = null;
+      AppSettings.srSubject = null;
+      AppSettings.srComponent = null;
+      AppSettings.srSectionId = null;
+      AppSettings.srBatch = null;
+
+      // 5. Update FCM topic subscriptions for student role
+      if (division != null && division.isNotEmpty) {
+        NotificationService.updateDivisionSubscription(division).catchError((
+          e,
+        ) {
+          debugPrint('Exit CR: Notification subscription update error: $e');
+        });
+      }
+
+      if (!context.mounted) return;
+      Navigator.pop(context); // Dismiss loading dialog
+
+      AppDialogs.showSnackBar(
+        context: context,
+        message: isCR
+            ? 'Exited CR Mode. You are now in Student mode.'
+            : 'Exited SR Mode. You are now in Student mode.',
+      );
+
+      final targetDivision = division ?? AppSettings.division ?? 'CE';
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => HomePage(division: targetDivision)),
+        (_) => false,
+      );
+    } catch (e) {
+      debugPrint('Error exiting role mode: $e');
+      if (context.mounted) {
+        Navigator.pop(context); // Dismiss loading
+        AppDialogs.showError(
+          context: context,
+          title: 'Error',
+          message: 'Failed to exit role mode: $e',
+        );
+      }
+    }
   }
 
   Future<void> _addLecture() async {
@@ -609,43 +708,40 @@ class _CRPanelPageState extends State<CRPanelPage> {
             const SizedBox(height: AppSpacing.sm),
             StaggeredListItem(
               index: isCR ? 11 : 5,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: semanticColors.surfaceElevated,
-                  borderRadius: BorderRadius.circular(AppRadius.xl),
-                  border: Border.all(
-                    color: semanticColors.warning.withValues(alpha: 0.3),
-                    width: 1,
-                  ),
-                ),
-                child: AnimatedCard(
-                  borderRadius: AppRadius.xl,
-                  backgroundColor: Colors.transparent,
-                  onTap: () => _logoutCR(context),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xl,
-                      vertical: AppSpacing.lg,
+              child: AnimatedCard(
+                borderRadius: AppRadius.xl,
+                backgroundColor: semanticColors.surfaceElevated,
+                onTap: () => _logoutCR(context),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppRadius.xl),
+                    border: Border.all(
+                      color: semanticColors.warning.withValues(alpha: 0.3),
+                      width: 1,
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.logout_rounded,
-                          size: 18,
+                  ),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                    vertical: AppSpacing.lg,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.logout_rounded,
+                        size: 18,
+                        color: semanticColors.warning,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        isCR ? 'Exit CR Mode' : 'Exit SR Mode',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
                           color: semanticColors.warning,
                         ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(
-                          isCR ? 'Exit CR Mode' : 'Exit SR Mode',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: semanticColors.warning,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),

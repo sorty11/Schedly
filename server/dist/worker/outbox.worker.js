@@ -38,6 +38,7 @@ const admin = __importStar(require("firebase-admin"));
 const notification_service_1 = require("../notifications/notification.service");
 const logger_1 = require("../utils/logger");
 const env_config_1 = require("../config/env.config");
+const feedback_service_1 = require("../services/feedback.service");
 class OutboxWorker {
     _isRunning = false;
     isProcessing = false;
@@ -152,6 +153,35 @@ class OutboxWorker {
             logger_1.logger.error('Error processing faculty reminders', { error });
         }
     }
+    async processPendingFeedbackEmails() {
+        try {
+            const db = admin.firestore();
+            const now = admin.firestore.Timestamp.now();
+            // Query documents with emailStatus == 'pending'
+            const pendingSnap = await db.collection('feedback')
+                .where('emailStatus', '==', 'pending')
+                .limit(10)
+                .get();
+            // Query documents with emailStatus == 'failed' eligible for retry
+            const failedSnap = await db.collection('feedback')
+                .where('emailStatus', '==', 'failed')
+                .where('nextRetryAt', '<=', now)
+                .limit(10)
+                .get();
+            const docsToProcess = [...pendingSnap.docs, ...failedSnap.docs];
+            for (const doc of docsToProcess) {
+                const data = doc.data();
+                if ((data.emailAttempts || 0) >= 5) {
+                    continue;
+                }
+                logger_1.logger.info('Worker processing pending feedback email', { id: doc.id, type: data.type });
+                await feedback_service_1.FeedbackEmailService.dispatchFeedbackEmail(doc.id, data);
+            }
+        }
+        catch (error) {
+            logger_1.logger.error('Error in worker processPendingFeedbackEmails', { error: error.message });
+        }
+    }
     async processOutbox() {
         if (this.isProcessing) {
             this.scheduleNext(this.currentPollMs);
@@ -161,6 +191,7 @@ class OutboxWorker {
         const loopStartTime = Date.now();
         try {
             await this.transferDueFacultyReminders();
+            await this.processPendingFeedbackEmails();
             this.checkResetStats();
             const db = admin.firestore();
             const snapshot = await db.collection('notification_outbox')

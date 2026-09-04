@@ -1,22 +1,9 @@
 import { Router, Request, Response } from 'express';
 import * as admin from 'firebase-admin';
-import * as nodemailer from 'nodemailer';
 import { logger } from '../utils/logger';
+import { FeedbackEmailService } from '../services/feedback.service';
 
 const router = Router();
-
-// Create reusable transporter object using the default SMTP transport
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
-};
 
 router.post('/email', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -39,74 +26,84 @@ router.post('/email', async (req: Request, res: Response): Promise<void> => {
 
     const { type, reportId, data } = req.body;
 
-    if (!type || !reportId || !data) {
-      res.status(400).json({ error: 'Bad Request: Missing required fields' });
+    if (!reportId) {
+      res.status(400).json({ error: 'Bad Request: Missing reportId' });
       return;
     }
 
-    const transporter = createTransporter();
-    
-    let subject = '';
-    let htmlContent = '';
+    // Dispatch email through FeedbackEmailService (atomic claim prevents duplicate emails)
+    const result = await FeedbackEmailService.dispatchFeedbackEmail(reportId, {
+      ...(data || {}),
+      type: type || data?.type || 'other',
+    });
 
-    if (type === 'bug_report') {
-      subject = `🐞 New Schedly Bug Report: ${data.title}`;
-      htmlContent = `
-        <h2>New Bug Report</h2>
-        <p><strong>Title:</strong> ${data.title}</p>
-        <p><strong>Category:</strong> ${data.category}</p>
-        <p><strong>Description:</strong><br/>${data.description.replace(/\\n/g, '<br/>')}</p>
-        <hr/>
-        <h3>User Metadata</h3>
-        <ul>
-          <li><strong>Name:</strong> ${data.name}</li>
-          <li><strong>Role:</strong> ${data.role}</li>
-          <li><strong>Section:</strong> ${data.section}</li>
-          <li><strong>UID:</strong> ${data.uid}</li>
-        </ul>
-        <h3>Device Info</h3>
-        <ul>
-          <li><strong>Platform:</strong> ${data.platform}</li>
-          <li><strong>Device:</strong> ${data.device}</li>
-          <li><strong>App Version:</strong> ${data.appVersion}</li>
-        </ul>
-        <p><small>Timestamp: ${data.timestamp}</small></p>
-      `;
-    } else if (type === 'feature_request') {
-      subject = `💡 New Feature Suggestion: ${data.title}`;
-      htmlContent = `
-        <h2>New Feature Suggestion</h2>
-        <p><strong>Title:</strong> ${data.title}</p>
-        <p><strong>Category:</strong> ${data.category}</p>
-        <p><strong>Description:</strong><br/>${data.description.replace(/\\n/g, '<br/>')}</p>
-        <hr/>
-        <h3>User Metadata</h3>
-        <ul>
-          <li><strong>Name:</strong> ${data.name}</li>
-          <li><strong>Role:</strong> ${data.role}</li>
-          <li><strong>Section:</strong> ${data.section}</li>
-          <li><strong>UID:</strong> ${data.uid}</li>
-        </ul>
-        <p><small>Timestamp: ${data.timestamp}</small></p>
-      `;
-    } else {
-      res.status(400).json({ error: 'Bad Request: Invalid type' });
+    if (result.skipped) {
+      res.status(200).json({ success: true, message: 'Email already sent or currently processing' });
       return;
     }
 
-    const mailOptions = {
-      from: `"Schedly App" <${process.env.SMTP_USER}>`,
-      to: 'sorty797@gmail.com',
-      subject: subject,
-      html: htmlContent,
-    };
+    if (!result.success) {
+      res.status(202).json({
+        success: false,
+        message: 'Feedback saved in Firestore; email delivery queued for retry',
+        error: result.error,
+      });
+      return;
+    }
 
-    await transporter.sendMail(mailOptions);
-    logger.info(`Feedback email sent successfully for report: ${reportId}`);
-    
     res.status(200).json({ success: true, message: 'Email sent successfully' });
-  } catch (error) {
-    logger.error(`Error sending feedback email: ${error}`);
+  } catch (error: any) {
+    logger.error('Error handling feedback email request', { error: error.message });
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+router.get('/diag', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({ error: 'Unauthorized: Missing or invalid token' });
+      return;
+    }
+
+    const idToken = authHeader.split('Bearer ')[1];
+    await admin.auth().verifyIdToken(idToken);
+
+    const hasUser = Boolean(process.env.SMTP_USER);
+    const hasPass = Boolean(process.env.SMTP_PASS);
+    const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+    const port = parseInt(process.env.SMTP_PORT || '587', 10);
+
+    let verifyStatus = 'untested';
+    let verifyError: string | null = null;
+
+    if (hasUser && hasPass) {
+      try {
+        const transporter = FeedbackEmailService.createTransporter();
+        if (transporter) {
+          await transporter.verify();
+          verifyStatus = 'verified_success';
+        }
+      } catch (e: any) {
+        verifyStatus = 'verify_failed';
+        verifyError = e.message;
+      }
+    } else {
+      verifyStatus = 'missing_credentials';
+    }
+
+    res.status(200).json({
+      smtpConfigured: hasUser && hasPass,
+      hasUser,
+      hasPass,
+      host,
+      port,
+      userDomain: process.env.SMTP_USER ? process.env.SMTP_USER.split('@')[1] : null,
+      verifyStatus,
+      verifyError,
+    });
+  } catch (error: any) {
+    logger.error('Error handling feedback diag request', { error: error.message });
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });

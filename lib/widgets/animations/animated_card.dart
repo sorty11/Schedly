@@ -75,6 +75,7 @@ class _AnimatedCardState extends State<AnimatedCard>
       child: Container(
         margin: widget.margin,
         child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onPanDown: isInteractive ? _onPanDown : null,
           onPanCancel: isInteractive ? _onPanCancel : null,
           onPanEnd: (_) => isInteractive ? _onPanCancel() : null,

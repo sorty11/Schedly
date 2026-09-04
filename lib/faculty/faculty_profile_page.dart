@@ -30,6 +30,11 @@ import '../onboarding/services/tutorial_storage_service.dart';
 import '../onboarding/services/onboarding_service.dart';
 import '../about_schedly_page.dart';
 import '../widgets/app_dialogs.dart';
+import '../services/account_deletion_service.dart';
+import '../exceptions.dart';
+import '../widgets/support/bug_report_sheet.dart';
+import '../widgets/support/feature_request_sheet.dart';
+import '../widgets/support/other_feedback_sheet.dart';
 
 class FacultyProfilePage extends StatefulWidget {
   const FacultyProfilePage({super.key});
@@ -257,6 +262,247 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
       context,
       MaterialPageRoute(builder: (_) => const OnboardingFlow()),
       (_) => false,
+    );
+  }
+
+  Future<void> _showDeleteAccountDialog() async {
+    final isPasswordUser = AccountDeletionService.isPasswordUser;
+    final passwordCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool obscurePassword = true;
+    bool isDeleting = false;
+    String? errorMessage;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final theme = Theme.of(context);
+          final semanticColors = theme.extension<AppSemanticColors>()!;
+          final destructiveColor = semanticColors.cancelled;
+
+          return AlertDialog(
+            backgroundColor: semanticColors.surfaceElevated,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+              side: BorderSide(
+                color: destructiveColor.withValues(alpha: 0.3),
+                width: 1,
+              ),
+            ),
+            title: Row(
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: destructiveColor,
+                  size: 24,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'Delete Account',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w700,
+                      color: destructiveColor,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'This action is permanent and cannot be undone.',
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      '• Your faculty profile, preferences, and notifications will be wiped.\n'
+                      '• Shared section timetables and announcements will remain intact.\n'
+                      '• You can create a fresh faculty account later with the same email if you choose.',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: semanticColors.onSurfaceMuted,
+                        height: 1.4,
+                      ),
+                    ),
+                    if (isPasswordUser) ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      Text(
+                        'Confirm your password to proceed:',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 13,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      TextFormField(
+                        controller: passwordCtrl,
+                        obscureText: obscurePassword,
+                        enabled: !isDeleting,
+                        decoration: InputDecoration(
+                          hintText: 'Enter your password',
+                          prefixIcon: const Icon(
+                            Icons.lock_outline_rounded,
+                            size: 20,
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              size: 20,
+                            ),
+                            onPressed: () {
+                              setDialogState(
+                                () => obscurePassword = !obscurePassword,
+                              );
+                            },
+                          ),
+                          errorMaxLines: 2,
+                        ),
+                        validator: (val) {
+                          if (val == null || val.isEmpty) {
+                            return 'Please enter your password to confirm.';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                    if (errorMessage != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: destructiveColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(
+                            color: destructiveColor.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 18,
+                              color: destructiveColor,
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Expanded(
+                              child: Text(
+                                errorMessage!,
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: destructiveColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    if (isDeleting) ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      Center(
+                        child: Column(
+                          children: [
+                            const CircularProgressIndicator(),
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              'Deleting account & cleaning up records...',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: semanticColors.onSurfaceMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isDeleting ? null : () => Navigator.pop(dialogCtx),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: destructiveColor,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: isDeleting
+                    ? null
+                    : () async {
+                        if (isPasswordUser &&
+                            !formKey.currentState!.validate()) {
+                          return;
+                        }
+
+                        setDialogState(() {
+                          isDeleting = true;
+                          errorMessage = null;
+                        });
+
+                        try {
+                          await AccountDeletionService.deleteAccount(
+                            password: isPasswordUser ? passwordCtrl.text : null,
+                          );
+
+                          if (!dialogCtx.mounted) return;
+                          Navigator.pop(dialogCtx);
+
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Your faculty account and personal data were deleted.',
+                              ),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          );
+
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const OnboardingFlow(),
+                            ),
+                            (_) => false,
+                          );
+                        } on AppException catch (e) {
+                          setDialogState(() {
+                            isDeleting = false;
+                            errorMessage = e.message;
+                          });
+                        } catch (e) {
+                          setDialogState(() {
+                            isDeleting = false;
+                            errorMessage = 'Deletion failed: $e';
+                          });
+                        }
+                      },
+                child: const Text('Delete Account'),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -1268,6 +1514,56 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                     ]),
                   ),
 
+                  // ── Support ───────────────────────────────────────────────────
+                  _sectionHeader('Support'),
+                  StaggeredListItem(
+                    index: staggerIndex++,
+                    child: _buildTileGroup([
+                      _buildRoleTile(
+                        icon: Icons.bug_report_outlined,
+                        title: 'Report a Bug',
+                        subtitle: 'Let us know if something is broken',
+                        iconColor: sem.error,
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (_) => const BugReportSheet(),
+                          );
+                        },
+                      ),
+                      _buildRoleTile(
+                        icon: Icons.lightbulb_outline_rounded,
+                        title: 'Suggest a Feature',
+                        subtitle: 'Have an idea for Schedly?',
+                        iconColor: sem.warning,
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (_) => const FeatureRequestSheet(),
+                          );
+                        },
+                      ),
+                      _buildRoleTile(
+                        icon: Icons.chat_bubble_outline_rounded,
+                        title: 'General Feedback',
+                        subtitle: 'Share your thoughts with the team',
+                        iconColor: sem.accent,
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (_) => const OtherFeedbackSheet(),
+                          );
+                        },
+                      ),
+                    ]),
+                  ),
+
                   // ── Administration ──────────────────────────────────────────────
                   _sectionHeader('Administration'),
                   StaggeredListItem(
@@ -1354,13 +1650,31 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                         ),
                       ),
                       clipBehavior: Clip.antiAlias,
-                      child: _buildRoleTile(
-                        icon: Icons.logout_rounded,
-                        title: 'Reset App & Logout',
-                        subtitle: 'Clear all local data and sign out',
-                        iconColor: sem.cancelled,
-                        isDestructive: true,
-                        onTap: () => _logout(context),
+                      child: Column(
+                        children: [
+                          _buildRoleTile(
+                            icon: Icons.logout_rounded,
+                            title: 'Reset App & Logout',
+                            subtitle: 'Clear all local data and sign out',
+                            iconColor: sem.cancelled,
+                            isDestructive: true,
+                            onTap: () => _logout(context),
+                          ),
+                          Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: sem.cancelled.withValues(alpha: 0.12),
+                          ),
+                          _buildRoleTile(
+                            icon: Icons.delete_forever_rounded,
+                            title: 'Delete Account',
+                            subtitle:
+                                'Permanently delete your account and personal data',
+                            iconColor: sem.cancelled,
+                            isDestructive: true,
+                            onTap: _showDeleteAccountDialog,
+                          ),
+                        ],
                       ),
                     ),
                   ),

@@ -11,6 +11,7 @@ import '../models/event_category.dart';
 import '../timetable_manager.dart';
 import '../services/timetable_resolver_service.dart';
 import 'faculty_excel_import_service.dart';
+import 'faculty_sr_connection_service.dart';
 import '../widgets/animations/animated_card.dart';
 import '../widgets/animations/staggered_list_item.dart';
 import '../widgets/animations/floating_empty_state.dart';
@@ -75,14 +76,18 @@ class _FacultyConflictsPageState extends State<FacultyConflictsPage> {
         .collection('faculty_profiles')
         .doc(uid)
         .get();
-    final subjectsMap =
-        (profileSnap.data()?['subjects'] as Map<String, dynamic>?) ?? {};
+    final subjectsMap = FacultySrConnectionService.parseSubjectsMap(
+      profileSnap.data()?['subjects'],
+    );
 
     final targetDate = _getTargetDateForDay(_selectedDay);
     final targetDateStr = DateFormat('yyyy-MM-dd').format(targetDate);
 
     final streams = divisions.map((div) {
-      final mySubjects = List<String>.from(subjectsMap[div] ?? []);
+      final mySubjects = FacultySrConnectionService.getSubjectsForDivision(
+        subjectsMap,
+        div,
+      );
       if (mySubjects.isEmpty) return Stream.value(<_FacultyLecture>[]);
 
       return TimetableManager.streamEntriesForDay(

@@ -182,6 +182,7 @@ class AccountDeletionService {
       await AppSettings.resetRole();
       AppSettings.studentName = null;
       AppSettings.studentRollNo = null;
+      await AppSettings.clearFacultyDetails();
       await TutorialStorageService.resetAll();
     } catch (e) {
       debugPrint('AccountDeletionService: Local state clear warning: $e');

@@ -14,6 +14,7 @@ import '../widgets/animations/animated_button.dart';
 import '../widgets/skeleton_loader.dart';
 import 'faculty_request_sheet.dart';
 import 'faculty_panel_page.dart';
+import 'faculty_sr_connection_service.dart';
 import '../create_announcement_page.dart';
 import '../models/faculty_lecture_context.dart';
 import '../services/local_notification_service.dart';
@@ -76,8 +77,9 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
         .doc(uid)
         .get();
     final profileData = profileSnap.data() ?? {};
-    final subjectsMap =
-        (profileData['subjects'] as Map<String, dynamic>?) ?? {};
+    final subjectsMap = FacultySrConnectionService.parseSubjectsMap(
+      profileData['subjects'],
+    );
 
     if (divisions.isEmpty) {
       yield [];
@@ -85,7 +87,10 @@ class _FacultyDashboardPageState extends State<FacultyDashboardPage> {
     }
 
     final streams = divisions.map((div) {
-      final mySubjects = List<String>.from(subjectsMap[div] ?? []);
+      final mySubjects = FacultySrConnectionService.getSubjectsForDivision(
+        subjectsMap,
+        div,
+      );
       if (mySubjects.isEmpty) return Stream.value(<FacultyLectureContext>[]);
 
       return TimetableManager.streamEntriesForDay(

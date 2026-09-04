@@ -1,37 +1,45 @@
+import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io' show Platform;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'dart:developer' as developer;
+import 'package:package_info_plus/package_info_plus.dart';
+
+import '../app_settings.dart';
+import '../user_roles.dart';
 
 class FeedbackService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final DeviceInfoPlugin _deviceInfo = DeviceInfoPlugin();
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
+  FirebaseAuth get _auth => FirebaseAuth.instance;
+  DeviceInfoPlugin get _deviceInfo => DeviceInfoPlugin();
 
-  // Make sure this matches the deployed Render backend URL or test endpoint.
-  // Using localhost for Android emulator testing, fallback to generic Render URL.
-  // In production, this should come from AppSettings.
   final String _backendUrl = const String.fromEnvironment(
     'BACKEND_URL',
-    defaultValue: 'https://schedly-backend.onrender.com',
+    defaultValue: 'https://schedly-p61g.onrender.com',
   );
 
   Future<Map<String, dynamic>> _gatherMetadata() async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('User not logged in');
 
-    // Fetch user details from Firestore
-    final userDoc = await _firestore.collection('users').doc(user.uid).get();
-    final userData = userDoc.data() ?? {};
+    // Fetch user details from Firestore if available
+    Map<String, dynamic> userData = {};
+    try {
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      userData = userDoc.data() ?? {};
+    } catch (e) {
+      developer.log('Warning: Could not fetch user doc for feedback: $e');
+    }
 
     // Get App Version
-    final packageInfo = await PackageInfo.fromPlatform();
-    final appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+    String appVersion = '1.0.11';
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+    } catch (_) {}
 
     // Get Device Info
     String deviceModel = 'Unknown Device';
@@ -52,15 +60,59 @@ class FeedbackService {
       developer.log('Failed to get device info: $e');
     }
 
+    // Resolve Role & Identity accurately
+    String role = 'Student';
+    String name = 'Student';
+    String section = 'Unknown';
+    String email = user.email ?? '';
+
+    if (AppSettings.currentRole == UserRole.faculty) {
+      role = 'Faculty';
+      name = AppSettings.facultyName ?? userData['name'] ?? 'Faculty Member';
+      section =
+          AppSettings.facultyDepartment ?? userData['department'] ?? 'Faculty';
+      if (email.isEmpty && AppSettings.facultyEmail != null) {
+        email = AppSettings.facultyEmail!;
+      }
+    } else if (AppSettings.currentRole == UserRole.cr) {
+      role = 'CR';
+      name =
+          userData['name'] ?? AppSettings.studentName ?? 'Class Representative';
+      section =
+          userData['division'] ??
+          AppSettings.sectionId ??
+          AppSettings.division ??
+          'Unknown';
+    } else if (AppSettings.currentRole == UserRole.sr) {
+      role = 'SR';
+      name =
+          userData['name'] ??
+          AppSettings.studentName ??
+          'Subject Representative';
+      section =
+          userData['division'] ??
+          AppSettings.sectionId ??
+          AppSettings.division ??
+          'Unknown';
+    } else {
+      role = (userData['role'] as String?) ?? 'Student';
+      name = userData['name'] ?? AppSettings.studentName ?? 'Student';
+      section =
+          userData['division'] ??
+          AppSettings.sectionId ??
+          AppSettings.division ??
+          'Unknown';
+    }
+
     return {
       'uid': user.uid,
-      'name': userData['name'] ?? 'Unknown',
-      'role': userData['role'] ?? 'Student',
-      'section': userData['division'] ?? 'Unknown',
+      'email': email,
+      'name': name,
+      'role': role,
+      'section': section,
       'device': deviceModel,
       'platform': platform,
       'appVersion': appVersion,
-      'timestamp': FieldValue.serverTimestamp(),
     };
   }
 
@@ -69,31 +121,12 @@ class FeedbackService {
     required String title,
     required String description,
   }) async {
-    try {
-      final metadata = await _gatherMetadata();
-      final data = {
-        ...metadata,
-        'type':
-            'bug_report', // using 'type' field since we are saving to a shared 'feedback' collection
-        'category': category,
-        'title': title,
-        'description': description,
-        'status': 'Open',
-      };
-
-      // 1. Save to Firestore (works offline)
-      final docRef = await _firestore.collection('feedback').add(data);
-
-      // 2. Trigger Email via Backend
-      await _triggerBackendEmail('bug_report', docRef.id, {
-        ...data,
-        'timestamp': DateTime.now()
-            .toIso8601String(), // replace FieldValue for JSON serialization
-      });
-    } catch (e) {
-      developer.log('Error submitting bug report: $e');
-      rethrow;
-    }
+    await _submitFeedback(
+      type: 'bug',
+      category: category,
+      title: title,
+      description: description,
+    );
   }
 
   Future<void> submitFeatureRequest({
@@ -101,30 +134,59 @@ class FeedbackService {
     required String title,
     required String description,
   }) async {
-    try {
-      final metadata = await _gatherMetadata();
-      final data = {
-        ...metadata,
-        'type':
-            'feature_request', // using 'type' field since we are saving to a shared 'feedback' collection
-        'category': category,
-        'title': title,
-        'description': description,
-        'status': 'New',
-      };
+    await _submitFeedback(
+      type: 'feature',
+      category: category,
+      title: title,
+      description: description,
+    );
+  }
 
-      // 1. Save to Firestore (works offline)
-      final docRef = await _firestore.collection('feedback').add(data);
+  Future<void> submitGeneralFeedback({
+    required String category,
+    required String title,
+    required String description,
+  }) async {
+    await _submitFeedback(
+      type: 'other',
+      category: category,
+      title: title,
+      description: description,
+    );
+  }
 
-      // 2. Trigger Email via Backend
-      await _triggerBackendEmail('feature_request', docRef.id, {
-        ...data,
-        'timestamp': DateTime.now().toIso8601String(),
-      });
-    } catch (e) {
-      developer.log('Error submitting feature request: $e');
-      rethrow;
-    }
+  Future<void> _submitFeedback({
+    required String type,
+    required String category,
+    required String title,
+    required String description,
+  }) async {
+    final metadata = await _gatherMetadata();
+    final timestampMs = DateTime.now().millisecondsSinceEpoch;
+    final reportId = 'fb_${metadata['uid']}_$timestampMs';
+
+    final data = {
+      ...metadata,
+      'id': reportId,
+      'type': type,
+      'category': category,
+      'title': title,
+      'description': description,
+      'status': 'new',
+      'emailStatus': 'pending',
+      'emailAttempts': 0,
+      'timestamp': FieldValue.serverTimestamp(),
+    };
+
+    // 1. Save to Firestore with deterministic ID (always succeeds even offline)
+    await _firestore.collection('feedback').doc(reportId).set(data);
+
+    // 2. Trigger asynchronous email dispatch on Render backend
+    // Note: If offline or cold start occurs, backend worker sweeps pending documents
+    _triggerBackendEmail(type, reportId, {
+      ...data,
+      'timestamp': DateTime.now().toIso8601String(),
+    });
   }
 
   Future<void> _triggerBackendEmail(
@@ -139,23 +201,30 @@ class FeedbackService {
       final idToken = await user.getIdToken();
       final url = Uri.parse('$_backendUrl/api/feedback/email');
 
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $idToken',
-        },
-        body: jsonEncode({'type': type, 'reportId': reportId, 'data': data}),
-      );
+      final response = await http
+          .post(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $idToken',
+            },
+            body: jsonEncode({
+              'type': type,
+              'reportId': reportId,
+              'data': data,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
 
-      if (response.statusCode != 200) {
+      if (response.statusCode != 200 && response.statusCode != 202) {
         developer.log(
-          'Backend email error: ${response.statusCode} - ${response.body}',
+          'Backend feedback email notification status: ${response.statusCode} - ${response.body}',
         );
       }
     } catch (e) {
-      // Don't rethrow here so that offline submission still succeeds in saving to Firestore
-      developer.log('Could not trigger backend email: $e');
+      // Non-fatal: the feedback document is already saved in Firestore with emailStatus: pending
+      // and will be retried automatically by the Render backend worker.
+      developer.log('Initial email trigger deferred to background worker: $e');
     }
   }
 }

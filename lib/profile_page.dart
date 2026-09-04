@@ -29,6 +29,7 @@ import 'widgets/app_dialogs.dart';
 import 'about_schedly_page.dart';
 import 'widgets/support/bug_report_sheet.dart';
 import 'widgets/support/feature_request_sheet.dart';
+import 'widgets/support/other_feedback_sheet.dart';
 import 'admin/admin_session.dart';
 import 'admin/admin_auth_sheet.dart';
 import 'admin/student_management_page.dart';
@@ -487,9 +488,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => const ThemesPage(),
-                        ),
+                        MaterialPageRoute(builder: (_) => const ThemesPage()),
                       );
                     },
                   ),
@@ -656,6 +655,20 @@ class _ProfilePageState extends State<ProfilePage> {
                       isScrollControlled: true,
                       backgroundColor: Colors.transparent,
                       builder: (_) => const FeatureRequestSheet(),
+                    );
+                  },
+                ),
+                _buildRoleTile(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  title: 'General Feedback',
+                  subtitle: 'Share your thoughts with the team',
+                  iconColor: semanticColors.accent,
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => const OtherFeedbackSheet(),
                     );
                   },
                 ),

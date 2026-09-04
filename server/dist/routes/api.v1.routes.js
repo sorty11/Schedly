@@ -40,6 +40,7 @@ const admin = __importStar(require("firebase-admin"));
 const auth_middleware_1 = require("../middleware/auth.middleware");
 const rateLimiter_middleware_1 = require("../middleware/rateLimiter.middleware");
 const logger_1 = require("../utils/logger");
+const feedback_service_1 = require("../services/feedback.service");
 const router = (0, express_1.Router)();
 router.post('/create-section', rateLimiter_middleware_1.sectionCreateRateLimiter, auth_middleware_1.verifyIdToken, async (req, res) => {
     const { masterPassword, sectionId, sectionData, crPassword, srPassword } = req.body;
@@ -155,17 +156,33 @@ router.post('/delete-account', auth_middleware_1.verifyIdToken, async (req, res)
                 }
             }
         }
-        // 5. Detach faculty profile if applicable (smallest possible shared-document update)
+        // 5. Cleanup faculty profile & faculty-owned documents if applicable
         stepLog.push('detach_faculty');
-        if (role === 'Faculty' || facultyProfileId) {
+        try {
+            // 5a. Delete user-owned direct faculty profile: faculty_profiles/{uid}
+            const directFacRef = db.collection('faculty_profiles').doc(uid);
+            const directFacSnap = await directFacRef.get();
+            if (directFacSnap.exists) {
+                await directFacRef.delete();
+                logger_1.logger.info('Deleted direct faculty profile doc', { uid });
+            }
+            // 5b. Cleanup any other faculty_profiles matching uid
             const facQuery = await db.collection('faculty_profiles').where('uid', '==', uid).get();
             for (const doc of facQuery.docs) {
-                await doc.ref.update({
-                    uid: admin.firestore.FieldValue.delete(),
-                    unlinkedAt: admin.firestore.FieldValue.serverTimestamp()
-                });
+                if (doc.id === uid) {
+                    await doc.ref.delete();
+                }
+                else {
+                    // If profile ID is not uid (e.g. legacy fac_name or pre-created admin profile),
+                    // unlink uid so the slot can be reclaimed later.
+                    await doc.ref.update({
+                        uid: admin.firestore.FieldValue.delete(),
+                        unlinkedAt: admin.firestore.FieldValue.serverTimestamp()
+                    });
+                }
             }
-            if (facultyProfileId) {
+            // 5c. If facultyProfileId is set and differs from uid
+            if (facultyProfileId && facultyProfileId !== uid) {
                 const facDocRef = db.collection('faculty_profiles').doc(facultyProfileId);
                 const facSnap = await facDocRef.get();
                 if (facSnap.exists && facSnap.data()?.uid === uid) {
@@ -175,6 +192,34 @@ router.post('/delete-account', auth_middleware_1.verifyIdToken, async (req, res)
                     });
                 }
             }
+            // 5d. Clean up user-owned admin action doc: admin_actions/${uid}_facultySetup
+            const adminActionRef = db.collection('admin_actions').doc(`${uid}_facultySetup`);
+            const adminActionSnap = await adminActionRef.get();
+            if (adminActionSnap.exists) {
+                await adminActionRef.delete();
+            }
+            // 5e. Clean up any pending faculty_reminders owned by this faculty
+            const remindersSnap = await db.collection('faculty_reminders').where('facultyId', '==', uid).get();
+            if (!remindersSnap.empty) {
+                const b = db.batch();
+                remindersSnap.docs.forEach(d => b.delete(d.ref));
+                await b.commit();
+            }
+            // 5f. Clean up pending faculty requests owned by this faculty
+            try {
+                const facReqSnap = await db.collectionGroup('faculty_requests').where('facultyId', '==', uid).get();
+                if (!facReqSnap.empty) {
+                    const b = db.batch();
+                    facReqSnap.docs.forEach(d => b.delete(d.ref));
+                    await b.commit();
+                }
+            }
+            catch (reqErr) {
+                logger_1.logger.info('Faculty requests cleanup note', { uid, message: reqErr.message });
+            }
+        }
+        catch (facErr) {
+            logger_1.logger.warn('Non-fatal warning during faculty cleanup', { uid, error: facErr.message });
         }
         // 6. Cleanup user-owned Storage files if any exist
         stepLog.push('cleanup_storage');
@@ -252,6 +297,7 @@ router.get('/health', async (req, res) => {
             version: env_config_1.AppConfig.VERSION,
             worker: stats.workerState,
             firebase: firebaseStatus,
+            smtpConfigured: feedback_service_1.FeedbackEmailService.isSmtpConfigured(),
             uptime: `${process.uptime()}s`,
             queueLength: stats.queueLength,
             processedToday: stats.processedToday,

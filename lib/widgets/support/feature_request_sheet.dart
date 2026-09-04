@@ -50,7 +50,7 @@ class _FeatureRequestSheetState extends State<FeatureRequestSheet> {
             children: const [
               Icon(Icons.check_circle_outline, color: Colors.white),
               SizedBox(width: AppSpacing.sm),
-              Text('Feature suggestion submitted!'),
+              Text('Thanks! Your feedback has been submitted.'),
             ],
           ),
           backgroundColor: Colors.green.shade600,

@@ -2,6 +2,7 @@ import * as admin from 'firebase-admin';
 import { dispatchNotification } from '../notifications/notification.service';
 import { logger } from '../utils/logger';
 import { WorkerConfig } from '../config/env.config';
+import { FeedbackEmailService } from '../services/feedback.service';
 
 export class OutboxWorker {
   private _isRunning = false;
@@ -135,6 +136,40 @@ export class OutboxWorker {
     }
   }
 
+  public async processPendingFeedbackEmails() {
+    try {
+      const db = admin.firestore();
+      const now = admin.firestore.Timestamp.now();
+
+      // Query documents with emailStatus == 'pending'
+      const pendingSnap = await db.collection('feedback')
+        .where('emailStatus', '==', 'pending')
+        .limit(10)
+        .get();
+
+      // Query documents with emailStatus == 'failed' eligible for retry
+      const failedSnap = await db.collection('feedback')
+        .where('emailStatus', '==', 'failed')
+        .where('nextRetryAt', '<=', now)
+        .limit(10)
+        .get();
+
+      const docsToProcess = [...pendingSnap.docs, ...failedSnap.docs];
+
+      for (const doc of docsToProcess) {
+        const data = doc.data();
+        if ((data.emailAttempts || 0) >= 5) {
+          continue;
+        }
+
+        logger.info('Worker processing pending feedback email', { id: doc.id, type: data.type });
+        await FeedbackEmailService.dispatchFeedbackEmail(doc.id, data);
+      }
+    } catch (error: any) {
+      logger.error('Error in worker processPendingFeedbackEmails', { error: error.message });
+    }
+  }
+
   private async processOutbox() {
     if (this.isProcessing) {
       this.scheduleNext(this.currentPollMs);
@@ -145,6 +180,7 @@ export class OutboxWorker {
     const loopStartTime = Date.now();
     try {
       await this.transferDueFacultyReminders();
+      await this.processPendingFeedbackEmails();
       
       this.checkResetStats();
       const db = admin.firestore();
