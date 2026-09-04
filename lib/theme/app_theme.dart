@@ -272,7 +272,8 @@ class AppTheme {
   }
 
   // ─── Light Theme ─────────────────────────────────────────────────────────
-  static ThemeData get lightTheme => _buildLightTheme(transparentScaffold: false);
+  static ThemeData get lightTheme =>
+      _buildLightTheme(transparentScaffold: false);
 
   static ThemeData _buildLightTheme({bool transparentScaffold = false}) {
     const colorScheme = ColorScheme.light(
@@ -316,9 +317,7 @@ class AppTheme {
           ),
         },
       ),
-      canvasColor: transparentScaffold
-          ? Colors.transparent
-          : AppColors.surface,
+      canvasColor: transparentScaffold ? Colors.transparent : AppColors.surface,
       scaffoldBackgroundColor: transparentScaffold
           ? Colors.transparent
           : AppColors.background,

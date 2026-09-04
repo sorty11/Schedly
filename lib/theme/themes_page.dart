@@ -112,10 +112,7 @@ class _ThemeCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: sem.surfaceElevated,
           borderRadius: BorderRadius.circular(AppRadius.xl),
-          border: Border.all(
-            color: borderColor,
-            width: isSelected ? 2.0 : 1.0,
-          ),
+          border: Border.all(color: borderColor, width: isSelected ? 2.0 : 1.0),
           boxShadow: isSelected
               ? [
                   BoxShadow(
@@ -155,7 +152,9 @@ class _ThemeCard extends StatelessWidget {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          (isDark ? const Color(0xAA0A0A0A) : const Color(0x55000000)),
+                          (isDark
+                              ? const Color(0xAA0A0A0A)
+                              : const Color(0x55000000)),
                         ],
                       ),
                     ),
@@ -215,14 +214,19 @@ class _ThemeCard extends StatelessWidget {
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: (isSelected ? colorScheme.primary : sem.onSurfaceMuted)
-                          .withValues(alpha: 0.12),
+                      color:
+                          (isSelected
+                                  ? colorScheme.primary
+                                  : sem.onSurfaceMuted)
+                              .withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                     child: Icon(
                       theme.icon,
                       size: 20,
-                      color: isSelected ? colorScheme.primary : sem.onSurfaceMuted,
+                      color: isSelected
+                          ? colorScheme.primary
+                          : sem.onSurfaceMuted,
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
@@ -235,7 +239,9 @@ class _ThemeCard extends StatelessWidget {
                           style: GoogleFonts.outfit(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: isDark ? AppColors.onSurfaceDark : AppColors.onSurface,
+                            color: isDark
+                                ? AppColors.onSurfaceDark
+                                : AppColors.onSurface,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -254,7 +260,9 @@ class _ThemeCard extends StatelessWidget {
                     isSelected
                         ? Icons.radio_button_checked_rounded
                         : Icons.radio_button_off_rounded,
-                    color: isSelected ? colorScheme.primary : sem.onSurfaceFaint,
+                    color: isSelected
+                        ? colorScheme.primary
+                        : sem.onSurfaceFaint,
                     size: 22,
                   ),
                 ],

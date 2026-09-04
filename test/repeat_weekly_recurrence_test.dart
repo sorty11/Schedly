@@ -1,4 +1,4 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:schedly/models/event_category.dart';
 import 'package:schedly/models/timetable_entry.dart';
 import 'package:schedly/services/timetable_resolver_service.dart';
@@ -28,69 +28,75 @@ void main() {
       expect(recurringEntry.validForDate, isNull);
     });
 
-    test('2. Repeat OFF creates single-date entry (validForDate has specific date)', () {
-      final oneOffEntry = TimetableEntry(
-        id: 'oneoff_math_1',
-        subject: 'PEM',
-        component: 'Theory',
-        category: EventCategory.academic,
-        batch: 'Whole Class',
-        startTime: 600,
-        endTime: 660,
-        durationMinutes: 60,
-        room: '302',
-        status: 'active',
-        validForDate: '2026-09-08', // Tuesday, 8 Sep
-        hiddenOnDates: const [],
-      );
+    test(
+      '2. Repeat OFF creates single-date entry (validForDate has specific date)',
+      () {
+        final oneOffEntry = TimetableEntry(
+          id: 'oneoff_math_1',
+          subject: 'PEM',
+          component: 'Theory',
+          category: EventCategory.academic,
+          batch: 'Whole Class',
+          startTime: 600,
+          endTime: 660,
+          durationMinutes: 60,
+          room: '302',
+          status: 'active',
+          validForDate: '2026-09-08', // Tuesday, 8 Sep
+          hiddenOnDates: const [],
+        );
 
-      final firestoreData = oneOffEntry.toFirestore();
-      expect(firestoreData['validForDate'], '2026-09-08');
-      expect(firestoreData['status'], 'active');
-      expect(oneOffEntry.validForDate, '2026-09-08');
-    });
+        final firestoreData = oneOffEntry.toFirestore();
+        expect(firestoreData['validForDate'], '2026-09-08');
+        expect(firestoreData['status'], 'active');
+        expect(oneOffEntry.validForDate, '2026-09-08');
+      },
+    );
 
-    test('3. Repeat ON appears on future weeks via TimetableResolverService', () {
-      final recurringEntry = TimetableEntry(
-        id: 'rec_tue_pem',
-        subject: 'PEM',
-        component: 'Theory',
-        category: EventCategory.academic,
-        batch: 'Whole Class',
-        startTime: 600,
-        endTime: 660,
-        durationMinutes: 60,
-        room: '302',
-        status: 'active',
-        validForDate: null,
-      );
+    test(
+      '3. Repeat ON appears on future weeks via TimetableResolverService',
+      () {
+        final recurringEntry = TimetableEntry(
+          id: 'rec_tue_pem',
+          subject: 'PEM',
+          component: 'Theory',
+          category: EventCategory.academic,
+          batch: 'Whole Class',
+          startTime: 600,
+          endTime: 660,
+          durationMinutes: 60,
+          room: '302',
+          status: 'active',
+          validForDate: null,
+        );
 
-      final rawEntries = [recurringEntry];
+        final rawEntries = [recurringEntry];
 
-      // Week 1: 8 Sep 2026 (Tuesday)
-      final week1 = TimetableResolverService.resolve(
-        rawEntries: rawEntries,
-        targetDateStr: '2026-09-08',
-      );
-      expect(week1.lectures.length, 1);
-      expect(week1.lectures.first.id, 'rec_tue_pem');
+        // Week 1: 8 Sep 2026 (Tuesday)
+        final week1 = TimetableResolverService.resolve(
+          rawEntries: rawEntries,
+          targetDateStr: '2026-09-08',
+        );
+        expect(week1.lectures.length, 1);
+        expect(week1.lectures.first.id, 'rec_tue_pem');
 
-      // Week 2: 15 Sep 2026 (Tuesday)
-      final week2 = TimetableResolverService.resolve(
-        rawEntries: rawEntries,
-        targetDateStr: '2026-09-15',
-      );
-      expect(week2.lectures.length, 1);
-      expect(week2.lectures.first.id, 'rec_tue_pem');
+        // Week 2: 15 Sep 2026 (Tuesday)
+        final week2 = TimetableResolverService.resolve(
+          rawEntries: rawEntries,
+          targetDateStr: '2026-09-15',
+        );
+        expect(week2.lectures.length, 1);
+        expect(week2.lectures.first.id, 'rec_tue_pem');
 
-      // Week 3: 22 Sep 2026 (Tuesday)
-      final week3 = TimetableResolverService.resolve(
-        rawEntries: rawEntries,
-        targetDateStr: '2026-09-22',
-      );
-      expect(week3.lectures.length, 1);
-      expect(week3.lectures.first.id, 'rec_tue_pem');
-    });
+        // Week 3: 22 Sep 2026 (Tuesday)
+        final week3 = TimetableResolverService.resolve(
+          rawEntries: rawEntries,
+          targetDateStr: '2026-09-22',
+        );
+        expect(week3.lectures.length, 1);
+        expect(week3.lectures.first.id, 'rec_tue_pem');
+      },
+    );
 
     test('4. Repeat OFF does NOT appear on following weeks', () {
       final oneOffEntry = TimetableEntry(
@@ -132,65 +138,68 @@ void main() {
       expect(twoWeeksLater.lectures.isEmpty, isTrue);
     });
 
-    test('5. Single-day cancellation hides master for that date while preserving future weeks', () {
-      final masterEntry = TimetableEntry(
-        id: 'master_pem',
-        subject: 'PEM',
-        component: 'Theory',
-        category: EventCategory.academic,
-        batch: 'Whole Class',
-        startTime: 600,
-        endTime: 660,
-        durationMinutes: 60,
-        room: '302',
-        status: 'active',
-        validForDate: null,
-        hiddenOnDates: ['2026-09-15'],
-      );
+    test(
+      '5. Single-day cancellation hides master for that date while preserving future weeks',
+      () {
+        final masterEntry = TimetableEntry(
+          id: 'master_pem',
+          subject: 'PEM',
+          component: 'Theory',
+          category: EventCategory.academic,
+          batch: 'Whole Class',
+          startTime: 600,
+          endTime: 660,
+          durationMinutes: 60,
+          room: '302',
+          status: 'active',
+          validForDate: null,
+          hiddenOnDates: ['2026-09-15'],
+        );
 
-      final cancelledPlaceholder = TimetableEntry(
-        id: 'cancel_placeholder_15th',
-        subject: 'PEM',
-        component: 'Theory',
-        category: EventCategory.academic,
-        batch: 'Whole Class',
-        startTime: 600,
-        endTime: 660,
-        durationMinutes: 60,
-        room: '302',
-        status: 'cancelled',
-        validForDate: '2026-09-15',
-      );
+        final cancelledPlaceholder = TimetableEntry(
+          id: 'cancel_placeholder_15th',
+          subject: 'PEM',
+          component: 'Theory',
+          category: EventCategory.academic,
+          batch: 'Whole Class',
+          startTime: 600,
+          endTime: 660,
+          durationMinutes: 60,
+          room: '302',
+          status: 'cancelled',
+          validForDate: '2026-09-15',
+        );
 
-      final rawEntries = [masterEntry, cancelledPlaceholder];
+        final rawEntries = [masterEntry, cancelledPlaceholder];
 
-      // Week 1 (8 Sep): Master is active
-      final week1 = TimetableResolverService.resolve(
-        rawEntries: rawEntries,
-        targetDateStr: '2026-09-08',
-      );
-      expect(week1.lectures.length, 1);
-      expect(week1.lectures.first.id, 'master_pem');
-      expect(week1.lectures.first.isActive, isTrue);
+        // Week 1 (8 Sep): Master is active
+        final week1 = TimetableResolverService.resolve(
+          rawEntries: rawEntries,
+          targetDateStr: '2026-09-08',
+        );
+        expect(week1.lectures.length, 1);
+        expect(week1.lectures.first.id, 'master_pem');
+        expect(week1.lectures.first.isActive, isTrue);
 
-      // Week 2 (15 Sep): Master is hidden; placeholder is visible with cancelled status
-      final week2 = TimetableResolverService.resolve(
-        rawEntries: rawEntries,
-        targetDateStr: '2026-09-15',
-      );
-      expect(week2.lectures.length, 1);
-      expect(week2.lectures.first.id, 'cancel_placeholder_15th');
-      expect(week2.lectures.first.isCancelled, isTrue);
+        // Week 2 (15 Sep): Master is hidden; placeholder is visible with cancelled status
+        final week2 = TimetableResolverService.resolve(
+          rawEntries: rawEntries,
+          targetDateStr: '2026-09-15',
+        );
+        expect(week2.lectures.length, 1);
+        expect(week2.lectures.first.id, 'cancel_placeholder_15th');
+        expect(week2.lectures.first.isCancelled, isTrue);
 
-      // Week 3 (22 Sep): Master returns automatically as active!
-      final week3 = TimetableResolverService.resolve(
-        rawEntries: rawEntries,
-        targetDateStr: '2026-09-22',
-      );
-      expect(week3.lectures.length, 1);
-      expect(week3.lectures.first.id, 'master_pem');
-      expect(week3.lectures.first.isActive, isTrue);
-    });
+        // Week 3 (22 Sep): Master returns automatically as active!
+        final week3 = TimetableResolverService.resolve(
+          rawEntries: rawEntries,
+          targetDateStr: '2026-09-22',
+        );
+        expect(week3.lectures.length, 1);
+        expect(week3.lectures.first.id, 'master_pem');
+        expect(week3.lectures.first.isActive, isTrue);
+      },
+    );
 
     test('6. Permanent deletion stops all future occurrences', () {
       final rawEntriesBeforeDelete = [

@@ -77,7 +77,8 @@ class _ProfileEditSheetState extends State<ProfileEditSheet> {
 
     // Check if nothing changed
     if (trimmedName == widget.currentName.trim() &&
-        trimmedSapId.toUpperCase() == widget.currentSapId.trim().toUpperCase()) {
+        trimmedSapId.toUpperCase() ==
+            widget.currentSapId.trim().toUpperCase()) {
       Navigator.of(context).pop(false);
       return;
     }
@@ -130,9 +131,7 @@ class _ProfileEditSheetState extends State<ProfileEditSheet> {
               decoration: BoxDecoration(
                 color: sem.cancelled.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppRadius.md),
-                border: Border.all(
-                  color: sem.cancelled.withValues(alpha: 0.3),
-                ),
+                border: Border.all(color: sem.cancelled.withValues(alpha: 0.3)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -205,15 +204,17 @@ class _ProfileEditSheetState extends State<ProfileEditSheet> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: _isSaving ? null : () => Navigator.of(context).pop(false),
+                  onPressed: _isSaving
+                      ? null
+                      : () => Navigator.of(context).pop(false),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.md,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.lg),
                     ),
-                    side: BorderSide(
-                      color: sem.borderSubtle,
-                    ),
+                    side: BorderSide(color: sem.borderSubtle),
                   ),
                   child: Text(
                     'Cancel',
@@ -231,7 +232,9 @@ class _ProfileEditSheetState extends State<ProfileEditSheet> {
                   style: FilledButton.styleFrom(
                     backgroundColor: colorScheme.primary,
                     foregroundColor: colorScheme.onPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.md,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.lg),
                     ),
@@ -249,9 +252,7 @@ class _ProfileEditSheetState extends State<ProfileEditSheet> {
                         )
                       : Text(
                           'Save Changes',
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                         ),
                 ),
               ),

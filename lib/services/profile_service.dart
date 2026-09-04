@@ -139,11 +139,7 @@ class ProfileService {
       'facultyId': sapId,
       'sapId': sapId,
       'rollNo': sapId,
-      'draftProfile': {
-        'name': name,
-        'facultyId': sapId,
-        'sapId': sapId,
-      },
+      'draftProfile': {'name': name, 'facultyId': sapId, 'sapId': sapId},
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
@@ -165,10 +161,7 @@ class ProfileService {
     await batch.commit();
 
     // 3. Update local state
-    await AppSettings.updateFacultyProfileNameAndId(
-      name: name,
-      sapId: sapId,
-    );
+    await AppSettings.updateFacultyProfileNameAndId(name: name, sapId: sapId);
 
     // 4. Update Auth display name
     try {
@@ -227,11 +220,7 @@ class ProfileService {
       'name': name,
       'rollNo': sapId,
       'sapId': sapId,
-      'draftProfile': {
-        'name': name,
-        'rollNo': sapId,
-        'sapId': sapId,
-      },
+      'draftProfile': {'name': name, 'rollNo': sapId, 'sapId': sapId},
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 

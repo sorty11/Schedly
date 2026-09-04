@@ -377,9 +377,16 @@ class PdfTimetableImportService {
         s = s.replaceAll(RegExp(r'[_:\-]+$'), '').trim();
       }
 
+      String entryId;
+      try {
+        entryId = db.collection('timetables').doc().id;
+      } catch (_) {
+        entryId = 'entry_${DateTime.now().microsecondsSinceEpoch}_$i';
+      }
+
       entries.add(
         TimetableEntry(
-          id: db.collection('timetables').doc().id, // Random auto-id
+          id: entryId, // Auto-id
           subject: s,
           component: component,
           category: category,

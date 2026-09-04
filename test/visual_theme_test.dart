@@ -8,17 +8,26 @@ void main() {
 
   group('SchedlyVisualTheme Enum Tests', () {
     test('fromId correctly parses all themes', () {
-      expect(SchedlyVisualTheme.fromId('default'), SchedlyVisualTheme.defaultTheme);
+      expect(
+        SchedlyVisualTheme.fromId('default'),
+        SchedlyVisualTheme.defaultTheme,
+      );
       expect(SchedlyVisualTheme.fromId('space'), SchedlyVisualTheme.space);
       expect(SchedlyVisualTheme.fromId('cats'), SchedlyVisualTheme.cats);
-      expect(SchedlyVisualTheme.fromId('cyber_robo'), SchedlyVisualTheme.cyberRobo);
+      expect(
+        SchedlyVisualTheme.fromId('cyber_robo'),
+        SchedlyVisualTheme.cyberRobo,
+      );
       expect(SchedlyVisualTheme.fromId('arcade'), SchedlyVisualTheme.arcade);
     });
 
     test('fromId falls back to defaultTheme on null or unknown id', () {
       expect(SchedlyVisualTheme.fromId(null), SchedlyVisualTheme.defaultTheme);
       expect(SchedlyVisualTheme.fromId(''), SchedlyVisualTheme.defaultTheme);
-      expect(SchedlyVisualTheme.fromId('nonexistent_theme'), SchedlyVisualTheme.defaultTheme);
+      expect(
+        SchedlyVisualTheme.fromId('nonexistent_theme'),
+        SchedlyVisualTheme.defaultTheme,
+      );
     });
 
     test('Each theme has valid title, description, and icon', () {
@@ -50,35 +59,44 @@ void main() {
       expect(controller.visualTheme, SchedlyVisualTheme.space);
     });
 
-    test('setVisualTheme updates state, notifies listeners, and persists to SharedPreferences', () async {
-      SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
-      final controller = ThemeController(prefs);
+    test(
+      'setVisualTheme updates state, notifies listeners, and persists to SharedPreferences',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final controller = ThemeController(prefs);
 
-      bool notified = false;
-      controller.addListener(() {
-        notified = true;
-      });
+        bool notified = false;
+        controller.addListener(() {
+          notified = true;
+        });
 
-      await controller.setVisualTheme(SchedlyVisualTheme.cats);
+        await controller.setVisualTheme(SchedlyVisualTheme.cats);
 
-      expect(controller.visualTheme, SchedlyVisualTheme.cats);
-      expect(notified, true);
-      expect(prefs.getString('visual_theme_preference'), 'cats');
+        expect(controller.visualTheme, SchedlyVisualTheme.cats);
+        expect(notified, true);
+        expect(prefs.getString('visual_theme_preference'), 'cats');
 
-      // Changing back to defaultTheme
-      notified = false;
-      await controller.setVisualTheme(SchedlyVisualTheme.defaultTheme);
-      expect(controller.visualTheme, SchedlyVisualTheme.defaultTheme);
-      expect(notified, true);
-      expect(prefs.getString('visual_theme_preference'), 'default');
-    });
+        // Changing back to defaultTheme
+        notified = false;
+        await controller.setVisualTheme(SchedlyVisualTheme.defaultTheme);
+        expect(controller.visualTheme, SchedlyVisualTheme.defaultTheme);
+        expect(notified, true);
+        expect(prefs.getString('visual_theme_preference'), 'default');
+      },
+    );
   });
 
   group('AppTheme transparentScaffold Tests', () {
     test('Default theme retains original solid scaffold backgrounds', () {
-      final light = AppTheme.buildTheme(isDark: false, transparentScaffold: false);
-      final dark = AppTheme.buildTheme(isDark: true, transparentScaffold: false);
+      final light = AppTheme.buildTheme(
+        isDark: false,
+        transparentScaffold: false,
+      );
+      final dark = AppTheme.buildTheme(
+        isDark: true,
+        transparentScaffold: false,
+      );
 
       expect(light.scaffoldBackgroundColor, isNot(Colors.transparent));
       expect(dark.scaffoldBackgroundColor, isNot(Colors.transparent));
@@ -86,19 +104,30 @@ void main() {
       expect(dark.scaffoldBackgroundColor, AppColors.backgroundDark);
     });
 
-    test('Custom theme provides transparent scaffold and app bar backgrounds', () {
-      final light = AppTheme.buildTheme(isDark: false, transparentScaffold: true);
-      final dark = AppTheme.buildTheme(isDark: true, transparentScaffold: true);
+    test(
+      'Custom theme provides transparent scaffold and app bar backgrounds',
+      () {
+        final light = AppTheme.buildTheme(
+          isDark: false,
+          transparentScaffold: true,
+        );
+        final dark = AppTheme.buildTheme(
+          isDark: true,
+          transparentScaffold: true,
+        );
 
-      expect(light.scaffoldBackgroundColor, Colors.transparent);
-      expect(dark.scaffoldBackgroundColor, Colors.transparent);
-      expect(light.appBarTheme.backgroundColor, Colors.transparent);
-      expect(dark.appBarTheme.backgroundColor, Colors.transparent);
-    });
+        expect(light.scaffoldBackgroundColor, Colors.transparent);
+        expect(dark.scaffoldBackgroundColor, Colors.transparent);
+        expect(light.appBarTheme.backgroundColor, Colors.transparent);
+        expect(dark.appBarTheme.backgroundColor, Colors.transparent);
+      },
+    );
   });
 
   group('AnimatedThemeBackground Widget Tests', () {
-    testWidgets('defaultTheme renders child without any background stack', (tester) async {
+    testWidgets('defaultTheme renders child without any background stack', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: AnimatedThemeBackground(
@@ -112,7 +141,9 @@ void main() {
       expect(find.byType(AnimatedThemeCanvas), findsNothing);
     });
 
-    testWidgets('space theme renders AnimatedThemeCanvas behind child', (tester) async {
+    testWidgets('space theme renders AnimatedThemeCanvas behind child', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: AnimatedThemeBackground(

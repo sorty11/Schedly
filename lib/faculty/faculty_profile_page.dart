@@ -1003,7 +1003,8 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
     final department = AppSettings.facultyDepartment ?? 'Department';
     final designation = AppSettings.facultyDesignation ?? 'Designation';
     final cabin = AppSettings.facultyCabin ?? 'Cabin Unknown';
-    final facultySap = AppSettings.facultySapId ??
+    final facultySap =
+        AppSettings.facultySapId ??
         (AppSettings.facultyId != null && AppSettings.facultyId!.isNotEmpty
             ? AppSettings.facultyId
             : null);
@@ -1098,15 +1099,20 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                             const SizedBox(height: AppSpacing.sm),
 
                             // SAP ID / Faculty ID chip
-                            if (facultySap != null && facultySap.isNotEmpty) ...[
+                            if (facultySap != null &&
+                                facultySap.isNotEmpty) ...[
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: AppSpacing.md,
                                   vertical: AppSpacing.xs,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: colorScheme.primary.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(AppRadius.full),
+                                  color: colorScheme.primary.withValues(
+                                    alpha: 0.08,
+                                  ),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.full,
+                                  ),
                                   border: Border.all(
                                     color: colorScheme.primary.withValues(
                                       alpha: 0.18,
@@ -1214,10 +1220,14 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: colorScheme.primary,
                                 side: BorderSide(
-                                  color: colorScheme.primary.withValues(alpha: 0.25),
+                                  color: colorScheme.primary.withValues(
+                                    alpha: 0.25,
+                                  ),
                                 ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppRadius.full),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.full,
+                                  ),
                                 ),
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: AppSpacing.lg,

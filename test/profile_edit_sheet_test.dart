@@ -10,16 +10,31 @@ void main() {
       expect(ProfileService.validateName(null), 'Name cannot be empty');
       expect(ProfileService.validateName(''), 'Name cannot be empty');
       expect(ProfileService.validateName('   '), 'Name cannot be empty');
-      expect(ProfileService.validateName('A'), 'Name must be at least 2 characters');
+      expect(
+        ProfileService.validateName('A'),
+        'Name must be at least 2 characters',
+      );
       expect(ProfileService.validateName('John Doe'), isNull);
       expect(ProfileService.validateName('  Jane Smith  '), isNull);
     });
 
     test('validateSapId correctly validates SAP ID formats', () {
-      expect(ProfileService.validateSapId(null), 'SAP ID / Roll Number cannot be empty');
-      expect(ProfileService.validateSapId(''), 'SAP ID / Roll Number cannot be empty');
-      expect(ProfileService.validateSapId('   '), 'SAP ID / Roll Number cannot be empty');
-      expect(ProfileService.validateSapId('X'), 'Must be at least 2 characters');
+      expect(
+        ProfileService.validateSapId(null),
+        'SAP ID / Roll Number cannot be empty',
+      );
+      expect(
+        ProfileService.validateSapId(''),
+        'SAP ID / Roll Number cannot be empty',
+      );
+      expect(
+        ProfileService.validateSapId('   '),
+        'SAP ID / Roll Number cannot be empty',
+      );
+      expect(
+        ProfileService.validateSapId('X'),
+        'Must be at least 2 characters',
+      );
       expect(
         ProfileService.validateSapId('Invalid SAP!'),
         'Must be alphanumeric (letters, numbers, hyphen or underscore)',
@@ -55,12 +70,16 @@ void main() {
       );
     }
 
-    testWidgets('Pre-fills existing Name and SAP ID for Student', (tester) async {
-      await tester.pumpWidget(buildTestWidget(
-        currentName: 'Aarav Patel',
-        currentSapId: 'A137',
-        isFaculty: false,
-      ));
+    testWidgets('Pre-fills existing Name and SAP ID for Student', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildTestWidget(
+          currentName: 'Aarav Patel',
+          currentSapId: 'A137',
+          isFaculty: false,
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Aarav Patel'), findsOneWidget);
@@ -70,12 +89,16 @@ void main() {
       expect(find.text('Cancel'), findsOneWidget);
     });
 
-    testWidgets('Pre-fills existing Name and Faculty ID for Faculty', (tester) async {
-      await tester.pumpWidget(buildTestWidget(
-        currentName: 'Dr. Sharma',
-        currentSapId: 'FAC701',
-        isFaculty: true,
-      ));
+    testWidgets('Pre-fills existing Name and Faculty ID for Faculty', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildTestWidget(
+          currentName: 'Dr. Sharma',
+          currentSapId: 'FAC701',
+          isFaculty: true,
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Dr. Sharma'), findsOneWidget);
@@ -85,11 +108,13 @@ void main() {
     });
 
     testWidgets('Shows validation errors on empty submission', (tester) async {
-      await tester.pumpWidget(buildTestWidget(
-        currentName: 'Aarav Patel',
-        currentSapId: 'A137',
-        isFaculty: false,
-      ));
+      await tester.pumpWidget(
+        buildTestWidget(
+          currentName: 'Aarav Patel',
+          currentSapId: 'A137',
+          isFaculty: false,
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Clear the text fields
@@ -105,15 +130,22 @@ void main() {
       expect(find.text('SAP ID / Roll Number cannot be empty'), findsOneWidget);
     });
 
-    testWidgets('Whitespace trimming and valid input acceptance', (tester) async {
-      await tester.pumpWidget(buildTestWidget(
-        currentName: 'Aarav Patel',
-        currentSapId: 'A137',
-        isFaculty: false,
-      ));
+    testWidgets('Whitespace trimming and valid input acceptance', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildTestWidget(
+          currentName: 'Aarav Patel',
+          currentSapId: 'A137',
+          isFaculty: false,
+        ),
+      );
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextFormField).first, '   Rohan Varma   ');
+      await tester.enterText(
+        find.byType(TextFormField).first,
+        '   Rohan Varma   ',
+      );
       await tester.enterText(find.byType(TextFormField).last, '   b042   ');
       await tester.pumpAndSettle();
 

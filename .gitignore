@@ -41,3 +41,7 @@ server/node_modules/
 
 # Builds
 *.apk
+
+# Python
+__pycache__/
+*.pyc

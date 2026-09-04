@@ -38,7 +38,9 @@ class AnimatedThemeBackground extends StatelessWidget {
                   radius: 1.25,
                   colors: [
                     Colors.transparent,
-                    (isDark ? Colors.black : Colors.white).withValues(alpha: isDark ? 0.25 : 0.40),
+                    (isDark ? Colors.black : Colors.white).withValues(
+                      alpha: isDark ? 0.25 : 0.40,
+                    ),
                   ],
                   stops: const [0.35, 1.0],
                 ),
@@ -108,7 +110,9 @@ class _AnimatedThemeCanvasState extends State<AnimatedThemeCanvas>
   Widget build(BuildContext context) {
     if (widget.theme == SchedlyVisualTheme.defaultTheme) {
       return Container(
-        color: widget.isDark ? const Color(0xFF000000) : const Color(0xFFF9F9F9),
+        color: widget.isDark
+            ? const Color(0xFF000000)
+            : const Color(0xFFF9F9F9),
       );
     }
 
@@ -149,10 +153,7 @@ class _AnimatedThemeCanvasState extends State<AnimatedThemeCanvas>
             return const SizedBox.shrink();
         }
 
-        return CustomPaint(
-          painter: painter,
-          size: Size.infinite,
-        );
+        return CustomPaint(painter: painter, size: Size.infinite);
       },
     );
   }
@@ -193,11 +194,7 @@ class SpaceThemePainter extends CustomPainter {
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [
-          Color(0xFF030612),
-          Color(0xFF070B1E),
-          Color(0xFF02040B),
-        ],
+        colors: [Color(0xFF030612), Color(0xFF070B1E), Color(0xFF02040B)],
       ).createShader(rect);
     canvas.drawRect(rect, bgPaint);
 
@@ -205,19 +202,20 @@ class SpaceThemePainter extends CustomPainter {
     final nebulaRadius = math.min(size.width, size.height) * 0.75;
     final nebulaPulse = math.sin(progress * math.pi * 2) * 0.08 + 0.92;
     final nebulaPaint = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          const Color(0xFF381559).withValues(alpha: 0.35 * nebulaPulse),
-          const Color(0xFF0D2354).withValues(alpha: 0.25 * nebulaPulse),
-          Colors.transparent,
-        ],
-        stops: const [0.0, 0.5, 1.0],
-      ).createShader(
-        Rect.fromCircle(
-          center: Offset(size.width * 0.65, size.height * 0.35),
-          radius: nebulaRadius,
-        ),
-      );
+      ..shader =
+          RadialGradient(
+            colors: [
+              const Color(0xFF381559).withValues(alpha: 0.35 * nebulaPulse),
+              const Color(0xFF0D2354).withValues(alpha: 0.25 * nebulaPulse),
+              Colors.transparent,
+            ],
+            stops: const [0.0, 0.5, 1.0],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width * 0.65, size.height * 0.35),
+              radius: nebulaRadius,
+            ),
+          );
     canvas.drawRect(rect, nebulaPaint);
 
     // Drifting twinkling starfield
@@ -228,7 +226,8 @@ class SpaceThemePainter extends CustomPainter {
       final s = _stars[i];
       final currentY = (s.y + progress * s.speed) % 1.0 * size.height;
       final currentX = s.x * size.width;
-      final blink = (math.sin(progress * math.pi * 6 + s.blinkOffset) + 1.0) / 2.0;
+      final blink =
+          (math.sin(progress * math.pi * 6 + s.blinkOffset) + 1.0) / 2.0;
       final opacity = (0.35 + 0.65 * blink).clamp(0.0, 1.0);
 
       starPaint.color = s.isCyan
@@ -257,17 +256,18 @@ class SpaceThemePainter extends CustomPainter {
       final shootPaint = Paint()
         ..strokeWidth = 1.2
         ..strokeCap = StrokeCap.round
-        ..shader = LinearGradient(
-          colors: [
-            Colors.white.withValues(alpha: (1.0 - t) * 0.8),
-            Colors.transparent,
-          ],
-        ).createShader(
-          Rect.fromPoints(
-            Offset(startX, startY),
-            Offset(startX - tailLength, startY - tailLength * 0.35),
-          ),
-        );
+        ..shader =
+            LinearGradient(
+              colors: [
+                Colors.white.withValues(alpha: (1.0 - t) * 0.8),
+                Colors.transparent,
+              ],
+            ).createShader(
+              Rect.fromPoints(
+                Offset(startX, startY),
+                Offset(startX - tailLength, startY - tailLength * 0.35),
+              ),
+            );
       canvas.drawLine(
         Offset(startX, startY),
         Offset(startX - tailLength, startY - tailLength * 0.35),
@@ -320,7 +320,9 @@ class CatsThemePainter extends CustomPainter {
       initialY: rand.nextDouble(),
       speed: 0.04 + rand.nextDouble() * 0.06,
       scale: 0.75 + rand.nextDouble() * 0.5,
-      type: rand.nextInt(3), // 0: sleeping cat head, 1: paw print, 2: star sparkle
+      type: rand.nextInt(
+        3,
+      ), // 0: sleeping cat head, 1: paw print, 2: star sparkle
       swayOffset: rand.nextDouble() * math.pi * 2,
     );
   });
@@ -334,27 +336,24 @@ class CatsThemePainter extends CustomPainter {
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [
-          Color(0xFF13101C),
-          Color(0xFF181324),
-          Color(0xFF0F0E16),
-        ],
+        colors: [Color(0xFF13101C), Color(0xFF181324), Color(0xFF0F0E16)],
       ).createShader(rect);
     canvas.drawRect(rect, bgPaint);
 
     // Warm pastel radial ambient glows
     final glowPaint = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          const Color(0xFF4C2A4C).withValues(alpha: 0.28),
-          Colors.transparent,
-        ],
-      ).createShader(
-        Rect.fromCircle(
-          center: Offset(size.width * 0.3, size.height * 0.4),
-          radius: size.width * 0.6,
-        ),
-      );
+      ..shader =
+          RadialGradient(
+            colors: [
+              const Color(0xFF4C2A4C).withValues(alpha: 0.28),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width * 0.3, size.height * 0.4),
+              radius: size.width * 0.6,
+            ),
+          );
     canvas.drawRect(rect, glowPaint);
 
     final linePaint = Paint()
@@ -494,27 +493,24 @@ class CyberRoboThemePainter extends CustomPainter {
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [
-          Color(0xFF040A12),
-          Color(0xFF06101D),
-          Color(0xFF03070E),
-        ],
+        colors: [Color(0xFF040A12), Color(0xFF06101D), Color(0xFF03070E)],
       ).createShader(rect);
     canvas.drawRect(rect, bgPaint);
 
     // Cyan glowing ambient radial glow
     final glowPaint = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          const Color(0xFF00B4D8).withValues(alpha: 0.18),
-          Colors.transparent,
-        ],
-      ).createShader(
-        Rect.fromCircle(
-          center: Offset(size.width * 0.5, size.height * 0.7),
-          radius: size.width * 0.7,
-        ),
-      );
+      ..shader =
+          RadialGradient(
+            colors: [
+              const Color(0xFF00B4D8).withValues(alpha: 0.18),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width * 0.5, size.height * 0.7),
+              radius: size.width * 0.7,
+            ),
+          );
     canvas.drawRect(rect, glowPaint);
 
     // Grid Perspective in bottom third
@@ -640,11 +636,7 @@ class ArcadeThemePainter extends CustomPainter {
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [
-          Color(0xFF090412),
-          Color(0xFF140824),
-          Color(0xFF080310),
-        ],
+        colors: [Color(0xFF090412), Color(0xFF140824), Color(0xFF080310)],
       ).createShader(rect);
     canvas.drawRect(rect, bgPaint);
 
@@ -652,17 +644,21 @@ class ArcadeThemePainter extends CustomPainter {
     final horizonY = size.height * 0.46;
     final sunRadius = math.min(size.width * 0.40, 150.0);
     final sunPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          const Color(0xFFFF007F).withValues(alpha: 0.50),
-          const Color(0xFFFF8C00).withValues(alpha: 0.25),
-          Colors.transparent,
-        ],
-      ).createShader(
-        Rect.fromCircle(center: Offset(size.width * 0.5, horizonY), radius: sunRadius),
-      );
+      ..shader =
+          LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFFFF007F).withValues(alpha: 0.50),
+              const Color(0xFFFF8C00).withValues(alpha: 0.25),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width * 0.5, horizonY),
+              radius: sunRadius,
+            ),
+          );
     canvas.drawCircle(Offset(size.width * 0.5, horizonY), sunRadius, sunPaint);
 
     // Retro horizon grid
@@ -693,11 +689,17 @@ class ArcadeThemePainter extends CustomPainter {
       final y = (p.initialY - progress * p.speed) % 1.0 * size.height;
       final x = p.x * size.width;
 
-      final color = p.isMagenta ? const Color(0xFFFF007F) : const Color(0xFF00F0FF);
+      final color = p.isMagenta
+          ? const Color(0xFFFF007F)
+          : const Color(0xFF00F0FF);
       pixelPaint.color = color.withValues(alpha: 0.35);
 
       // Pixel diamond or square
-      final pRect = Rect.fromCenter(center: Offset(x, y), width: p.size, height: p.size);
+      final pRect = Rect.fromCenter(
+        center: Offset(x, y),
+        width: p.size,
+        height: p.size,
+      );
       canvas.drawRect(pRect, pixelPaint);
     }
   }
