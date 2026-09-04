@@ -11,6 +11,7 @@ import '../app_settings.dart';
 import '../user_roles.dart';
 import '../services/history_service.dart';
 import '../services/timetable_event_service.dart';
+import '../services/permission_service.dart';
 import 'app_dialogs.dart';
 import 'schedly_text_field.dart';
 import 'schedly_bottom_sheet.dart';
@@ -37,6 +38,7 @@ class TimetableStudioSheet extends StatefulWidget {
     required String initialDay,
     TimetableEntry? existingEntry,
     TimetableEntry? duplicateFrom,
+    DateTime? targetDateForOverride,
   }) async {
     await showModalBottomSheet(
       context: context,
@@ -47,6 +49,7 @@ class TimetableStudioSheet extends StatefulWidget {
         initialDay: initialDay,
         existingEntry: existingEntry,
         duplicateFrom: duplicateFrom,
+        targetDateForOverride: targetDateForOverride,
       ),
     );
   }
@@ -145,9 +148,14 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
           ? (entry.validForDate == null)
           : false;
     } else {
-      _subject = _lastSubject ?? '';
-      _batch = _lastBatch ?? 'Whole Class';
-      _component = _lastComponent ?? 'Theory';
+      final isSR = AppSettings.currentRole == UserRole.sr;
+      _subject = _lastSubject ?? (isSR ? (AppSettings.srSubject ?? '') : '');
+      _batch =
+          _lastBatch ??
+          (isSR ? (AppSettings.srBatch ?? 'Whole Class') : 'Whole Class');
+      _component =
+          _lastComponent ??
+          (isSR ? (AppSettings.srComponent ?? 'Theory') : 'Theory');
       _category = _lastCategory ?? EventCategory.academic;
       _room = _lastRoom ?? '';
       _startTime = 9 * 60;
@@ -163,6 +171,14 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
     final subjects = await TimetableManager.getUniqueSubjects(
       division: widget.division,
     );
+    if (AppSettings.currentRole == UserRole.sr &&
+        AppSettings.srSubject != null &&
+        AppSettings.srSubject!.trim().isNotEmpty) {
+      final srSubj = AppSettings.srSubject!.trim();
+      if (!subjects.contains(srSubj)) {
+        subjects.add(srSubj);
+      }
+    }
 
     final Set<String> rooms = {};
     for (final day in _days) {
@@ -453,6 +469,16 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final isEditing = widget.existingEntry != null;
     final isCR = AppSettings.currentRole == UserRole.cr;
+    final isSR = AppSettings.currentRole == UserRole.sr;
+    final canDelete =
+        isCR ||
+        (isSR &&
+            widget.existingEntry != null &&
+            PermissionService.canManageLecture(
+              lectureSubject: widget.existingEntry!.subjectCode,
+              lectureComponent: widget.existingEntry!.component,
+              lectureBatch: widget.existingEntry!.batch,
+            ));
 
     return Padding(
       padding: EdgeInsets.only(
@@ -725,103 +751,141 @@ class _TimetableStudioSheetState extends State<TimetableStudioSheet> {
 
             // ── Section: Options ──────────────────────────────────────
             _buildSectionLabel('Options'),
-            Container(
-              decoration: BoxDecoration(
-                color: _repeatWeekly
-                    ? colorScheme.primary.withValues(alpha: 0.1)
-                    : (isDark ? sem.surfaceElevated : const Color(0xFFF8F8FC)),
-                borderRadius: BorderRadius.circular(AppRadius.xl),
-                border: Border.all(
+            Material(
+              color: Colors.transparent,
+              child: Ink(
+                decoration: BoxDecoration(
                   color: _repeatWeekly
-                      ? colorScheme.primary.withValues(alpha: 0.3)
-                      : sem.borderSubtle,
-                  width: _repeatWeekly ? 1.5 : 1.0,
-                ),
-              ),
-              child: SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xl,
-                  vertical: AppSpacing.sm,
-                ),
-                title: Row(
-                  children: [
-                    Icon(
-                      _repeatWeekly
-                          ? Icons.repeat_rounded
-                          : Icons.today_rounded,
-                      size: 20,
-                      color: _repeatWeekly
-                          ? colorScheme.primary
-                          : colorScheme.onSurface,
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Text(
-                      'Repeat weekly',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: _repeatWeekly
-                            ? colorScheme.primary
-                            : colorScheme.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-                subtitle: Padding(
-                  padding: const EdgeInsets.only(left: 32.0, top: 4.0),
-                  child: Text(
-                    _repeatWeekly
-                        ? 'Applies every $_selectedDay'
-                        : 'Only applies on ${widget.targetDateForOverride != null ? DateFormat('d MMM').format(widget.targetDateForOverride!) : DateFormat('d MMM').format(DateTime.parse(_getTargetDateStr(_selectedDay)))}',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 13,
-                      color: _repeatWeekly
-                          ? colorScheme.primary.withValues(alpha: 0.8)
-                          : sem.onSurfaceMuted,
-                      fontWeight: FontWeight.w500,
-                    ),
+                      ? colorScheme.primary.withValues(
+                          alpha: isDark ? 0.15 : 0.08,
+                        )
+                      : (isDark
+                            ? sem.surfaceElevated
+                            : const Color(0xFFF8F8FC)),
+                  borderRadius: BorderRadius.circular(AppRadius.xl),
+                  border: Border.all(
+                    color: _repeatWeekly
+                        ? colorScheme.primary.withValues(alpha: 0.4)
+                        : sem.borderSubtle,
+                    width: _repeatWeekly ? 1.5 : 1.0,
                   ),
                 ),
-                value: _repeatWeekly,
-                onChanged: (val) {
-                  HapticFeedback.lightImpact();
-                  setState(() => _repeatWeekly = val);
-                },
-                activeColor: colorScheme.primary,
-                shape: RoundedRectangleBorder(
+                child: InkWell(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    setState(() => _repeatWeekly = !_repeatWeekly);
+                  },
                   borderRadius: BorderRadius.circular(AppRadius.xl),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.md,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: _repeatWeekly
+                                ? colorScheme.primary.withValues(alpha: 0.15)
+                                : (isDark
+                                      ? sem.surfaceElevated2
+                                      : Colors.black.withValues(alpha: 0.04)),
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                          ),
+                          child: Icon(
+                            _repeatWeekly
+                                ? Icons.repeat_rounded
+                                : Icons.today_rounded,
+                            size: 20,
+                            color: _repeatWeekly
+                                ? colorScheme.primary
+                                : sem.onSurfaceMuted,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Repeat weekly',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: colorScheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _repeatWeekly
+                                    ? 'Applies every $_selectedDay'
+                                    : 'Only applies on ${widget.targetDateForOverride != null ? DateFormat('d MMM').format(widget.targetDateForOverride!) : DateFormat('d MMM').format(DateTime.parse(_getTargetDateStr(_selectedDay)))}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: _repeatWeekly
+                                      ? colorScheme.primary
+                                      : sem.onSurfaceMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Transform.scale(
+                          scale: 0.85,
+                          child: Switch.adaptive(
+                            value: _repeatWeekly,
+                            activeColor: colorScheme.primary,
+                            onChanged: (val) {
+                              HapticFeedback.lightImpact();
+                              setState(() => _repeatWeekly = val);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: AppSpacing.x3l),
 
             // ── Action Buttons ────────────────────────────────────────
-            if (isEditing && isCR)
+            if (isEditing)
               Row(
                 children: [
-                  // Delete button (icon only, outlined)
-                  SizedBox(
-                    height: 52,
-                    child: OutlinedButton(
-                      onPressed: _isLoading ? null : _confirmDelete,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: colorScheme.error,
-                        side: BorderSide(
-                          color: colorScheme.error.withValues(alpha: 0.5),
+                  if (canDelete) ...[
+                    // Delete button (icon only, outlined)
+                    SizedBox(
+                      height: 52,
+                      child: OutlinedButton(
+                        onPressed: _isLoading ? null : _confirmDelete,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: colorScheme.error,
+                          side: BorderSide(
+                            color: colorScheme.error.withValues(alpha: 0.5),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                          ),
                         ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.lg),
-                        ),
+                        child: const Icon(Icons.delete_rounded, size: 20),
                       ),
-                      child: const Icon(Icons.delete_rounded, size: 20),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
+                    const SizedBox(width: AppSpacing.md),
+                  ],
                   Expanded(
                     child: _ActionButton(
                       label: 'Save Changes',

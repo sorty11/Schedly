@@ -179,10 +179,23 @@ class _CRPanelPageState extends State<CRPanelPage> {
     if (division == null) return;
 
     if (!mounted) return;
+    const days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
+    final weekday = DateTime.now().weekday;
+    final initialDay = weekday >= 1 && weekday <= 6
+        ? days[weekday - 1]
+        : 'Monday';
+
     await TimetableStudioSheet.show(
       context,
       division: division,
-      initialDay: 'Monday', // Provide a default day, user can change it
+      initialDay: initialDay,
     );
   }
 
