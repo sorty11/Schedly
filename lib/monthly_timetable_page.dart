@@ -183,50 +183,6 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
     _loadAllTimetables();
   }
 
-  Color _subjectColor(String subject, BuildContext context) {
-    if (subject.toLowerCase().contains('lunch')) {
-      return Colors.amber;
-    }
-    final colorScheme = Theme.of(context).colorScheme;
-    final sem = Theme.of(context).extension<AppSemanticColors>()!;
-    final colors = [
-      colorScheme.primary,
-      colorScheme.secondary,
-      sem.accent,
-      sem.conducted,
-      sem.rescheduled,
-    ];
-    return colors[subject.hashCode.abs() % colors.length];
-  }
-
-  IconData _subjectIcon(String subject) {
-    switch (subject.toLowerCase()) {
-      case 'mathematics':
-        return Icons.calculate_rounded;
-      case 'programming':
-      case 'oop':
-      case 'java':
-        return Icons.computer_rounded;
-      case 'beee':
-        return Icons.electrical_services_rounded;
-      case 'physics':
-        return Icons.science_rounded;
-      case 'chemistry':
-        return Icons.biotech_rounded;
-      case 'dbms':
-        return Icons.storage_rounded;
-      case 'lade':
-        return Icons.menu_book_rounded;
-      case 'ctps':
-        return Icons.lightbulb_rounded;
-      case 'lunch break':
-      case 'lunch':
-        return Icons.restaurant_rounded;
-      default:
-        return Icons.book_rounded;
-    }
-  }
-
   Widget _buildCalendarGrid(AppSemanticColors sem, ColorScheme colorScheme) {
     final daysInMonth = DateTime(
       _currentMonth.year,
@@ -436,7 +392,7 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
                 final collapsedHeight = safeAreaTop + kToolbarHeight + dhHeight;
 
                 return CustomScrollView(
-                  physics: const BouncingScrollPhysics(),
+                  physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
                     SliverPersistentHeader(
                       pinned: true,
@@ -499,16 +455,6 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
                             index,
                           ) {
                             final entries = groupedLectures[index];
-                            final allCancelled = entries.every(
-                              (e) => !e.isActive,
-                            );
-                            final activeEntry = entries.firstWhere(
-                              (e) => e.isActive,
-                              orElse: () => entries.first,
-                            );
-                            final subjectColor = allCancelled
-                                ? sem.cancelled
-                                : _subjectColor(activeEntry.subject, context);
 
                             return StaggeredListItem(
                               index: index,
@@ -516,173 +462,24 @@ class _MonthlyTimetablePageState extends State<MonthlyTimetablePage> {
                                 padding: const EdgeInsets.only(
                                   bottom: AppSpacing.md,
                                 ),
-                                child: AnimatedCard(
-                                  borderRadius: AppRadius.xl,
-                                  backgroundColor: allCancelled
-                                      ? sem.cancelled.withValues(alpha: 0.05)
-                                      : isDark
-                                      ? sem.surfaceElevated
-                                      : colorScheme.surface,
+                                child: ThemedLectureCard(
+                                  entries: entries,
+                                  isEditMode: canEdit,
+                                  canEditEntry: (e) => canEdit,
                                   onTap: (canEdit && entries.length == 1)
                                       ? () => _openStudio(
                                           _selectedDate,
                                           existingEntry: entries.first,
                                         )
                                       : null,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(
-                                        AppRadius.xl,
-                                      ),
-                                      border: Border(
-                                        left: BorderSide(
-                                          color: subjectColor,
-                                          width: 4,
-                                        ),
-                                      ),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(
-                                        AppSpacing.xl,
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: entries.asMap().entries.map((
-                                          mapEntry,
-                                        ) {
-                                          final entry = mapEntry.value;
-                                          final isCancelled = !entry.isActive;
-                                          final entryColor = isCancelled
-                                              ? sem.cancelled
-                                              : _subjectColor(
-                                                  entry.subject,
-                                                  context,
-                                                );
-
-                                          Widget content = Row(
-                                            children: [
-                                              Container(
-                                                width: 48,
-                                                height: 48,
-                                                decoration: BoxDecoration(
-                                                  color: entryColor.withValues(
-                                                    alpha: 0.1,
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        AppRadius.md,
-                                                      ),
-                                                ),
-                                                child: Icon(
-                                                  isCancelled
-                                                      ? Icons.cancel_rounded
-                                                      : _subjectIcon(
-                                                          entry.subject,
-                                                        ),
-                                                  color: entryColor,
-                                                  size: 22,
-                                                ),
-                                              ),
-                                              const SizedBox(
-                                                width: AppSpacing.lg,
-                                              ),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Row(
-                                                      children: [
-                                                        Expanded(
-                                                          child: Text(
-                                                            entry
-                                                                .displaySubject,
-                                                            style: GoogleFonts.outfit(
-                                                              fontSize: 17,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w700,
-                                                              color: isCancelled
-                                                                  ? sem.cancelled
-                                                                  : colorScheme
-                                                                        .onSurface,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                        Text(
-                                                          TimetableManager.formatTime(
-                                                            entry.startTime,
-                                                            entry.endTime,
-                                                          ),
-                                                          style: GoogleFonts.inter(
-                                                            fontSize: 13,
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            color: isCancelled
-                                                                ? sem.cancelled
-                                                                      .withValues(
-                                                                        alpha:
-                                                                            0.7,
-                                                                      )
-                                                                : colorScheme
-                                                                      .primary,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    const SizedBox(height: 4),
-                                                    Text(
-                                                      isCancelled
-                                                          ? 'CANCELLED'
-                                                          : [
-                                                                  entry.room,
-                                                                  if (entry
-                                                                      .component
-                                                                      .isNotEmpty)
-                                                                    entry
-                                                                        .component,
-                                                                  if (entry
-                                                                          .batch !=
-                                                                      'Whole Class')
-                                                                    entry.batch,
-                                                                ]
-                                                                .where(
-                                                                  (e) =>
-                                                                      e !=
-                                                                          null &&
-                                                                      e.isNotEmpty,
-                                                                )
-                                                                .join(' • '),
-                                                      style: GoogleFonts.inter(
-                                                        fontSize: 13,
-                                                        color: isCancelled
-                                                            ? sem.cancelled
-                                                                  .withValues(
-                                                                    alpha: 0.7,
-                                                                  )
-                                                            : sem.onSurfaceMuted,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          );
-
-                                          if (mapEntry.key > 0) {
-                                            content = Padding(
-                                              padding: const EdgeInsets.only(
-                                                top: AppSpacing.lg,
-                                              ),
-                                              child: content,
-                                            );
-                                          }
-                                          return content;
-                                        }).toList(),
-                                      ),
-                                    ),
-                                  ),
+                                  onEntryTap: (e) {
+                                    if (canEdit) {
+                                      _openStudio(
+                                        _selectedDate,
+                                        existingEntry: e,
+                                      );
+                                    }
+                                  },
                                 ),
                               ),
                             );

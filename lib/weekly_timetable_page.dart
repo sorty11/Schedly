@@ -77,20 +77,16 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
     return '${targetDate.year}-${targetDate.month.toString().padLeft(2, '0')}-${targetDate.day.toString().padLeft(2, '0')}';
   }
 
-  Color _subjectColor(String subject, BuildContext context) {
-    if (subject.toLowerCase().contains('lunch')) {
-      return Colors.amber;
-    }
-    final colorScheme = Theme.of(context).colorScheme;
-    final sem = Theme.of(context).extension<AppSemanticColors>()!;
-    final colors = [
-      colorScheme.primary,
-      colorScheme.secondary,
-      sem.accent,
-      sem.conducted,
-      sem.rescheduled,
-    ];
-    return colors[subject.hashCode.abs() % colors.length];
+  Color _subjectColor(
+    String subject,
+    BuildContext context, {
+    String? component,
+  }) {
+    return AppTheme.lectureTypeColor(
+      context,
+      subject: subject,
+      component: component,
+    );
   }
 
   bool _canEdit(TimetableEntry entry) {
@@ -345,34 +341,6 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
     );
   }
 
-  IconData _subjectIcon(String subject) {
-    switch (subject.toLowerCase()) {
-      case 'mathematics':
-        return Icons.calculate_rounded;
-      case 'programming':
-      case 'oop':
-      case 'java':
-        return Icons.computer_rounded;
-      case 'beee':
-        return Icons.electrical_services_rounded;
-      case 'physics':
-        return Icons.science_rounded;
-      case 'chemistry':
-        return Icons.biotech_rounded;
-      case 'dbms':
-        return Icons.storage_rounded;
-      case 'lade':
-        return Icons.menu_book_rounded;
-      case 'ctps':
-        return Icons.lightbulb_rounded;
-      case 'lunch break':
-      case 'lunch':
-        return Icons.restaurant_rounded;
-      default:
-        return Icons.book_rounded;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -391,27 +359,26 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                 AppSpacing.x2l,
                 AppSpacing.sm,
               ),
-              child: Row(
-                children: [
-                  if (widget.isEditMode)
-                    Padding(
-                      padding: const EdgeInsets.only(right: AppSpacing.md),
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back_rounded),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ),
-                  Text(
-                    widget.isEditMode ? 'Select Lecture' : 'Timetable',
-                    style: Theme.of(context).appBarTheme.titleTextStyle,
-                  ),
-                  const Spacer(),
-                  if (!widget.isEditMode)
-                    IconButton(
-                      icon: const Icon(Icons.calendar_month_rounded),
-                      color: colorScheme.primary,
-                      tooltip: 'Monthly View',
-                      onPressed: () {
+              child: widget.isEditMode
+                  ? Row(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(right: AppSpacing.md),
+                          child: IconButton(
+                            icon: const Icon(Icons.arrow_back_rounded),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ),
+                        Text(
+                          'Select Lecture',
+                          style: Theme.of(context).appBarTheme.titleTextStyle,
+                        ),
+                      ],
+                    )
+                  : ThemedTimetableHeader(
+                      title: 'Timetable',
+                      subtitle: 'Your schedule for the week',
+                      onCalendarTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -420,41 +387,12 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                           ),
                         );
                       },
+                      onEditModeToggle:
+                          (AppSettings.currentRole == UserRole.cr ||
+                              AppSettings.currentRole == UserRole.sr)
+                          ? () {}
+                          : null,
                     ),
-                  if (!widget.isEditMode &&
-                      (AppSettings.currentRole == UserRole.cr ||
-                          AppSettings.currentRole == UserRole.sr))
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                        vertical: AppSpacing.xs + 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(AppRadius.full),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.edit_rounded,
-                            size: 13,
-                            color: colorScheme.primary,
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            'Long-press to edit',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: colorScheme.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
             ),
 
             GestureDetector(
@@ -491,7 +429,6 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                 ),
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
                       minWidth: MediaQuery.of(context).size.width,
@@ -501,88 +438,17 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                         horizontal: AppSpacing.lg,
                         vertical: AppSpacing.md,
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: List.generate(_days.length, (index) {
-                          final isSelected = selectedIndex == index;
-                          final isToday = todayIndex == index;
-                          return GestureDetector(
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              setState(() {
-                                selectedIndex = index;
-                                selectedDay = _days[index];
-                              });
-                            },
-                            child: MouseRegion(
-                              cursor: SystemMouseCursors.click,
-                              child: AnimatedContainer(
-                                duration: AppDuration.standard,
-                                curve: AppCurves.standard,
-                                margin: EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.xs,
-                                ),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.xl,
-                                  vertical: AppSpacing.md,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? colorScheme.primary
-                                      : isToday
-                                      ? colorScheme.primary.withValues(
-                                          alpha: 0.08,
-                                        )
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(
-                                    AppRadius.full,
-                                  ),
-                                  border: isToday && !isSelected
-                                      ? Border.all(
-                                          color: colorScheme.primary.withValues(
-                                            alpha: 0.3,
-                                          ),
-                                          width: 1,
-                                        )
-                                      : Border.all(
-                                          color: Colors.transparent,
-                                          width: 1,
-                                        ),
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      _dayShort[index],
-                                      style: GoogleFonts.inter(
-                                        fontSize: 15,
-                                        fontWeight: isSelected
-                                            ? FontWeight.w700
-                                            : FontWeight.w600,
-                                        color: isSelected
-                                            ? colorScheme.onPrimary
-                                            : isToday
-                                            ? colorScheme.primary
-                                            : sem.onSurfaceMuted,
-                                      ),
-                                    ),
-                                    if (isToday && !isSelected) ...[
-                                      const SizedBox(height: 4),
-                                      Container(
-                                        width: 4,
-                                        height: 4,
-                                        decoration: BoxDecoration(
-                                          color: colorScheme.primary,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
+                      child: ThemedDaySelector(
+                        days: _dayShort,
+                        selectedIndex: selectedIndex,
+                        todayIndex: todayIndex,
+                        onDaySelected: (index) {
+                          HapticFeedback.selectionClick();
+                          setState(() {
+                            selectedIndex = index;
+                            selectedDay = _days[index];
+                          });
+                        },
                       ),
                     ),
                   ),
@@ -672,7 +538,7 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                     ),
                     child: ListView.builder(
                       key: ValueKey(selectedDay),
-                      physics: const BouncingScrollPhysics(),
+                      physics: const AlwaysScrollableScrollPhysics(),
                       padding: EdgeInsets.fromLTRB(
                         AppSpacing.lg,
                         AppSpacing.lg,
@@ -689,19 +555,20 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                         );
                         final subjectColor = allCancelled
                             ? sem.cancelled
-                            : _subjectColor(activeEntry.subject, context);
+                            : _subjectColor(
+                                activeEntry.subject,
+                                context,
+                                component: activeEntry.component,
+                              );
 
                         return StaggeredListItem(
                           index: index,
                           child: Padding(
                             padding: EdgeInsets.only(bottom: AppSpacing.md),
-                            child: AnimatedCard(
-                              borderRadius: AppRadius.xl,
-                              backgroundColor: allCancelled
-                                  ? sem.cancelled.withValues(alpha: 0.05)
-                                  : isDark
-                                  ? sem.surfaceElevated
-                                  : colorScheme.surface,
+                            child: ThemedLectureCard(
+                              entries: entries,
+                              isEditMode: widget.isEditMode,
+                              canEditEntry: _canEdit,
                               onTap:
                                   (widget.isEditMode &&
                                       entries.length == 1 &&
@@ -714,277 +581,16 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                                       _canEdit(entries.first))
                                   ? () => _editLecture(entries.first)
                                   : null,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(
-                                    AppRadius.xl,
-                                  ),
-                                  border: Border(
-                                    left: BorderSide(
-                                      color: subjectColor,
-                                      width: 4,
-                                    ),
-                                  ),
-                                ),
-                                child: Padding(
-                                  padding: EdgeInsets.all(AppSpacing.xl),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: entries.asMap().entries.map((
-                                      mapEntry,
-                                    ) {
-                                      final idx = mapEntry.key;
-                                      final entry = mapEntry.value;
-                                      final isCancelled = !entry.isActive;
-                                      final entryColor = isCancelled
-                                          ? sem.cancelled
-                                          : _subjectColor(
-                                              entry.subject,
-                                              context,
-                                            );
-
-                                      Widget content = Row(
-                                        children: [
-                                          Container(
-                                            width: 48,
-                                            height: 48,
-                                            decoration: BoxDecoration(
-                                              color: entryColor.withValues(
-                                                alpha: 0.1,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                    AppRadius.md,
-                                                  ),
-                                            ),
-                                            child: Icon(
-                                              isCancelled
-                                                  ? Icons.cancel_rounded
-                                                  : _subjectIcon(entry.subject),
-                                              color: entryColor,
-                                              size: 22,
-                                            ),
-                                          ),
-                                          const SizedBox(width: AppSpacing.lg),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Row(
-                                                  children: [
-                                                    Expanded(
-                                                      child: Text(
-                                                        entry.displaySubject,
-                                                        style: GoogleFonts.outfit(
-                                                          fontSize: 17,
-                                                          fontWeight:
-                                                              FontWeight.w700,
-                                                          color: isCancelled
-                                                              ? sem.cancelled
-                                                              : colorScheme
-                                                                    .onSurface,
-                                                          decoration:
-                                                              isCancelled
-                                                              ? TextDecoration
-                                                                    .lineThrough
-                                                              : null,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    if (isCancelled)
-                                                      Container(
-                                                        padding:
-                                                            EdgeInsets.symmetric(
-                                                              horizontal:
-                                                                  AppSpacing.sm,
-                                                              vertical: 2,
-                                                            ),
-                                                        decoration: BoxDecoration(
-                                                          color: sem.cancelled
-                                                              .withValues(
-                                                                alpha: 0.1,
-                                                              ),
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                AppRadius.full,
-                                                              ),
-                                                        ),
-                                                        child: Text(
-                                                          'CANCELLED',
-                                                          style:
-                                                              GoogleFonts.inter(
-                                                                fontSize: 9,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w800,
-                                                                letterSpacing:
-                                                                    0.8,
-                                                                color: sem
-                                                                    .cancelled,
-                                                              ),
-                                                        ),
-                                                      ),
-                                                  ],
-                                                ),
-                                                const SizedBox(
-                                                  height: AppSpacing.sm,
-                                                ),
-                                                Wrap(
-                                                  spacing: AppSpacing.md,
-                                                  runSpacing: AppSpacing.sm,
-                                                  crossAxisAlignment:
-                                                      WrapCrossAlignment.center,
-                                                  children: [
-                                                    Row(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: [
-                                                        Icon(
-                                                          Icons
-                                                              .access_time_rounded,
-                                                          size: 13,
-                                                          color: sem
-                                                              .onSurfaceMuted,
-                                                        ),
-                                                        const SizedBox(
-                                                          width: 4,
-                                                        ),
-                                                        Text(
-                                                          TimetableManager.formatTime(
-                                                            entry.startTime,
-                                                            entry.endTime,
-                                                          ),
-                                                          style: GoogleFonts.inter(
-                                                            fontSize: 13,
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            color: sem
-                                                                .onSurfaceMuted,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    if (entry.room != null &&
-                                                        entry.room!.isNotEmpty)
-                                                      Row(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          Icon(
-                                                            Icons.room_rounded,
-                                                            size: 13,
-                                                            color: sem
-                                                                .onSurfaceMuted,
-                                                          ),
-                                                          const SizedBox(
-                                                            width: 4,
-                                                          ),
-                                                          Text(
-                                                            'Room ${entry.room}',
-                                                            style: GoogleFonts.inter(
-                                                              fontSize: 13,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w500,
-                                                              color: sem
-                                                                  .onSurfaceMuted,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    if (entry.batch !=
-                                                        'Whole Class')
-                                                      Row(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          Icon(
-                                                            Icons.group_rounded,
-                                                            size: 13,
-                                                            color: sem
-                                                                .onSurfaceMuted,
-                                                          ),
-                                                          const SizedBox(
-                                                            width: 4,
-                                                          ),
-                                                          Text(
-                                                            entry.batch,
-                                                            style: GoogleFonts.inter(
-                                                              fontSize: 13,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w600,
-                                                              color: sem
-                                                                  .onSurfaceMuted,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          if (_canEdit(entry) &&
-                                              entries.length > 1)
-                                            Padding(
-                                              padding: EdgeInsets.only(
-                                                left: AppSpacing.sm,
-                                              ),
-                                              child: Icon(
-                                                Icons.more_vert_rounded,
-                                                size: 18,
-                                                color: sem.onSurfaceMuted
-                                                    .withValues(alpha: 0.4),
-                                              ),
-                                            ),
-                                        ],
-                                      );
-
-                                      if (entries.length > 1) {
-                                        return GestureDetector(
-                                          onTap:
-                                              (widget.isEditMode &&
-                                                  _canEdit(entry))
-                                              ? () => _editLecture(entry)
-                                              : null,
-                                          onLongPress:
-                                              (!widget.isEditMode &&
-                                                  _canEdit(entry))
-                                              ? () => _editLecture(entry)
-                                              : null,
-                                          child: Container(
-                                            margin: EdgeInsets.only(
-                                              top: idx == 0 ? 0 : AppSpacing.md,
-                                            ),
-                                            padding: EdgeInsets.all(
-                                              AppSpacing.sm,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: isDark
-                                                  ? Colors.white.withValues(
-                                                      alpha: 0.03,
-                                                    )
-                                                  : Colors.black.withValues(
-                                                      alpha: 0.02,
-                                                    ),
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                    AppRadius.md,
-                                                  ),
-                                            ),
-                                            child: content,
-                                          ),
-                                        );
-                                      } else {
-                                        return content;
-                                      }
-                                    }).toList(),
-                                  ),
-                                ),
-                              ),
+                              onEntryTap: (entry) {
+                                if (widget.isEditMode && _canEdit(entry)) {
+                                  _editLecture(entry);
+                                }
+                              },
+                              onEntryLongPress: (entry) {
+                                if (!widget.isEditMode && _canEdit(entry)) {
+                                  _editLecture(entry);
+                                }
+                              },
                             ),
                           ),
                         );

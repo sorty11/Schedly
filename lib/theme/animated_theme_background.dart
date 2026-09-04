@@ -48,7 +48,7 @@ class AnimatedThemeBackground extends StatelessWidget {
             ),
           ),
         ),
-        child,
+        RepaintBoundary(child: child),
       ],
     );
   }
@@ -116,35 +116,32 @@ class _AnimatedThemeCanvasState extends State<AnimatedThemeCanvas>
       );
     }
 
+    final disableAnimations =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
+        final progress = disableAnimations ? 0.0 : _controller.value;
         CustomPainter painter;
         switch (widget.theme) {
-          case SchedlyVisualTheme.space:
-            painter = SpaceThemePainter(
-              progress: _controller.value,
+          case SchedlyVisualTheme.heritage:
+            painter = HeritageThemePainter(
+              progress: progress,
               isDark: widget.isDark,
               isPreview: widget.isPreview,
             );
             break;
-          case SchedlyVisualTheme.cats:
-            painter = CatsThemePainter(
-              progress: _controller.value,
+          case SchedlyVisualTheme.future:
+            painter = FutureThemePainter(
+              progress: progress,
               isDark: widget.isDark,
               isPreview: widget.isPreview,
             );
             break;
-          case SchedlyVisualTheme.cyberRobo:
-            painter = CyberRoboThemePainter(
-              progress: _controller.value,
-              isDark: widget.isDark,
-              isPreview: widget.isPreview,
-            );
-            break;
-          case SchedlyVisualTheme.arcade:
-            painter = ArcadeThemePainter(
-              progress: _controller.value,
+          case SchedlyVisualTheme.bloom:
+            painter = BloomThemePainter(
+              progress: progress,
               isDark: widget.isDark,
               isPreview: widget.isPreview,
             );
@@ -160,567 +157,223 @@ class _AnimatedThemeCanvasState extends State<AnimatedThemeCanvas>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. SPACE THEME PAINTER
+// 1. HERITAGE THEME PAINTER (Old School Rust / Academic Editorial Texture)
 // ─────────────────────────────────────────────────────────────────────────────
-class SpaceThemePainter extends CustomPainter {
+class HeritageThemePainter extends CustomPainter {
   final double progress;
   final bool isDark;
   final bool isPreview;
 
-  SpaceThemePainter({
+  HeritageThemePainter({
     required this.progress,
     required this.isDark,
     required this.isPreview,
-  });
-
-  static final List<_Star> _stars = List.generate(65, (i) {
-    final rand = math.Random(i * 101 + 7);
-    return _Star(
-      x: rand.nextDouble(),
-      y: rand.nextDouble(),
-      size: 0.8 + rand.nextDouble() * 1.8,
-      speed: 0.05 + rand.nextDouble() * 0.15,
-      blinkOffset: rand.nextDouble() * math.pi * 2,
-      isCyan: rand.nextDouble() > 0.65,
-    );
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
 
-    // Deep space gradient
+    final baseColor = isDark
+        ? const Color(0xFF141210)
+        : const Color(0xFFF7F4EE);
+    final deepColor = isDark
+        ? const Color(0xFF191613)
+        : const Color(0xFFEFE8DD);
+
     final bgPaint = Paint()
-      ..shader = const LinearGradient(
+      ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [Color(0xFF030612), Color(0xFF070B1E), Color(0xFF02040B)],
+        colors: [baseColor, deepColor],
       ).createShader(rect);
+
     canvas.drawRect(rect, bgPaint);
 
-    // Subtle breathing nebula
-    final nebulaRadius = math.min(size.width, size.height) * 0.75;
-    final nebulaPulse = math.sin(progress * math.pi * 2) * 0.08 + 0.92;
-    final nebulaPaint = Paint()
-      ..shader =
-          RadialGradient(
-            colors: [
-              const Color(0xFF381559).withValues(alpha: 0.35 * nebulaPulse),
-              const Color(0xFF0D2354).withValues(alpha: 0.25 * nebulaPulse),
-              Colors.transparent,
-            ],
-            stops: const [0.0, 0.5, 1.0],
-          ).createShader(
-            Rect.fromCircle(
-              center: Offset(size.width * 0.65, size.height * 0.35),
-              radius: nebulaRadius,
-            ),
-          );
-    canvas.drawRect(rect, nebulaPaint);
+    // Warm antique dust motes drifting gently
+    final motePaint = Paint()..style = PaintingStyle.fill;
+    final moteCount = isPreview ? 10 : 22;
 
-    // Drifting twinkling starfield
-    final starPaint = Paint()..style = PaintingStyle.fill;
+    for (int i = 0; i < moteCount; i++) {
+      final seed = i * 47.123;
+      final speed = 0.3 + (i % 5) * 0.15;
+      final t = (progress * speed + (i / moteCount)) % 1.0;
 
-    final starCount = isPreview ? 25 : _stars.length;
-    for (int i = 0; i < starCount; i++) {
-      final s = _stars[i];
-      final currentY = (s.y + progress * s.speed) % 1.0 * size.height;
-      final currentX = s.x * size.width;
-      final blink =
-          (math.sin(progress * math.pi * 6 + s.blinkOffset) + 1.0) / 2.0;
-      final opacity = (0.35 + 0.65 * blink).clamp(0.0, 1.0);
+      final x = (math.sin(seed + t * math.pi * 2) * 0.35 + 0.5) * size.width;
+      final y = (1.0 - t) * size.height;
 
-      starPaint.color = s.isCyan
-          ? const Color(0xFF8AE8FF).withValues(alpha: opacity)
-          : Colors.white.withValues(alpha: opacity);
-
-      canvas.drawCircle(Offset(currentX, currentY), s.size, starPaint);
-
-      // Star halo for larger stars
-      if (s.size > 1.8) {
-        final haloPaint = Paint()
-          ..color = (s.isCyan ? const Color(0xFF42C5FF) : Colors.white)
-              .withValues(alpha: opacity * 0.25)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
-        canvas.drawCircle(Offset(currentX, currentY), s.size * 2.2, haloPaint);
-      }
-    }
-
-    // Occasional subtle shooting star
-    final shootT = (progress * 3.0) % 1.0;
-    if (shootT < 0.22) {
-      final t = shootT / 0.22;
-      final startX = size.width * 0.15 + t * size.width * 0.7;
-      final startY = size.height * 0.08 + t * size.height * 0.25;
-      final tailLength = size.width * 0.12;
-      final shootPaint = Paint()
-        ..strokeWidth = 1.2
-        ..strokeCap = StrokeCap.round
-        ..shader =
-            LinearGradient(
-              colors: [
-                Colors.white.withValues(alpha: (1.0 - t) * 0.8),
-                Colors.transparent,
-              ],
-            ).createShader(
-              Rect.fromPoints(
-                Offset(startX, startY),
-                Offset(startX - tailLength, startY - tailLength * 0.35),
-              ),
-            );
-      canvas.drawLine(
-        Offset(startX, startY),
-        Offset(startX - tailLength, startY - tailLength * 0.35),
-        shootPaint,
+      final radius = 1.0 + (i % 3) * 0.8;
+      final alpha = (math.sin(t * math.pi) * (isDark ? 0.22 : 0.15)).clamp(
+        0.0,
+        1.0,
       );
+
+      motePaint.color =
+          (isDark ? const Color(0xFFD48827) : const Color(0xFFA34820))
+              .withValues(alpha: alpha);
+
+      canvas.drawCircle(Offset(x, y), radius, motePaint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant SpaceThemePainter oldDelegate) =>
-      oldDelegate.progress != progress;
-}
-
-class _Star {
-  final double x;
-  final double y;
-  final double size;
-  final double speed;
-  final double blinkOffset;
-  final bool isCyan;
-
-  const _Star({
-    required this.x,
-    required this.y,
-    required this.size,
-    required this.speed,
-    required this.blinkOffset,
-    required this.isCyan,
-  });
+  bool shouldRepaint(covariant HeritageThemePainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.isDark != isDark ||
+      oldDelegate.isPreview != isPreview;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 2. CATS THEME PAINTER
+// 2. FUTURE THEME PAINTER (Neo Future / High-Tech Precision Grid & Pulses)
 // ─────────────────────────────────────────────────────────────────────────────
-class CatsThemePainter extends CustomPainter {
+class FutureThemePainter extends CustomPainter {
   final double progress;
   final bool isDark;
   final bool isPreview;
 
-  CatsThemePainter({
+  FutureThemePainter({
     required this.progress,
     required this.isDark,
     required this.isPreview,
-  });
-
-  static final List<_CatItem> _items = List.generate(14, (i) {
-    final rand = math.Random(i * 97 + 13);
-    return _CatItem(
-      x: 0.08 + (i / 14.0) * 0.84 + (rand.nextDouble() * 0.08 - 0.04),
-      initialY: rand.nextDouble(),
-      speed: 0.04 + rand.nextDouble() * 0.06,
-      scale: 0.75 + rand.nextDouble() * 0.5,
-      type: rand.nextInt(
-        3,
-      ), // 0: sleeping cat head, 1: paw print, 2: star sparkle
-      swayOffset: rand.nextDouble() * math.pi * 2,
-    );
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
 
-    // Cozy twilight warm base
+    final baseColor = isDark
+        ? const Color(0xFF060A12)
+        : const Color(0xFFF0F4F8);
+    final deepColor = isDark
+        ? const Color(0xFF0A101D)
+        : const Color(0xFFE4EDF5);
+
     final bgPaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF13101C), Color(0xFF181324), Color(0xFF0F0E16)],
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [baseColor, deepColor],
       ).createShader(rect);
+
     canvas.drawRect(rect, bgPaint);
 
-    // Warm pastel radial ambient glows
-    final glowPaint = Paint()
-      ..shader =
-          RadialGradient(
-            colors: [
-              const Color(0xFF4C2A4C).withValues(alpha: 0.28),
-              Colors.transparent,
-            ],
-          ).createShader(
-            Rect.fromCircle(
-              center: Offset(size.width * 0.3, size.height * 0.4),
-              radius: size.width * 0.6,
-            ),
-          );
-    canvas.drawRect(rect, glowPaint);
-
-    final linePaint = Paint()
+    // Subtle luminous cybernetic grid lines
+    final gridPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4
-      ..strokeCap = StrokeCap.round;
+      ..strokeWidth = 0.75
+      ..color = (isDark ? const Color(0xFF00D8FF) : const Color(0xFF0284C7))
+          .withValues(alpha: isDark ? 0.05 : 0.04);
 
-    final fillPaint = Paint()..style = PaintingStyle.fill;
+    final step = isPreview ? 28.0 : 44.0;
+    for (double x = 0; x < size.width; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+    }
+    for (double y = 0; y < size.height; y += step) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
 
-    final itemCount = isPreview ? 6 : _items.length;
-    for (int i = 0; i < itemCount; i++) {
-      final item = _items[i];
-      final y = (item.initialY - progress * item.speed) % 1.0 * size.height;
-      final sway = math.sin(progress * math.pi * 4 + item.swayOffset) * 12.0;
-      final x = (item.x * size.width + sway).clamp(16.0, size.width - 16.0);
+    // High-tech luminous data particles drifting vertically
+    final particlePaint = Paint()..style = PaintingStyle.fill;
+    final count = isPreview ? 8 : 18;
 
-      canvas.save();
-      canvas.translate(x, y);
-      canvas.scale(item.scale);
+    for (int i = 0; i < count; i++) {
+      final seed = i * 29.53;
+      final speed = 0.4 + (i % 4) * 0.2;
+      final t = (progress * speed + (i / count)) % 1.0;
 
-      if (item.type == 0) {
-        // Minimalist Sleeping Cat Silhouette (head + pointed ears + closed smiling eyes)
-        final catColor = const Color(0xFFE4C3DE).withValues(alpha: 0.32);
-        linePaint.color = catColor;
-        fillPaint.color = const Color(0xFF9E6896).withValues(alpha: 0.12);
+      final x = ((seed * 11) % size.width);
+      final y = t * size.height;
+      final radius = 1.2 + (i % 2) * 0.8;
 
-        // Head shape
-        const headRadius = 14.0;
-        canvas.drawCircle(Offset.zero, headRadius, fillPaint);
-        canvas.drawCircle(Offset.zero, headRadius, linePaint);
+      final pulseAlpha = (math.sin(t * math.pi) * (isDark ? 0.35 : 0.20)).clamp(
+        0.0,
+        1.0,
+      );
+      particlePaint.color =
+          (isDark ? const Color(0xFF00D8FF) : const Color(0xFF0284C7))
+              .withValues(alpha: pulseAlpha);
 
-        // Left ear
-        final leftEar = Path()
-          ..moveTo(-11, -8)
-          ..lineTo(-14, -20)
-          ..lineTo(-3, -13);
-        canvas.drawPath(leftEar, linePaint);
+      canvas.drawCircle(Offset(x, y), radius, particlePaint);
+    }
+  }
 
-        // Right ear
-        final rightEar = Path()
-          ..moveTo(3, -13)
-          ..lineTo(14, -20)
-          ..lineTo(11, -8);
-        canvas.drawPath(rightEar, linePaint);
+  @override
+  bool shouldRepaint(covariant FutureThemePainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.isDark != isDark ||
+      oldDelegate.isPreview != isPreview;
+}
 
-        // Sleeping eyes: ^ . ^
-        final eyePaint = Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.2
-          ..color = const Color(0xFFF3DAEC).withValues(alpha: 0.4);
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. BLOOM THEME PAINTER (Vibrant / Soft Modern Botanical Warmth)
+// ─────────────────────────────────────────────────────────────────────────────
+class BloomThemePainter extends CustomPainter {
+  final double progress;
+  final bool isDark;
+  final bool isPreview;
 
-        // Left sleeping eye curve
-        final leftEye = Path()
-          ..moveTo(-7, -1)
-          ..quadraticBezierTo(-4, -4, -1, -1);
-        canvas.drawPath(leftEye, eyePaint);
+  BloomThemePainter({
+    required this.progress,
+    required this.isDark,
+    required this.isPreview,
+  });
 
-        // Right sleeping eye curve
-        final rightEye = Path()
-          ..moveTo(1, -1)
-          ..quadraticBezierTo(4, -4, 7, -1);
-        canvas.drawPath(rightEye, eyePaint);
-      } else if (item.type == 1) {
-        // Floating Cute Paw Print
-        fillPaint.color = const Color(0xFFFFB6C1).withValues(alpha: 0.24);
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
 
-        // Main palm pad
-        canvas.drawOval(
-          Rect.fromCenter(center: const Offset(0, 3), width: 14, height: 11),
-          fillPaint,
-        );
+    final baseColor = isDark
+        ? const Color(0xFF120C17)
+        : const Color(0xFFFDF6F8);
+    final deepColor = isDark
+        ? const Color(0xFF1A1121)
+        : const Color(0xFFF7ECF3);
 
-        // 4 cute toe beans
-        canvas.drawCircle(const Offset(-6, -6), 2.8, fillPaint);
-        canvas.drawCircle(const Offset(-2, -9), 3.0, fillPaint);
-        canvas.drawCircle(const Offset(3, -9), 3.0, fillPaint);
-        canvas.drawCircle(const Offset(7, -6), 2.8, fillPaint);
+    final bgPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [baseColor, deepColor],
+      ).createShader(rect);
+
+    canvas.drawRect(rect, bgPaint);
+
+    // Soft floating pastel bokeh orbs
+    final orbCount = isPreview ? 4 : 8;
+
+    for (int i = 0; i < orbCount; i++) {
+      final angle =
+          (progress * math.pi * 2 * 0.2) + (i * (math.pi * 2 / orbCount));
+      final radius = (isPreview ? 25.0 : 60.0) + (i % 3) * 15.0;
+
+      final cx = size.width * (0.2 + 0.6 * ((math.sin(angle + i) + 1) / 2));
+      final cy =
+          size.height * (0.15 + 0.7 * ((math.cos(angle * 0.7 + i) + 1) / 2));
+
+      Color orbColor;
+      if (i % 3 == 0) {
+        orbColor = isDark ? const Color(0xFFF472B6) : const Color(0xFFF43F5E);
+      } else if (i % 3 == 1) {
+        orbColor = isDark ? const Color(0xFFC084FC) : const Color(0xFF9333EA);
       } else {
-        // Ambient Star / Sparkle
-        fillPaint.color = const Color(0xFFFFD4A3).withValues(alpha: 0.35);
-        final spark = Path()
-          ..moveTo(0, -6)
-          ..quadraticBezierTo(0, 0, 6, 0)
-          ..quadraticBezierTo(0, 0, 0, 6)
-          ..quadraticBezierTo(0, 0, -6, 0)
-          ..quadraticBezierTo(0, 0, 0, -6);
-        canvas.drawPath(spark, fillPaint);
+        orbColor = isDark ? const Color(0xFF34D399) : const Color(0xFF0D9488);
       }
 
-      canvas.restore();
+      final orbPaint = Paint()
+        ..shader = RadialGradient(
+          colors: [
+            orbColor.withValues(alpha: isDark ? 0.12 : 0.08),
+            orbColor.withValues(alpha: 0.0),
+          ],
+        ).createShader(Rect.fromCircle(center: Offset(cx, cy), radius: radius));
+
+      canvas.drawCircle(Offset(cx, cy), radius, orbPaint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant CatsThemePainter oldDelegate) =>
-      oldDelegate.progress != progress;
-}
-
-class _CatItem {
-  final double x;
-  final double initialY;
-  final double speed;
-  final double scale;
-  final int type;
-  final double swayOffset;
-
-  const _CatItem({
-    required this.x,
-    required this.initialY,
-    required this.speed,
-    required this.scale,
-    required this.type,
-    required this.swayOffset,
-  });
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 3. CYBER ROBO THEME PAINTER
-// ─────────────────────────────────────────────────────────────────────────────
-class CyberRoboThemePainter extends CustomPainter {
-  final double progress;
-  final bool isDark;
-  final bool isPreview;
-
-  CyberRoboThemePainter({
-    required this.progress,
-    required this.isDark,
-    required this.isPreview,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-
-    // Dark cyber carbon base
-    final bgPaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFF040A12), Color(0xFF06101D), Color(0xFF03070E)],
-      ).createShader(rect);
-    canvas.drawRect(rect, bgPaint);
-
-    // Cyan glowing ambient radial glow
-    final glowPaint = Paint()
-      ..shader =
-          RadialGradient(
-            colors: [
-              const Color(0xFF00B4D8).withValues(alpha: 0.18),
-              Colors.transparent,
-            ],
-          ).createShader(
-            Rect.fromCircle(
-              center: Offset(size.width * 0.5, size.height * 0.7),
-              radius: size.width * 0.7,
-            ),
-          );
-    canvas.drawRect(rect, glowPaint);
-
-    // Grid Perspective in bottom third
-    final gridPaint = Paint()
-      ..color = const Color(0xFF00E5FF).withValues(alpha: 0.08)
-      ..strokeWidth = 1.0;
-
-    final horizonY = size.height * 0.65;
-    const linesCount = 8;
-    for (int i = 0; i < linesCount; i++) {
-      final t = (i + (progress * 2) % 1.0) / linesCount;
-      final y = horizonY + math.pow(t, 2.2) * (size.height - horizonY);
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
-    }
-
-    // Perspective diagonals
-    for (double xRatio = -0.5; xRatio <= 1.5; xRatio += 0.25) {
-      canvas.drawLine(
-        Offset(size.width * 0.5, horizonY),
-        Offset(size.width * xRatio, size.height),
-        gridPaint,
-      );
-    }
-
-    // Circuit trace lines flowing with subtle pulses
-    final tracePaint = Paint()
-      ..color = const Color(0xFF00E5FF).withValues(alpha: 0.15)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
-
-    final packetPaint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = const Color(0xFF00FFC2).withValues(alpha: 0.85);
-
-    final glowPacketPaint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = const Color(0xFF00FFC2).withValues(alpha: 0.3)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.5);
-
-    // 4 fixed procedural circuit routes
-    final routes = [
-      [
-        Offset(size.width * 0.15, size.height * 0.05),
-        Offset(size.width * 0.15, size.height * 0.28),
-        Offset(size.width * 0.35, size.height * 0.42),
-        Offset(size.width * 0.35, size.height * 0.60),
-      ],
-      [
-        Offset(size.width * 0.85, size.height * 0.08),
-        Offset(size.width * 0.85, size.height * 0.32),
-        Offset(size.width * 0.65, size.height * 0.48),
-        Offset(size.width * 0.65, size.height * 0.62),
-      ],
-      [
-        Offset(size.width * 0.50, size.height * 0.02),
-        Offset(size.width * 0.50, size.height * 0.22),
-        Offset(size.width * 0.72, size.height * 0.34),
-        Offset(size.width * 0.72, size.height * 0.52),
-      ],
-    ];
-
-    for (int r = 0; r < routes.length; r++) {
-      final pts = routes[r];
-      final path = Path()..moveTo(pts[0].dx, pts[0].dy);
-      for (int i = 1; i < pts.length; i++) {
-        path.lineTo(pts[i].dx, pts[i].dy);
-      }
-      canvas.drawPath(path, tracePaint);
-
-      // Terminal circuit nodes
-      for (final p in pts) {
-        canvas.drawCircle(p, 2.2, tracePaint);
-      }
-
-      // Traveling glowing data pulse along the circuit
-      final pulseT = (progress * 1.8 + r * 0.33) % 1.0;
-      final targetIdx = (pulseT * (pts.length - 1)).floor();
-      final nextIdx = (targetIdx + 1).clamp(0, pts.length - 1);
-      final segmentT = (pulseT * (pts.length - 1)) - targetIdx;
-
-      final pCurrent = Offset.lerp(pts[targetIdx], pts[nextIdx], segmentT)!;
-      canvas.drawCircle(pCurrent, 4.5, glowPacketPaint);
-      canvas.drawCircle(pCurrent, 2.2, packetPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CyberRoboThemePainter oldDelegate) =>
-      oldDelegate.progress != progress;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 4. ARCADE THEME PAINTER
-// ─────────────────────────────────────────────────────────────────────────────
-class ArcadeThemePainter extends CustomPainter {
-  final double progress;
-  final bool isDark;
-  final bool isPreview;
-
-  ArcadeThemePainter({
-    required this.progress,
-    required this.isDark,
-    required this.isPreview,
-  });
-
-  static final List<_PixelParticle> _pixels = List.generate(28, (i) {
-    final rand = math.Random(i * 131 + 47);
-    return _PixelParticle(
-      x: rand.nextDouble(),
-      initialY: rand.nextDouble(),
-      size: 2.0 + rand.nextDouble() * 3.5,
-      speed: 0.05 + rand.nextDouble() * 0.08,
-      isMagenta: rand.nextDouble() > 0.45,
-    );
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-
-    // Retro synthwave dark violet backdrop
-    final bgPaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFF090412), Color(0xFF140824), Color(0xFF080310)],
-      ).createShader(rect);
-    canvas.drawRect(rect, bgPaint);
-
-    // Neon horizon sun arc
-    final horizonY = size.height * 0.46;
-    final sunRadius = math.min(size.width * 0.40, 150.0);
-    final sunPaint = Paint()
-      ..shader =
-          LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFFFF007F).withValues(alpha: 0.50),
-              const Color(0xFFFF8C00).withValues(alpha: 0.25),
-              Colors.transparent,
-            ],
-          ).createShader(
-            Rect.fromCircle(
-              center: Offset(size.width * 0.5, horizonY),
-              radius: sunRadius,
-            ),
-          );
-    canvas.drawCircle(Offset(size.width * 0.5, horizonY), sunRadius, sunPaint);
-
-    // Retro horizon grid
-    final gridPaint = Paint()
-      ..color = const Color(0xFFFF007F).withValues(alpha: 0.28)
-      ..strokeWidth = 1.2;
-
-    const gridLines = 10;
-    for (int i = 0; i < gridLines; i++) {
-      final t = (i + (progress * 2.5) % 1.0) / gridLines;
-      final y = horizonY + math.pow(t, 1.8) * (size.height - horizonY);
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
-    }
-
-    // Grid vertical converging lines
-    for (double r = -0.4; r <= 1.4; r += 0.2) {
-      canvas.drawLine(
-        Offset(size.width * 0.5, horizonY),
-        Offset(size.width * r, size.height),
-        gridPaint,
-      );
-    }
-
-    // Floating retro 8-bit square pixels
-    final pixelPaint = Paint()..style = PaintingStyle.fill;
-
-    for (final p in _pixels) {
-      final y = (p.initialY - progress * p.speed) % 1.0 * size.height;
-      final x = p.x * size.width;
-
-      final color = p.isMagenta
-          ? const Color(0xFFFF007F)
-          : const Color(0xFF00F0FF);
-      pixelPaint.color = color.withValues(alpha: 0.35);
-
-      // Pixel diamond or square
-      final pRect = Rect.fromCenter(
-        center: Offset(x, y),
-        width: p.size,
-        height: p.size,
-      );
-      canvas.drawRect(pRect, pixelPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant ArcadeThemePainter oldDelegate) =>
-      oldDelegate.progress != progress;
-}
-
-class _PixelParticle {
-  final double x;
-  final double initialY;
-  final double size;
-  final double speed;
-  final bool isMagenta;
-
-  const _PixelParticle({
-    required this.x,
-    required this.initialY,
-    required this.size,
-    required this.speed,
-    required this.isMagenta,
-  });
+  bool shouldRepaint(covariant BloomThemePainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.isDark != isDark ||
+      oldDelegate.isPreview != isPreview;
 }
