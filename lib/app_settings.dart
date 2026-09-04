@@ -18,6 +18,7 @@ class AppSettings {
   static String? studentName;
   static String? studentRollNo;
   static String? studentBatch;
+  static String? profilePhotoUrl;
 
   static String? academicYear;
   static String? branch;
@@ -27,6 +28,7 @@ class AppSettings {
   // Faculty fields
   static String? facultyId;
   static int facultyIdMigrationVersion = 0;
+  static String? facultySapId;
   static String? facultyName;
   static String? facultyEmail;
   static String? facultyDepartment;
@@ -80,6 +82,7 @@ class AppSettings {
     studentName = prefs.getString('student_name');
     studentRollNo = prefs.getString('student_roll_no');
     studentBatch = prefs.getString('student_batch');
+    profilePhotoUrl = prefs.getString('profile_photo_url');
 
     academicYear = prefs.getString('academic_year');
     branch = prefs.getString('branch');
@@ -90,6 +93,7 @@ class AppSettings {
   static Future<void> loadFacultyDetails() async {
     final prefs = await SharedPreferences.getInstance();
     facultyId = prefs.getString('faculty_id');
+    facultySapId = prefs.getString('faculty_sap_id') ?? facultyId;
     facultyIdMigrationVersion =
         prefs.getInt('faculty_id_migration_version') ?? 0;
     facultyName = prefs.getString('faculty_name');
@@ -102,6 +106,23 @@ class AppSettings {
     facultyAssignedDivisions = prefs.getStringList(
       'faculty_assigned_divisions',
     );
+    profilePhotoUrl = prefs.getString('profile_photo_url');
+  }
+
+  static Future<void> saveProfilePhoto(String? url) async {
+    final prefs = await SharedPreferences.getInstance();
+    profilePhotoUrl = url;
+    if (url != null && url.isNotEmpty) {
+      await prefs.setString('profile_photo_url', url);
+    } else {
+      await prefs.remove('profile_photo_url');
+    }
+  }
+
+  static Future<void> clearProfilePhoto() async {
+    final prefs = await SharedPreferences.getInstance();
+    profilePhotoUrl = null;
+    await prefs.remove('profile_photo_url');
   }
 
   static Future<void> saveRole(UserRole role) async {
@@ -187,6 +208,28 @@ class AppSettings {
     await prefs.setString('student_batch', batch);
   }
 
+  static Future<void> updateStudentProfileNameAndRoll({
+    required String name,
+    required String rollNo,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    studentName = name;
+    studentRollNo = rollNo;
+    await prefs.setString('student_name', name);
+    await prefs.setString('student_roll_no', rollNo);
+  }
+
+  static Future<void> updateFacultyProfileNameAndId({
+    required String name,
+    required String sapId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    facultyName = name;
+    facultySapId = sapId;
+    await prefs.setString('faculty_name', name);
+    await prefs.setString('faculty_sap_id', sapId);
+  }
+
   static Future<void> saveFacultyDetails({
     required String name,
     required String email,
@@ -195,6 +238,7 @@ class AppSettings {
     required String cabin,
     List<String> assignedDivisions = const [],
     String? id,
+    String? sapId,
     int? migrationVersion,
   }) async {
     final prefs = await SharedPreferences.getInstance();
@@ -202,6 +246,14 @@ class AppSettings {
     if (id != null) {
       facultyId = id;
       await prefs.setString('faculty_id', id);
+    }
+
+    if (sapId != null) {
+      facultySapId = sapId;
+      await prefs.setString('faculty_sap_id', sapId);
+    } else if (id != null && facultySapId == null) {
+      facultySapId = id;
+      await prefs.setString('faculty_sap_id', id);
     }
 
     if (migrationVersion != null) {
@@ -240,6 +292,7 @@ class AppSettings {
   static Future<void> clearFacultyDetails() async {
     final prefs = await SharedPreferences.getInstance();
     facultyId = null;
+    facultySapId = null;
     facultyIdMigrationVersion = 0;
     facultyName = null;
     facultyEmail = null;
@@ -284,6 +337,8 @@ class AppSettings {
     await prefs.remove('faculty_cabin');
     await prefs.remove('faculty_setup_completed');
     await prefs.remove('faculty_assigned_divisions');
+    await prefs.remove('profile_photo_url');
+    profilePhotoUrl = null;
 
     currentRole = UserRole.student;
 

@@ -20,6 +20,8 @@ import 'main.dart';
 import 'widgets/animations/animated_list_tile.dart';
 import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/staggered_list_item.dart';
+import 'widgets/profile_avatar.dart';
+import 'widgets/profile_edit_sheet.dart';
 import 'onboarding/widgets/tutorial_target.dart';
 import 'onboarding/services/tutorial_storage_service.dart';
 import 'onboarding/services/onboarding_service.dart';
@@ -326,32 +328,13 @@ class _ProfilePageState extends State<ProfilePage> {
                   padding: EdgeInsets.all(AppSpacing.x2l),
                   child: Column(
                     children: [
-                      // Avatar — gradient circle with a clean ring, no glow
-                      Container(
-                        width: 88,
-                        height: 88,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            colors: [AppColors.primary, AppColors.secondary],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          border: Border.all(
-                            color: AppColors.primary.withValues(alpha: 0.18),
-                            width: 3,
-                          ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            initial,
-                            style: GoogleFonts.outfit(
-                              fontSize: 36,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
+                      // Profile Photo Avatar
+                      ProfileAvatar(
+                        initial: initial,
+                        size: 80,
+                        onPhotoChanged: () {
+                          if (mounted) setState(() {});
+                        },
                       ),
                       const SizedBox(height: AppSpacing.lg),
 
@@ -443,6 +426,41 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ],
                         ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+
+                      // Edit Profile Button
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final updated = await ProfileEditSheet.show(
+                            context,
+                            currentName: name,
+                            currentSapId: AppSettings.studentRollNo ?? '',
+                            isFaculty: false,
+                          );
+                          if (updated == true && mounted) {
+                            setState(() {});
+                          }
+                        },
+                        icon: const Icon(Icons.edit_outlined, size: 15),
+                        label: const Text('Edit Profile'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: colorScheme.primary,
+                          side: BorderSide(
+                            color: colorScheme.primary.withValues(alpha: 0.25),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.full),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg,
+                            vertical: AppSpacing.sm,
+                          ),
+                          textStyle: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ],
                   ),

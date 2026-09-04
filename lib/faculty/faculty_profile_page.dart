@@ -35,6 +35,8 @@ import '../exceptions.dart';
 import '../widgets/support/bug_report_sheet.dart';
 import '../widgets/support/feature_request_sheet.dart';
 import '../widgets/support/other_feedback_sheet.dart';
+import '../widgets/profile_avatar.dart';
+import '../widgets/profile_edit_sheet.dart';
 
 class FacultyProfilePage extends StatefulWidget {
   const FacultyProfilePage({super.key});
@@ -1001,6 +1003,10 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
     final department = AppSettings.facultyDepartment ?? 'Department';
     final designation = AppSettings.facultyDesignation ?? 'Designation';
     final cabin = AppSettings.facultyCabin ?? 'Cabin Unknown';
+    final facultySap = AppSettings.facultySapId ??
+        (AppSettings.facultyId != null && AppSettings.facultyId!.isNotEmpty
+            ? AppSettings.facultyId
+            : null);
 
     final colorScheme = Theme.of(context).colorScheme;
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
@@ -1069,40 +1075,13 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                         padding: const EdgeInsets.all(AppSpacing.x2l),
                         child: Column(
                           children: [
-                            // Avatar gradient circle
-                            Container(
-                              width: 88,
-                              height: 88,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    AppColors.primary,
-                                    AppColors.secondary,
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.primary.withValues(
-                                      alpha: 0.35,
-                                    ),
-                                    blurRadius: 20,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: Text(
-                                  initial,
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 36,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
+                            // Profile Photo Avatar
+                            ProfileAvatar(
+                              initial: initial,
+                              size: 80,
+                              onPhotoChanged: () {
+                                if (mounted) setState(() {});
+                              },
                             ),
                             const SizedBox(height: AppSpacing.lg),
 
@@ -1117,6 +1096,47 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: AppSpacing.sm),
+
+                            // SAP ID / Faculty ID chip
+                            if (facultySap != null && facultySap.isNotEmpty) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.md,
+                                  vertical: AppSpacing.xs,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primary.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(AppRadius.full),
+                                  border: Border.all(
+                                    color: colorScheme.primary.withValues(
+                                      alpha: 0.18,
+                                    ),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.badge_rounded,
+                                      size: 13,
+                                      color: colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: AppSpacing.xs),
+                                    Text(
+                                      facultySap,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: colorScheme.primary,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                            ],
 
                             // Division + Role chips
                             Row(
@@ -1173,6 +1193,41 @@ class _FacultyProfilePageState extends State<FacultyProfilePage> {
                                   ),
                                 ),
                               ],
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+
+                            // Edit Profile Button
+                            OutlinedButton.icon(
+                              onPressed: () async {
+                                final updated = await ProfileEditSheet.show(
+                                  context,
+                                  currentName: name,
+                                  currentSapId: facultySap ?? '',
+                                  isFaculty: true,
+                                );
+                                if (updated == true && mounted) {
+                                  setState(() {});
+                                }
+                              },
+                              icon: const Icon(Icons.edit_outlined, size: 15),
+                              label: const Text('Edit Profile'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: colorScheme.primary,
+                                side: BorderSide(
+                                  color: colorScheme.primary.withValues(alpha: 0.25),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppRadius.full),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.lg,
+                                  vertical: AppSpacing.sm,
+                                ),
+                                textStyle: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ],
                         ),
