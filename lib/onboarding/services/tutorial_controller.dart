@@ -29,15 +29,34 @@ class TutorialController extends ChangeNotifier with WidgetsBindingObserver {
   TutorialState? _prePauseState;
 
   TutorialTour? get activeTour => _activeTour;
+  TutorialTour? get currentTour => _activeTour;
   int get currentStepIndex => _currentStepIndex;
   TutorialState get state => _state;
   bool get isVisible =>
       _state != TutorialState.idle && _state != TutorialState.paused;
 
+  int get totalSteps => _activeTour?.steps.length ?? 0;
+  bool get isFirstStep => _currentStepIndex == 0;
+  bool get isLastStep =>
+      _activeTour != null && _currentStepIndex == _activeTour!.steps.length - 1;
+
   TutorialStep? get currentStep {
-    if (_activeTour == null || _currentStepIndex >= _activeTour!.steps.length)
+    if (_activeTour == null || _currentStepIndex >= _activeTour!.steps.length) {
       return null;
+    }
     return _activeTour!.steps[_currentStepIndex];
+  }
+
+  void registerTarget(String targetId, GlobalKey key) {
+    TargetRegistry.instance.register(targetId, key);
+  }
+
+  void unregisterTarget(String targetId) {
+    TargetRegistry.instance.unregister(targetId);
+  }
+
+  GlobalKey? getTargetKey(String targetId) {
+    return TargetRegistry.instance.getKey(targetId);
   }
 
   @override
@@ -107,7 +126,19 @@ class TutorialController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void skipTour() {
-    finishTour();
+    if (_activeTour != null) {
+      TutorialStorageService.markTourSkipped(_activeTour!.tourId);
+    }
+    _activeTour = null;
+    _currentStepIndex = 0;
+    _transitionTo(TutorialState.idle);
+  }
+
+  /// Immediately dismisses the tour overlay safely without throwing exceptions.
+  void forceDismiss() {
+    _activeTour = null;
+    _currentStepIndex = 0;
+    _transitionTo(TutorialState.idle);
   }
 
   void retryCurrentStep() {
@@ -137,9 +168,10 @@ class TutorialController extends ChangeNotifier with WidgetsBindingObserver {
     _transitionTo(TutorialState.waitingForTarget);
     _checkTargetAvailability();
 
-    // Recovery timeout
-    Future.delayed(const Duration(seconds: 3), () {
+    // Recovery timeout: if target fails to appear within 2.5 seconds, advance or gracefully end
+    Future.delayed(const Duration(milliseconds: 2500), () {
       if (_state == TutorialState.waitingForTarget && _activeTour != null) {
+        debugPrint('Tutorial target "${step.targetId}" unavailable after timeout; advancing gracefully.');
         advanceStep();
       }
     });
@@ -157,6 +189,7 @@ class TutorialController extends ChangeNotifier with WidgetsBindingObserver {
       }
     }
   }
+
 
   void _checkTargetAvailability() {
     final step = currentStep;

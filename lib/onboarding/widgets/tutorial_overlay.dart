@@ -1,10 +1,11 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'dart:ui';
+import '../../theme/theme.dart';
+import '../models/tutorial_step.dart';
 import '../services/tutorial_controller.dart';
 import 'tutorial_target.dart';
 import 'tutorial_tooltip.dart';
-import '../../theme/theme.dart';
 
 class TutorialOverlayManager {
   static OverlayEntry? _overlayEntry;
@@ -26,20 +27,34 @@ class TutorialOverlayManager {
 
 class _HoleClipper extends CustomClipper<Path> {
   final Rect hole;
-  _HoleClipper(this.hole);
+  final SpotlightShape shape;
+  final double radius;
+
+  _HoleClipper({
+    required this.hole,
+    required this.shape,
+    required this.radius,
+  });
 
   @override
   Path getClip(Size size) {
-    return Path()
-      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..addRRect(
-        RRect.fromRectAndRadius(hole, const Radius.circular(AppRadius.lg)),
-      )
-      ..fillType = PathFillType.evenOdd;
+    final path = Path()..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
+    if (shape == SpotlightShape.circle) {
+      path.addOval(hole);
+    } else {
+      path.addRRect(
+        RRect.fromRectAndRadius(hole, Radius.circular(radius)),
+      );
+    }
+    path.fillType = PathFillType.evenOdd;
+    return path;
   }
 
   @override
-  bool shouldReclip(_HoleClipper oldClipper) => hole != oldClipper.hole;
+  bool shouldReclip(_HoleClipper oldClipper) =>
+      hole != oldClipper.hole ||
+      shape != oldClipper.shape ||
+      radius != oldClipper.radius;
 }
 
 class _TutorialOverlayWidget extends StatefulWidget {
@@ -104,11 +119,6 @@ class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget>
             _currentTargetBounds = bounds;
           });
         }
-      } else if (bounds == null) {
-        // Target is missing, state is likely waitingForTarget.
-        // We do NOT clear _currentTargetBounds. We keep the previous bounds
-        // to prevent the overlay from unmounting or jumping to an error state.
-        if (mounted) setState(() {});
       } else {
         if (mounted) setState(() {});
       }
@@ -130,28 +140,40 @@ class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget>
       return const SizedBox.shrink();
     }
 
+    final step = _controller.currentStep;
+    final padding = step?.targetPadding ?? const EdgeInsets.all(8.0);
+    final shape = step?.shape ?? SpotlightShape.roundedRectangle;
+
     final rect = boundsToUse;
     final highlightRect = Rect.fromLTRB(
-      rect.left - 8,
-      rect.top - 8,
-      rect.right + 8,
-      rect.bottom + 8,
+      rect.left - padding.left,
+      rect.top - padding.top,
+      rect.right + padding.right,
+      rect.bottom + padding.bottom,
     );
 
     final prevRect = _previousTargetBounds ?? highlightRect;
     final prevHighlightRect = Rect.fromLTRB(
-      prevRect.left - 8,
-      prevRect.top - 8,
-      prevRect.right + 8,
-      prevRect.bottom + 8,
+      prevRect.left - padding.left,
+      prevRect.top - padding.top,
+      prevRect.right + padding.right,
+      prevRect.bottom + padding.bottom,
     );
 
-    // Fade out tooltip during transition, paused, or celebration
     final bool showTooltip =
         state == TutorialState.highlighting ||
         state == TutorialState.waitingForInteraction ||
         state == TutorialState.interactionCompleted ||
         state == TutorialState.celebration;
+
+    final skin = VisualSkin.of(context);
+    final isHeritage = skin.visualTheme == SchedlyVisualTheme.heritage;
+    final isFuture = skin.visualTheme == SchedlyVisualTheme.future;
+    final isBloom = skin.visualTheme == SchedlyVisualTheme.bloom;
+
+    final double cornerRadius = shape == SpotlightShape.circle
+        ? highlightRect.width / 2
+        : (isBloom ? AppRadius.x2l : (isFuture ? AppRadius.md : AppRadius.lg));
 
     return Material(
       type: MaterialType.transparency,
@@ -160,51 +182,71 @@ class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget>
           Positioned.fill(
             child: TweenAnimationBuilder<Rect?>(
               tween: RectTween(begin: prevHighlightRect, end: highlightRect),
-              duration: const Duration(milliseconds: 600),
+              duration: const Duration(milliseconds: 500),
               curve: Curves.easeInOutCubic,
               builder: (context, currentRect, _) {
                 if (currentRect == null) return const SizedBox.shrink();
                 return Stack(
                   children: [
+                    // Backdrop with cutout hole
                     ClipPath(
-                      clipper: _HoleClipper(currentRect),
+                      clipper: _HoleClipper(
+                        hole: currentRect,
+                        shape: shape,
+                        radius: cornerRadius,
+                      ),
                       child: Stack(
                         children: [
                           BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
+                            filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
                             child: Container(
                               color: Colors.black.withValues(alpha: 0.1),
                             ),
                           ),
                           GestureDetector(
-                            onTap: () {}, // Block all taps outside the hole
+                            onTap: () {
+                              // If user taps backdrop, allow safe skip or ignore
+                            },
                             behavior: HitTestBehavior.opaque,
                             child: Container(
-                              color: Colors.black.withValues(alpha: 0.65),
+                              color: Colors.black.withValues(
+                                alpha: isFuture ? 0.75 : (isHeritage ? 0.70 : 0.65),
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
+
+                    // Spotlight Border & Skin Highlights
                     Positioned.fromRect(
                       rect: currentRect,
                       child: IgnorePointer(
                         child: Container(
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                            shape: shape == SpotlightShape.circle
+                                ? BoxShape.circle
+                                : BoxShape.rectangle,
+                            borderRadius: shape == SpotlightShape.circle
+                                ? null
+                                : BorderRadius.circular(cornerRadius),
                             border: Border.all(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.primary.withValues(alpha: 0.6),
-                              width: 2,
+                              color: isHeritage
+                                  ? const Color(0xFFC07040)
+                                  : (isFuture
+                                      ? const Color(0xFF00E5FF)
+                                      : skin.primaryAccent.withValues(alpha: 0.8)),
+                              width: isHeritage ? 2.5 : (isFuture ? 1.8 : 2.0),
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.primary.withValues(alpha: 0.3),
-                                blurRadius: 15,
-                                spreadRadius: 1,
+                                color: isHeritage
+                                    ? const Color(0xFFC86432).withValues(alpha: 0.35)
+                                    : (isFuture
+                                        ? const Color(0xFF00E5FF).withValues(alpha: 0.45)
+                                        : skin.primaryAccent.withValues(alpha: 0.3)),
+                                blurRadius: isFuture ? 20 : 16,
+                                spreadRadius: isFuture ? 2 : 1,
                               ),
                             ],
                           ),
@@ -221,11 +263,10 @@ class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget>
           Positioned.fill(
             child: TweenAnimationBuilder<Rect?>(
               tween: RectTween(begin: prevHighlightRect, end: highlightRect),
-              duration: const Duration(milliseconds: 600),
+              duration: const Duration(milliseconds: 500),
               curve: Curves.easeInOutCubic,
               builder: (context, currentRect, _) {
                 if (currentRect == null) return const SizedBox.shrink();
-                // We wrap TutorialTooltip in a Stack so its Positioned widget has a proper parent.
                 return Stack(
                   children: [
                     TutorialTooltip(
@@ -242,3 +283,4 @@ class _TutorialOverlayWidgetState extends State<_TutorialOverlayWidget>
     );
   }
 }
+
