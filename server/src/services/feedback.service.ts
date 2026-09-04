@@ -2,6 +2,17 @@ import * as admin from 'firebase-admin';
 import * as nodemailer from 'nodemailer';
 import { logger } from '../utils/logger';
 
+// Enforce IPv4 in Nodemailer's internal DNS resolver to avoid ENETUNREACH on cloud environments lacking IPv6 routing
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const nmShared = require('nodemailer/lib/shared');
+  if (nmShared) {
+    nmShared.networkInterfaces = {
+      eth0: [{ family: 'IPv4', internal: false }]
+    };
+  }
+} catch (_) {}
+
 export class FeedbackEmailService {
   public static isSmtpConfigured(): boolean {
     return Boolean(process.env.SMTP_USER && process.env.SMTP_PASS);
@@ -17,25 +28,16 @@ export class FeedbackEmailService {
 
     const host = process.env.SMTP_HOST || 'smtp.gmail.com';
     const port = parseInt(process.env.SMTP_PORT || '587', 10);
-    const isGmail = !process.env.SMTP_HOST || process.env.SMTP_HOST === 'smtp.gmail.com';
-
-    // If using Gmail on standard ports, service: 'gmail' with family: 4
-    // completely avoids ENETUNREACH IPv6 routing errors on cloud environments (like Render).
-    if (isGmail && (!process.env.SMTP_PORT || process.env.SMTP_PORT === '465' || process.env.SMTP_PORT === '587')) {
-      return nodemailer.createTransport({
-        service: 'gmail',
-        auth: { user, pass },
-        family: 4,
-      } as any);
-    }
 
     return nodemailer.createTransport({
       host,
       port,
       secure: port === 465,
       auth: { user, pass },
-      family: 4,
-    } as any);
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
   }
 
   public static formatSubject(type: string, title: string): string {
