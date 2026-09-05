@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'models/attendance_record.dart';
+import 'models/attendance_subject_view_model.dart';
 import 'services/attendance_service.dart';
 import 'timetable_manager.dart';
 import 'theme/theme.dart';
@@ -12,6 +13,7 @@ import 'services/progress_calculator_service.dart';
 import 'attendance_import_review_page.dart';
 import 'models/attendance_import_models.dart';
 import 'services/attendance_parser.dart';
+import 'services/attendance_status_mapper.dart';
 import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/staggered_list_item.dart';
 import 'widgets/animations/floating_empty_state.dart';
@@ -264,23 +266,7 @@ class _AttendancePageState extends State<AttendancePage> {
 
                     final Map<String, AttendanceRecord> records = {};
                     final Map<String, List<AttendanceRecord>> rawGrouped = {};
-
-                    // Clean and normalize component names to human-readable form
-                    String normalizeComponent(String comp) {
-                      final lower = comp.trim().toLowerCase();
-                      if (lower.isEmpty ||
-                          lower == 'lecture' ||
-                          lower == 'theory') {
-                        return 'Theory';
-                      }
-                      if (lower.contains('lab') ||
-                          lower.contains('practical')) {
-                        return 'Lab';
-                      }
-                      if (lower.contains('tutorial')) return 'Tutorial';
-                      if (lower.contains('project')) return 'Project';
-                      return comp.trim();
-                    }
+                    final Map<String, int> completedCounts = {};
 
                     // 1. If logs exist, they are the ground truth for imported lectures
                     if (logs.isNotEmpty) {
@@ -299,18 +285,8 @@ class _AttendancePageState extends State<AttendancePage> {
                       }
                       final deduplicatedLogs = uniqueLogs.values.toList();
 
-                      final compsBySubject = <String, Set<String>>{};
-                      for (final log in deduplicatedLogs) {
-                        final canonSubj = AttendanceLog.canonicalSubjectCode(
-                          log.subjectCode,
-                        );
-                        compsBySubject
-                            .putIfAbsent(canonSubj, () => {})
-                            .add(normalizeComponent(log.component));
-                      }
-
                       // Aggregate logs: ONLY DSA splits Theory and Lab.
-                      // All other multi-component subjects merge into ONE card.
+                      // All other subjects merge into ONE card with component 'Merged'.
                       final aggregatedLogs =
                           <
                             String,
@@ -327,24 +303,15 @@ class _AttendancePageState extends State<AttendancePage> {
                         final canonSubj = AttendanceLog.canonicalSubjectCode(
                           log.subjectCode,
                         );
-                        final isDsa = AttendanceLog.isDsa(canonSubj);
-                        final normComp = normalizeComponent(log.component);
-                        final hasMultiple =
-                            (compsBySubject[canonSubj]?.length ?? 0) > 1;
-
-                        final String groupKey;
-                        final String displayComponent;
-
-                        if (isDsa) {
-                          groupKey = '${canonSubj}_$normComp';
-                          displayComponent = normComp;
-                        } else if (hasMultiple) {
-                          groupKey = '${canonSubj}_Merged';
-                          displayComponent = 'Merged';
-                        } else {
-                          groupKey = '${canonSubj}_$normComp';
-                          displayComponent = normComp;
-                        }
+                        final displayComponent =
+                            AttendanceLog.canonicalComponent(
+                              canonSubj,
+                              log.component,
+                            );
+                        final groupKey = AttendanceLog.canonicalGroupKey(
+                          canonSubj,
+                          log.component,
+                        );
 
                         final cur =
                             aggregatedLogs[groupKey] ??
@@ -371,6 +338,10 @@ class _AttendancePageState extends State<AttendancePage> {
                           absent: a,
                           cancelled: cur.cancelled,
                         );
+
+                        if (AttendanceStatusMapper.countsAsCompletedOccurrence(log.status)) {
+                          completedCounts[groupKey] = (completedCounts[groupKey] ?? 0) + 1;
+                        }
                       }
 
                       for (final entry in aggregatedLogs.entries) {
@@ -391,88 +362,143 @@ class _AttendancePageState extends State<AttendancePage> {
                         rawGrouped[entry.key] = [rec];
                       }
 
-                      // Include any subject that exists in rawRecords but not in logs
+                      // Include any subject that exists in rawRecords but NOT in logs
+                      final subjectsInLogs = deduplicatedLogs
+                          .map(
+                            (l) => AttendanceLog.canonicalSubjectCode(
+                              l.subjectCode,
+                            ),
+                          )
+                          .toSet();
+
                       for (final r in rawRecords) {
                         final canonSubj = AttendanceLog.canonicalSubjectCode(
                           r.subjectCode,
                         );
-                        final isDsa = AttendanceLog.isDsa(canonSubj);
-                        final normComp = normalizeComponent(r.component);
-                        final hasMultiple =
-                            (compsBySubject[canonSubj]?.length ?? 0) > 1;
-                        final groupKey = isDsa
-                            ? '${canonSubj}_$normComp'
-                            : (hasMultiple
-                                  ? '${canonSubj}_Merged'
-                                  : '${canonSubj}_$normComp');
-                        if (!records.containsKey(groupKey)) {
-                          records[groupKey] = r;
-                          rawGrouped[groupKey] = [r];
+                        // If subject is already covered by ground-truth logs, NEVER add duplicate from rawRecords!
+                        if (subjectsInLogs.contains(canonSubj)) {
+                          continue;
                         }
-                      }
-                    } else {
-                      // Fallback when no logs exist: aggregate directly from rawRecords
-                      final compsBySubject = <String, Set<String>>{};
-                      for (final r in rawRecords) {
-                        compsBySubject
-                            .putIfAbsent(r.subjectCode, () => {})
-                            .add(normalizeComponent(r.component));
-                      }
 
-                      for (final r in rawRecords) {
-                        final isDsa = AttendanceLog.isDsa(r.subjectCode);
-                        final normComp = normalizeComponent(r.component);
-                        final hasMultiple =
-                            (compsBySubject[r.subjectCode]?.length ?? 0) > 1;
-
-                        final String groupKey;
-                        final String displayComponent;
-
-                        if (isDsa) {
-                          groupKey = '${r.subjectCode}_$normComp';
-                          displayComponent = normComp;
-                        } else if (hasMultiple || r.component == 'Merged') {
-                          groupKey = '${r.subjectCode}_Merged';
-                          displayComponent = 'Merged';
-                        } else {
-                          groupKey = '${r.subjectCode}_$normComp';
-                          displayComponent = normComp;
-                        }
+                        final displayComponent =
+                            AttendanceLog.canonicalComponent(
+                              canonSubj,
+                              r.component,
+                            );
+                        final groupKey = AttendanceLog.canonicalGroupKey(
+                          canonSubj,
+                          r.component,
+                        );
 
                         if (records.containsKey(groupKey)) {
                           final existing = records[groupKey]!;
-                          records[groupKey] = AttendanceRecord(
-                            id: existing.id,
-                            division: existing.division,
-                            subjectCode: r.subjectCode,
-                            component: displayComponent,
-                            present: existing.present + r.present,
-                            absent: existing.absent + r.absent,
-                            cancelled: existing.cancelled + r.cancelled,
-                          );
+                          if (r.total > existing.total) {
+                            records[groupKey] = AttendanceRecord(
+                              id: r.id,
+                              division: r.division,
+                              subjectCode: canonSubj,
+                              component: displayComponent,
+                              present: r.present,
+                              absent: r.absent,
+                              cancelled: r.cancelled,
+                            );
+                          }
                         } else {
                           records[groupKey] = AttendanceRecord(
                             id: r.id,
                             division: r.division,
-                            subjectCode: r.subjectCode,
+                            subjectCode: canonSubj,
                             component: displayComponent,
                             present: r.present,
                             absent: r.absent,
                             cancelled: r.cancelled,
                           );
+                          rawGrouped.putIfAbsent(groupKey, () => []).add(r);
                         }
-                        rawGrouped.putIfAbsent(groupKey, () => []).add(r);
+                      }
+                    } else {
+                      // Fallback when no logs exist: aggregate directly from rawRecords
+                      final recordsByGroup = <String, List<AttendanceRecord>>{};
+                      for (final r in rawRecords) {
+                        final canonSubj = AttendanceLog.canonicalSubjectCode(
+                          r.subjectCode,
+                        );
+                        final groupKey = AttendanceLog.canonicalGroupKey(
+                          canonSubj,
+                          r.component,
+                        );
+                        recordsByGroup.putIfAbsent(groupKey, () => []).add(r);
+                      }
+
+                      for (final entry in recordsByGroup.entries) {
+                        final groupKey = entry.key;
+                        final recList = entry.value;
+                        final first = recList.first;
+                        final canonSubj = AttendanceLog.canonicalSubjectCode(
+                          first.subjectCode,
+                        );
+                        final displayComponent =
+                            AttendanceLog.canonicalComponent(
+                              canonSubj,
+                              first.component,
+                            );
+
+                        final distinctComponents = recList
+                            .map(
+                              (r) =>
+                                  AttendanceLog.normalizeComponent(r.component),
+                            )
+                            .toSet();
+                        final hasMerged =
+                            distinctComponents.contains('Merged') ||
+                            recList.any((r) => r.component == 'Merged');
+
+                        int totalPresent = 0;
+                        int totalAbsent = 0;
+                        int totalCancelled = 0;
+
+                        if (hasMerged || distinctComponents.length == 1) {
+                          // Overlapping representations / snapshots of the same subject:
+                          // Deduplicate by picking the most complete/latest snapshot
+                          recList.sort((a, b) {
+                            final cmp = b.total.compareTo(a.total);
+                            if (cmp != 0) return cmp;
+                            return b.updatedAt.compareTo(a.updatedAt);
+                          });
+                          final best = recList.first;
+                          totalPresent = best.present;
+                          totalAbsent = best.absent;
+                          totalCancelled = best.cancelled;
+                        } else {
+                          // Genuinely distinct non-overlapping components (e.g. Theory + Lab for merged course):
+                          for (final r in recList) {
+                            totalPresent += r.present;
+                            totalAbsent += r.absent;
+                            totalCancelled += r.cancelled;
+                          }
+                        }
+
+                        records[groupKey] = AttendanceRecord(
+                          id: '${first.division}_${canonSubj}_$displayComponent',
+                          division: first.division,
+                          subjectCode: canonSubj,
+                          component: displayComponent,
+                          present: totalPresent,
+                          absent: totalAbsent,
+                          cancelled: totalCancelled,
+                        );
+                        rawGrouped[groupKey] = recList;
                       }
                     }
 
                     final subjects = records.entries.map((e) {
                       final key = e.key;
                       final r = e.value;
-                      return _SubjectEntry(
-                        subjectCode: r.subjectCode,
-                        component: r.component,
+                      return AttendanceSubjectViewModel.fromRecord(
                         record: r,
+                        calculator: calculator,
                         rawRecords: rawGrouped[key] ?? [],
+                        completedOccurrences: completedCounts[key],
                       );
                     }).toList();
 
@@ -491,7 +517,9 @@ class _AttendancePageState extends State<AttendancePage> {
                             id: 'attendance_page_header',
                             child: Text(
                               'My Attendance',
-                              style: Theme.of(context).appBarTheme.titleTextStyle,
+                              style: Theme.of(
+                                context,
+                              ).appBarTheme.titleTextStyle,
                             ),
                           ),
                           actions: [
@@ -500,7 +528,7 @@ class _AttendancePageState extends State<AttendancePage> {
                               tooltip: 'Open SVKM Portal',
                               onPressed: () async {
                                 final uri = Uri.parse(
-                                  'https://sdc-sppap1.svkm.ac.in:50001/irj/portal',
+                                   'https://sdc-sppap1.svkm.ac.in:50001/irj/portal',
                                 );
                                 try {
                                   await launchUrl(
@@ -547,11 +575,8 @@ class _AttendancePageState extends State<AttendancePage> {
                           ),
                           sliver: SliverList(
                             delegate: SliverChildBuilderDelegate((context, i) {
-                              final entry = subjects[i];
-                              if (entry.record == null ||
-                                  (entry.record!.present +
-                                          entry.record!.absent ==
-                                      0)) {
+                              final vm = subjects[i];
+                              if (vm.total == 0) {
                                 return const SizedBox.shrink();
                               }
 
@@ -561,10 +586,9 @@ class _AttendancePageState extends State<AttendancePage> {
                                   padding: const EdgeInsets.only(
                                     bottom: AppSpacing.md,
                                   ),
-                                  child: _SubjectAttendanceCard(
-                                    entry: entry,
+                                  child: SubjectAttendanceCard(
+                                    viewModel: vm,
                                     division: widget.division,
-                                    calculator: calculator,
                                   ),
                                 ),
                               );
@@ -658,32 +682,14 @@ class _AttendancePageState extends State<AttendancePage> {
 }
 
 // -----------------------------------------------------------------------------
-class _SubjectEntry {
-  final String subjectCode;
-  final String component;
-  final AttendanceRecord? record;
-  final List<AttendanceRecord> rawRecords;
-
-  const _SubjectEntry({
-    required this.subjectCode,
-    required this.component,
-    this.record,
-    this.rawRecords = const [],
-  });
-}
-
-// -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
-class _SubjectAttendanceCard extends StatelessWidget {
-  final _SubjectEntry entry;
+class SubjectAttendanceCard extends StatelessWidget {
+  final AttendanceSubjectViewModel viewModel;
   final String division;
-  final ProgressCalculatorService calculator;
 
-  const _SubjectAttendanceCard({
-    required this.entry,
-    required this.division,
-    required this.calculator,
+  const SubjectAttendanceCard({
+    super.key,
+    required this.viewModel,
+    this.division = '',
   });
 
   Color _color(BuildContext context, double pct) {
@@ -699,20 +705,11 @@ class _SubjectAttendanceCard extends StatelessWidget {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final record = entry.record;
-    final present = record?.present ?? 0;
-    final absent = record?.absent ?? 0;
-    final total = present + absent;
-    final pct = total == 0 ? 0.0 : present / total;
+    final present = viewModel.present;
+    final absent = viewModel.absent;
+    final total = viewModel.total;
+    final pct = viewModel.percentage;
     final color = _color(context, pct);
-
-    // Skip Bank Math based on fixed semester course hours from Course Details
-    final int skipsLeft = calculator.getRemainingSkips(
-      entry.subjectCode,
-      entry.component,
-      absent,
-      requiredAttendance: 0.80,
-    );
 
     return Container(
       decoration: BoxDecoration(
@@ -729,68 +726,103 @@ class _SubjectAttendanceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Primary Row: Subject Title + Attendance %
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            entry.subjectCode,
-                            style: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: isDark
-                                  ? Colors.white
-                                  : colorScheme.onSurface,
-                              height: 1.2,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            '${(pct * 100).toStringAsFixed(1)}%',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: color,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      entry.component,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: isDark ? Colors.white70 : sem.onSurfaceMuted,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  viewModel.subjectCode,
+                  style: GoogleFonts.outfit(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : colorScheme.onSurface,
+                    height: 1.2,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              _SkipBadge(skipsLeft: skipsLeft),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 7,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '${(pct * 100).toStringAsFixed(1)}%',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: 6),
+
+          // Secondary Row: Component + Skip Badge
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
+                  viewModel.component,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: isDark ? Colors.white70 : sem.onSurfaceMuted,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _SkipBadge(skipsLeft: viewModel.skipsLeft),
+            ],
+          ),
+          if (viewModel.needsReview) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: 3,
+              ),
+              decoration: BoxDecoration(
+                color: sem.warning.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(
+                  color: sem.warning.withValues(alpha: 0.3),
+                  width: 0.8,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 13,
+                    color: sem.warning,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    viewModel.reviewMessage ?? 'Subject matching needs review',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: sem.warning,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
 
           Text(
             "Total: $total  •  Present: $present  •  Absent: $absent",
@@ -818,7 +850,146 @@ class _SubjectAttendanceCard extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: AppSpacing.md),
+          _SemesterContextRow(
+            assignedHoursLabel: viewModel.assignedHoursLabel,
+            remainingLecturesLabel: viewModel.remainingLecturesLabel,
+            isDark: isDark,
+            borderSubtle: sem.borderSubtle,
+            onSurfaceMuted: sem.onSurfaceMuted,
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _SemesterContextRow extends StatelessWidget {
+  final String assignedHoursLabel;
+  final String remainingLecturesLabel;
+  final bool isDark;
+  final Color borderSubtle;
+  final Color onSurfaceMuted;
+
+  const _SemesterContextRow({
+    required this.assignedHoursLabel,
+    required this.remainingLecturesLabel,
+    required this.isDark,
+    required this.borderSubtle,
+    required this.onSurfaceMuted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textStyle = GoogleFonts.inter(
+      fontSize: 11.5,
+      fontWeight: FontWeight.w500,
+      color: isDark ? Colors.white70 : onSurfaceMuted,
+    );
+    final iconColor = isDark ? Colors.white60 : onSurfaceMuted;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm + 1,
+      ),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.04)
+            : const Color(0xFFF6F6FA),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+          color: isDark
+              ? borderSubtle.withValues(alpha: 0.35)
+              : const Color(0xFFECECF2),
+        ),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth >= 320;
+          if (isWide) {
+            return Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(Icons.schedule_rounded, size: 13.5, color: iconColor),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          assignedHoursLabel,
+                          style: textStyle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: 12,
+                  margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                  color: isDark
+                      ? borderSubtle.withValues(alpha: 0.5)
+                      : const Color(0xFFDFDFE8),
+                ),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(Icons.event_note_rounded, size: 13.5, color: iconColor),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          remainingLecturesLabel,
+                          style: textStyle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.schedule_rounded, size: 13.5, color: iconColor),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      assignedHoursLabel,
+                      style: textStyle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.event_note_rounded, size: 13.5, color: iconColor),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      remainingLecturesLabel,
+                      style: textStyle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -920,7 +1091,9 @@ class _TimelineLogCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '${log.date.day}/${log.date.month}/${log.date.year}  ${TimetableManager.formatTime(log.startTime, log.endTime)}',
+                  log.startTime != null && log.endTime != null
+                      ? '${log.date.day}/${log.date.month}/${log.date.year}  ${TimetableManager.formatTime(log.startTime!, log.endTime!)}'
+                      : '${log.date.day}/${log.date.month}/${log.date.year}',
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     color: sem.onSurfaceMuted,

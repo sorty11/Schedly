@@ -5,6 +5,7 @@ import '../models/timetable_entry.dart';
 import '../models/course_component.dart';
 import '../models/attendance_log.dart';
 import 'course_configuration_service.dart';
+import 'subject_identity_service.dart';
 
 import '../app_settings.dart';
 import '../user_roles.dart';
@@ -102,10 +103,14 @@ class ProgressCalculatorService {
   static bool _eq(String a, String b) =>
       a.trim().toUpperCase() == b.trim().toUpperCase();
 
-  /// Returns the fixed total course hours for the semester from Course Details configuration.
-  int getFixedTotalCourseHours(String subjectCode, String component) {
+  /// Returns the authoritative configured course hours from Course Details
+  /// (`sections/{division}/subjects/{componentId}.targetHours` with `totalHours` fallback).
+  ///
+  /// Returns null if the course hours are not configured or <= 0.
+  /// Does NOT estimate from weekly timetable.
+  int? getConfiguredCourseHours(String subjectCode, String component) {
     if (courseComponents.isEmpty && subjectMetadata.isEmpty) {
-      return _getEstimatedTimetableHours(subjectCode, component);
+      return null;
     }
 
     final canonSubj = AttendanceLog.canonicalSubjectCode(subjectCode);
@@ -114,11 +119,19 @@ class ProgressCalculatorService {
     bool matchCourseName(CourseComponent c) {
       final compCanon = AttendanceLog.canonicalSubjectCode(c.courseName);
       final idCanon = AttendanceLog.canonicalSubjectCode(c.componentId);
+      final codeCanon = c.courseCode.isNotEmpty
+          ? AttendanceLog.canonicalSubjectCode(c.courseCode)
+          : '';
       return _eq(compCanon, canonSubj) ||
           _eq(idCanon, canonSubj) ||
+          (codeCanon.isNotEmpty && _eq(codeCanon, canonSubj)) ||
           _eq(c.courseName, subjectCode) ||
           _eq(c.componentId, subjectCode) ||
-          (c.courseCode.isNotEmpty && _eq(c.courseCode, subjectCode));
+          (c.courseCode.isNotEmpty && _eq(c.courseCode, subjectCode)) ||
+          SubjectIdentityService.isMatch(c.courseName, subjectCode, configuredCourses: courseComponents) ||
+          SubjectIdentityService.isMatch(c.componentId, subjectCode, configuredCourses: courseComponents) ||
+          (c.courseCode.isNotEmpty &&
+              SubjectIdentityService.isMatch(c.courseCode, subjectCode, configuredCourses: courseComponents));
     }
 
     // 1. Specific component lookup (e.g. Theory or Lab for split courses like DSA)
@@ -155,7 +168,36 @@ class ProgressCalculatorService {
       return direct.targetHours;
     }
 
-    // 4. Fallback to timetable estimation if Course Details is unconfigured
+    return null;
+  }
+
+  /// Returns the remaining lectures in the semester for the given subject and component:
+  /// (configured semester assigned hours) - (completed lecture occurrences).
+  ///
+  /// Clamped at 0 (never negative).
+  /// Returns null if configured semester assigned hours are not available or <= 0.
+  int? getRemainingLectures(
+    String subjectCode,
+    String component,
+    int conductedLectures,
+  ) {
+    final assignedHours = getConfiguredCourseHours(subjectCode, component);
+    if (assignedHours == null || assignedHours <= 0) {
+      return null;
+    }
+    final remaining = assignedHours - conductedLectures;
+    return remaining < 0 ? 0 : remaining;
+  }
+
+  /// Returns the fixed total course hours for the semester from Course Details configuration.
+  /// Falls back to estimating from the weekly timetable only if Course Details is unconfigured.
+  int getFixedTotalCourseHours(String subjectCode, String component) {
+    final configured = getConfiguredCourseHours(subjectCode, component);
+    if (configured != null && configured > 0) {
+      return configured;
+    }
+
+    // Fallback to timetable estimation if Course Details is unconfigured
     return _getEstimatedTimetableHours(subjectCode, component);
   }
 
@@ -197,12 +239,29 @@ class ProgressCalculatorService {
     DateTime now = DateTime.now();
     DateTime current = semesterStartDate;
 
+    final normTargetComp = AttendanceLog.normalizeComponent(component);
+    final isDsa = AttendanceLog.isDsa(subjectCode);
+
     // Loop day-by-day from startDate to now
     while (current.isBefore(now)) {
       int weekday = current.weekday;
       if (weeklyTimetable.containsKey(weekday)) {
         for (var entry in weeklyTimetable[weekday]!) {
-          if (entry.subject == subjectCode && entry.component == component) {
+          final isSubjMatch = SubjectIdentityService.isMatch(
+            entry.subject,
+            subjectCode,
+            configuredCourses: courseComponents,
+          );
+          if (!isSubjMatch) continue;
+
+          if (isDsa) {
+            final entryNormComp =
+                AttendanceLog.normalizeComponent(entry.component);
+            if (entryNormComp == normTargetComp) {
+              totalScheduledHours += (entry.durationMinutes / 60).round();
+            }
+          } else {
+            // Merged subject accumulates all components
             totalScheduledHours += (entry.durationMinutes / 60).round();
           }
         }
@@ -215,9 +274,33 @@ class ProgressCalculatorService {
   int getCancelledHours(String subjectCode, String component) {
     // Subject names in course_component are sometimes stored as composite like 'SnS Theory'
     final compositeKey = '$subjectCode $component'.trim();
-    // Try composite key first, then fallback to base subject code if needed
-    final comp = subjectMetadata[compositeKey] ?? subjectMetadata[subjectCode];
-    return comp?.cancelledHours ?? 0;
+    if (subjectMetadata.containsKey(compositeKey)) {
+      return subjectMetadata[compositeKey]!.cancelledHours;
+    }
+    if (subjectMetadata.containsKey(subjectCode)) {
+      return subjectMetadata[subjectCode]!.cancelledHours;
+    }
+
+    final canonSubj = AttendanceLog.canonicalSubjectCode(subjectCode);
+    if (subjectMetadata.containsKey(canonSubj)) {
+      return subjectMetadata[canonSubj]!.cancelledHours;
+    }
+
+    for (final comp in courseComponents) {
+      if (SubjectIdentityService.isMatch(
+            comp.courseName,
+            subjectCode,
+            configuredCourses: courseComponents,
+          ) ||
+          SubjectIdentityService.isMatch(
+            comp.componentId,
+            subjectCode,
+            configuredCourses: courseComponents,
+          )) {
+        return comp.cancelledHours;
+      }
+    }
+    return 0;
   }
 
   int getConductedClasses(String subjectCode, String component) {
@@ -238,59 +321,41 @@ class ProgressCalculatorService {
     // Structure: { 'Lab': {'C1': 2, 'C2': 2}, 'Tutorial': {'T1': 1, 'T2': 1} }
     Map<String, Map<String, int>> splitComponentHours = {};
 
+    final normTargetComp = AttendanceLog.normalizeComponent(component);
+    final isDsa = AttendanceLog.isDsa(subjectCode);
+
     for (var dayEntries in weeklyTimetable.values) {
       for (var entry in dayEntries) {
         String entrySubj = entry.subject;
         String entryComp = entry.component;
 
-        // Force-normalize DSA variants
-        if (entrySubj.toUpperCase().contains('DATA STRUCTURES') ||
-            entrySubj.trim().toUpperCase() == 'DSA') {
-          entrySubj = 'DSA';
-          if (entryComp.toUpperCase().contains('LAB') ||
-              entryComp.toUpperCase().contains('PRACTICAL')) {
-            entryComp = 'Lab';
-          } else {
-            entryComp = 'Theory';
-          }
-        }
+        final isSubjMatch = SubjectIdentityService.isMatch(
+          entrySubj,
+          subjectCode,
+          configuredCourses: courseComponents,
+        );
+        if (!isSubjMatch) continue;
 
         // Determine if we should process this entry based on split/merged rules
         bool isMatch = false;
 
-        if (component == 'Merged' || component == 'All' || component.isEmpty) {
+        if (!isDsa ||
+            component == 'Merged' ||
+            component == 'All' ||
+            component.isEmpty) {
           // Merged Subject -> Match by subject name only, grab all components
-          isMatch = (entrySubj == subjectCode);
+          isMatch = true;
         } else {
-          // Split Subject -> Must match BOTH subject and specific component
-          String normEntryComp = entryComp;
-          if (normEntryComp.isEmpty || normEntryComp == 'Lecture') {
-            normEntryComp = 'Theory';
-          } else if (normEntryComp == 'Practical') {
-            normEntryComp = 'Lab';
-          }
-
-          String normTargetComp = component;
-          if (normTargetComp.isEmpty || normTargetComp == 'Lecture') {
-            normTargetComp = 'Theory';
-          } else if (normTargetComp == 'Practical') {
-            normTargetComp = 'Lab';
-          }
-
-          isMatch =
-              (entrySubj == subjectCode && normEntryComp == normTargetComp);
+          // Split Subject (DSA) -> Must match BOTH subject and specific component
+          final normEntryComp = AttendanceLog.normalizeComponent(entryComp);
+          isMatch = (normEntryComp == normTargetComp);
         }
 
         if (isMatch) {
           int hours = (entry.durationMinutes / 60).round();
           String batch = entry.batch.isEmpty ? "Whole Class" : entry.batch;
 
-          String comp = entryComp;
-          if (comp.isEmpty || comp == 'Lecture') {
-            comp = 'Theory';
-          } else if (comp == 'Practical') {
-            comp = 'Lab';
-          }
+          String comp = AttendanceLog.normalizeComponent(entryComp);
 
           if (batch == "Whole Class") {
             // Everyone attends these (Theory)
