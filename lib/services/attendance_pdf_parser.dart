@@ -10,16 +10,16 @@ import 'attendance_course_matcher.dart';
 import 'attendance_course_normalizer.dart';
 import 'attendance_date_time_parser.dart';
 import 'attendance_status_mapper.dart';
+import 'attendance/academic_grouping_policy.dart';
+import 'attendance/attendance_document_profile.dart';
+import 'attendance/attendance_reconciliation_report.dart';
+import 'attendance/attendance_row_validator.dart';
+import 'attendance/extraction_strategy.dart';
+import 'attendance/progressive_attendance_reconciler.dart';
+import 'attendance/raw_attendance_row.dart';
 
 /// Extracts and parses NMIMS/SVKM student attendance PDF reports.
 class AttendancePdfParser {
-  static final _rowLineRegex = RegExp(
-    r'^\s*(\d+)\s+(.+?)\s+([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})\s+'
-    r'(\d{1,2}:\d{2}:\d{2}\s*[AP]M)\s+(\d{1,2}:\d{2}:\d{2}\s*[AP]M)\s+'
-    r'(P|A|E|L|NU)\s*$',
-    caseSensitive: false,
-  );
-
   /// Parses PDF bytes into rows + metadata. Pure — no Firestore side effects.
   static ({
     AttendanceReportMetadata metadata,
@@ -27,8 +27,14 @@ class AttendancePdfParser {
     List<String> warnings,
     List<String> errors,
     bool isImageOnly,
+    AttendanceReconciliationReport? reconciliationReport,
+    AttendanceDocumentProfile? profile,
   })
-  parseBytes(Uint8List bytes, {AttendanceParseProgress? onProgress}) {
+  parseBytes(
+    Uint8List bytes, {
+    AttendanceParseProgress? onProgress,
+    AttendanceDocumentProfile? explicitProfile,
+  }) {
     PdfDocument? document;
     try {
       document = PdfDocument(inputBytes: bytes);
@@ -60,7 +66,7 @@ class AttendancePdfParser {
 
       final extractor = PdfTextExtractor(document);
       final pageCount = document.pages.count;
-      final allRows = <ParsedAttendanceRow>[];
+      final allRawRows = <RawAttendanceRow>[];
       final warnings = <String>[];
       final errors = <String>[];
       var totalTextLength = 0;
@@ -72,11 +78,35 @@ class AttendancePdfParser {
       String? programName;
       String? durationLine;
 
+      // Sample first 2 pages to detect profile
+      final sampleLines = <String>[];
+      final detectedHeaderTokens = <String>{};
+      for (var page = 0; page < math.min(pageCount, 2); page++) {
+        final lines = extractor.extractTextLines(
+          startPageIndex: page,
+          endPageIndex: page,
+        );
+        for (final line in lines) {
+          final t = line.text.trim();
+          if (t.isNotEmpty) sampleLines.add(t);
+          for (final w in line.wordCollection) {
+            final wt = w.text.trim();
+            if (wt.isNotEmpty) detectedHeaderTokens.add(wt);
+          }
+        }
+      }
+
+      final profile = explicitProfile ??
+          AttendanceDocumentDetector.detectProfile(
+            sampleLines: sampleLines,
+            detectedHeaderTokens: detectedHeaderTokens,
+          );
+
       for (var page = 0; page < pageCount; page++) {
         onProgress?.call(
           currentPage: page + 1,
           totalPages: pageCount,
-          rowsDetected: allRows.length,
+          rowsDetected: allRawRows.length,
           message: 'Parsing page ${page + 1} of $pageCount…',
         );
 
@@ -105,14 +135,15 @@ class AttendancePdfParser {
           durationLine ??= meta.durationLine;
         }
 
-        // 2. Positional row extraction
-        final pageRows = _extractRowsFromPage(
+        // 2. Extraction via Strategy Chain
+        final pageRows = ExtractionStrategyChain.execute(
+          pageLines: pageLines,
           pageWords: pageWords,
           pageIndex: page,
-          warnings: warnings,
+          profile: profile,
         );
 
-        allRows.addAll(pageRows);
+        allRawRows.addAll(pageRows);
       }
 
       final isImageOnly = totalTextLength < 50;
@@ -125,7 +156,78 @@ class AttendancePdfParser {
             'This PDF appears to be image-only with no extractable text. OCR is not supported.',
           ],
           isImageOnly: true,
+          reconciliationReport: null,
+          profile: profile,
         );
+      }
+
+      // 3. Validation & Stage 1 Reconciliation
+      final validation = AttendanceRowValidator.validateAll(allRawRows, profile);
+
+      final allRows = <ParsedAttendanceRow>[];
+      for (final val in validation.confirmed) {
+        final normalized = AttendanceCourseNormalizer.normalize(
+          val.rawRow.rawCourseName,
+        );
+        allRows.add(
+          ParsedAttendanceRow(
+            srNo: val.rawRow.sourceRowNumber,
+            rawCourseName: val.rawRow.rawCourseName,
+            courseName: normalized.courseName.isNotEmpty
+                ? normalized.courseName
+                : val.rawRow.rawCourseName,
+            componentCode: normalized.componentCode,
+            batchOrSection: normalized.batchOrSection,
+            date: val.date!,
+            startTimeMinutes: val.startTimeMinutes,
+            endTimeMinutes: val.endTimeMinutes,
+            rawStatus: val.rawRow.rawStatus.toUpperCase(),
+            normalizedStatus: val.normalizedStatus!,
+            pageIndex: val.rawRow.pageNumber - 1,
+            rawRow: val.rawRow,
+          ),
+        );
+      }
+
+      for (final val in validation.reviewRequired) {
+        if (val.diagnostic != null) {
+          warnings.add(
+            'Page ${val.rawRow.pageNumber}, Row ${val.rawRow.sourceRowNumber}: ${val.diagnostic!.failureDescription}',
+          );
+        }
+        if (val.date != null) {
+          final effectiveStatus =
+              val.normalizedStatus ?? val.rawRow.rawStatus.toLowerCase();
+          final normalized = AttendanceCourseNormalizer.normalize(
+            val.rawRow.rawCourseName,
+          );
+          allRows.add(
+            ParsedAttendanceRow(
+              srNo: val.rawRow.sourceRowNumber,
+              rawCourseName: val.rawRow.rawCourseName,
+              courseName: normalized.courseName.isNotEmpty
+                  ? normalized.courseName
+                  : val.rawRow.rawCourseName,
+              componentCode: normalized.componentCode,
+              batchOrSection: normalized.batchOrSection,
+              date: val.date!,
+              startTimeMinutes: val.startTimeMinutes,
+              endTimeMinutes: val.endTimeMinutes,
+              rawStatus: val.rawRow.rawStatus.toUpperCase(),
+              normalizedStatus: effectiveStatus,
+              pageIndex: val.rawRow.pageNumber - 1,
+              rawRow: val.rawRow,
+            ),
+          );
+        }
+      }
+
+      for (final val in validation.rejected) {
+        if (val.diagnostic != null) {
+          warnings.add(
+            'Page ${val.rawRow.pageNumber}, Row ${val.rawRow.sourceRowNumber} REJECTED: ${val.diagnostic!.failureDescription}',
+          );
+        }
       }
 
       if (allRows.isEmpty) {
@@ -160,6 +262,8 @@ class AttendancePdfParser {
         warnings: warnings,
         errors: errors,
         isImageOnly: false,
+        reconciliationReport: validation.report,
+        profile: profile,
       );
     } finally {
       document.dispose();
@@ -176,6 +280,7 @@ class AttendancePdfParser {
     List<String> parseErrors = const [],
     bool isImageOnly = false,
     int totalPagesParsed = 0,
+    AttendanceReconciliationReport? reconciliationReport,
   }) {
     final matcher = AttendanceCourseMatcher(configuredCourses);
     final existingByKey = {
@@ -261,6 +366,14 @@ class AttendancePdfParser {
       );
     }
 
+    final newCount = (logs.length - duplicates - updates).clamp(0, logs.length);
+    final finalReport = reconciliationReport?.copyWithStorage(
+      newRecords: newCount,
+      updatedRecords: updates,
+      duplicatesIgnored: duplicates,
+      conflicts: 0,
+    );
+
     return AttendanceImportPreview(
       metadata: metadata,
       logs: logs,
@@ -277,6 +390,7 @@ class AttendancePdfParser {
       errors: parseErrors,
       isImageOnly: isImageOnly,
       totalPagesParsed: totalPagesParsed,
+      reconciliationReport: finalReport,
     );
   }
 
@@ -292,201 +406,6 @@ class AttendancePdfParser {
       subjectCode: subjectCode,
       component: component,
     );
-  }
-
-  /// Extracts rows from a page using visual position and coordinate reconstruction.
-  static List<ParsedAttendanceRow> _extractRowsFromPage({
-    required List<TextWord> pageWords,
-    required int pageIndex,
-    required List<String> warnings,
-  }) {
-    if (pageWords.isEmpty) return [];
-
-    // Find table header words on this page
-    double? headerMaxY;
-    for (final w in pageWords) {
-      final t = w.text.trim().toLowerCase();
-      final cy = w.bounds.center.dy;
-      if (t == 'sr' ||
-          t == 'no.' ||
-          t == 'course' ||
-          t == 'date' ||
-          t == 'attenda' ||
-          t == 'attendance' ||
-          t == 'nce') {
-        if (pageIndex == 0 && cy > 200 && cy < 340) {
-          headerMaxY = headerMaxY == null
-              ? w.bounds.bottom
-              : math.max(headerMaxY, w.bounds.bottom);
-        } else if (pageIndex > 0 && cy < 60) {
-          headerMaxY = headerMaxY == null
-              ? w.bounds.bottom
-              : math.max(headerMaxY, w.bounds.bottom);
-        }
-      }
-    }
-
-    final tableTopY = headerMaxY != null
-        ? headerMaxY + 2.0
-        : (pageIndex == 0 ? 320.0 : 45.0);
-
-    // Find footer boundary
-    double tableBottomY = 740.0;
-    for (final w in pageWords) {
-      final t = w.text.trim().toLowerCase();
-      final cy = w.bounds.center.dy;
-      if (cy > tableTopY) {
-        if (t.contains('present') ||
-            t.contains('sap') ||
-            t.contains('system-generated') ||
-            t.contains('query') ||
-            t == 'ps:') {
-          tableBottomY = math.min(tableBottomY, w.bounds.top - 2.0);
-        }
-      }
-    }
-
-    final tableWords = pageWords.where((w) {
-      final cy = w.bounds.center.dy;
-      return cy > tableTopY && cy < tableBottomY && w.text.trim().isNotEmpty;
-    }).toList();
-
-    if (tableWords.isEmpty) return [];
-
-    // Cluster words into visual rows by dy (within 6.0 pt)
-    tableWords.sort((a, b) => a.bounds.center.dy.compareTo(b.bounds.center.dy));
-
-    final rowClusters = <List<TextWord>>[];
-    for (final w in tableWords) {
-      final y = w.bounds.center.dy;
-      if (rowClusters.isEmpty) {
-        rowClusters.add([w]);
-      } else {
-        final clusterY = rowClusters.last.first.bounds.center.dy;
-        if ((y - clusterY).abs() <= 6.0) {
-          rowClusters.last.add(w);
-        } else {
-          rowClusters.add([w]);
-        }
-      }
-    }
-
-    final rows = <ParsedAttendanceRow>[];
-
-    // Standard column boundary thresholds:
-    // Col 1 (Sr No): < 55.0
-    // Col 2 (Course Name): 55.0 <= cx < 325.0
-    // Col 3 (Date): 325.0 <= cx < 390.0
-    // Col 4 (Start Time): 390.0 <= cx < 460.0
-    // Col 5 (End Time): 460.0 <= cx < 535.0
-    // Col 6 (Attendance): 535.0 <= cx
-    const colSrMax = 55.0;
-    const colCourseMax = 325.0;
-    const colDateMax = 390.0;
-    const colStartMax = 460.0;
-    const colEndMax = 535.0;
-
-    for (final cluster in rowClusters) {
-      cluster.sort((a, b) => a.bounds.center.dx.compareTo(b.bounds.center.dx));
-
-      final srWords = <String>[];
-      final courseWords = <String>[];
-      final dateWords = <String>[];
-      final startWords = <String>[];
-      final endWords = <String>[];
-      final statusWords = <String>[];
-
-      for (final w in cluster) {
-        final cx = w.bounds.center.dx;
-        final t = w.text;
-        if (cx < colSrMax) {
-          srWords.add(t);
-        } else if (cx < colCourseMax) {
-          courseWords.add(t);
-        } else if (cx < colDateMax) {
-          dateWords.add(t);
-        } else if (cx < colStartMax) {
-          startWords.add(t);
-        } else if (cx < colEndMax) {
-          endWords.add(t);
-        } else {
-          statusWords.add(t);
-        }
-      }
-
-      var srStr = srWords.join(' ').trim();
-      var courseStr = courseWords.join(' ').trim();
-      var dateStr = dateWords.join(' ').trim();
-      var startStr = startWords.join(' ').trim();
-      var endStr = endWords.join(' ').trim();
-      var statusStr = statusWords.join(' ').trim();
-
-      int? srNo = int.tryParse(srStr);
-      DateTime? date = AttendanceDateTimeParser.parseDate(dateStr);
-      int? startMins = AttendanceDateTimeParser.parseTimeToMinutes(startStr);
-      int? endMins = AttendanceDateTimeParser.parseTimeToMinutes(endStr);
-      String rawStatus = statusStr.toUpperCase();
-      String? normalizedStatus = AttendanceStatusMapper.normalize(rawStatus);
-
-      // Fallback: if coordinate division was slightly misaligned, use full reconstructed row regex
-      if (srNo == null ||
-          date == null ||
-          startMins == null ||
-          endMins == null ||
-          normalizedStatus == null) {
-        final fullLine = cluster.map((w) => w.text).join(' ').trim();
-        final match = _rowLineRegex.firstMatch(fullLine);
-        if (match != null) {
-          srNo = int.tryParse(match.group(1)!);
-          courseStr = match.group(2)!.trim();
-          date = AttendanceDateTimeParser.parseDate(match.group(3)!);
-          startMins = AttendanceDateTimeParser.parseTimeToMinutes(
-            match.group(4)!,
-          );
-          endMins = AttendanceDateTimeParser.parseTimeToMinutes(
-            match.group(5)!,
-          );
-          rawStatus = match.group(6)!.trim().toUpperCase();
-          normalizedStatus = AttendanceStatusMapper.normalize(rawStatus);
-        }
-      }
-
-      if (srNo == null ||
-          date == null ||
-          startMins == null ||
-          endMins == null) {
-        continue;
-      }
-
-      if (normalizedStatus == null) {
-        warnings.add(
-          'Page ${pageIndex + 1}, Sr No. $srNo: Unknown attendance status "$rawStatus".',
-        );
-      }
-
-      final effectiveStatus = normalizedStatus ?? rawStatus.toLowerCase();
-      final normalized = AttendanceCourseNormalizer.normalize(courseStr);
-
-      rows.add(
-        ParsedAttendanceRow(
-          srNo: srNo,
-          rawCourseName: courseStr,
-          courseName: normalized.courseName.isNotEmpty
-              ? normalized.courseName
-              : courseStr,
-          componentCode: normalized.componentCode,
-          batchOrSection: normalized.batchOrSection,
-          date: date,
-          startTimeMinutes: startMins,
-          endTimeMinutes: endMins,
-          rawStatus: rawStatus,
-          normalizedStatus: effectiveStatus,
-          pageIndex: pageIndex,
-        ),
-      );
-    }
-
-    return rows;
   }
 
   static ({

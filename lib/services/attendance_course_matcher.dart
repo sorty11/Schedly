@@ -181,7 +181,7 @@ class AttendanceCourseMatcher {
 
     if (candidates.length == 1) {
       return CourseMatchResult(
-        subjectCode: candidates.first.componentId,
+        subjectCode: _cleanSubjectCode(candidates.first),
         component: candidates.first.componentType,
         confidence: MatchConfidence.fuzzy,
         warning:

@@ -26,18 +26,35 @@ class AttendanceDateTimeParser {
     r'(\d{1,2})[./\-](\d{1,2})[./\-](\d{4})',
   );
 
-  /// Parses dates like "Jan 5, 2026" or "Jul 13, 2026" or "Aug 30, 2026".
+  /// Parses dates like "Jan 5, 2026", "Jul 13, 2026", "15/08/2026", or "2026-08-15".
   static DateTime? parseDate(String raw) {
     final trimmed = raw.trim();
     final match = _dateRegex.firstMatch(trimmed);
-    if (match == null) return null;
+    if (match != null) {
+      final month = _months[match.group(1)];
+      final day = int.tryParse(match.group(2)!);
+      final year = int.tryParse(match.group(3)!);
+      if (month != null && day != null && year != null) {
+        return DateTime(year, month, day);
+      }
+    }
 
-    final month = _months[match.group(1)];
-    final day = int.tryParse(match.group(2)!);
-    final year = int.tryParse(match.group(3)!);
-    if (month == null || day == null || year == null) return null;
+    // Support numeric date formats: DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY
+    final dMatch = _durationDateRegex.firstMatch(trimmed);
+    if (dMatch != null) {
+      final d1 = int.tryParse(dMatch.group(1)!);
+      final d2 = int.tryParse(dMatch.group(2)!);
+      final d3 = int.tryParse(dMatch.group(3)!);
+      if (d1 != null && d2 != null && d3 != null) {
+        if (d3 > 1900) {
+          return DateTime(d3, d2, d1);
+        } else if (d1 > 1900) {
+          return DateTime(d1, d2, d3);
+        }
+      }
+    }
 
-    return DateTime(year, month, day);
+    return null;
   }
 
   /// Parses times like "9:15:00 AM" or "10:14:59 AM" or "1:00:00 PM".

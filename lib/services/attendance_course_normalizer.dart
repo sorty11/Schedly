@@ -57,6 +57,15 @@ class AttendanceCourseNormalizer {
       courseName = courseName.substring(0, courseName.length - 9).trim();
     }
 
+    // Normalize SAP-truncated course endings so sibling components share the same base name
+    final cleanedUpper = courseName.toUpperCase();
+    if (cleanedUpper.contains('DIGITAL CIRCUITS') &&
+        (cleanedUpper.endsWith('ARCH') ||
+            cleanedUpper.endsWith('ARCHI') ||
+            cleanedUpper.endsWith('ARCHITECTURE'))) {
+      courseName = 'Digital Circuits and Computer Architecture';
+    }
+
     final batch = _extractBatch(trailing.isNotEmpty ? trailing : raw);
 
     return NormalizedCourseInfo(

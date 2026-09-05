@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/attendance/academic_grouping_policy.dart';
+import '../services/subject_identity_service.dart';
 
 enum MatchConfidence {
   exact(100, 'Exact match'),
@@ -21,8 +23,8 @@ class AttendanceLog {
   final String? normalizedSubject; // Stripped string
   final String? canonicalSubjectId; // The resolved canonical ID
   final DateTime date;
-  final int startTime; // minutes from midnight
-  final int endTime;
+  final int? startTime; // minutes from midnight (nullable for timeless formats)
+  final int? endTime;
   final String status; // 'present' or 'absent'
   final String source; // 'pdf_import' or 'manual'
   final MatchConfidence confidence;
@@ -37,8 +39,8 @@ class AttendanceLog {
     this.normalizedSubject,
     this.canonicalSubjectId,
     required this.date,
-    required this.startTime,
-    required this.endTime,
+    this.startTime,
+    this.endTime,
     required this.status,
     required this.source,
     required this.confidence,
@@ -108,49 +110,63 @@ class AttendanceLog {
   );
 
   static String canonicalSubjectCode(String rawCode) {
-    final trimmed = rawCode.trim();
-    if (trimmed.isEmpty) return trimmed;
-    final upper = trimmed.toUpperCase();
-
-    if (upper == 'DSA' || upper.contains('DATA STRUCTURES')) return 'DSA';
-    if (upper == 'COA' || upper.contains('ORGANIZATION AND ARCHITECTUR')) {
-      return 'COA';
-    }
-    if (upper == 'PEM' || upper.contains('ECONOMICS AND MANAGEMEN')) {
-      return 'PEM';
-    }
-    if (upper == 'DM' || upper.contains('DISCRETE MATHEMATICS')) return 'DM';
-    if (upper == 'SNS' || upper.contains('SIGNALS AND SYSTEMS')) return 'SnS';
-    if (upper == 'PNS' || upper.contains('PROBABILITY AND STATISTICS')) {
-      return 'PnS';
-    }
-    if (upper == 'PYTHON' || upper.contains('PYTHON')) return 'Python';
-    if (upper == 'TC' || upper.contains('TECHNICAL COMMUNICATION')) return 'TC';
-    if (upper == 'PE' || upper.contains('PROMPT ENGINEERING')) {
-      return 'Prompt Engineering for ChatGPT';
-    }
-
-    return trimmed;
+    return SubjectIdentityService.getCanonicalKey(rawCode);
   }
 
+  /// Normalizes a component name into a standard form.
+  static String normalizeComponent(String comp) {
+    return AcademicGroupingPolicy.normalizeComponent(comp);
+  }
+
+  /// Deprecated: Generic business logic should use AcademicGroupingPolicy.isSplitCourse.
+  @Deprecated('Use AcademicGroupingPolicy.isSplitCourse instead')
   static bool isDsa(String subjectCode) {
-    final upper = subjectCode.trim().toUpperCase();
-    return upper == 'DSA' || upper.contains('DATA STRUCTURES');
+    final canon = canonicalSubjectCode(subjectCode);
+    return AcademicGroupingPolicy.isSplitCourse(
+      canon,
+      sectionSplitSubjects: {'DSA', 'DATA STRUCTURES AND ALGORITHMS'},
+    );
   }
 
-  /// Deterministic identity:
-  /// For DSA: course + component + date + start/end
-  /// For merged courses: course + date + start/end
+  /// Returns the canonical display component for a subject.
+  /// Delegates to AcademicGroupingPolicy.
+  static String canonicalComponent(String subjectCode, String rawComponent) {
+    final canon = canonicalSubjectCode(subjectCode);
+    return AcademicGroupingPolicy.canonicalComponent(
+      canon,
+      rawComponent,
+      sectionSplitSubjects: {'DSA', 'DATA STRUCTURES AND ALGORITHMS'},
+    );
+  }
+
+  /// Returns the canonical card/grouping key.
+  /// Delegates to AcademicGroupingPolicy.
+  static String canonicalGroupKey(String subjectCode, String rawComponent) {
+    final canon = canonicalSubjectCode(subjectCode);
+    return AcademicGroupingPolicy.canonicalGroupKey(
+      canon,
+      rawComponent,
+      sectionSplitSubjects: {'DSA', 'DATA STRUCTURES AND ALGORITHMS'},
+    );
+  }
+
+  /// Deterministic event identity.
+  /// Delegates to AcademicGroupingPolicy. Supports both time-aware and timeless events.
   static String buildDeduplicationKey({
     required DateTime date,
-    required int startTime,
-    required int endTime,
+    int? startTime,
+    int? endTime,
     required String subjectCode,
     required String component,
   }) {
     final canonSubj = canonicalSubjectCode(subjectCode);
-    final compPart = isDsa(canonSubj) ? '_$component' : '';
-    return '${date.year}-${date.month}-${date.day}_${startTime}_${endTime}_$canonSubj$compPart'
-        .replaceAll(RegExp(r'\s+'), '_');
+    return AcademicGroupingPolicy.buildDeduplicationKey(
+      date: date,
+      startTime: startTime,
+      endTime: endTime,
+      canonicalSubject: canonSubj,
+      component: component,
+      sectionSplitSubjects: {'DSA', 'DATA STRUCTURES AND ALGORITHMS'},
+    );
   }
 }

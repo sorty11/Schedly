@@ -1,4 +1,6 @@
 import 'attendance_log.dart';
+import '../services/attendance/attendance_reconciliation_report.dart';
+import '../services/attendance/raw_attendance_row.dart';
 
 /// Metadata extracted from the NMIMS/SVKM attendance report header.
 class AttendanceReportMetadata {
@@ -33,11 +35,12 @@ class ParsedAttendanceRow {
   final String? componentCode;
   final String? batchOrSection;
   final DateTime date;
-  final int startTimeMinutes;
-  final int endTimeMinutes;
+  final int? startTimeMinutes;
+  final int? endTimeMinutes;
   final String rawStatus;
   final String normalizedStatus;
   final int pageIndex;
+  final RawAttendanceRow? rawRow;
 
   const ParsedAttendanceRow({
     required this.srNo,
@@ -46,15 +49,16 @@ class ParsedAttendanceRow {
     this.componentCode,
     this.batchOrSection,
     required this.date,
-    required this.startTimeMinutes,
-    required this.endTimeMinutes,
+    this.startTimeMinutes,
+    this.endTimeMinutes,
     required this.rawStatus,
     required this.normalizedStatus,
     this.pageIndex = 0,
+    this.rawRow,
   });
 
   String get deduplicationKey =>
-      '${date.year}-${date.month}-${date.day}_${startTimeMinutes}_${endTimeMinutes}_${courseName}_${componentCode ?? ''}';
+      '${date.year}-${date.month}-${date.day}_${startTimeMinutes ?? 't'}_${endTimeMinutes ?? 't'}_${courseName}_${componentCode ?? ''}';
 }
 
 /// Result of normalizing a raw PDF course name.
@@ -108,6 +112,7 @@ class AttendanceImportPreview {
   final List<String> errors;
   final bool isImageOnly;
   final int totalPagesParsed;
+  final AttendanceReconciliationReport? reconciliationReport;
 
   const AttendanceImportPreview({
     required this.metadata,
@@ -125,6 +130,7 @@ class AttendanceImportPreview {
     this.errors = const [],
     this.isImageOnly = false,
     this.totalPagesParsed = 0,
+    this.reconciliationReport,
   });
 
   int get totalRows =>
@@ -151,12 +157,14 @@ class AttendanceImportResult {
   final int updated;
   final int skippedDuplicates;
   final int aggregatesUpdated;
+  final AttendanceReconciliationReport? reconciliationReport;
 
   const AttendanceImportResult({
     required this.imported,
     this.updated = 0,
     this.skippedDuplicates = 0,
     this.aggregatesUpdated = 0,
+    this.reconciliationReport,
   });
 }
 

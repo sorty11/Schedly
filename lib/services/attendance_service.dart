@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/attendance_record.dart';
 import '../models/attendance_log.dart';
 import '../models/attendance_import_models.dart';
+import 'attendance/academic_grouping_policy.dart';
 import 'package:schedly/exceptions.dart';
 
 class AttendanceService {
@@ -233,13 +234,12 @@ class AttendanceService {
       }
 
       if (log.subjectCode.isNotEmpty) {
-        final groupComp = AttendanceLog.isDsa(log.subjectCode)
-            ? log.component
-            : 'Merged';
-        affectedComponents.add((
-          subjectCode: log.subjectCode,
-          component: groupComp,
-        ));
+        final canon = AttendanceLog.canonicalSubjectCode(log.subjectCode);
+        final groupComp = AttendanceLog.canonicalComponent(
+          canon,
+          log.component,
+        );
+        affectedComponents.add((subjectCode: canon, component: groupComp));
       }
     }
 
@@ -286,10 +286,12 @@ class AttendanceService {
     for (final doc in logsSnap.docs) {
       final log = AttendanceLog.fromFirestore(doc);
       if (log.subjectCode.isNotEmpty) {
-        final groupComp = AttendanceLog.isDsa(log.subjectCode)
-            ? log.component
-            : 'Merged';
-        pairs.add((subjectCode: log.subjectCode, component: groupComp));
+        final canon = AttendanceLog.canonicalSubjectCode(log.subjectCode);
+        final groupComp = AttendanceLog.canonicalComponent(
+          canon,
+          log.component,
+        );
+        pairs.add((subjectCode: canon, component: groupComp));
       }
     }
     for (final pair in pairs) {
@@ -308,6 +310,7 @@ class AttendanceService {
     required String component,
   }) async {
     final canonSubj = AttendanceLog.canonicalSubjectCode(subjectCode);
+    final targetComp = AttendanceLog.canonicalComponent(canonSubj, component);
     final snapshot = await _logsCol().get();
 
     // Deduplicate in memory by stable lecture identity to ensure 100% data accuracy
@@ -317,10 +320,12 @@ class AttendanceService {
       final logCanon = AttendanceLog.canonicalSubjectCode(log.subjectCode);
       if (logCanon != canonSubj) continue;
 
-      if (AttendanceLog.isDsa(canonSubj) && component != 'Merged') {
-        if (log.component.toLowerCase() != component.toLowerCase()) {
-          continue;
-        }
+      final logComp = AcademicGroupingPolicy.canonicalComponent(
+        canonSubj,
+        log.component,
+      );
+      if (logComp != targetComp) {
+        continue;
       }
       final existing = uniqueLogs[log.deduplicationKey];
       if (existing == null || log.importedAt.isAfter(existing.importedAt)) {
@@ -338,11 +343,11 @@ class AttendanceService {
       }
     }
 
-    final recordId = _recordId(division, canonSubj, component);
+    final recordId = _recordId(division, canonSubj, targetComp);
     await _col().doc(recordId).set({
       'division': division,
-      'subjectCode': subjectCode,
-      'component': component,
+      'subjectCode': canonSubj,
+      'component': targetComp,
       'present': present,
       'absent': absent,
       'updatedAt': FieldValue.serverTimestamp(),

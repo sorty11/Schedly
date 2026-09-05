@@ -25,6 +25,15 @@ class AttendanceStatusMapper {
     return normalizedStatus == 'present' || normalizedStatus == 'absent';
   }
 
+  /// Whether the status represents a lecture occurrence that has already taken place
+  /// and counts toward completed lectures / semester progress (P, A, E, L, NU).
+  /// Note: 'cancelled' lectures do NOT count as completed.
+  static bool countsAsCompletedOccurrence(String status) {
+    final s = status.trim().toLowerCase();
+    if (s.isEmpty || s == 'cancelled' || s == 'unknown') return false;
+    return true;
+  }
+
   static String displayLabel(String normalizedStatus) {
     switch (normalizedStatus) {
       case 'present':
