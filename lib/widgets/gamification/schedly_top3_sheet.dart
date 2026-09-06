@@ -37,11 +37,11 @@ class _SchedlyTop3SheetState extends State<SchedlyTop3Sheet>
     super.initState();
     _progressController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 3),
+      duration: const Duration(seconds: 6),
     )..forward();
 
-    // 3-second timer starts exactly when popup is mounted and visible
-    _autoCloseTimer = Timer(const Duration(seconds: 3), () {
+    // 6-second timer starts exactly when popup is mounted and visible
+    _autoCloseTimer = Timer(const Duration(seconds: 6), () {
       _dismiss();
     });
   }
@@ -215,16 +215,19 @@ class _SchedlyTop3SheetState extends State<SchedlyTop3Sheet>
                     const SizedBox(height: AppSpacing.sm),
 
                     // Top 3 cards
-                    for (int i = 0; i < top3.length; i++) ...[
-                      _buildTop3Card(
-                        rank: i + 1,
-                        profile: top3[i],
-                        colorScheme: colorScheme,
-                        sem: sem,
-                      ),
-                      if (i < top3.length - 1)
-                        const SizedBox(height: AppSpacing.sm),
-                    ],
+                    if (top3.isEmpty)
+                      _buildEmptyState(sem)
+                    else
+                      for (int i = 0; i < top3.length; i++) ...[
+                        _buildTop3Card(
+                          rank: i + 1,
+                          profile: top3[i],
+                          colorScheme: colorScheme,
+                          sem: sem,
+                        ),
+                        if (i < top3.length - 1)
+                          const SizedBox(height: AppSpacing.sm),
+                      ],
 
                     const SizedBox(height: AppSpacing.lg),
 
@@ -270,6 +273,27 @@ class _SchedlyTop3SheetState extends State<SchedlyTop3Sheet>
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(AppSemanticColors sem) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: sem.surfaceElevated2,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: sem.borderSubtle),
+      ),
+      child: Center(
+        child: Text(
+          'No leaderboard rankings recorded yet.\nBe the first to earn EXP today!',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: sem.onSurfaceMuted,
+          ),
         ),
       ),
     );

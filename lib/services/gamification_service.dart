@@ -305,7 +305,7 @@ class GamificationService {
     return null;
   }
 
-  /// Loads leaderboard data asynchronously. Returns null on failure or if empty.
+  /// Loads leaderboard data asynchronously. Returns null on catastrophic failure.
   Future<LeaderboardPopupData?> loadPopupData() async {
     debugPrint('[GAMIFICATION] Leaderboard fetch started');
     try {
@@ -322,22 +322,17 @@ class GamificationService {
       final bestCR = results[1] as GamificationProfile?;
       final bestSR = results[2] as GamificationProfile?;
 
-      debugPrint('[GAMIFICATION] Top 3 count: ${top3.length}');
+      debugPrint('[GAMIFICATION] Top 3 result count: ${top3.length}');
       debugPrint('[GAMIFICATION] Best CR result: ${bestCR != null ? '${bestCR.displayName} (${bestCR.crPoints} pts)' : 'none'}');
       debugPrint('[GAMIFICATION] Best SR result: ${bestSR != null ? '${bestSR.displayName} (${bestSR.srPoints} pts)' : 'none'}');
-
-      if (top3.isEmpty) {
-        debugPrint('[GAMIFICATION] Top 3 is empty, skipping popup');
-        return null;
-      }
 
       return LeaderboardPopupData(
         top3: top3,
         bestCR: bestCR,
         bestSR: bestSR,
       );
-    } catch (e) {
-      debugPrint('[GAMIFICATION] Error loading popup data: $e');
+    } catch (e, st) {
+      debugPrint('[GAMIFICATION] Error loading popup data: $e\n$st');
       return null;
     }
   }
@@ -345,6 +340,7 @@ class GamificationService {
   /// Automatically displays the 3-second leaderboard popup once per session
   /// if valid leaderboard data is available. Non-blocking.
   Future<void> showAutoLeaderboardPopupIfEligible(BuildContext context) async {
+    debugPrint('[GAMIFICATION] Session popup check started');
     if (hasShownAutoPopup) {
       debugPrint('[GAMIFICATION] Leaderboard popup already shown this session');
       return;
@@ -366,8 +362,8 @@ class GamificationService {
     try {
       await SchedlyTop3Sheet.show(context, data: data);
       debugPrint('[GAMIFICATION] Popup dismissed');
-    } catch (e) {
-      debugPrint('[GAMIFICATION] Error showing popup: $e');
+    } catch (e, st) {
+      debugPrint('[GAMIFICATION] Error showing popup: $e\n$st');
     }
   }
 }
