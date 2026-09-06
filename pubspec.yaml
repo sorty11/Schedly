@@ -89,6 +89,7 @@ flutter:
   assets:
   - assets/nmims_logo.png
   - assets/videos/Scene-1.mp4
+  - assets/Schedlynew.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -116,10 +117,10 @@ flutter_launcher_icons:
   ios: true
   web:
     generate: true
-    image_path: "assets/app_logo.jpg"
-    background_color: "#121422"
-    theme_color: "#121422"
-  image_path: "assets/app_logo.jpg"
-  adaptive_icon_background: "#121422" # Dark background matching the image
-  adaptive_icon_foreground: "assets/app_logo.jpg"
+    image_path: "assets/Schedlynew.png"
+    background_color: "#000000"
+    theme_color: "#000000"
+  image_path: "assets/Schedlynew.png"
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/Schedlynew.png"
   min_sdk_android: 21
