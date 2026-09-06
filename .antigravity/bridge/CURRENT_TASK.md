@@ -1,9 +1,10 @@
-﻿# Current Task: Phase 1 Multi-School Foundation and Bridge Setup
+﻿# Current Active Task Pointer
 
-## Status: `done` (Phase 1 Locked at `44d0228`)
-
-- **Task ID**: `PHASE1_FOUNDATION_LOCK`
-- **Assigned Agents**: ChatGPT (Architect/Reviewer), Antigravity (Executor/Validator)
+- **Active Task ID**: `PHASE1_FOUNDATION_LOCK`
+- **Contract File**: [`.antigravity/bridge/tasks/PHASE1_FOUNDATION_LOCK.json`](tasks/PHASE1_FOUNDATION_LOCK.json)
+- **Status**: `done` (Phase 1 Locked at `44d0228`)
+- **Planner / Reviewer**: ChatGPT
+- **Executor / Validator**: Antigravity
 - **Branch**: `main`
 - **Locked Commit**: `44d0228`
 

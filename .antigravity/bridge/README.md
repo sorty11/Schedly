@@ -1,4 +1,4 @@
-﻿# Antigravity Bridge Quickstart Guide
+# Antigravity Bridge Quickstart Guide
 
 This guide explains how **ChatGPT** and **Antigravity** collaborate on Schedly development tasks via GitHub.
 
@@ -29,7 +29,7 @@ This guide explains how **ChatGPT** and **Antigravity** collaborate on Schedly d
 ## How to Run a New Task
 
 ### 1. ChatGPT Prepares the Task
-In `.antigravity/bridge/TASK.json`:
+Creates `.antigravity/bridge/tasks/<task-id>.json`:
 - Set `"stage": "planned"`
 - Define `"task_id"` (e.g. `"PHASE2_LAW_PARSER"`)
 - Specify `"scope"`:
@@ -38,26 +38,28 @@ In `.antigravity/bridge/TASK.json`:
 - List strict `"acceptance_criteria"`.
 - Provide automated `"validation.commands"`.
 
-ChatGPT also mirrors this into `.antigravity/bridge/CURRENT_TASK.md` for easy viewing in GitHub.
+ChatGPT also updates `.antigravity/bridge/CURRENT_TASK.md` to point to the new task file.
 
 ### 2. Antigravity Executes the Task
 When invoked:
-1. Antigravity reads `.antigravity/bridge/TASK.json` and transitions `"stage": "executing"`.
+1. Antigravity reads `CURRENT_TASK.md`, loads `tasks/<task-id>.json`, and transitions `"stage": "executing"`.
 2. Antigravity modifies code only within the defined scope.
 3. Antigravity executes each command in `"validation.commands"`:
    - `flutter test`
    - `flutter analyze`
 4. When all checks pass:
-   - Antigravity updates `"stage": "review"` and records latest commit in `"git.current_commit"`.
+   - Antigravity updates `"stage": "review"` in `tasks/<task-id>.json` (awaiting review).
+   - Records latest commit in `"git.current_commit"`.
    - Antigravity commits and pushes to `main`.
 
 ### 3. ChatGPT Reviews the Output
 1. ChatGPT inspects the commit diff on GitHub.
-2. ChatGPT inspects the test run summaries in `TASK.json`.
+2. ChatGPT inspects the test run summaries in `tasks/<task-id>.json`.
 3. If approved:
-   - Sets `"stage": "done"` with sign-off notes in `"review.notes"`.
+   - Sets `"stage": "done"` with sign-off notes in `"review.notes"`. (**Antigravity never sets done**).
 4. If issues remain:
    - Sets `"stage": "fix"` with remediation instructions.
+   - Antigravity automatically addresses the feedback and re-validates.
    - Antigravity automatically addresses the feedback and re-validates.
 
 ---

@@ -6,4 +6,4 @@
 4. **NO ARCHITECTURE SHIFTS**: Do not introduce new state management libraries or structural paradigms during a UI task unless explicitly directed.
 5. **READ BEFORE WRITING**: Always review the context and existing code before proposing changes. Always consult `orchestration.md`.
 6. **NO BLIND DESTRUCTIVE ACTIONS**: Never run mass-deletions, schema wipes, or force pushes without explicit confirmation.
-7. **HONOR BRIDGE CONTRACT**: Respect task scopes in `bridge/TASK.json`; do not touch files marked in `frozen_files`.
+7. **HONOR BRIDGE CONTRACT**: Respect task scopes in active task contracts (`.antigravity/bridge/tasks/<task-id>.json`); do not touch files marked in `frozen_files`. Never auto-transition `review` to `done`.

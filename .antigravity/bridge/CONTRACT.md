@@ -1,4 +1,4 @@
-﻿# Bridge Contract & Lifecycle Specification
+# Bridge Contract & Lifecycle Specification
 
 This document formalizes the machine-readable and operational contract between **ChatGPT** (Planner & Reviewer) and **Antigravity** (Autonomous Implementer & Validator).
 
@@ -30,19 +30,20 @@ stateDiagram-v2
 ### Stage Definitions
 1. `planned`:
    - **Set by**: ChatGPT.
+   - **File Location**: `.antigravity/bridge/tasks/<task-id>.json` (with pointer in `CURRENT_TASK.md`).
    - **Meaning**: Task is fully specified with strict acceptance criteria, constraints, and validation commands. Antigravity can pick up work immediately.
 2. `executing`:
    - **Set by**: Antigravity.
    - **Meaning**: Antigravity is active, analyzing the codebase, writing code, and verifying behavior.
 3. `review`:
    - **Set by**: Antigravity.
-   - **Meaning**: Implementation is verified, tests are green, `flutter analyze` has 0 errors, code is committed & pushed. Antigravity has populated `validation` and `artifacts` in `TASK.json`.
+   - **Meaning**: Implementation and automated validation are 100% complete, tests are green, `flutter analyze` has 0 errors, and the commit is pushed. Antigravity is now awaiting human / ChatGPT review.
 4. `fix`:
-   - **Set by**: ChatGPT.
-   - **Meaning**: Audit found an issue. ChatGPT appends review findings to `CURRENT_TASK.md` and sets state to `fix`. Antigravity resumes execution to remediate.
+   - **Set by**: ChatGPT (or Human Reviewer).
+   - **Meaning**: Audit found an issue. Reviewer appends findings to `CURRENT_TASK.md` and transitions state to `fix`. Antigravity resumes execution to remediate.
 5. `done`:
-   - **Set by**: ChatGPT.
-   - **Meaning**: Final sign-off. Acceptance criteria met. Ready for next task or archive.
+   - **Set by**: ChatGPT (or Human Reviewer) ONLY.
+   - **Meaning**: Final sign-off. Acceptance criteria met. **NEVER auto-transition review → done.** Antigravity is forbidden from setting this stage.
 
 ---
 
