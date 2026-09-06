@@ -291,5 +291,31 @@ void main() {
         'Only applies on 8 Sep',
       );
     });
+
+    test('8. Sports Law is classified as Academic, preserving normal lecture editability', () {
+      // 1. inferFromSubject should classify "Sports Law" as academic, not sports
+      expect(EventCategoryExtension.inferFromSubject('Sports Law'), EventCategory.academic);
+      expect(EventCategoryExtension.inferFromSubject('Sports Law Theory'), EventCategory.academic);
+      expect(EventCategoryExtension.inferFromSubject('Sports Law Tutorial'), EventCategory.academic);
+      expect(EventCategoryExtension.inferFromSubject('Sports and Entertainment Law'), EventCategory.academic);
+
+      // Normal athletic sports activities remain classified as sports
+      expect(EventCategoryExtension.inferFromSubject('Sports'), EventCategory.sports);
+      expect(EventCategoryExtension.inferFromSubject('Sports Activity'), EventCategory.sports);
+
+      // 2. TimetableEntry preserves isAcademic for Sports Law
+      final sportsLawEntry = TimetableEntry(
+        id: 'sports_law_1',
+        subject: 'Sports Law',
+        component: 'Theory',
+        category: EventCategoryExtension.inferFromSubject('Sports Law'),
+        batch: 'Whole Class',
+        startTime: 540,
+        endTime: 600,
+        durationMinutes: 60,
+      );
+      expect(sportsLawEntry.isAcademic, isTrue);
+      expect(sportsLawEntry.displaySubject, 'Sports Law Theory');
+    });
   });
 }
