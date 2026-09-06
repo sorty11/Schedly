@@ -11,7 +11,7 @@ import '../widgets/animations/animated_button.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/security_utils.dart';
 import '../widgets/app_dialogs.dart';
-
+import '../services/section_admin_service.dart';
 import '../utils/responsive_utils.dart';
 
 class SectionManagementPage extends StatefulWidget {
@@ -128,6 +128,18 @@ class _SectionManagementPageState extends State<SectionManagementPage> {
                               Text(
                                 '${data['branch']} • Div ${data['division']} • ${data['academicYear']}${data['semester'] != null ? ' • ${data['semester']}' : ''}',
                               ),
+                              if (data['crPassword'] != null && (data['crPassword'] as String).isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2.0),
+                                  child: Text(
+                                    'CR Password: ${data['crPassword']}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Theme.of(context).colorScheme.primary,
+                                    ),
+                                  ),
+                                ),
                               const SizedBox(height: 4),
                               Row(
                                 children: [
@@ -191,6 +203,12 @@ class _SectionManagementPageState extends State<SectionManagementPage> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
+                                icon: const Icon(Icons.edit_rounded),
+                                tooltip: 'Edit Section',
+                                onPressed: () =>
+                                    _editSection(context, doc.id, data),
+                              ),
+                              IconButton(
                                 icon: const Icon(Icons.copy_rounded),
                                 tooltip: 'Clone Section',
                                 onPressed: () =>
@@ -205,6 +223,15 @@ class _SectionManagementPageState extends State<SectionManagementPage> {
                                 tooltip: isActive ? 'Archive' : 'Unarchive',
                                 onPressed: () =>
                                     _toggleArchive(doc.id, isActive),
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.delete_outline_rounded,
+                                  color: Colors.red[400],
+                                ),
+                                tooltip: 'Delete Section',
+                                onPressed: () =>
+                                    _deleteSection(context, doc.id, data),
                               ),
                             ],
                           ),
@@ -233,6 +260,25 @@ class _SectionManagementPageState extends State<SectionManagementPage> {
     );
   }
 
+  void _editSection(
+    BuildContext context,
+    String sectionId,
+    Map<String, dynamic> sectionData,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => _CreateSectionSheet(
+        editSectionId: sectionId,
+        editData: sectionData,
+      ),
+    );
+  }
+
   void _cloneSection(
     BuildContext context,
     String originalId,
@@ -249,6 +295,30 @@ class _SectionManagementPageState extends State<SectionManagementPage> {
     );
   }
 
+  Future<void> _deleteSection(
+    BuildContext context,
+    String sectionId,
+    Map<String, dynamic> data,
+  ) async {
+    final deleted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _DeleteSectionDialog(
+        sectionId: sectionId,
+        sectionData: data,
+      ),
+    );
+
+    if (deleted == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Section $sectionId deleted successfully'),
+          backgroundColor: Colors.red[700],
+        ),
+      );
+    }
+  }
+
   Future<void> _toggleArchive(String id, bool currentlyActive) async {
     await FirebaseFirestore.instance.collection('sections').doc(id).update({
       'active': !currentlyActive,
@@ -258,7 +328,14 @@ class _SectionManagementPageState extends State<SectionManagementPage> {
 
 class _CreateSectionSheet extends StatefulWidget {
   final Map<String, dynamic>? cloneFromData;
-  const _CreateSectionSheet({this.cloneFromData});
+  final String? editSectionId;
+  final Map<String, dynamic>? editData;
+
+  const _CreateSectionSheet({
+    this.cloneFromData,
+    this.editSectionId,
+    this.editData,
+  });
 
   @override
   State<_CreateSectionSheet> createState() => _CreateSectionSheetState();
@@ -270,38 +347,50 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
   final _branchCtrl = TextEditingController();
   final _divCtrl = TextEditingController();
   final _semesterCtrl = TextEditingController();
+  final _crPasswordCtrl = TextEditingController();
+  final _srPasswordCtrl = TextEditingController();
   bool _loading = false;
   List<String> _existingDivisions = [];
 
   @override
   void initState() {
     super.initState();
-    if (widget.cloneFromData != null) {
-      _selectedSchool = widget.cloneFromData!['school'] as String? ?? 'STME';
-      _yearCtrl.text = widget.cloneFromData!['academicYear'] ?? '';
-      _branchCtrl.text = widget.cloneFromData!['branch'] ?? '';
-      _divCtrl.text = widget.cloneFromData!['division'] ?? '';
-      _semesterCtrl.text = widget.cloneFromData!['semester'] ?? '';
+    final initialData = widget.editData ?? widget.cloneFromData;
+    if (initialData != null) {
+      _selectedSchool = initialData['school'] as String? ?? 'STME';
+      _yearCtrl.text = initialData['academicYear'] ?? '';
+      _branchCtrl.text = initialData['branch'] ?? initialData['program'] ?? '';
+      _divCtrl.text = initialData['division'] ?? '';
+      _semesterCtrl.text = initialData['semester'] ?? '';
+      _crPasswordCtrl.text = initialData['crPassword'] ?? '';
+      _srPasswordCtrl.text = initialData['srPassword'] ?? '';
       _fetchExistingDivisions();
     }
 
     // Fetch divisions when year or branch changes
     _yearCtrl.addListener(_onFieldChanged);
     _branchCtrl.addListener(_onFieldChanged);
+    _divCtrl.addListener(_onFieldChanged);
+    _semesterCtrl.addListener(_onFieldChanged);
   }
 
   @override
   void dispose() {
     _yearCtrl.removeListener(_onFieldChanged);
     _branchCtrl.removeListener(_onFieldChanged);
+    _divCtrl.removeListener(_onFieldChanged);
+    _semesterCtrl.removeListener(_onFieldChanged);
     _yearCtrl.dispose();
     _branchCtrl.dispose();
     _divCtrl.dispose();
     _semesterCtrl.dispose();
+    _crPasswordCtrl.dispose();
+    _srPasswordCtrl.dispose();
     super.dispose();
   }
 
   void _onFieldChanged() {
+    if (mounted) setState(() {});
     if (_yearCtrl.text.isNotEmpty && _branchCtrl.text.isNotEmpty) {
       _fetchExistingDivisions();
     }
@@ -334,26 +423,81 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
     final branch = _branchCtrl.text.trim();
     final div = _divCtrl.text.trim().toUpperCase();
     final sem = _semesterCtrl.text.trim();
+    final isSol = _selectedSchool == 'SOL';
 
-    if (year.isEmpty || branch.isEmpty || div.isEmpty || (_selectedSchool == 'SOL' && sem.isEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_selectedSchool == 'SOL'
-              ? 'Year, Program, Semester, and Division are required'
-              : 'Year, Branch, and Division are required'),
-        ),
-      );
-      return;
+    if (isSol) {
+      if (year.isEmpty || branch.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Year and Program are required'),
+          ),
+        );
+        return;
+      }
+    } else {
+      if (year.isEmpty || branch.isEmpty || div.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Year, Branch, and Division are required'),
+          ),
+        );
+        return;
+      }
     }
 
     setState(() => _loading = true);
     try {
+      if (widget.editSectionId != null) {
+        final updateMap = <String, dynamic>{
+          'school': _selectedSchool,
+          'academicYear': year,
+          'branch': branch,
+          'program': branch,
+          'division': div,
+        };
+        if (sem.isNotEmpty) {
+          updateMap['semester'] = sem;
+        } else {
+          updateMap['semester'] = FieldValue.delete();
+        }
+        final crPwd = _crPasswordCtrl.text.trim();
+        final srPwd = _srPasswordCtrl.text.trim();
+        if (crPwd.isNotEmpty) {
+          updateMap['crPassword'] = crPwd;
+        }
+        if (srPwd.isNotEmpty) {
+          updateMap['srPassword'] = srPwd;
+        }
+
+        final res = await SectionAdminService.updateSection(
+          sectionId: widget.editSectionId!,
+          updatedData: updateMap,
+        );
+
+        if (!mounted) return;
+        if (res.success) {
+          Navigator.pop(context);
+          AppDialogs.showSuccess(
+            context: context,
+            title: 'Updated',
+            message: 'Section ${widget.editSectionId} updated successfully',
+          );
+        } else {
+          AppDialogs.showError(
+            context: context,
+            title: 'Update Failed',
+            message: res.error ?? res.message,
+          );
+        }
+        return;
+      }
+
       final sectionId = NMIMSStructure.generateSectionId(
         school: _selectedSchool,
         year: year,
         branchOrProgram: branch,
         semester: sem.isNotEmpty ? sem : null,
-        division: div,
+        division: div.isNotEmpty ? div : null,
       );
 
       final doc = await FirebaseFirestore.instance
@@ -381,7 +525,11 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
         dataToSave['academicYear'] = year;
         dataToSave['branch'] = branch;
         dataToSave['division'] = div;
-        if (sem.isNotEmpty) dataToSave['semester'] = sem;
+        if (sem.isNotEmpty) {
+          dataToSave['semester'] = sem;
+        } else {
+          dataToSave.remove('semester');
+        }
         dataToSave['active'] = true;
       } else {
         final periods = [
@@ -446,8 +594,7 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
         List<String> generateDefaultBatches(String d, int count) {
           if (count == 1) return ['Whole Class'];
           final parts = d.trim().split(RegExp(r'[\s_]+'));
-          String base = parts.isNotEmpty ? parts.last : 'Batch';
-          if (base.isEmpty) base = 'Batch';
+          String base = (parts.isNotEmpty && parts.last.isNotEmpty) ? parts.last : 'Batch';
           return List.generate(count, (i) => '$base${i + 1}');
         }
 
@@ -515,28 +662,33 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
   }
 
   String get _generatedId {
+    if (widget.editSectionId != null) {
+      return '${widget.editSectionId} (Preserved)';
+    }
     final year = _yearCtrl.text.trim();
     final branch = _branchCtrl.text.trim();
-    final div = _divCtrl.text.trim();
-    if (year.isEmpty && branch.isEmpty && div.isEmpty) {
+    final div = _divCtrl.text.trim().toUpperCase();
+    final sem = _semesterCtrl.text.trim();
+    final isSol = _selectedSchool == 'SOL';
+
+    if (year.isEmpty && branch.isEmpty && div.isEmpty && sem.isEmpty) {
       return 'Section ID Preview';
     }
     return NMIMSStructure.generateSectionId(
       school: _selectedSchool,
       year: year.isEmpty ? 'Year' : year,
-      branchOrProgram: branch.isEmpty ? 'Branch' : branch,
-      semester: _semesterCtrl.text.trim().isNotEmpty
-          ? _semesterCtrl.text.trim()
-          : null,
-      division: div.isEmpty ? 'Div' : div,
+      branchOrProgram: branch.isEmpty ? (isSol ? 'Program' : 'Branch') : branch,
+      semester: sem.isNotEmpty ? sem : null,
+      division: isSol ? (div.isNotEmpty ? div : null) : (div.isEmpty ? 'Div' : div),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.cloneFromData != null
-        ? 'Clone Section'
-        : 'Create Section';
+    final isEdit = widget.editSectionId != null;
+    final title = isEdit
+        ? 'Edit Section'
+        : (widget.cloneFromData != null ? 'Clone Section' : 'Create Section');
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
 
     return Padding(
@@ -677,7 +829,9 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
                           ),
                         SchedlyTextField(
                           controller: _divCtrl,
-                          labelText: 'Division',
+                          labelText: _selectedSchool == 'SOL'
+                              ? 'Division (Optional)'
+                              : 'Division',
                           hintText: 'e.g. A, B, C or custom name',
                           textCapitalization: TextCapitalization.characters,
                         ),
@@ -689,30 +843,42 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
                     DropdownButtonFormField<String>(
                       value: _semesterCtrl.text.isEmpty ? null : _semesterCtrl.text,
                       decoration: InputDecoration(
-                        labelText: 'Semester',
+                        labelText: 'Semester (Optional)',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
+                        suffixIcon: _semesterCtrl.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 20),
+                                tooltip: 'Clear Semester',
+                                onPressed: () {
+                                  setState(() => _semesterCtrl.text = '');
+                                },
+                              )
+                            : null,
                       ),
-                      items: (NMIMSStructure.solSemestersByYear[_yearCtrl.text] ??
-                              const [
-                                'Semester I',
-                                'Semester II',
-                                'Semester III',
-                                'Semester IV',
-                                'Semester V',
-                                'Semester VI',
-                                'Semester VII',
-                                'Semester VIII',
-                                'Semester IX',
-                                'Semester X',
-                              ])
-                          .map((sem) => DropdownMenuItem(value: sem, child: Text(sem)))
-                          .toList(),
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: '',
+                          child: Text('None (No Semester)'),
+                        ),
+                        ...(NMIMSStructure.solSemestersByYear[_yearCtrl.text] ??
+                                const [
+                                  'Semester I',
+                                  'Semester II',
+                                  'Semester III',
+                                  'Semester IV',
+                                  'Semester V',
+                                  'Semester VI',
+                                  'Semester VII',
+                                  'Semester VIII',
+                                  'Semester IX',
+                                  'Semester X',
+                                ])
+                            .map((sem) => DropdownMenuItem(value: sem, child: Text(sem))),
+                      ],
                       onChanged: (val) {
-                        if (val != null) {
-                          setState(() => _semesterCtrl.text = val);
-                        }
+                        setState(() => _semesterCtrl.text = val ?? '');
                       },
                     ),
                   ] else ...[
@@ -720,6 +886,20 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
                       controller: _semesterCtrl,
                       labelText: 'Semester (Optional)',
                       hintText: 'e.g. Semester 3',
+                    ),
+                  ],
+                  if (isEdit) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    SchedlyTextField(
+                      controller: _crPasswordCtrl,
+                      labelText: 'CR Password',
+                      hintText: 'e.g. lcr3',
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    SchedlyTextField(
+                      controller: _srPasswordCtrl,
+                      labelText: 'SR Password',
+                      hintText: 'e.g. lsr3',
                     ),
                   ],
                   const SizedBox(height: AppSpacing.lg),
@@ -735,7 +915,9 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Generated Section ID',
+                          isEdit
+                              ? 'Section ID (Preserved)'
+                              : 'Generated Section ID',
                           style: TextStyle(
                             fontSize: 12,
                             color: semanticColors.onSurfaceMuted,
@@ -757,7 +939,7 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
                   AnimatedButton(
                     onPressed: _loading ? null : _save,
                     isLoading: _loading,
-                    child: Text(title),
+                    child: Text(isEdit ? 'Save Changes' : title),
                   ),
                   const SizedBox(height: AppSpacing.xl),
                 ],
@@ -766,6 +948,227 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _DeleteSectionDialog extends StatefulWidget {
+  final String sectionId;
+  final Map<String, dynamic> sectionData;
+
+  const _DeleteSectionDialog({
+    required this.sectionId,
+    required this.sectionData,
+  });
+
+  @override
+  State<_DeleteSectionDialog> createState() => _DeleteSectionDialogState();
+}
+
+class _DeleteSectionDialogState extends State<_DeleteSectionDialog> {
+  final _confirmIdCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  bool _loading = false;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _confirmIdCtrl.dispose();
+    _passwordCtrl.dispose();
+    super.dispose();
+  }
+
+  bool get _canDelete =>
+      _confirmIdCtrl.text.trim() == widget.sectionId &&
+      _passwordCtrl.text.isNotEmpty &&
+      !_loading;
+
+  Future<void> _handleDelete() async {
+    if (!_canDelete) return;
+
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final res = await SectionAdminService.deleteSection(
+        sectionId: widget.sectionId,
+        masterPassword: _passwordCtrl.text,
+      );
+
+      if (!mounted) return;
+
+      if (res.success) {
+        Navigator.of(context).pop(true);
+      } else {
+        setState(() {
+          _errorMessage = res.error ?? res.message;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString().replaceAll('Exception: ', '');
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, color: Colors.red[700], size: 28),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Text(
+              'Delete Section',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 460,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Are you sure you want to permanently delete section "${widget.sectionId}"?',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.withOpacity(0.25)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'PERMANENT DELETION WARNING:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: Colors.red[800],
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '• This section document and its timetables will be permanently erased.\n'
+                      '• Section subcollections (announcements, faculty requests, SR assignments) and memberships will be deleted.\n'
+                      '• Global student user accounts and faculty records will NOT be affected.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.red[900],
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              RichText(
+                text: TextSpan(
+                  style: theme.textTheme.bodyMedium,
+                  children: [
+                    const TextSpan(text: 'To confirm, type the exact section ID '),
+                    TextSpan(
+                      text: widget.sectionId,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                    const TextSpan(text: ' below:'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _confirmIdCtrl,
+                decoration: InputDecoration(
+                  hintText: widget.sectionId,
+                  hintStyle: TextStyle(
+                    color: theme.hintColor.withOpacity(0.4),
+                    fontFamily: 'monospace',
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  isDense: true,
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Enter Admin Master Password:',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _passwordCtrl,
+                obscureText: true,
+                decoration: InputDecoration(
+                  hintText: 'Master Password',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  isDense: true,
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _errorMessage!,
+                  style: TextStyle(
+                    color: Colors.red[700],
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _loading ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red[700],
+            foregroundColor: Colors.white,
+          ),
+          onPressed: _canDelete ? _handleDelete : null,
+          child: _loading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text('Delete Section'),
+        ),
+      ],
     );
   }
 }
