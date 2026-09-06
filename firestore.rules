@@ -85,7 +85,10 @@ service cloud.firestore {
         allow update, delete: if isCRForSection(sectionId);
       }
       match /students/{studentId} {
-        allow read, write: if request.auth != null;
+        allow read: if request.auth != null;
+        allow create, update: if request.auth != null 
+                              && (isCRorSRForSection(sectionId) || request.resource.data.rollNo == studentId);
+        allow delete: if isCRForSection(sectionId);
       }
       match /announcements/{announcementId} {
         allow read: if request.auth != null;
@@ -96,7 +99,8 @@ service cloud.firestore {
         allow write: if isCRorSRForSection(sectionId);
       }
       match /analytics/{analyticsId} {
-        allow read, write: if request.auth != null;
+        allow read: if request.auth != null;
+        allow write: if isCRorSRForSection(sectionId);
       }
       match /conduct_logs/{logId} {
         allow read: if request.auth != null;
@@ -123,7 +127,8 @@ service cloud.firestore {
     // OUTBOX FOR RENDER WORKER
     match /notification_outbox/{docId} {
       allow read: if false; 
-      allow create: if request.auth != null;
+      allow create: if request.auth != null 
+                    && request.resource.data.uid == request.auth.uid;
       allow update, delete: if false; 
     }
     match /faculty_reminders/{docId} {
@@ -165,7 +170,7 @@ service cloud.firestore {
     // MEMBERSHIP AUDIT LOGS
     match /membership_audit_logs/{logId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null; // CRs can create logs when removing members
+      allow create: if request.auth != null && isCRorSR(); // Privileged audit trail
       allow update, delete: if false;
     }
 
@@ -207,20 +212,31 @@ service cloud.firestore {
     // FACULTY AUDIT LOGS
     match /faculty_audit_logs/{logId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null;
+      allow create: if request.auth != null && (isCRorSR() || request.resource.data.markedByUid == request.auth.uid);
       allow update, delete: if false;
     }
     match /faculty_audit_log/{logId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null;
+      allow create: if request.auth != null && (isCRorSR() || request.resource.data.markedByUid == request.auth.uid);
       allow update, delete: if false;
     }
 
     // USERS
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId
+                    && (
+                      !('role' in request.resource.data)
+                      || request.resource.data.role in ['Student', 'Faculty']
+                      || (getAfter(/databases/$(database)/documents/admin_actions/$(request.auth.uid + '_' + request.resource.data.division)).data.masterHash == '652f3d7b860776a2537a2c3a3b42702aed372a2b49c802b077470ad3efdf3f4d')
+                    );
+      allow update: if request.auth != null && request.auth.uid == userId
+                    && (
+                      !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])
+                      || request.resource.data.role == resource.data.role
+                      || (request.resource.data.role in ['Student', 'Faculty'] && (!('role' in resource.data) || resource.data.role in ['Student', 'Faculty']))
+                      || (getAfter(/databases/$(database)/documents/admin_actions/$(request.auth.uid + '_' + ('division' in request.resource.data ? request.resource.data.division : resource.data.division))).data.masterHash == '652f3d7b860776a2537a2c3a3b42702aed372a2b49c802b077470ad3efdf3f4d')
+                    );
       
       match /fcm_tokens/{tokenId} {
         allow read, write: if request.auth != null;
