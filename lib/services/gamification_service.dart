@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import '../app_settings.dart';
 import '../user_roles.dart';
 import '../models/gamification_profile.dart';
+import '../theme/champion_theme_access.dart';
 import '../widgets/gamification/schedly_top3_sheet.dart';
 
 class LeaderboardPopupData {
@@ -27,7 +28,14 @@ class LeaderboardPopupData {
 }
 
 class GamificationService {
-  GamificationService._();
+  GamificationService._() {
+    _auth.authStateChanges().listen((user) {
+      championThemeUnlockedNotifier.value = ChampionThemeAccess.hasAccess(
+        isWeeklyChampion: isChampionNotifier.value,
+        user: user,
+      );
+    });
+  }
   static final GamificationService instance = GamificationService._();
 
   static const int dailyExpReward = 20;
@@ -49,12 +57,20 @@ class GamificationService {
   bool _claimedDailyThisSession = false;
   bool _claimedAttendanceThisSession = false;
   bool hasShownAutoPopup = false;
+  bool _isFetchingAutoPopup = false;
 
   // Reactive notifiers for current user's EXP, points, and Champion status
   final ValueNotifier<int> currentExpNotifier = ValueNotifier<int>(0);
   final ValueNotifier<int> currentCrPointsNotifier = ValueNotifier<int>(0);
   final ValueNotifier<int> currentSrPointsNotifier = ValueNotifier<int>(0);
   final ValueNotifier<bool> isChampionNotifier = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> championThemeUnlockedNotifier = ValueNotifier<bool>(false);
+
+  /// Whether current user has access to the Champion visual theme (weekly champion or permanent allowlist).
+  bool get hasChampionThemeAccess => ChampionThemeAccess.hasAccess(
+        isWeeklyChampion: isChampionNotifier.value,
+        user: _auth.currentUser,
+      );
 
   CollectionReference<Map<String, dynamic>> get _gamificationRef =>
       _firestore.collection('gamification');
@@ -85,11 +101,12 @@ class GamificationService {
     return null;
   }
 
-  /// Checks if current user is the active weekly Champion.
+  /// Checks if current user is the active weekly Champion and updates theme access.
   Future<bool> checkChampionStatus() async {
     final user = _auth.currentUser;
     if (user == null) {
       isChampionNotifier.value = false;
+      championThemeUnlockedNotifier.value = ChampionThemeAccess.isPermanentlyUnlocked();
       return false;
     }
 
@@ -104,6 +121,10 @@ class GamificationService {
         final champUid = data['championUid'] as String?;
         final isChamp = champUid != null && champUid.isNotEmpty && champUid == user.uid;
         isChampionNotifier.value = isChamp;
+        championThemeUnlockedNotifier.value = ChampionThemeAccess.hasAccess(
+          isWeeklyChampion: isChamp,
+          user: user,
+        );
         return isChamp;
       }
     } catch (e) {
@@ -111,6 +132,7 @@ class GamificationService {
     }
 
     isChampionNotifier.value = false;
+    championThemeUnlockedNotifier.value = ChampionThemeAccess.isPermanentlyUnlocked(user: user);
     return false;
   }
 
@@ -364,23 +386,34 @@ class GamificationService {
   /// if valid leaderboard data is available. Non-blocking.
   Future<void> showAutoLeaderboardPopupIfEligible(BuildContext context) async {
     debugPrint('[GAMIFICATION] Session popup check started');
-    if (hasShownAutoPopup) {
-      debugPrint('[GAMIFICATION] Leaderboard popup already shown this session');
+    if (hasShownAutoPopup || _isFetchingAutoPopup) {
+      debugPrint('[GAMIFICATION] Leaderboard popup already shown or in flight this session');
       return;
     }
 
-    final data = await loadPopupData();
+    _isFetchingAutoPopup = true;
+    LeaderboardPopupData? data;
+    try {
+      data = await loadPopupData();
+    } catch (e) {
+      _isFetchingAutoPopup = false;
+      return;
+    }
+
     if (data == null) {
       debugPrint('[GAMIFICATION] No popup data available, skipping popup');
+      _isFetchingAutoPopup = false;
       return;
     }
 
     if (!context.mounted) {
       debugPrint('[GAMIFICATION] Context no longer mounted, skipping popup');
+      _isFetchingAutoPopup = false;
       return;
     }
 
     hasShownAutoPopup = true;
+    _isFetchingAutoPopup = false;
     debugPrint('[GAMIFICATION] Showing leaderboard popup');
     try {
       await SchedlyTop3Sheet.show(context, data: data);

@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:schedly/models/gamification_profile.dart';
 import 'package:schedly/services/gamification_service.dart';
 
+import 'package:schedly/theme/champion_theme_access.dart';
+
 void main() {
   group('Gamification System Tests', () {
     test('GamificationProfile defaults and academicContext', () {
@@ -75,6 +77,79 @@ void main() {
       expect(popupData.top3.first.displayName, 'User 1');
       expect(popupData.bestCR?.displayName, 'CR 1');
       expect(popupData.bestSR, isNull);
+    });
+
+    test('ChampionThemeAccess allowlist and role evaluation', () {
+      // Allowlisted accounts permanently unlocked
+      expect(
+        ChampionThemeAccess.isPermanentlyUnlocked(explicitEmail: 'sorty797@gmail.com'),
+        isTrue,
+      );
+      expect(
+        ChampionThemeAccess.isPermanentlyUnlocked(explicitEmail: 'ayaan9421375797@gmail.com'),
+        isTrue,
+      );
+      expect(
+        ChampionThemeAccess.isPermanentlyUnlocked(explicitEmail: 'maulapatel369@gmail.com'),
+        isTrue,
+      );
+      // Case-insensitive & trimmed
+      expect(
+        ChampionThemeAccess.isPermanentlyUnlocked(explicitEmail: '  Sorty797@Gmail.com  '),
+        isTrue,
+      );
+      expect(
+        ChampionThemeAccess.isPermanentlyUnlocked(explicitEmail: '  Ayaan9421375797@Gmail.com  '),
+        isTrue,
+      );
+      expect(
+        ChampionThemeAccess.isPermanentlyUnlocked(explicitEmail: '  MaulaPatel369@Gmail.com  '),
+        isTrue,
+      );
+      // Non-allowlisted user is not permanently unlocked
+      expect(
+        ChampionThemeAccess.isPermanentlyUnlocked(explicitEmail: 'student@example.com'),
+        isFalse,
+      );
+
+      // Allowlisted users have access even if not weekly champion
+      expect(
+        ChampionThemeAccess.hasAccess(
+          isWeeklyChampion: false,
+          explicitEmail: 'sorty797@gmail.com',
+        ),
+        isTrue,
+      );
+      expect(
+        ChampionThemeAccess.hasAccess(
+          isWeeklyChampion: false,
+          explicitEmail: 'ayaan9421375797@gmail.com',
+        ),
+        isTrue,
+      );
+      expect(
+        ChampionThemeAccess.hasAccess(
+          isWeeklyChampion: false,
+          explicitEmail: 'maulapatel369@gmail.com',
+        ),
+        isTrue,
+      );
+
+      // Non-allowlisted user has access ONLY if they are weekly champion
+      expect(
+        ChampionThemeAccess.hasAccess(
+          isWeeklyChampion: true,
+          explicitEmail: 'student@example.com',
+        ),
+        isTrue,
+      );
+      expect(
+        ChampionThemeAccess.hasAccess(
+          isWeeklyChampion: false,
+          explicitEmail: 'student@example.com',
+        ),
+        isFalse,
+      );
     });
   });
 }
