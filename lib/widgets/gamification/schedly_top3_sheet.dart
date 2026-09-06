@@ -67,7 +67,12 @@ class _SchedlyTop3SheetState extends State<SchedlyTop3Sheet>
     final sem = theme.extension<AppSemanticColors>()!;
     final isDark = theme.brightness == Brightness.dark;
 
-    final sheetBg = isDark ? sem.surfaceElevated : colorScheme.surface;
+    final skin = VisualSkin.of(context);
+    final isChampionTheme = skin.visualTheme == SchedlyVisualTheme.champion;
+
+    final sheetBg = isChampionTheme
+        ? (isDark ? const Color(0xFF0C0A10) : const Color(0xFFFAF7F2))
+        : (isDark ? sem.surfaceElevated : colorScheme.surface);
     final top3 = widget.data.top3;
     final bestCR = widget.data.bestCR;
     final bestSR = widget.data.bestSR;
@@ -82,8 +87,11 @@ class _SchedlyTop3SheetState extends State<SchedlyTop3Sheet>
           top: Radius.circular(AppRadius.x2l),
         ),
         border: Border.all(
-          color: sem.borderSubtle,
-          width: 1,
+          color: isChampionTheme
+              ? (isDark ? const Color(0xFFFFD700) : const Color(0xFFB4831B))
+                  .withValues(alpha: 0.40)
+              : sem.borderSubtle,
+          width: isChampionTheme ? 1.2 : 1.0,
         ),
       ),
       child: SafeArea(
@@ -104,7 +112,9 @@ class _SchedlyTop3SheetState extends State<SchedlyTop3Sheet>
                     minHeight: 3,
                     backgroundColor: Colors.transparent,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      colorScheme.primary.withValues(alpha: 0.6),
+                      isChampionTheme
+                          ? const Color(0xFFFFD700)
+                          : colorScheme.primary.withValues(alpha: 0.6),
                     ),
                   );
                 },
@@ -119,7 +129,9 @@ class _SchedlyTop3SheetState extends State<SchedlyTop3Sheet>
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: colorScheme.onSurface.withValues(alpha: 0.2),
+                  color: isChampionTheme
+                      ? const Color(0xFFFFD700).withValues(alpha: 0.4)
+                      : colorScheme.onSurface.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(AppRadius.full),
                 ),
               ),
@@ -135,10 +147,26 @@ class _SchedlyTop3SheetState extends State<SchedlyTop3Sheet>
                   Container(
                     padding: const EdgeInsets.all(AppSpacing.sm),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE5A93C).withValues(alpha: 0.15),
+                      color: (isChampionTheme
+                              ? const Color(0xFFFFD700)
+                              : const Color(0xFFE5A93C))
+                          .withValues(alpha: 0.18),
                       shape: BoxShape.circle,
+                      border: isChampionTheme
+                          ? Border.all(
+                              color: const Color(0xFFFFD700)
+                                  .withValues(alpha: 0.5),
+                              width: 1,
+                            )
+                          : null,
                     ),
-                    child: const Text('🏆', style: TextStyle(fontSize: 18)),
+                    child: isChampionTheme
+                        ? const Icon(
+                            Icons.workspace_premium_rounded,
+                            size: 20,
+                            color: Color(0xFFFFD700),
+                          )
+                        : const Text('🏆', style: TextStyle(fontSize: 18)),
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
@@ -150,8 +178,10 @@ class _SchedlyTop3SheetState extends State<SchedlyTop3Sheet>
                           style: GoogleFonts.outfit(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: 0.5,
-                            color: colorScheme.onSurface,
+                            letterSpacing: 0.6,
+                            color: isChampionTheme
+                                ? (isDark ? const Color(0xFFFFD700) : const Color(0xFFD97706))
+                                : colorScheme.onSurface,
                           ),
                         ),
                         Text(
@@ -313,23 +343,76 @@ class _SchedlyTop3SheetState extends State<SchedlyTop3Sheet>
     required ColorScheme colorScheme,
     required AppSemanticColors sem,
   }) {
-    const goldColor = Color(0xFFE5A93C);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const goldColor = Color(0xFFFFD700);
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm + 2,
+        vertical: AppSpacing.sm + 4,
       ),
       decoration: BoxDecoration(
-        color: goldColor.withValues(alpha: 0.08),
+        gradient: LinearGradient(
+          colors: isDark
+              ? [const Color(0xFF1E1728), const Color(0xFF110D17)]
+              : [const Color(0xFFFAF2E4), const Color(0xFFF3E7D0)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(
-          color: goldColor.withValues(alpha: 0.35),
-          width: 1.2,
+          color: goldColor.withValues(alpha: isDark ? 0.75 : 0.65),
+          width: 1.4,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFFE57F).withValues(alpha: isDark ? 0.25 : 0.15),
+            blurRadius: 1,
+            offset: const Offset(0, -1),
+          ),
+          BoxShadow(
+            color: goldColor.withValues(alpha: isDark ? 0.22 : 0.12),
+            blurRadius: 18,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          _buildAvatar(profile, colorScheme),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: goldColor, width: 2.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: goldColor.withValues(alpha: 0.35),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+                child: _buildAvatar(profile, colorScheme),
+              ),
+              Positioned(
+                top: -6,
+                right: -6,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF0C0A10),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.workspace_premium_rounded,
+                    size: 14,
+                    color: goldColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
@@ -340,35 +423,53 @@ class _SchedlyTop3SheetState extends State<SchedlyTop3Sheet>
                   children: [
                     const Text('🔥 ', style: TextStyle(fontSize: 11)),
                     Text(
-                      'CURRENT CHAMPION',
+                      'REIGNING CHAMPION',
                       style: GoogleFonts.outfit(
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: 0.8,
+                        letterSpacing: 0.9,
                         color: goldColor,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 1),
+                const SizedBox(height: 2),
                 Text(
                   profile.displayName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.outfit(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: colorScheme.onSurface,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : const Color(0xFF1E170A),
                   ),
                 ),
               ],
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 2, vertical: AppSpacing.xs),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm + 4,
+              vertical: AppSpacing.xs + 2,
+            ),
             decoration: BoxDecoration(
-              color: goldColor.withValues(alpha: 0.15),
+              gradient: LinearGradient(
+                colors: isDark
+                    ? const [Color(0xFF2E2412), Color(0xFF1B150A)]
+                    : const [Color(0xFFFDF6E2), Color(0xFFF5E8C8)],
+              ),
               borderRadius: BorderRadius.circular(AppRadius.full),
+              border: Border.all(
+                color: goldColor.withValues(alpha: isDark ? 0.65 : 0.50),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: goldColor.withValues(alpha: isDark ? 0.18 : 0.10),
+                  blurRadius: 6,
+                  offset: const Offset(0, 1),
+                ),
+              ],
             ),
             child: Text(
               '${profile.weeklyExp} Weekly XP',
@@ -376,6 +477,7 @@ class _SchedlyTop3SheetState extends State<SchedlyTop3Sheet>
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
                 color: goldColor,
+                letterSpacing: 0.4,
               ),
             ),
           ),
