@@ -1,4 +1,4 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:schedly/nmims_structure.dart';
 import 'package:schedly/models/section_config.dart';
 
@@ -51,7 +51,7 @@ void main() {
         semester: 'Semester V',
         division: 'A',
       );
-      expect(solId, equals('SOL_3rdYear_BALLB_SemesterV_A'));
+      expect(solId, equals('SOL_3rdYear_BALLB_SemV_A'));
 
       final solIdShortSem = NMIMSStructure.generateSectionId(
         school: 'SOL',
@@ -91,7 +91,7 @@ void main() {
 
     test('SOL SectionConfig preserves school, program, semester and division', () {
       final solConfig = SectionConfig(
-        id: 'SOL_3rdYear_BALLB_SemesterV_A',
+        id: 'SOL_3rdYear_BALLB_SemV_A',
         school: 'SOL',
         program: 'B.A. LL.B. (Hons.)',
         academicYear: '3rd Year',
@@ -110,8 +110,8 @@ void main() {
       expect(json['academicYear'], equals('3rd Year'));
       expect(json['division'], equals('A'));
 
-      final reconstructed = SectionConfig.fromJson(json, 'SOL_3rdYear_BALLB_SemesterV_A');
-      expect(reconstructed.id, equals('SOL_3rdYear_BALLB_SemesterV_A'));
+      final reconstructed = SectionConfig.fromJson(json, 'SOL_3rdYear_BALLB_SemV_A');
+      expect(reconstructed.id, equals('SOL_3rdYear_BALLB_SemV_A'));
       expect(reconstructed.school, equals('SOL'));
       expect(reconstructed.program, equals('B.A. LL.B. (Hons.)'));
       expect(reconstructed.semester, equals('Semester V'));

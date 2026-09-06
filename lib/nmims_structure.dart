@@ -138,10 +138,20 @@ class NMIMSStructure {
 
     final cleanProg = _sanitizeProgramCode(branchOrProgram);
     if (semester != null && semester.trim().isNotEmpty) {
-      final cleanSem = semester.trim().replaceAll(' ', '');
+      final cleanSem = _sanitizeSemesterCode(semester);
       return '${effectiveSchool}_${cleanYear}_${cleanProg}_${cleanSem}_$cleanDiv';
     }
     return '${effectiveSchool}_${cleanYear}_${cleanProg}_$cleanDiv';
+  }
+
+  static String _sanitizeSemesterCode(String semester) {
+    String sem = semester.trim();
+    // Normalize 'Semester V' or 'Semester 5' or 'Sem V' -> 'SemV'
+    final match = RegExp(r'^(?:Semester|Sem)\s*([IVXLCDM0-9]+)$', caseSensitive: false).firstMatch(sem);
+    if (match != null) {
+      return 'Sem${match.group(1)}';
+    }
+    return sem.replaceAll(' ', '');
   }
 
   static String _sanitizeProgramCode(String name) {
