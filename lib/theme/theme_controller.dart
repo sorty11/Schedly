@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'visual_theme.dart';
+import 'champion_theme_access.dart';
 import '../services/gamification_service.dart';
 
 class ThemeController extends ChangeNotifier {
@@ -39,17 +40,20 @@ class ThemeController extends ChangeNotifier {
 
     // Validate champion theme access if active
     if (_visualTheme == SchedlyVisualTheme.champion) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        validateChampionAccess();
-      });
+      if (!ChampionThemeAccess.isPermanentlyUnlocked()) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          validateChampionAccess();
+        });
+      }
     }
   }
 
-  /// Automatically falls back to defaultTheme if user is no longer weekly Champion
+  /// Automatically falls back to defaultTheme if user is neither weekly Champion nor permanently allowlisted
   Future<void> validateChampionAccess() async {
     if (_visualTheme == SchedlyVisualTheme.champion) {
       final isChamp = await GamificationService.instance.checkChampionStatus();
-      if (!isChamp) {
+      final hasAccess = ChampionThemeAccess.hasAccess(isWeeklyChampion: isChamp);
+      if (!hasAccess) {
         await setVisualTheme(SchedlyVisualTheme.defaultTheme);
       }
     }

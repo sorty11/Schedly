@@ -1191,6 +1191,124 @@ class AppTheme {
     );
   }
 
+  // ─── Champion Text Theme (Bold Elite Luxury Typography) ───────────────────
+  static TextTheme _buildChampionTextTheme(
+    TextTheme base, {
+    required bool isDark,
+  }) {
+    final textColor = isDark ? const Color(0xFFFFFDF5) : const Color(0xFF1E170A);
+    final mutedColor = isDark ? const Color(0xFFC7B696) : const Color(0xFF7A6B52);
+
+    return base.copyWith(
+      displayLarge: TextStyle(
+        fontFamily: 'Outfit',
+        fontFamilyFallback: const ['Inter', 'sans-serif'],
+        fontSize: 46,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.5,
+        color: textColor,
+        height: 1.1,
+      ),
+      displayMedium: TextStyle(
+        fontFamily: 'Outfit',
+        fontFamilyFallback: const ['Inter', 'sans-serif'],
+        fontSize: 34,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.3,
+        color: textColor,
+        height: 1.15,
+      ),
+      displaySmall: TextStyle(
+        fontFamily: 'Outfit',
+        fontFamilyFallback: const ['Inter', 'sans-serif'],
+        fontSize: 26,
+        fontWeight: FontWeight.w800,
+        color: textColor,
+        height: 1.2,
+      ),
+      headlineLarge: TextStyle(
+        fontFamily: 'Outfit',
+        fontFamilyFallback: const ['Inter', 'sans-serif'],
+        fontSize: 24,
+        fontWeight: FontWeight.w800,
+        color: textColor,
+      ),
+      headlineMedium: TextStyle(
+        fontFamily: 'Outfit',
+        fontFamilyFallback: const ['Inter', 'sans-serif'],
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        color: textColor,
+      ),
+      headlineSmall: TextStyle(
+        fontFamily: 'Outfit',
+        fontFamilyFallback: const ['Inter', 'sans-serif'],
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color: textColor,
+      ),
+      titleLarge: TextStyle(
+        fontFamily: 'Outfit',
+        fontFamilyFallback: const ['Inter', 'sans-serif'],
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color: textColor,
+      ),
+      titleMedium: TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+        color: textColor,
+      ),
+      titleSmall: TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: textColor,
+      ),
+      bodyLarge: TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
+        color: textColor,
+      ),
+      bodyMedium: TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        color: textColor,
+      ),
+      bodySmall: TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 12,
+        fontWeight: FontWeight.w400,
+        color: mutedColor,
+      ),
+      labelLarge: TextStyle(
+        fontFamily: 'Outfit',
+        fontFamilyFallback: const ['Inter', 'sans-serif'],
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.5,
+        color: textColor,
+      ),
+      labelMedium: TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.4,
+        color: mutedColor,
+      ),
+      labelSmall: TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.8,
+        color: mutedColor,
+      ),
+    );
+  }
+
   // ─── Heritage Theme Builder ───────────────────────────────────────────────
   static ThemeData _buildHeritageTheme({
     required bool isDark,
@@ -1918,23 +2036,259 @@ class AppTheme {
     );
   }
 
+  // ─── Champion Theme Builder (Competitive Imperial Reward) ─────────────────
   static ThemeData _buildChampionTheme({
     required bool isDark,
-    required bool transparentScaffold,
+    bool transparentScaffold = false,
   }) {
-    final base = isDark
-        ? _buildDarkTheme(transparentScaffold: transparentScaffold)
-        : _buildLightTheme(transparentScaffold: transparentScaffold);
+    final colorScheme = isDark
+        ? const ColorScheme.dark(
+            primary: Color(0xFFFFD700), // 24K pure metallic gold
+            primaryContainer: Color(0xFF261F10),
+            onPrimaryContainer: Color(0xFFFFD700),
+            secondary: Color(0xFFE5A93C), // Luminous amber gold
+            secondaryContainer: Color(0xFF1B150A),
+            tertiary: Color(0xFFFFE066),
+            surface: Color(0xFF0F0D14), // Deep imperial obsidian
+            onPrimary: Color(0xFF0A0702),
+            onSecondary: Color(0xFF0A0702),
+            onTertiary: Color(0xFF0A0702),
+            onSurface: Color(0xFFFFFDF5),
+            error: Color(0xFFFF4D6D),
+            onError: Colors.white,
+            outline: Color(0x40FFD700),
+            outlineVariant: Color(0x20FFD700),
+            surfaceContainerHighest: Color(0xFF1B1724),
+            scrim: Color(0x80000000),
+          )
+        : const ColorScheme.light(
+            primary: Color(0xFFD97706), // Warm burnished gold
+            primaryContainer: Color(0xFFFBF1D8),
+            onPrimaryContainer: Color(0xFF92400E),
+            secondary: Color(0xFFB4831B),
+            secondaryContainer: Color(0xFFF7EEDD),
+            tertiary: Color(0xFFF59E0B),
+            surface: Color(0xFFFFFFFF),
+            onPrimary: Colors.white,
+            onSecondary: Colors.white,
+            onTertiary: Colors.white,
+            onSurface: Color(0xFF1E170A),
+            error: Color(0xFFE11D48),
+            onError: Colors.white,
+            outline: Color(0x40B4831B),
+            outlineVariant: Color(0x20B4831B),
+            surfaceContainerHighest: Color(0xFFF5ECDC),
+            scrim: Color(0x1A000000),
+          );
 
-    const goldColor = Color(0xFFE5A93C);
+    final textTheme = _buildChampionTextTheme(
+      isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
+      isDark: isDark,
+    );
 
-    return base.copyWith(
-      colorScheme: base.colorScheme.copyWith(
-        primary: goldColor,
-        secondary: const Color(0xFFFFD700),
+    final sem = isDark ? championDarkSemanticColors : championLightSemanticColors;
+    final lecture = isDark ? championDarkLectureColors : championLightLectureColors;
+    final bgColor = isDark ? const Color(0xFF070609) : const Color(0xFFFAF7F2);
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: isDark ? Brightness.dark : Brightness.light,
+      scrollbarTheme: _commonScrollbarTheme,
+      colorScheme: colorScheme,
+      textTheme: textTheme,
+      canvasColor: transparentScaffold ? Colors.transparent : colorScheme.surface,
+      scaffoldBackgroundColor: transparentScaffold ? Colors.transparent : bgColor,
+      pageTransitionsTheme: PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: FadeThroughPageTransitionsBuilder(
+            fillColor: transparentScaffold ? Colors.transparent : null,
+          ),
+          TargetPlatform.iOS: FadeThroughPageTransitionsBuilder(
+            fillColor: transparentScaffold ? Colors.transparent : null,
+          ),
+        },
+      ),
+      typography: Typography.material2021(colorScheme: colorScheme),
+      appBarTheme: AppBarTheme(
+        backgroundColor: transparentScaffold ? Colors.transparent : bgColor,
+        foregroundColor: colorScheme.onSurface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          fontFamily: 'Outfit',
+          fontSize: 20,
+          fontWeight: FontWeight.w800,
+          color: colorScheme.onSurface,
+          letterSpacing: 0.3,
+        ),
+        iconTheme: IconThemeData(color: colorScheme.primary, size: 20),
+      ),
+      cardTheme: CardThemeData(
+        color: sem.surfaceElevated,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.0),
+          side: BorderSide(color: sem.borderSubtle, width: 1),
+        ),
+        margin: EdgeInsets.zero,
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+        elevation: 4,
+        highlightElevation: 8,
+        shape: const CircleBorder(),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: sem.surfaceElevated,
+        surfaceTintColor: Colors.transparent,
+        elevation: 24,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.0),
+          side: BorderSide(color: sem.borderSubtle, width: 1.2),
+        ),
+        titleTextStyle: TextStyle(
+          fontFamily: 'Outfit',
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          color: colorScheme.onSurface,
+          letterSpacing: 0.3,
+        ),
+        contentTextStyle: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 14,
+          color: sem.onSurfaceMuted,
+          height: 1.5,
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        showDragHandle: false,
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: isDark ? const Color(0xFF191420) : const Color(0xFF281F10),
+        contentTextStyle: const TextStyle(
+          fontFamily: 'Inter',
+          color: Colors.white,
+          fontSize: 14,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          side: BorderSide(color: sem.borderSubtle, width: 1),
+        ),
+        elevation: 8,
+        actionTextColor: colorScheme.primary,
+      ),
+      dividerTheme: DividerThemeData(
+        color: sem.borderSubtle,
+        thickness: 1,
+        space: 1,
+      ),
+      listTileTheme: ListTileThemeData(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.sm,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected)
+              ? colorScheme.onPrimary
+              : sem.onSurfaceMuted,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected)
+              ? colorScheme.primary
+              : sem.borderSubtle,
+        ),
+        trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+      ),
+      inputDecorationTheme: _inputTheme(colorScheme),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isDark ? const Color(0xFF261F10) : const Color(0xFFFBF1D8),
+          foregroundColor: colorScheme.primary,
+          elevation: 3,
+          shadowColor: colorScheme.primary.withValues(alpha: isDark ? 0.35 : 0.20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: colorScheme.primary.withValues(alpha: isDark ? 0.75 : 0.60),
+              width: 1.2,
+            ),
+          ),
+          textStyle: const TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
+          elevation: 2,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: (isDark ? const Color(0xFFFFE57F) : const Color(0xFFF59E0B))
+                  .withValues(alpha: 0.6),
+              width: 1.0,
+            ),
+          ),
+          textStyle: const TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: colorScheme.primary,
+          backgroundColor: isDark ? const Color(0xFF131018) : const Color(0xFFFAF7F2),
+          side: BorderSide(
+            color: colorScheme.primary.withValues(alpha: 0.6),
+            width: 1.2,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: const TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.3,
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: colorScheme.primary,
+          textStyle: const TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
       extensions: [
-        ...base.extensions.values.where((e) => e is! SchedlySkinExtension),
+        sem,
+        lecture,
         SchedlySkinExtension(skin: ChampionSkin(isDark: isDark)),
       ],
     );

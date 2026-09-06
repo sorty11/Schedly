@@ -448,6 +448,69 @@ const bloomDarkLectureColors = SchedlyLectureTypeColors(
   lunch: Color(0xFFF59E0B),
 );
 
+// ─── 5. CHAMPION PALETTES (Royal Imperial Obsidian & 24K Metallic Gold) ───────
+const championLightSemanticColors = AppSemanticColors(
+  pending: Color(0xFFD97706), // Warm amber
+  conducted: Color(0xFF10B981), // Imperial emerald
+  cancelled: Color(0xFFE11D48), // Royal crimson
+  rescheduled: Color(0xFF8B5CF6), // Royal purple
+  success: Color(0xFF10B981),
+  warning: Color(0xFFD97706),
+  error: Color(0xFFE11D48),
+  accent: Color(0xFFB4831B), // Burnished bronze gold
+  surfaceElevated: Color(0xFFFFFFFF),
+  surfaceElevated2: Color(0xFFF7F2E8),
+  surfaceTinted: Color(0xFFFAF5EC),
+  borderSubtle: Color(0x40B4831B), // Polished gold hairline
+  borderFocus: Color(0xFFD97706),
+  onSurfaceMuted: Color(0xFF7A6B52), // Champagne bronze text
+  onSurfaceFaint: Color(0xFFA3947B),
+);
+
+const championDarkSemanticColors = AppSemanticColors(
+  pending: Color(0xFFFBBF24), // Luminous gold
+  conducted: Color(0xFF34D399), // Emerald triumph
+  cancelled: Color(0xFFFF4D6D), // Imperial ruby
+  rescheduled: Color(0xFFA78BFA), // Royal amethyst
+  success: Color(0xFF34D399),
+  warning: Color(0xFFFBBF24),
+  error: Color(0xFFFF4D6D),
+  accent: Color(0xFFFFD700), // 24K pure metallic gold
+  surfaceElevated: Color(0xFF131118), // Deep obsidian slate
+  surfaceElevated2: Color(0xFF1C1824), // Raised obsidian plate
+  surfaceTinted: Color(0xFF221D2C),
+  borderSubtle: Color(0x3DFFD700), // Luminous gold border
+  borderFocus: Color(0xFFFFD700),
+  onSurfaceMuted: Color(0xFFC7B696), // Muted champagne gold
+  onSurfaceFaint: Color(0xFF8E8067),
+);
+
+const championLightLectureColors = SchedlyLectureTypeColors(
+  theory: Color(0xFFB4831B), // Burnished gold
+  lab: Color(0xFF0D9488), // Teal emerald
+  tutorial: Color(0xFF7C3AED), // Amethyst
+  practical: Color(0xFF0284C7), // Sapphire
+  project: Color(0xFFD97706), // Amber
+  seminar: Color(0xFFC026D3), // Magenta
+  viva: Color(0xFFE11D48), // Ruby
+  event: Color(0xFFD97706), // Gold star
+  other: Color(0xFF78716C),
+  lunch: Color(0xFFD97706),
+);
+
+const championDarkLectureColors = SchedlyLectureTypeColors(
+  theory: Color(0xFFFFD700), // 24K Gold
+  lab: Color(0xFF2DD4BF), // Glowing Teal Emerald
+  tutorial: Color(0xFFA78BFA), // Luminous Lavender
+  practical: Color(0xFF38BDF8), // Cyan Gold
+  project: Color(0xFFFBBF24), // Bright Amber
+  seminar: Color(0xFFF472B6), // Pink Diamond
+  viva: Color(0xFFFF4D6D), // Ruby Red
+  event: Color(0xFFFFD700), // Pure Gold
+  other: Color(0xFF9CA3AF),
+  lunch: Color(0xFFFBBF24),
+);
+
 // ─── Named Color Palette ──────────────────────────────────────────────────────
 class AppColors {
   AppColors._();
