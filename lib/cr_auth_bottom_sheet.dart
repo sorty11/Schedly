@@ -30,6 +30,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
   String? _selectedSchool = 'STME';
   String? _selectedYear;
   String? _selectedBranch;
+  String? _selectedSemester;
   String? _selectedDivision;
   String? _sectionId;
 
@@ -69,18 +70,21 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
   }
 
   void _checkSectionStatus() {
-    if (_selectedDivision == null) return;
+    final isSol = _selectedSchool == 'SOL';
+    if (_selectedDivision == null || (isSol && _selectedSemester == null)) return;
 
     final matchingDocs = _activeSections.where((doc) {
       final data = doc.data() as Map<String, dynamic>;
       final school = (data['school'] as String?) ?? 'STME';
       final prog = (data['program'] as String?) ?? (data['branch'] as String?) ?? '';
       final year = (data['academicYear'] as String?) ?? '';
+      final sem = (data['semester'] as String?);
       final div = (data['division'] as String?) ?? '';
       return school == (_selectedSchool ?? 'STME') &&
           prog == _selectedBranch &&
           year == _selectedYear &&
-          div == _selectedDivision;
+          div == _selectedDivision &&
+          (!isSol || (sem != null && sem == _selectedSemester));
     }).toList();
 
     if (matchingDocs.isNotEmpty) {
@@ -91,6 +95,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
         school: _selectedSchool,
         year: _selectedYear ?? '',
         branchOrProgram: _selectedBranch ?? '',
+        semester: isSol ? _selectedSemester : null,
         division: _selectedDivision ?? '',
       );
       _sectionExists = false;
@@ -219,6 +224,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
               initialSchool: _selectedSchool,
               initialYear: _selectedYear,
               initialBranch: _selectedBranch,
+              initialSemester: _selectedSemester,
               initialDivision: _selectedDivision,
             ),
           ),
@@ -297,6 +303,8 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
       return (data['program'] as String?) ?? (data['branch'] as String?) ?? '';
     }
 
+    final bool isSol = _selectedSchool == 'SOL';
+
     final activeSchools = _activeSections.map(getDocSchool).toSet().toList()..sort();
     if (_selectedSchool == null) {
       if (activeSchools.contains('STME')) {
@@ -308,6 +316,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
       _selectedSchool = activeSchools.first;
       _selectedBranch = null;
       _selectedYear = null;
+      _selectedSemester = null;
       _selectedDivision = null;
     }
 
@@ -323,6 +332,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
       if (_selectedBranch != null && !activePrograms.contains(_selectedBranch)) {
         _selectedBranch = null;
         _selectedYear = null;
+        _selectedSemester = null;
         _selectedDivision = null;
       }
     }
@@ -340,17 +350,49 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
         ..sort();
       if (_selectedYear != null && !activeYears.contains(_selectedYear)) {
         _selectedYear = null;
+        _selectedSemester = null;
         _selectedDivision = null;
       }
     }
 
-    List<String> activeDivisions = [];
-    if (_selectedSchool != null && _selectedBranch != null && _selectedYear != null) {
-      activeDivisions = _activeSections
+    List<String> activeSemesters = [];
+    if (isSol && _selectedBranch != null && _selectedYear != null) {
+      final fromSections = _activeSections
           .where((d) =>
               getDocSchool(d) == _selectedSchool &&
               getDocProgram(d) == _selectedBranch &&
               (d.data() as Map<String, dynamic>)['academicYear'] == _selectedYear)
+          .map((d) => (d.data() as Map<String, dynamic>)['semester'] as String?)
+          .whereType<String>()
+          .where((s) => s.isNotEmpty)
+          .toSet()
+          .toList();
+
+      if (fromSections.isNotEmpty) {
+        activeSemesters = fromSections..sort();
+      } else {
+        activeSemesters = NMIMSStructure.solSemestersByYear[_selectedYear] ?? [];
+      }
+
+      if (_selectedSemester != null && !activeSemesters.contains(_selectedSemester)) {
+        _selectedSemester = null;
+        _selectedDivision = null;
+      }
+    } else if (!isSol) {
+      _selectedSemester = null;
+    }
+
+    List<String> activeDivisions = [];
+    if (_selectedSchool != null &&
+        _selectedBranch != null &&
+        _selectedYear != null &&
+        (!isSol || _selectedSemester != null)) {
+      activeDivisions = _activeSections
+          .where((d) =>
+              getDocSchool(d) == _selectedSchool &&
+              getDocProgram(d) == _selectedBranch &&
+              (d.data() as Map<String, dynamic>)['academicYear'] == _selectedYear &&
+              (!isSol || (d.data() as Map<String, dynamic>)['semester'] == _selectedSemester))
           .map((d) => (d.data() as Map<String, dynamic>)['division'] as String? ?? '')
           .where((div) => div.isNotEmpty)
           .toSet()
@@ -436,6 +478,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
                           _selectedSchool = val;
                           _selectedBranch = null;
                           _selectedYear = null;
+                          _selectedSemester = null;
                           _selectedDivision = null;
                           _sectionExists = false;
                           _passwordController.clear();
@@ -457,6 +500,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
                       setState(() {
                         _selectedBranch = val;
                         _selectedYear = null;
+                        _selectedSemester = null;
                         _selectedDivision = null;
                         _sectionExists = false;
                         _passwordController.clear();
@@ -477,6 +521,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
                       onChanged: (val) {
                         setState(() {
                           _selectedYear = val;
+                          _selectedSemester = null;
                           _selectedDivision = null;
                           _sectionExists = false;
                           _passwordController.clear();
@@ -485,7 +530,28 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
                     ),
                     const SizedBox(height: 12),
                   ],
-                  if (_selectedYear != null) ...[
+                  if (isSol && _selectedYear != null) ...[
+                    DropdownButtonFormField<String>(
+                      value: _selectedSemester,
+                      decoration: _compactDecoration(
+                        'Semester',
+                        Icons.layers_rounded,
+                      ),
+                      items: activeSemesters
+                          .map((sem) => DropdownMenuItem(value: sem, child: Text(sem)))
+                          .toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedSemester = val;
+                          _selectedDivision = null;
+                          _sectionExists = false;
+                          _passwordController.clear();
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (_selectedYear != null && (!isSol || _selectedSemester != null)) ...[
                     if (activeDivisions.isEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),

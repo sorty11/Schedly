@@ -23,6 +23,7 @@ class CRSetupWizard extends StatefulWidget {
   final String? initialSchool;
   final String? initialYear;
   final String? initialBranch;
+  final String? initialSemester;
   final String? initialDivision;
 
   const CRSetupWizard({
@@ -30,6 +31,7 @@ class CRSetupWizard extends StatefulWidget {
     this.initialSchool,
     this.initialYear,
     this.initialBranch,
+    this.initialSemester,
     this.initialDivision,
   });
 
@@ -63,6 +65,7 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
     _selectedSchool = widget.initialSchool ?? 'STME';
     _selectedYear = widget.initialYear;
     _selectedBranch = widget.initialBranch;
+    _selectedSemester = widget.initialSemester;
     if (widget.initialDivision != null) {
       _divisionController.text = widget.initialDivision!;
     }

@@ -178,7 +178,13 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
     setState(() => _loading = true);
     try {
       final sectionId = _selectedSectionId ??
-          '${_selectedYear!.replaceAll(' ', '')}_${_selectedBranch!.replaceAll(' ', '')}_$_selectedDivision';
+          NMIMSStructure.generateSectionId(
+            school: _selectedSchool,
+            year: _selectedYear!,
+            branchOrProgram: _selectedBranch!,
+            semester: _selectedSemester,
+            division: _selectedDivision!,
+          );
 
       await DivisionMembershipService.joinDivision(
         uid: user!.uid,

@@ -335,10 +335,12 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
     final div = _divCtrl.text.trim().toUpperCase();
     final sem = _semesterCtrl.text.trim();
 
-    if (year.isEmpty || branch.isEmpty || div.isEmpty) {
+    if (year.isEmpty || branch.isEmpty || div.isEmpty || (_selectedSchool == 'SOL' && sem.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Year, Branch, and Division are required'),
+        SnackBar(
+          content: Text(_selectedSchool == 'SOL'
+              ? 'Year, Program, Semester, and Division are required'
+              : 'Year, Branch, and Division are required'),
         ),
       );
       return;
@@ -607,7 +609,18 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
                         .map((y) => DropdownMenuItem(value: y, child: Text(y)))
                         .toList(),
                     onChanged: (val) {
-                      if (val != null) setState(() => _yearCtrl.text = val);
+                      if (val != null) {
+                        setState(() {
+                          _yearCtrl.text = val;
+                          if (_selectedSchool == 'SOL') {
+                            final validSems =
+                                NMIMSStructure.solSemestersByYear[val] ?? [];
+                            if (!validSems.contains(_semesterCtrl.text)) {
+                              _semesterCtrl.text = '';
+                            }
+                          }
+                        });
+                      }
                     },
                   ),
                   const SizedBox(height: AppSpacing.sm),
@@ -672,11 +685,43 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
                       ],
                     ),
 
-                  SchedlyTextField(
-                    controller: _semesterCtrl,
-                    labelText: 'Semester (Optional)',
-                    hintText: 'e.g. Semester 3',
-                  ),
+                  if (_selectedSchool == 'SOL') ...[
+                    DropdownButtonFormField<String>(
+                      value: _semesterCtrl.text.isEmpty ? null : _semesterCtrl.text,
+                      decoration: InputDecoration(
+                        labelText: 'Semester',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      items: (NMIMSStructure.solSemestersByYear[_yearCtrl.text] ??
+                              const [
+                                'Semester I',
+                                'Semester II',
+                                'Semester III',
+                                'Semester IV',
+                                'Semester V',
+                                'Semester VI',
+                                'Semester VII',
+                                'Semester VIII',
+                                'Semester IX',
+                                'Semester X',
+                              ])
+                          .map((sem) => DropdownMenuItem(value: sem, child: Text(sem)))
+                          .toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() => _semesterCtrl.text = val);
+                        }
+                      },
+                    ),
+                  ] else ...[
+                    SchedlyTextField(
+                      controller: _semesterCtrl,
+                      labelText: 'Semester (Optional)',
+                      hintText: 'e.g. Semester 3',
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.lg),
 
                   Container(
