@@ -443,7 +443,12 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   bool _canEditLecture(TimetableEntry entry) {
-    if (entry.category != EventCategory.academic) return false;
+    final lower = entry.subject.toLowerCase();
+    final isAcademicOrSportsLaw = entry.category == EventCategory.academic ||
+        lower.contains('sports law') ||
+        lower.contains('sport law') ||
+        (lower.contains('sport') && (lower.contains('law') || lower.contains('llb')));
+    if (!isAcademicOrSportsLaw) return false;
     if (AppSettings.currentRole == UserRole.cr) return true;
     if (AppSettings.currentRole == UserRole.sr) {
       return entry.subject == AppSettings.srSubject &&

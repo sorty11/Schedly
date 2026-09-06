@@ -110,7 +110,12 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
   }
 
   bool _canEdit(TimetableEntry entry) {
-    if (entry.category != EventCategory.academic) return false;
+    final lower = entry.subject.toLowerCase();
+    final isAcademicOrSportsLaw = entry.category == EventCategory.academic ||
+        lower.contains('sports law') ||
+        lower.contains('sport law') ||
+        (lower.contains('sport') && (lower.contains('law') || lower.contains('llb')));
+    if (!isAcademicOrSportsLaw) return false;
     return PermissionService.canManageLecture(
       lectureSubject: entry.subject,
       lectureComponent: entry.component,
