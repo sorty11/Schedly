@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'services/pdf_timetable_import_service.dart';
+import 'services/law_timetable_parser.dart';
 import 'services/network_service.dart';
 import 'pdf_import_preview_page.dart';
+import 'models/timetable_entry.dart';
 import 'models/event_category.dart';
 import 'widgets/app_dialogs.dart';
 import 'services/crash_reporting_service.dart';
@@ -63,10 +65,30 @@ class _UploadTimetablePdfPageState extends State<UploadTimetablePdfPage> {
       final text = await PdfTimetableImportService.extractText(bytes);
       final pdfDivision = PdfTimetableImportService.extractDivision(text);
 
-      final previewTimetable = await PdfTimetableImportService.parseTimetable(
-        bytes,
-        'L-19',
-      );
+      final prefs = await SharedPreferences.getInstance();
+      final selectedDivision =
+          prefs.getString('section_id') ?? prefs.getString('selected_division');
+      final savedSchool = prefs.getString('student_school') ?? 'STME';
+
+      final isLaw = savedSchool.toUpperCase() == 'SOL' ||
+          LawTimetableParser.isLawTimetable(text);
+
+      final Map<String, List<TimetableEntry>> previewTimetable;
+      final String defaultRoom;
+
+      if (isLaw) {
+        defaultRoom = 'SOL';
+        previewTimetable = await LawTimetableParser.parseTimetable(
+          bytes,
+          defaultRoom,
+        );
+      } else {
+        defaultRoom = 'L-19';
+        previewTimetable = await PdfTimetableImportService.parseTimetable(
+          bytes,
+          defaultRoom,
+        );
+      }
 
       final uniqueSubjects = <String>{};
       for (final entries in previewTimetable.values) {
@@ -78,14 +100,10 @@ class _UploadTimetablePdfPageState extends State<UploadTimetablePdfPage> {
       }
       final subjects = uniqueSubjects.toList();
 
-      final prefs = await SharedPreferences.getInstance();
-      final selectedDivision =
-          prefs.getString('section_id') ?? prefs.getString('selected_division');
-
       setState(() {
         detectedSubjects = subjects;
         division = pdfDivision;
-        room = 'L-19';
+        room = defaultRoom;
         loading = false;
       });
 
@@ -96,7 +114,7 @@ class _UploadTimetablePdfPageState extends State<UploadTimetablePdfPage> {
         MaterialPageRoute(
           builder: (_) => PdfImportPreviewPage(
             timetable: previewTimetable,
-            division: selectedDivision ?? pdfDivision ?? 'FY CSE A',
+            division: selectedDivision ?? pdfDivision ?? (isLaw ? 'SOL_3rdYear_BALLB_SemV_A' : 'FY CSE A'),
           ),
         ),
       );

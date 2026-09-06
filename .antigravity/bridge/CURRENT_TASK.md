@@ -1,27 +1,21 @@
 ﻿# Current Active Task Pointer
 
-- **Active Task ID**: `PHASE1_FOUNDATION_LOCK`
-- **Contract File**: [`.antigravity/bridge/tasks/PHASE1_FOUNDATION_LOCK.json`](tasks/PHASE1_FOUNDATION_LOCK.json)
-- **Status**: `done` (Phase 1 Locked at `44d0228`)
+- **Active Task ID**: `PHASE2_SOL_TIMETABLE`
+- **Contract File**: [`.antigravity/bridge/tasks/PHASE2_SOL_TIMETABLE.json`](tasks/PHASE2_SOL_TIMETABLE.json)
+- **Status**: `review` (Implementation & automated validation complete, awaiting review)
 - **Planner / Reviewer**: ChatGPT
 - **Executor / Validator**: Antigravity
 - **Branch**: `main`
-- **Locked Commit**: `44d0228`
+- **Base Commit**: `427619a`
 
 ---
 
 ## Acceptance Criteria
-- [x] Multi-school domain catalogs in `NMIMSStructure` (`STME`, `SOL`, `SPTM`, `SBM`, `SOC`).
-- [x] STME section IDs remain 100% legacy-compatible (`ThirdYear_CE_A`).
-- [x] SOL section IDs follow canonical format `SOL_3rdYear_BALLB_SemV_A`.
-- [x] Student onboarding cascades dynamically without showing unneeded dropdowns.
-- [x] All existing regression test suites and static analysis pass cleanly.
-- [x] Lightweight Git-based collaboration contract between ChatGPT and Antigravity established.
-
----
-
-## Validation Summary
-- `flutter test test/multi_school_test.dart`: PASSED (6/6)
-- `flutter test` (Regression Suites): PASSED (56/56)
-- `flutter analyze`: PASSED (0 errors, 0 warnings)
-- Git Status: Pushed to `origin/main` at `44d0228`
+- [x] STME V6 parser (`PdfTimetableImportService`) remains 100% untouched and preserved.
+- [x] Existing STME timetable import pipeline, storage, and tests remain green with zero regressions.
+- [x] `LawTimetableParser` built in `lib/services/law_timetable_parser.dart`.
+- [x] `UploadTimetablePdfPage` dispatches to `LawTimetableParser` for SOL and `PdfTimetableImportService` for STME.
+- [x] Standard, schema-compliant `TimetableEntry` instances produced.
+- [x] Unit test `test/law_timetable_parser_test.dart` passes with 100% precision.
+- [x] All regression tests (64 tests across 9 suites) pass cleanly.
+- [x] `flutter analyze` passes with 0 errors/warnings.

@@ -1,0 +1,84 @@
+﻿{
+  "$schema": "../schema.json",
+  "task_id": "PHASE2_SOL_TIMETABLE",
+  "title": "Phase 2 SOL Timetable Support & Parser Dispatch",
+  "stage": "review",
+  "created_at": "2026-09-07T00:56:00+05:30",
+  "updated_at": "2026-09-07T01:03:00+05:30",
+  "planner": "ChatGPT",
+  "executor": "Antigravity",
+  "format_spec": {
+    "institution": "SVKM's NMIMS School of Law, Hyderabad Campus",
+    "program": "B.A. LL.B. (Hons.)",
+    "year": "Third Year",
+    "semester": "Semester V",
+    "batch": "2024-29",
+    "academic_year": "2026-27",
+    "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    "morning_slots": [
+      {"slot": "9.10-10.10", "start": "09:10", "end": "10:10", "startMins": 550, "endMins": 610},
+      {"slot": "10.11-11.11 AM", "start": "10:11", "end": "11:11", "startMins": 611, "endMins": 671},
+      {"slot": "11.12-12.12 PM", "start": "11:12", "end": "12:12", "startMins": 672, "endMins": 732},
+      {"slot": "12.13-1.13 PM", "start": "12:13", "end": "13:13", "startMins": 733, "endMins": 793}
+    ],
+    "lunch": {"start": "13:13", "end": "14:00", "startMins": 793, "endMins": 840},
+    "afternoon_slots": [
+      {"slot": "2-3 PM", "start": "14:00", "end": "15:00", "startMins": 840, "endMins": 900},
+      {"slot": "3.01-4.01 PM", "start": "15:01", "end": "16:01", "startMins": 901, "endMins": 961},
+      {"slot": "4.02-5.02 PM", "start": "16:02", "end": "17:02", "startMins": 962, "endMins": 1022},
+      {"slot": "5.03-6.03 PM", "start": "17:03", "end": "18:03", "startMins": 1023, "endMins": 1083}
+    ],
+    "component_convention": {
+      "T": "Theory (default unmarked)",
+      "U": "Tutorial (explicit (U) suffix)"
+    },
+    "default_batch": "Whole Class"
+  },
+  "scope": {
+    "feature_area": "Timetable Import & Parser Dispatch",
+    "target_files": [
+      "lib/services/law_timetable_parser.dart",
+      "lib/upload_timetable_pdf_page.dart",
+      "test/law_timetable_parser_test.dart",
+      ".antigravity/bridge/tasks/PHASE2_SOL_TIMETABLE.json",
+      ".antigravity/bridge/CURRENT_TASK.md"
+    ],
+    "frozen_files": [
+      "lib/services/pdf_timetable_import_service.dart",
+      "lib/models/timetable_entry.dart",
+      "lib/services/timetable_resolver_service.dart",
+      "lib/dashboard_page.dart",
+      "lib/weekly_timetable_page.dart",
+      "firestore.rules"
+    ]
+  },
+  "acceptance_criteria": [
+    "STME V6 parser (PdfTimetableImportService) remains 100% untouched and preserved",
+    "Existing STME timetable import pipeline, storage, and tests remain green with zero regressions",
+    "LawTimetableParser is built as a separate, isolated service in lib/services/law_timetable_parser.dart",
+    "UploadTimetablePdfPage cleanly dispatches to LawTimetableParser for SOL sections and PdfTimetableImportService for STME sections",
+    "Parsed Law entries produce standard, schema-compliant TimetableEntry instances stored under timetables/{sectionId}/{day}",
+    "Theory (T) and Tutorial (U) components are parsed accurately with default Theory and explicit Tutorial for (U)",
+    "Clean extraction of faculty names into faculty/notes/metadata when present in cell",
+    "Zero flutter analyze errors or warnings",
+    "Unit test test/law_timetable_parser_test.dart validates Law timetable parsing with 100% precision"
+  ],
+  "validation": {
+    "commands": [
+      "flutter test test/timetable_pdf_parser_test.dart",
+      "flutter test test/multi_school_test.dart",
+      "flutter test test/law_timetable_parser_test.dart",
+      "flutter test",
+      "flutter analyze"
+    ],
+    "status": "PASSED"
+  },
+  "git": {
+    "base_commit": "427619a",
+    "branch": "main"
+  },
+  "review": {
+    "verdict": "AWAITING_REVIEW",
+    "notes": "Implementation & automated tests complete. Ready for ChatGPT / Human review. (Antigravity never sets done)."
+  }
+}
