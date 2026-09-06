@@ -12,7 +12,7 @@ const router = Router();
 router.post('/create-section', sectionCreateRateLimiter, verifyIdToken, async (req: any, res: any) => {
   const { masterPassword, sectionId, sectionData, crPassword, srPassword } = req.body;
 
-  if (masterPassword !== AppConfig.MASTER_SETUP_PASSWORD) {
+  if (!AppConfig.MASTER_SETUP_PASSWORD || masterPassword !== AppConfig.MASTER_SETUP_PASSWORD) {
     logger.warn('Failed section creation: Invalid master password', { uid: req.user?.uid, sectionId });
     return res.status(403).json({ error: 'Incorrect Master Password' });
   }

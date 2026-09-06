@@ -55,6 +55,11 @@ export const verifyIdToken = async (req: AuthenticatedRequest, res: Response, ne
   
   try {
     const decodedToken = await admin.auth().verifyIdToken(token);
+    if (decodedToken.firebase?.sign_in_provider === 'anonymous') {
+      logger.warn('Forbidden: Anonymous accounts are not permitted on this endpoint', { uid: decodedToken.uid });
+      res.status(403).json({ error: 'Forbidden: Anonymous accounts are not permitted' });
+      return;
+    }
     req.user = decodedToken;
     next();
   } catch (error) {

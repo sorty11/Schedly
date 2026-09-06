@@ -4,7 +4,7 @@ dotenv.config();
 export const AppConfig = {
   VERSION: process.env.APP_VERSION || '1.0.1',
   PORT: process.env.PORT || 3000,
-  MASTER_SETUP_PASSWORD: process.env.MASTER_SETUP_PASSWORD || 'schedly11',
+  MASTER_SETUP_PASSWORD: process.env.MASTER_SETUP_PASSWORD || '',
 };
 
 export const WorkerConfig = {
