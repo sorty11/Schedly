@@ -136,11 +136,46 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <!-- Force explicitly register the Firebase Service Worker before Flutter's caching SW takes over -->
+  <!-- Service Worker & Auto-Update Handler for Desktop / Web PWA -->
   <script>
     if ('serviceWorker' in navigator) {
+      var refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
+      });
+
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        navigator.serviceWorker.register('/firebase-messaging-sw.js').then(function (reg) {
+          // Immediately check for SW update on launch
+          reg.update();
+
+          // Listen for new updates found
+          reg.addEventListener('updatefound', function () {
+            var installingWorker = reg.installing;
+            if (installingWorker) {
+              installingWorker.addEventListener('statechange', function () {
+                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New version installed; tell it to activate immediately
+                  installingWorker.postMessage({ type: 'SKIP_WAITING' });
+                }
+              });
+            }
+          });
+        }).catch(function (err) {
+          console.warn('[SW] Registration error:', err);
+        });
+      });
+
+      // When app tab becomes visible again on desktop, check for latest update
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') {
+          navigator.serviceWorker.ready.then(function (reg) {
+            reg.update();
+          });
+        }
       });
     }
   </script>
