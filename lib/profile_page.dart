@@ -13,7 +13,6 @@ import 'app_settings.dart';
 import 'user_roles.dart';
 import 'role_verification_page.dart';
 import 'cr_panel_page.dart';
-import 'sr_conduct_dashboard.dart';
 import 'onboarding_flow.dart';
 import 'theme/theme.dart';
 import 'main.dart';
@@ -33,6 +32,7 @@ import 'about_schedly_page.dart';
 import 'widgets/support/bug_report_sheet.dart';
 import 'widgets/support/feature_request_sheet.dart';
 import 'widgets/support/other_feedback_sheet.dart';
+import 'services/gamification_service.dart';
 import 'admin/admin_session.dart';
 import 'admin/admin_auth_sheet.dart';
 import 'admin/student_management_page.dart';
@@ -49,9 +49,16 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  @override
+  void initState() {
+    super.initState();
+    GamificationService.instance.loadCurrentUserProfile();
+  }
+
   Future<void> _refresh() async {
     await AppSettings.loadRole();
     await AppSettings.loadSRDetails();
+    await GamificationService.instance.loadCurrentUserProfile();
     if (mounted) setState(() {});
   }
 
@@ -391,8 +398,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       const SizedBox(height: AppSpacing.md),
 
                       // Division + Role chips
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.xs,
                         children: [
                           _infoChip(
                             icon: Icons.class_rounded,
@@ -402,7 +411,6 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                             textColor: semanticColors.accent,
                           ),
-                          const SizedBox(width: AppSpacing.sm),
                           _infoChip(
                             icon: isCR
                                 ? Icons.star_rounded
@@ -415,8 +423,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                             textColor: colorScheme.secondary,
                           ),
-                          if (isSR && AppSettings.srSubject != null) ...[
-                            const SizedBox(width: AppSpacing.sm),
+                          if (isSR && AppSettings.srSubject != null)
                             _infoChip(
                               icon: Icons.menu_book_rounded,
                               label: AppSettings.srSubject!,
@@ -425,8 +432,66 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                               textColor: semanticColors.success,
                             ),
-                          ],
                         ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      ValueListenableBuilder<int>(
+                        valueListenable:
+                            GamificationService.instance.currentExpNotifier,
+                        builder: (context, exp, _) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.lg,
+                              vertical: AppSpacing.sm,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colorScheme.primary.withValues(
+                                alpha: 0.08,
+                              ),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              border: Border.all(
+                                color: colorScheme.primary.withValues(
+                                  alpha: 0.2,
+                                ),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.bolt_rounded,
+                                  size: 20,
+                                  color: colorScheme.primary,
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '$exp XP',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w800,
+                                        color: colorScheme.primary,
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Total Experience',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500,
+                                        color: semanticColors.onSurfaceMuted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: AppSpacing.lg),
 
@@ -520,28 +585,6 @@ class _ProfilePageState extends State<ProfilePage> {
             StaggeredListItem(
               index: 2,
               child: _buildTileGroup([
-                if (isSR)
-                  _buildRoleTile(
-                    icon: Icons.checklist_rtl_rounded,
-                    title: 'Conduct Dashboard',
-                    subtitle: 'Verify pending lectures for your subject',
-                    iconColor: colorScheme.secondary,
-                    targetId: 'conduct_dashboard_tab',
-                    onTap: () {
-                      if (AppSettings.srSubject != null) {
-                        TutorialController.instance.completeStep();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => SrConductDashboard(
-                              division: widget.division,
-                              subject: AppSettings.srSubject ?? '',
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                  ),
                 if (!isCR)
                   _buildRoleTile(
                     icon: Icons.admin_panel_settings_rounded,
