@@ -283,6 +283,148 @@ class _CRPanelPageState extends State<CRPanelPage> {
     return StaggeredListItem(index: staggerIndex, child: cardContent);
   }
 
+  // ─── CR Hero Card ─────────────────────────────────────────────────────────
+  Widget _buildCRHeroCard({
+    required BuildContext context,
+    required String sectionId,
+  }) {
+    final skin = VisualSkin.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final palette = _CRHeroCardPalette.resolve(skin.visualTheme, isDark);
+
+    return StaggeredListItem(
+      index: 0,
+      child: AnimatedCard(
+        borderRadius: AppRadius.xl,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: EdgeInsets.all(AppSpacing.xl),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: palette.cardGradient,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+            border: Border.all(
+              color: palette.borderColor,
+              width: 1.2,
+            ),
+            boxShadow: [
+              if (palette.specularColor != null)
+                BoxShadow(
+                  color: palette.specularColor!,
+                  blurRadius: 1,
+                  offset: const Offset(0, -1),
+                ),
+              BoxShadow(
+                color: palette.shadowColor,
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Icon container
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: palette.iconGradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(
+                    color: palette.iconBorderColor,
+                    width: 1.1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: palette.shadowColor,
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.workspace_premium_rounded,
+                  color: palette.iconColor,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.lg),
+
+              // Title and Role badge
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      sectionId,
+                      style: GoogleFonts.outfit(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                        color: palette.titleColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm + 2,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: palette.badgeBg,
+                        borderRadius: BorderRadius.circular(AppRadius.full),
+                        border: Border.all(
+                          color: palette.badgeBorder,
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Transform.rotate(
+                            angle: 0.785398, // 45 deg diamond pip
+                            child: Container(
+                              width: 5,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: palette.pipColor,
+                                shape: BoxShape.rectangle,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Class Representative',
+                            style: GoogleFonts.inter(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.3,
+                              color: palette.badgeText,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // ─── Section label ─────────────────────────────────────────────────────────
   Widget _buildSectionLabel(String label, {int staggerIndex = 0}) {
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
@@ -466,80 +608,9 @@ class _CRPanelPageState extends State<CRPanelPage> {
                 ),
               )
             else
-              StaggeredListItem(
-                index: 0,
-                child: Container(
-                  padding: EdgeInsets.all(AppSpacing.x2l),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppColors.primary, AppColors.secondary],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(AppRadius.xl),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.3),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(AppRadius.lg),
-                        ),
-                        child: const Icon(
-                          Icons.star_rounded,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.lg),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              sectionId,
-                              style: GoogleFonts.outfit(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.sm,
-                                vertical: AppSpacing.xs,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(
-                                  AppRadius.full,
-                                ),
-                              ),
-                              child: Text(
-                                'Class Representative',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              _buildCRHeroCard(
+                context: context,
+                sectionId: sectionId,
               ),
 
             // ── Timetable section ────────────────────────────────────────────
@@ -984,6 +1055,174 @@ class _CRPanelPageState extends State<CRPanelPage> {
         isError: true,
       );
       Navigator.popUntil(context, (route) => route.isFirst);
+    }
+  }
+}
+
+class _CRHeroCardPalette {
+  final List<Color> cardGradient;
+  final Color borderColor;
+  final Color? specularColor;
+  final Color shadowColor;
+  final List<Color> iconGradient;
+  final Color iconBorderColor;
+  final Color iconColor;
+  final Color titleColor;
+  final Color badgeBg;
+  final Color badgeBorder;
+  final Color badgeText;
+  final Color pipColor;
+
+  const _CRHeroCardPalette({
+    required this.cardGradient,
+    required this.borderColor,
+    this.specularColor,
+    required this.shadowColor,
+    required this.iconGradient,
+    required this.iconBorderColor,
+    required this.iconColor,
+    required this.titleColor,
+    required this.badgeBg,
+    required this.badgeBorder,
+    required this.badgeText,
+    required this.pipColor,
+  });
+
+  factory _CRHeroCardPalette.resolve(SchedlyVisualTheme theme, bool isDark) {
+    switch (theme) {
+      case SchedlyVisualTheme.champion:
+        return _CRHeroCardPalette(
+          cardGradient: isDark
+              ? const [Color(0xFF1E1828), Color(0xFF120E1A)]
+              : const [Color(0xFFFFFDF8), Color(0xFFF7F1E3)],
+          borderColor: isDark
+              ? const Color(0xFFFFD700).withValues(alpha: 0.40)
+              : const Color(0xFFB4831B).withValues(alpha: 0.35),
+          specularColor: isDark
+              ? const Color(0xFFFFE57F).withValues(alpha: 0.22)
+              : const Color(0xFFFFE57F).withValues(alpha: 0.14),
+          shadowColor: isDark
+              ? const Color(0xFFFFD700).withValues(alpha: 0.08)
+              : const Color(0xFFB4831B).withValues(alpha: 0.06),
+          iconGradient: isDark
+              ? const [Color(0xFF2C223A), Color(0xFF181222)]
+              : const [Color(0xFFFBF4E2), Color(0xFFEFE2C2)],
+          iconBorderColor: isDark
+              ? const Color(0xFFFFD700).withValues(alpha: 0.50)
+              : const Color(0xFFB4831B).withValues(alpha: 0.40),
+          iconColor: const Color(0xFFFFD700),
+          titleColor: isDark ? const Color(0xFFFFFDF5) : const Color(0xFF1A1408),
+          badgeBg: const Color(0xFFFFD700).withValues(alpha: isDark ? 0.14 : 0.10),
+          badgeBorder: const Color(0xFFFFD700).withValues(alpha: isDark ? 0.38 : 0.28),
+          badgeText: isDark ? const Color(0xFFFFE57F) : const Color(0xFF8A6205),
+          pipColor: const Color(0xFFFFD700),
+        );
+      case SchedlyVisualTheme.heritage:
+        return _CRHeroCardPalette(
+          cardGradient: isDark
+              ? const [Color(0xFF251C17), Color(0xFF17110D)]
+              : const [Color(0xFFFAF6F0), Color(0xFFF1E9DC)],
+          borderColor: isDark
+              ? const Color(0xFFC25E38).withValues(alpha: 0.38)
+              : const Color(0xFFD9822B).withValues(alpha: 0.32),
+          specularColor: isDark
+              ? const Color(0xFFD9822B).withValues(alpha: 0.18)
+              : null,
+          shadowColor: isDark
+              ? const Color(0xFFC25E38).withValues(alpha: 0.08)
+              : const Color(0xFFD9822B).withValues(alpha: 0.06),
+          iconGradient: isDark
+              ? const [Color(0xFF36271F), Color(0xFF201611)]
+              : const [Color(0xFFF3ECE0), Color(0xFFE5DAC9)],
+          iconBorderColor: const Color(0xFFC25E38).withValues(alpha: 0.45),
+          iconColor: const Color(0xFFD9822B),
+          titleColor: isDark ? const Color(0xFFFDF8F3) : const Color(0xFF2B1D14),
+          badgeBg: const Color(0xFFC25E38).withValues(alpha: isDark ? 0.15 : 0.10),
+          badgeBorder: const Color(0xFFC25E38).withValues(alpha: 0.35),
+          badgeText: isDark ? const Color(0xFFF5B57F) : const Color(0xFF9E401E),
+          pipColor: const Color(0xFFD9822B),
+        );
+      case SchedlyVisualTheme.future:
+        return _CRHeroCardPalette(
+          cardGradient: isDark
+              ? const [Color(0xFF111724), Color(0xFF0A0E17)]
+              : const [Color(0xFFF0FDFF), Color(0xFFE2F7FB)],
+          borderColor: isDark
+              ? const Color(0xFF00F2FE).withValues(alpha: 0.38)
+              : const Color(0xFF00B4D8).withValues(alpha: 0.35),
+          specularColor: isDark
+              ? const Color(0xFF00F2FE).withValues(alpha: 0.20)
+              : null,
+          shadowColor: isDark
+              ? const Color(0xFF00F2FE).withValues(alpha: 0.10)
+              : const Color(0xFF00B4D8).withValues(alpha: 0.06),
+          iconGradient: isDark
+              ? const [Color(0xFF182338), Color(0xFF0E1624)]
+              : const [Color(0xFFDEF7FB), Color(0xFFCBEFF7)],
+          iconBorderColor: const Color(0xFF00F2FE).withValues(alpha: 0.50),
+          iconColor: const Color(0xFF00F2FE),
+          titleColor: isDark ? const Color(0xFFF0FBFF) : const Color(0xFF0A1F2C),
+          badgeBg: const Color(0xFF00F2FE).withValues(alpha: isDark ? 0.15 : 0.10),
+          badgeBorder: const Color(0xFF00F2FE).withValues(alpha: 0.40),
+          badgeText: isDark ? const Color(0xFF7DF9FF) : const Color(0xFF007799),
+          pipColor: const Color(0xFF00F2FE),
+        );
+      case SchedlyVisualTheme.bloom:
+        return _CRHeroCardPalette(
+          cardGradient: isDark
+              ? const [Color(0xFF251622), Color(0xFF160E15)]
+              : const [Color(0xFFFFF6F9), Color(0xFFFCEBF2)],
+          borderColor: isDark
+              ? const Color(0xFFDE527B).withValues(alpha: 0.38)
+              : const Color(0xFFDE527B).withValues(alpha: 0.32),
+          specularColor: isDark
+              ? const Color(0xFFFF8DA9).withValues(alpha: 0.18)
+              : null,
+          shadowColor: isDark
+              ? const Color(0xFFDE527B).withValues(alpha: 0.08)
+              : const Color(0xFFDE527B).withValues(alpha: 0.06),
+          iconGradient: isDark
+              ? const [Color(0xFF381F32), Color(0xFF22121E)]
+              : const [Color(0xFFFDE7F0), Color(0xFFF9D6E4)],
+          iconBorderColor: const Color(0xFFDE527B).withValues(alpha: 0.45),
+          iconColor: const Color(0xFFDE527B),
+          titleColor: isDark ? const Color(0xFFFFF4F7) : const Color(0xFF2C101B),
+          badgeBg: const Color(0xFFDE527B).withValues(alpha: isDark ? 0.15 : 0.10),
+          badgeBorder: const Color(0xFFDE527B).withValues(alpha: 0.35),
+          badgeText: isDark ? const Color(0xFFFF9EB5) : const Color(0xFFA8264D),
+          pipColor: const Color(0xFFDE527B),
+        );
+      case SchedlyVisualTheme.defaultTheme:
+        return _CRHeroCardPalette(
+          cardGradient: isDark
+              ? const [Color(0xFF161E2E), Color(0xFF0E1320)]
+              : const [Color(0xFFFFFFFF), Color(0xFFF4F7FC)],
+          borderColor: isDark
+              ? const Color(0xFF38BDF8).withValues(alpha: 0.25)
+              : const Color(0xFFCBD5E1),
+          specularColor: isDark
+              ? const Color(0xFF60A5FA).withValues(alpha: 0.16)
+              : null,
+          shadowColor: isDark
+              ? const Color(0xFF020617).withValues(alpha: 0.50)
+              : const Color(0xFF64748B).withValues(alpha: 0.08),
+          iconGradient: isDark
+              ? const [Color(0xFF1E293B), Color(0xFF131C2E)]
+              : const [Color(0xFFEFF6FF), Color(0xFFDBEAFE)],
+          iconBorderColor: isDark
+              ? const Color(0xFF3B82F6).withValues(alpha: 0.35)
+              : const Color(0xFFBFDBFE),
+          iconColor: isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+          titleColor: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A),
+          badgeBg: isDark
+              ? const Color(0xFF3B82F6).withValues(alpha: 0.14)
+              : const Color(0xFFDBEAFE),
+          badgeBorder: isDark
+              ? const Color(0xFF3B82F6).withValues(alpha: 0.32)
+              : const Color(0xFF93C5FD),
+          badgeText: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8),
+          pipColor: isDark ? const Color(0xFF38BDF8) : const Color(0xFF2563EB),
+        );
     }
   }
 }

@@ -69,19 +69,17 @@ class _DashboardPageState extends State<DashboardPage> {
 
     try {
       final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-      bool hasAny = false;
-      for (final day in days) {
-        final snap = await FirebaseFirestore.instance
-            .collection('timetables')
-            .doc(widget.division)
-            .collection(day)
-            .limit(1)
-            .get();
-        if (snap.docs.isNotEmpty) {
-          hasAny = true;
-          break;
-        }
-      }
+      final snaps = await Future.wait(
+        days.map(
+          (day) => FirebaseFirestore.instance
+              .collection('timetables')
+              .doc(widget.division)
+              .collection(day)
+              .limit(1)
+              .get(),
+        ),
+      );
+      final hasAny = snaps.any((snap) => snap.docs.isNotEmpty);
 
       if (mounted) {
         if (!hasAny) {
