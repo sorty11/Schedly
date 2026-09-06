@@ -16,5 +16,6 @@ Welcome to the Antigravity AI UI/UX Workspace. This is not a repository of docum
 - [Prompts](prompts/README.md)
 - [References](references/README.md)
 - [MCP](mcp/21st_dev/README.md)
+- [Bridge (ChatGPT ↔ Antigravity)](bridge/CONTRACT.md)
 
 **CRITICAL INSTRUCTION**: Always follow the sequence defined in [orchestration.md](orchestration.md).

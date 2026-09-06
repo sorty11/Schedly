@@ -5,3 +5,5 @@
 3. **NEVER WEAKEN ACCESSIBILITY**: All contrast ratios, ARIA labels, and keyboard navigations must be maintained or improved. (Enforced by `critics/accessibility-critic.md`).
 4. **NO ARCHITECTURE SHIFTS**: Do not introduce new state management libraries or structural paradigms during a UI task unless explicitly directed.
 5. **READ BEFORE WRITING**: Always review the context and existing code before proposing changes. Always consult `orchestration.md`.
+6. **NO BLIND DESTRUCTIVE ACTIONS**: Never run mass-deletions, schema wipes, or force pushes without explicit confirmation.
+7. **HONOR BRIDGE CONTRACT**: Respect task scopes in `bridge/TASK.json`; do not touch files marked in `frozen_files`.
