@@ -24,6 +24,7 @@ import 'models/attendance_log.dart';
 import 'widgets/app_dialogs.dart';
 import 'onboarding/widgets/tutorial_target.dart';
 import 'onboarding/services/feature_discovery_service.dart';
+import 'services/gamification_service.dart';
 
 class AttendancePage extends StatefulWidget {
   final String division;
@@ -44,6 +45,11 @@ class _AttendancePageState extends State<AttendancePage> {
     _recordsStream = AttendanceService.streamAll(widget.division);
     _logsStream = AttendanceService.streamLogs();
     _calculatorFuture = ProgressCalculatorService.build(widget.division);
+    _calculatorFuture.then((calculator) {
+      if (mounted && calculator != null) {
+        GamificationService.instance.recordAttendanceView();
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FeatureDiscoveryService.checkAttendanceDiscovery(context);
     });

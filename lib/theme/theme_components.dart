@@ -366,6 +366,14 @@ class _ThemedLectureCardState extends State<ThemedLectureCard>
           color: baseColor,
           decoration: isCancelled ? TextDecoration.lineThrough : null,
         );
+      case SchedlyVisualTheme.champion:
+        return GoogleFonts.outfit(
+          fontSize: 17,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.2,
+          color: baseColor,
+          decoration: isCancelled ? TextDecoration.lineThrough : null,
+        );
     }
   }
 }

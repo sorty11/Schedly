@@ -146,6 +146,13 @@ class _AnimatedThemeCanvasState extends State<AnimatedThemeCanvas>
               isPreview: widget.isPreview,
             );
             break;
+          case SchedlyVisualTheme.champion:
+            painter = ChampionThemePainter(
+              progress: progress,
+              isDark: widget.isDark,
+              isPreview: widget.isPreview,
+            );
+            break;
           case SchedlyVisualTheme.defaultTheme:
             return const SizedBox.shrink();
         }
@@ -377,3 +384,87 @@ class BloomThemePainter extends CustomPainter {
       oldDelegate.isDark != isDark ||
       oldDelegate.isPreview != isPreview;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. CHAMPION THEME PAINTER (Royal Obsidian & Luminous Gold Achievement Aura)
+// ─────────────────────────────────────────────────────────────────────────────
+class ChampionThemePainter extends CustomPainter {
+  final double progress;
+  final bool isDark;
+  final bool isPreview;
+
+  ChampionThemePainter({
+    required this.progress,
+    required this.isDark,
+    required this.isPreview,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+
+    // Deep regal obsidian base with warm amber glow
+    final baseColor = isDark
+        ? const Color(0xFF0C0A06)
+        : const Color(0xFFFBF9F4);
+    final deepColor = isDark
+        ? const Color(0xFF181308)
+        : const Color(0xFFF3EDE0);
+
+    final bgPaint = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(0.0, -0.3),
+        radius: 1.1,
+        colors: [deepColor, baseColor],
+      ).createShader(rect);
+
+    canvas.drawRect(rect, bgPaint);
+
+    // Subtle royal chevron/crown geometric accents in the background
+    final accentPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0
+      ..color = (isDark ? const Color(0xFFE5A93C) : const Color(0xFFB4831B))
+          .withValues(alpha: isDark ? 0.04 : 0.03);
+
+    final centerX = size.width / 2;
+    final crestY = size.height * (isPreview ? 0.4 : 0.3);
+    final crestSize = isPreview ? 35.0 : 80.0;
+
+    final path = Path();
+    path.moveTo(centerX - crestSize, crestY);
+    path.lineTo(centerX, crestY - crestSize * 0.5);
+    path.lineTo(centerX + crestSize, crestY);
+    path.lineTo(centerX, crestY + crestSize * 0.5);
+    path.close();
+    canvas.drawPath(path, accentPaint);
+
+    // Soft luminous gold micro-shimmer embers drifting upwards
+    final emberCount = isPreview ? 8 : 16;
+    final emberPaint = Paint()..style = PaintingStyle.fill;
+
+    for (int i = 0; i < emberCount; i++) {
+      final seed = i * 47.13;
+      final speed = 0.35 + (i % 3) * 0.15;
+      final t = (progress * speed + (i / emberCount)) % 1.0;
+
+      final sway = math.sin(t * math.pi * 2 + seed) * (isPreview ? 6.0 : 15.0);
+      final x = ((seed * 17) % size.width) + sway;
+      final y = (1.0 - t) * size.height; // Drifting upward
+      final radius = 1.0 + (i % 3) * 0.8;
+
+      final pulseAlpha = (math.sin(t * math.pi) * (isDark ? 0.35 : 0.22)).clamp(0.0, 1.0);
+      emberPaint.color = (isDark ? const Color(0xFFFFD700) : const Color(0xFFD97706))
+          .withValues(alpha: pulseAlpha);
+
+      canvas.drawCircle(Offset(x, y), radius, emberPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant ChampionThemePainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.isDark != isDark ||
+      oldDelegate.isPreview != isPreview;
+}
+

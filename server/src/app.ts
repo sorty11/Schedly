@@ -11,6 +11,8 @@ import { TokenWorker } from './worker/token.worker';
 import { AppConfig } from './config/env.config';
 import apiV1Routes from './routes/api.v1.routes';
 import feedbackRoutes from './routes/feedback';
+import gamificationRoutes from './routes/gamification.routes';
+import { ChampionWorker } from './worker/champion.worker';
 
 if (typeof dns.setDefaultResultOrder === 'function') {
   dns.setDefaultResultOrder('ipv4first');
@@ -29,6 +31,7 @@ app.use(morgan('combined', { stream: { write: message => logger.info(message.tri
 
 export const worker = new OutboxWorker();
 export const tokenWorker = new TokenWorker();
+export const championWorker = new ChampionWorker();
 
 app.get('/', (req, res) => {
   res.json({
@@ -40,6 +43,7 @@ app.get('/', (req, res) => {
 
 app.use('/api/v1', apiV1Routes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/gamification', gamificationRoutes);
 
 // Global Error Handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -54,6 +58,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 worker.start();
 tokenWorker.start();
+championWorker.start();
 
 app.listen(AppConfig.PORT, () => {
   logger.info(JSON.stringify({

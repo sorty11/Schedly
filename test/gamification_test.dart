@@ -38,6 +38,7 @@ void main() {
 
     test('Reward constants verification', () {
       expect(GamificationService.dailyExpReward, 20);
+      expect(GamificationService.attendanceExpReward, 10);
       expect(GamificationService.timetableActionReward, 25);
     });
 

@@ -493,6 +493,53 @@ class _ProfilePageState extends State<ProfilePage> {
                           );
                         },
                       ),
+                      ValueListenableBuilder<bool>(
+                        valueListenable:
+                            GamificationService.instance.isChampionNotifier,
+                        builder: (context, isChampion, _) {
+                          if (!isChampion) return const SizedBox.shrink();
+                          return Padding(
+                            padding: const EdgeInsets.only(top: AppSpacing.sm),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.md,
+                                vertical: AppSpacing.xs,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE5A93C).withValues(
+                                  alpha: 0.12,
+                                ),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.full,
+                                ),
+                                border: Border.all(
+                                  color: const Color(0xFFE5A93C).withValues(
+                                    alpha: 0.4,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    '🔥 ',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                  Text(
+                                    'SCHEDLY CHAMPION • Theme Unlocked',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFFE5A93C),
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                       const SizedBox(height: AppSpacing.lg),
 
                       // Edit Profile Button

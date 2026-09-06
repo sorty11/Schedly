@@ -291,6 +291,11 @@ class AppTheme {
           isDark: isDark,
           transparentScaffold: transparentScaffold,
         );
+      case SchedlyVisualTheme.champion:
+        return _buildChampionTheme(
+          isDark: isDark,
+          transparentScaffold: transparentScaffold,
+        );
       case SchedlyVisualTheme.defaultTheme:
         return isDark
             ? _buildDarkTheme(transparentScaffold: transparentScaffold)
@@ -1909,6 +1914,28 @@ class AppTheme {
         sem,
         lecture,
         SchedlySkinExtension(skin: BloomSkin(isDark: isDark)),
+      ],
+    );
+  }
+
+  static ThemeData _buildChampionTheme({
+    required bool isDark,
+    required bool transparentScaffold,
+  }) {
+    final base = isDark
+        ? _buildDarkTheme(transparentScaffold: transparentScaffold)
+        : _buildLightTheme(transparentScaffold: transparentScaffold);
+
+    const goldColor = Color(0xFFE5A93C);
+
+    return base.copyWith(
+      colorScheme: base.colorScheme.copyWith(
+        primary: goldColor,
+        secondary: const Color(0xFFFFD700),
+      ),
+      extensions: [
+        ...base.extensions.values.where((e) => e is! SchedlySkinExtension),
+        SchedlySkinExtension(skin: ChampionSkin(isDark: isDark)),
       ],
     );
   }

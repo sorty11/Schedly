@@ -239,11 +239,20 @@ service cloud.firestore {
       }
     }
 
-    // GAMIFICATION / LEADERBOARD
+    // GAMIFICATION / LEADERBOARD (Server-Authoritative)
     match /gamification/{userId} {
       allow read: if request.auth != null;
-      allow create, update: if request.auth != null && request.auth.uid == userId;
-      allow delete: if false;
+      allow write: if false; // Only Admin SDK/Server can write
+    }
+
+    match /gamification_weekly/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only Admin SDK/Server can write
+    }
+
+    match /gamification_meta/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only Admin SDK/Server can write
     }
   }
 }

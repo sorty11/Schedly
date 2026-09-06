@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
 
 import '../app_settings.dart';
 import '../user_roles.dart';
@@ -14,11 +16,13 @@ class LeaderboardPopupData {
   final List<GamificationProfile> top3;
   final GamificationProfile? bestCR;
   final GamificationProfile? bestSR;
+  final GamificationProfile? champion;
 
   const LeaderboardPopupData({
     required this.top3,
     this.bestCR,
     this.bestSR,
+    this.champion,
   });
 }
 
@@ -27,21 +31,30 @@ class GamificationService {
   static final GamificationService instance = GamificationService._();
 
   static const int dailyExpReward = 20;
+  static const int attendanceExpReward = 10;
   static const int timetableActionReward = 25;
+
   static const String _prefDailyClaimDateKey = 'schedly_last_daily_claim_date';
+  static const String _prefAttendanceClaimDateKey = 'schedly_last_attendance_claim_date';
+
+  static const String _defaultBackendUrl = String.fromEnvironment(
+    'BACKEND_URL',
+    defaultValue: 'https://schedly-p61g.onrender.com',
+  );
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // In-memory cache & guards
-  bool _claimedThisSession = false;
+  bool _claimedDailyThisSession = false;
+  bool _claimedAttendanceThisSession = false;
   bool hasShownAutoPopup = false;
-  DateTime? _lastTimetableActionTime;
 
-  // Reactive notifier for current user's EXP and points
+  // Reactive notifiers for current user's EXP, points, and Champion status
   final ValueNotifier<int> currentExpNotifier = ValueNotifier<int>(0);
   final ValueNotifier<int> currentCrPointsNotifier = ValueNotifier<int>(0);
   final ValueNotifier<int> currentSrPointsNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<bool> isChampionNotifier = ValueNotifier<bool>(false);
 
   CollectionReference<Map<String, dynamic>> get _gamificationRef =>
       _firestore.collection('gamification');
@@ -49,46 +62,6 @@ class GamificationService {
   String _getTodayDateStr() {
     final now = DateTime.now();
     return DateFormat('yyyy-MM-dd').format(now);
-  }
-
-  /// Ensures that the current authenticated user has a document in /gamification/{uid}
-  Future<void> _ensureCurrentUserDocExists() async {
-    final user = _auth.currentUser;
-    if (user == null || user.isAnonymous) return;
-
-    try {
-      final docRef = _gamificationRef.doc(user.uid);
-      final docSnap = await docRef.get();
-      if (!docSnap.exists) {
-        String displayName = AppSettings.studentName ??
-            AppSettings.facultyName ??
-            user.displayName ??
-            'Student';
-        String? photoUrl = AppSettings.profilePhotoUrl ?? user.photoURL;
-        String year = AppSettings.academicYear ?? '';
-        String branch = AppSettings.branch ?? '';
-        String division = AppSettings.sectionId ?? AppSettings.division ?? '';
-        String role = AppSettings.currentRole.name.toUpperCase();
-
-        await docRef.set({
-          'uid': user.uid,
-          'displayName': displayName,
-          if (photoUrl != null && photoUrl.isNotEmpty) 'photoUrl': photoUrl,
-          'academicYear': year,
-          'branch': branch,
-          'division': division,
-          'role': role,
-          'exp': dailyExpReward,
-          'crPoints': 0,
-          'srPoints': 0,
-          'lastDailyExpClaimDate': _getTodayDateStr(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-        debugPrint('[GAMIFICATION] Initialized gamification profile for ${user.uid}');
-      }
-    } catch (e) {
-      debugPrint('[GAMIFICATION] Note ensuring user doc: $e');
-    }
   }
 
   /// Initial load or refresh of current user's stats
@@ -103,6 +76,7 @@ class GamificationService {
         currentExpNotifier.value = profile.exp;
         currentCrPointsNotifier.value = profile.crPoints;
         currentSrPointsNotifier.value = profile.srPoints;
+        await checkChampionStatus();
         return profile;
       }
     } catch (e) {
@@ -111,7 +85,37 @@ class GamificationService {
     return null;
   }
 
-  /// Checks and awards the daily app-open EXP (+20 XP) if not yet claimed today.
+  /// Checks if current user is the active weekly Champion.
+  Future<bool> checkChampionStatus() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      isChampionNotifier.value = false;
+      return false;
+    }
+
+    try {
+      final champDoc = await _firestore
+          .collection('gamification_meta')
+          .doc('current_champion')
+          .get();
+
+      if (champDoc.exists) {
+        final data = champDoc.data() ?? {};
+        final champUid = data['championUid'] as String?;
+        final isChamp = champUid != null && champUid.isNotEmpty && champUid == user.uid;
+        isChampionNotifier.value = isChamp;
+        return isChamp;
+      }
+    } catch (e) {
+      debugPrint('[GAMIFICATION] Error checking champion status: $e');
+    }
+
+    isChampionNotifier.value = false;
+    return false;
+  }
+
+  /// Claims daily app-open EXP (+20 XP) via trusted server backend.
+  /// Strictly rate-limited to once per Asia/Kolkata calendar day.
   Future<bool> checkAndClaimDailyExp() async {
     final user = _auth.currentUser;
     if (user == null || user.isAnonymous) return false;
@@ -119,91 +123,124 @@ class GamificationService {
     debugPrint('[GAMIFICATION] Daily EXP check started');
     final todayStr = _getTodayDateStr();
 
-    // 1. In-memory session check
-    if (_claimedThisSession) {
+    // 1. Session and local preference guard (anti-farming)
+    if (_claimedDailyThisSession) {
       debugPrint('[GAMIFICATION] Daily EXP already claimed this session');
       return false;
     }
 
-    try {
-      final userDocRef = _gamificationRef.doc(user.uid);
-      final prefs = await SharedPreferences.getInstance();
-      final lastLocalClaim = prefs.getString(_prefDailyClaimDateKey);
-
-      String displayName = AppSettings.studentName ??
-          AppSettings.facultyName ??
-          user.displayName ??
-          'Student';
-      String? photoUrl = AppSettings.profilePhotoUrl ?? user.photoURL;
-      String year = AppSettings.academicYear ?? '';
-      String branch = AppSettings.branch ?? '';
-      String division = AppSettings.sectionId ?? AppSettings.division ?? '';
-      String role = AppSettings.currentRole.name.toUpperCase();
-
-      final docSnap = await userDocRef.get();
-
-      if (!docSnap.exists) {
-        // Document doesn't exist yet: initialize it with 20 EXP!
-        final newProfile = GamificationProfile(
-          uid: user.uid,
-          displayName: displayName,
-          photoUrl: photoUrl,
-          academicYear: year,
-          branch: branch,
-          division: division,
-          role: role,
-          exp: dailyExpReward,
-          lastDailyExpClaimDate: todayStr,
-          updatedAt: DateTime.now(),
-        );
-        await userDocRef.set(newProfile.toFirestore());
-        _claimedThisSession = true;
-        await prefs.setString(_prefDailyClaimDateKey, todayStr);
-        await loadCurrentUserProfile();
-        debugPrint('[GAMIFICATION] Daily EXP awarded: +$dailyExpReward XP (new profile created)');
-        return true;
-      }
-
-      // Document exists: check remote and local claim dates
-      final data = docSnap.data();
-      final lastRemoteClaim = data?['lastDailyExpClaimDate'] as String?;
-
-      if (lastLocalClaim == todayStr || lastRemoteClaim == todayStr) {
-        _claimedThisSession = true;
-        if (lastLocalClaim != todayStr) {
-          await prefs.setString(_prefDailyClaimDateKey, todayStr);
-        }
-        await loadCurrentUserProfile();
-        debugPrint('[GAMIFICATION] Daily EXP already claimed today ($todayStr)');
-        return false;
-      }
-
-      // Claim for today
-      await userDocRef.update({
-        'exp': FieldValue.increment(dailyExpReward),
-        'lastDailyExpClaimDate': todayStr,
-        'displayName': displayName,
-        if (photoUrl != null && photoUrl.isNotEmpty) 'photoUrl': photoUrl,
-        if (year.isNotEmpty) 'academicYear': year,
-        if (branch.isNotEmpty) 'branch': branch,
-        if (division.isNotEmpty) 'division': division,
-        'role': role,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      _claimedThisSession = true;
-      await prefs.setString(_prefDailyClaimDateKey, todayStr);
-      await loadCurrentUserProfile();
-      debugPrint('[GAMIFICATION] Daily EXP awarded: +$dailyExpReward XP');
-      return true;
-    } catch (e) {
-      debugPrint('[GAMIFICATION] Failed to claim daily EXP: $e');
+    final prefs = await SharedPreferences.getInstance();
+    final lastLocalClaim = prefs.getString(_prefDailyClaimDateKey);
+    if (lastLocalClaim == todayStr) {
+      _claimedDailyThisSession = true;
+      debugPrint('[GAMIFICATION] Daily EXP already claimed today locally ($todayStr)');
       return false;
     }
+
+    try {
+      final token = await user.getIdToken();
+      if (token == null || token.isEmpty) return false;
+
+      final url = Uri.parse('$_defaultBackendUrl/api/gamification/claim-daily');
+      final res = await http.post(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        final success = data['success'] == true;
+        final alreadyClaimed = data['alreadyClaimed'] == true;
+        final newTotal = (data['newTotalExp'] as num?)?.toInt();
+
+        _claimedDailyThisSession = true;
+        await prefs.setString(_prefDailyClaimDateKey, todayStr);
+
+        if (newTotal != null) {
+          currentExpNotifier.value = newTotal;
+        }
+
+        if (success) {
+          debugPrint('[GAMIFICATION] Daily EXP awarded: +$dailyExpReward XP');
+          return true;
+        } else if (alreadyClaimed) {
+          debugPrint('[GAMIFICATION] Server confirms daily EXP already claimed for today');
+          return false;
+        }
+      }
+    } catch (e) {
+      debugPrint('[GAMIFICATION] Failed to claim daily EXP via server: $e');
+    }
+    return false;
   }
 
-  /// Records a successful timetable modification action performed by CR or SR.
-  /// Awards +25 activity points (to crPoints for CR, srPoints for SR).
+  /// Claims attendance view EXP (+10 XP) via trusted server backend.
+  /// Triggered strictly after attendance page/data has successfully loaded.
+  Future<bool> recordAttendanceView() async {
+    final user = _auth.currentUser;
+    if (user == null || user.isAnonymous) return false;
+
+    final todayStr = _getTodayDateStr();
+
+    // Anti-farming guards: session + local preference
+    if (_claimedAttendanceThisSession) {
+      debugPrint('[GAMIFICATION] Attendance EXP already claimed this session');
+      return false;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final lastLocalClaim = prefs.getString(_prefAttendanceClaimDateKey);
+    if (lastLocalClaim == todayStr) {
+      _claimedAttendanceThisSession = true;
+      debugPrint('[GAMIFICATION] Attendance EXP already claimed today ($todayStr)');
+      return false;
+    }
+
+    try {
+      final token = await user.getIdToken();
+      if (token == null || token.isEmpty) return false;
+
+      final url = Uri.parse('$_defaultBackendUrl/api/gamification/claim-attendance');
+      final res = await http.post(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        final success = data['success'] == true;
+        final alreadyClaimed = data['alreadyClaimed'] == true;
+        final newTotal = (data['newTotalExp'] as num?)?.toInt();
+
+        _claimedAttendanceThisSession = true;
+        await prefs.setString(_prefAttendanceClaimDateKey, todayStr);
+
+        if (newTotal != null) {
+          currentExpNotifier.value = newTotal;
+        }
+
+        if (success) {
+          debugPrint('[GAMIFICATION] Attendance EXP awarded: +$attendanceExpReward XP');
+          return true;
+        } else if (alreadyClaimed) {
+          debugPrint('[GAMIFICATION] Attendance EXP already claimed today according to server');
+          return false;
+        }
+      }
+    } catch (e) {
+      debugPrint('[GAMIFICATION] Failed to claim attendance EXP via server: $e');
+    }
+    return false;
+  }
+
+  /// Observes timetable modification action.
+  /// Note: The actual +25 points are awarded server-side by the trusted outbox worker.
   Future<void> recordTimetableAction({required String division}) async {
     final user = _auth.currentUser;
     if (user == null || user.isAnonymous) return;
@@ -211,45 +248,10 @@ class GamificationService {
     final role = AppSettings.currentRole;
     if (role != UserRole.cr && role != UserRole.sr) return;
 
-    // Cooldown & deduplication: minimum 20 seconds between rewarded actions
-    final now = DateTime.now();
-    if (_lastTimetableActionTime != null &&
-        now.difference(_lastTimetableActionTime!).inSeconds < 20) {
-      debugPrint('[GAMIFICATION] Timetable action ignored due to cooldown.');
-      return;
-    }
-    _lastTimetableActionTime = now;
-
-    try {
-      final userDocRef = _gamificationRef.doc(user.uid);
-      final pointField = role == UserRole.cr ? 'crPoints' : 'srPoints';
-
-      String displayName = AppSettings.studentName ??
-          user.displayName ??
-          (role == UserRole.cr ? 'CR' : 'SR');
-      String? photoUrl = AppSettings.profilePhotoUrl ?? user.photoURL;
-      String year = AppSettings.academicYear ?? '';
-      String branch = AppSettings.branch ?? '';
-      String div = division.isNotEmpty ? division : (AppSettings.sectionId ?? '');
-
-      await userDocRef.set({
-        'uid': user.uid,
-        'displayName': displayName,
-        if (photoUrl != null && photoUrl.isNotEmpty) 'photoUrl': photoUrl,
-        'academicYear': year,
-        'branch': branch,
-        'division': div,
-        'role': role == UserRole.cr ? 'CR' : 'SR',
-        pointField: FieldValue.increment(timetableActionReward),
-        'lastTimetableActionAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-
-      await loadCurrentUserProfile();
-      debugPrint('[GAMIFICATION] Successfully awarded $timetableActionReward points to $pointField');
-    } catch (e) {
-      debugPrint('[GAMIFICATION] Error recording timetable action: $e');
-    }
+    // Refresh user's profile after outbox worker processes the event
+    Future.delayed(const Duration(seconds: 4), () {
+      loadCurrentUserProfile();
+    });
   }
 
   /// Fetches the Global Top 3 users ordered by EXP descending.
@@ -305,31 +307,52 @@ class GamificationService {
     return null;
   }
 
-  /// Loads leaderboard data asynchronously. Returns null on catastrophic failure.
+  /// Fetches the current weekly Champion from server-managed metadata.
+  Future<GamificationProfile?> fetchCurrentChampion() async {
+    try {
+      final doc = await _firestore
+          .collection('gamification_meta')
+          .doc('current_champion')
+          .get();
+
+      if (doc.exists) {
+        final profile = GamificationProfile.fromChampionDoc(doc);
+        if (profile.uid.isNotEmpty) {
+          return profile;
+        }
+      }
+    } catch (e) {
+      debugPrint('[GAMIFICATION] Error fetching current champion: $e');
+    }
+    return null;
+  }
+
+  /// Loads leaderboard popup data asynchronously. Returns null on failure.
   Future<LeaderboardPopupData?> loadPopupData() async {
     debugPrint('[GAMIFICATION] Leaderboard fetch started');
     try {
-      // Ensure current user exists in gamification collection
-      await _ensureCurrentUserDocExists();
-
       final results = await Future.wait([
         fetchGlobalTop3(),
         fetchBestCR(),
         fetchBestSR(),
+        fetchCurrentChampion(),
       ]);
 
       final top3 = results[0] as List<GamificationProfile>;
       final bestCR = results[1] as GamificationProfile?;
       final bestSR = results[2] as GamificationProfile?;
+      final champion = results[3] as GamificationProfile?;
 
       debugPrint('[GAMIFICATION] Top 3 result count: ${top3.length}');
       debugPrint('[GAMIFICATION] Best CR result: ${bestCR != null ? '${bestCR.displayName} (${bestCR.crPoints} pts)' : 'none'}');
       debugPrint('[GAMIFICATION] Best SR result: ${bestSR != null ? '${bestSR.displayName} (${bestSR.srPoints} pts)' : 'none'}');
+      debugPrint('[GAMIFICATION] Champion result: ${champion != null ? '${champion.displayName} (${champion.weeklyExp} XP)' : 'none'}');
 
       return LeaderboardPopupData(
         top3: top3,
         bestCR: bestCR,
         bestSR: bestSR,
+        champion: champion,
       );
     } catch (e, st) {
       debugPrint('[GAMIFICATION] Error loading popup data: $e\n$st');
@@ -337,7 +360,7 @@ class GamificationService {
     }
   }
 
-  /// Automatically displays the 3-second leaderboard popup once per session
+  /// Automatically displays the 6-second leaderboard popup once per session
   /// if valid leaderboard data is available. Non-blocking.
   Future<void> showAutoLeaderboardPopupIfEligible(BuildContext context) async {
     debugPrint('[GAMIFICATION] Session popup check started');

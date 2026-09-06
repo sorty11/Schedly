@@ -3,6 +3,7 @@ import { dispatchNotification } from '../notifications/notification.service';
 import { logger } from '../utils/logger';
 import { WorkerConfig } from '../config/env.config';
 import { FeedbackEmailService } from '../services/feedback.service';
+import { GamificationService } from '../services/gamification.service';
 
 export class OutboxWorker {
   private _isRunning = false;
@@ -300,10 +301,16 @@ export class OutboxWorker {
 
       await dispatchNotification(data as any);
       
+      // Award gamification points to verified CR or SR for legitimate timetable contribution
+      if (authorized && uid && (role.toUpperCase() === 'CR' || role.toUpperCase() === 'SR')) {
+        await GamificationService.awardTimetableContribution(db, uid, role, doc.id);
+      }
+
       const processingTime = Date.now() - startTime;
       await doc.ref.update({
         processed: true,
         status: 'SUCCESS',
+        gamificationAwarded: true,
         attempts: attemptNum,
         processedAt: admin.firestore.FieldValue.serverTimestamp(),
         lastAttempt: admin.firestore.FieldValue.serverTimestamp()

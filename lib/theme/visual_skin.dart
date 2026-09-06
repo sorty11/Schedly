@@ -28,6 +28,8 @@ abstract class VisualSkin {
         return FutureSkin(isDark: isDark);
       case SchedlyVisualTheme.bloom:
         return BloomSkin(isDark: isDark);
+      case SchedlyVisualTheme.champion:
+        return ChampionSkin(isDark: isDark);
       case SchedlyVisualTheme.defaultTheme:
         return DefaultSkin(isDark: isDark);
     }
@@ -221,6 +223,20 @@ class DefaultSkin extends VisualSkin {
     }
     return Icons.school_rounded;
   }
+}
+
+class ChampionSkin extends DefaultSkin {
+  const ChampionSkin({required super.isDark});
+
+  @override
+  SchedlyVisualTheme get visualTheme => SchedlyVisualTheme.champion;
+
+  @override
+  Color get primaryAccent => const Color(0xFFE5A93C);
+
+  @override
+  Color get borderLine =>
+      isDark ? const Color(0x33E5A93C) : const Color(0x33B4831B);
 }
 
 class _DefaultCardRecipe extends SkinCardRecipe {

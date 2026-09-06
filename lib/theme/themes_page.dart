@@ -9,6 +9,8 @@ import 'animated_theme_background.dart';
 import '../widgets/animations/animated_card.dart';
 import '../onboarding/widgets/tutorial_target.dart';
 import '../onboarding/services/feature_discovery_service.dart';
+import '../services/gamification_service.dart';
+import '../widgets/app_dialogs.dart';
 
 class ThemesPage extends StatefulWidget {
   const ThemesPage({super.key});
@@ -23,6 +25,7 @@ class _ThemesPageState extends State<ThemesPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FeatureDiscoveryService.checkThemesDiscovery(context);
+      GamificationService.instance.checkChampionStatus();
     });
   }
 
@@ -79,20 +82,37 @@ class _ThemesPageState extends State<ThemesPage> {
                 // Theme Cards
                 TutorialTarget(
                   id: 'theme_skin_gallery',
-                  child: Column(
-                    children: [
-                      for (final theme in SchedlyVisualTheme.values) ...[
-                        _ThemeCard(
-                          theme: theme,
-                          isSelected: activeTheme == theme,
-                          isDark: isDark,
-                          colorScheme: colorScheme,
-                          sem: sem,
-                          onTap: () => themeController.setVisualTheme(theme),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                      ],
-                    ],
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: GamificationService.instance.isChampionNotifier,
+                    builder: (context, isChampion, _) {
+                      return Column(
+                        children: [
+                          for (final theme in SchedlyVisualTheme.values) ...[
+                            _ThemeCard(
+                              theme: theme,
+                              isSelected: activeTheme == theme,
+                              isDark: isDark,
+                              isChampion: isChampion,
+                              colorScheme: colorScheme,
+                              sem: sem,
+                              onTap: () {
+                                if (theme == SchedlyVisualTheme.champion && !isChampion) {
+                                  AppDialogs.showWarning(
+                                    context: context,
+                                    title: 'Champion Theme Locked',
+                                    message:
+                                        'The Champion theme is exclusively unlocked for the weekly Schedly Champion. Earn the most weekly EXP to unlock it next week!',
+                                  );
+                                  return;
+                                }
+                                themeController.setVisualTheme(theme);
+                              },
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                          ],
+                        ],
+                      );
+                    },
                   ),
                 ),
               ],
@@ -108,6 +128,7 @@ class _ThemeCard extends StatelessWidget {
   final SchedlyVisualTheme theme;
   final bool isSelected;
   final bool isDark;
+  final bool isChampion;
   final ColorScheme colorScheme;
   final AppSemanticColors sem;
   final VoidCallback onTap;
@@ -116,6 +137,7 @@ class _ThemeCard extends StatelessWidget {
     required this.theme,
     required this.isSelected,
     required this.isDark,
+    required this.isChampion,
     required this.colorScheme,
     required this.sem,
     required this.onTap,
@@ -150,6 +172,13 @@ class _ThemeCard extends StatelessWidget {
           Color(0xFFC084FC),
           Color(0xFF34D399),
           Color(0xFFFB923C),
+        ];
+      case SchedlyVisualTheme.champion:
+        return const [
+          Color(0xFFFFD700),
+          Color(0xFFE5A93C),
+          Color(0xFF181308),
+          Color(0xFFB4831B),
         ];
     }
   }
@@ -250,6 +279,46 @@ class _ThemeCard extends StatelessWidget {
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
                                 letterSpacing: 0.6,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (theme == SchedlyVisualTheme.champion)
+                    Positioned(
+                      top: AppSpacing.sm,
+                      left: AppSpacing.sm,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm + 2,
+                          vertical: AppSpacing.xs,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.8),
+                          borderRadius: BorderRadius.circular(AppRadius.full),
+                          border: Border.all(
+                            color: const Color(0xFFE5A93C).withValues(alpha: 0.6),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isChampion
+                                  ? Icons.workspace_premium_rounded
+                                  : Icons.lock_rounded,
+                              size: 11,
+                              color: const Color(0xFFE5A93C),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              isChampion ? 'CHAMPION UNLOCKED' : 'CHAMPION ONLY',
+                              style: GoogleFonts.inter(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFFE5A93C),
+                                letterSpacing: 0.5,
                               ),
                             ),
                           ],

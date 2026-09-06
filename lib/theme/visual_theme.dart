@@ -24,6 +24,12 @@ enum SchedlyVisualTheme {
     'Vibrant',
     'Soft berry, coral, lavender, mint & rounded warmth',
     Icons.palette_rounded,
+  ),
+  champion(
+    'champion',
+    'Champion',
+    'Exclusive royal obsidian & luminous gold achievement aura',
+    Icons.workspace_premium_rounded,
   );
 
   final String id;

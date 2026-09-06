@@ -268,6 +268,15 @@ class _SchedlyTop3SheetState extends State<SchedlyTop3Sheet>
                         ),
                       ],
                     ),
+
+                    if (widget.data.champion != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      _buildChampionCard(
+                        profile: widget.data.champion!,
+                        colorScheme: colorScheme,
+                        sem: sem,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -295,6 +304,82 @@ class _SchedlyTop3SheetState extends State<SchedlyTop3Sheet>
             color: sem.onSurfaceMuted,
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildChampionCard({
+    required GamificationProfile profile,
+    required ColorScheme colorScheme,
+    required AppSemanticColors sem,
+  }) {
+    const goldColor = Color(0xFFE5A93C);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm + 2,
+      ),
+      decoration: BoxDecoration(
+        color: goldColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(
+          color: goldColor.withValues(alpha: 0.35),
+          width: 1.2,
+        ),
+      ),
+      child: Row(
+        children: [
+          _buildAvatar(profile, colorScheme),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    const Text('🔥 ', style: TextStyle(fontSize: 11)),
+                    Text(
+                      'CURRENT CHAMPION',
+                      style: GoogleFonts.outfit(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                        color: goldColor,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  profile.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 2, vertical: AppSpacing.xs),
+            decoration: BoxDecoration(
+              color: goldColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(AppRadius.full),
+            ),
+            child: Text(
+              '${profile.weeklyExp} Weekly XP',
+              style: GoogleFonts.outfit(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: goldColor,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

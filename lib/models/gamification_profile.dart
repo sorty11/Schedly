@@ -12,6 +12,9 @@ class GamificationProfile {
   final int crPoints;
   final int srPoints;
   final String? lastDailyExpClaimDate;
+  final String? lastAttendanceExpDate;
+  final int weeklyExp;
+  final String? weeklyPeriod;
   final DateTime? lastTimetableActionAt;
   final DateTime? updatedAt;
 
@@ -26,7 +29,10 @@ class GamificationProfile {
     this.exp = 0,
     this.crPoints = 0,
     this.srPoints = 0,
+    this.weeklyExp = 0,
+    this.weeklyPeriod,
     this.lastDailyExpClaimDate,
+    this.lastAttendanceExpDate,
     this.lastTimetableActionAt,
     this.updatedAt,
   });
@@ -44,9 +50,31 @@ class GamificationProfile {
       exp: (data['exp'] as num?)?.toInt() ?? 0,
       crPoints: (data['crPoints'] as num?)?.toInt() ?? 0,
       srPoints: (data['srPoints'] as num?)?.toInt() ?? 0,
-      lastDailyExpClaimDate: data['lastDailyExpClaimDate'] as String?,
+      weeklyExp: (data['weeklyExp'] as num?)?.toInt() ?? 0,
+      weeklyPeriod: data['weeklyPeriod'] as String? ?? data['weekKey'] as String?,
+      lastDailyExpClaimDate: data['lastDailyClaimDate'] as String? ?? data['lastDailyExpClaimDate'] as String?,
+      lastAttendanceExpDate: data['lastAttendanceClaimDate'] as String? ?? data['lastAttendanceExpDate'] as String?,
       lastTimetableActionAt: (data['lastTimetableActionAt'] as Timestamp?)?.toDate(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+    );
+  }
+
+  factory GamificationProfile.fromChampionDoc(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    final championUid = data['championUid'] as String?;
+    if (championUid == null || championUid.isEmpty) {
+      return const GamificationProfile(
+        uid: '',
+        displayName: 'No Champion',
+      );
+    }
+    return GamificationProfile(
+      uid: championUid,
+      displayName: data['displayName'] as String? ?? 'Champion',
+      photoUrl: data['photoUrl'] as String?,
+      division: data['academicContext'] as String? ?? '',
+      weeklyExp: (data['weeklyExp'] as num?)?.toInt() ?? 0,
+      weeklyPeriod: data['weekKey'] as String?,
     );
   }
 

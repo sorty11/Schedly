@@ -39,6 +39,7 @@ const notification_service_1 = require("../notifications/notification.service");
 const logger_1 = require("../utils/logger");
 const env_config_1 = require("../config/env.config");
 const feedback_service_1 = require("../services/feedback.service");
+const gamification_service_1 = require("../services/gamification.service");
 class OutboxWorker {
     _isRunning = false;
     isProcessing = false;
@@ -298,10 +299,15 @@ class OutboxWorker {
                 return;
             }
             await (0, notification_service_1.dispatchNotification)(data);
+            // Award gamification points to verified CR or SR for legitimate timetable contribution
+            if (authorized && uid && (role.toUpperCase() === 'CR' || role.toUpperCase() === 'SR')) {
+                await gamification_service_1.GamificationService.awardTimetableContribution(db, uid, role, doc.id);
+            }
             const processingTime = Date.now() - startTime;
             await doc.ref.update({
                 processed: true,
                 status: 'SUCCESS',
+                gamificationAwarded: true,
                 attempts: attemptNum,
                 processedAt: admin.firestore.FieldValue.serverTimestamp(),
                 lastAttempt: admin.firestore.FieldValue.serverTimestamp()
