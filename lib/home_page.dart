@@ -38,23 +38,22 @@ class _HomePageState extends State<HomePage>
   int _currentIndex = 0;
   int _unreadCount = 0;
   StreamSubscription? _notificationsSubscription;
+  final Set<int> _activatedTabs = {0};
 
   @override
   void initState() {
     super.initState();
-    AnnouncementListener.start(widget.division);
     if (AppSettings.currentRole == UserRole.cr ||
         AppSettings.currentRole == UserRole.sr) {
       ConductSyncService.syncPendingLectures(widget.division);
     }
-    _loadUnreadCount();
 
     _notificationsSubscription = FirebaseFirestore.instance
         .collection('sections')
         .doc(widget.division)
         .collection('notifications')
         .snapshots()
-        .listen((_) => _loadUnreadCount());
+        .listen(_updateUnreadFromSnapshot);
 
     _runMigrationIfNeeded();
 
@@ -113,19 +112,14 @@ class _HomePageState extends State<HomePage>
     }
   }
 
-  Future<void> _loadUnreadCount() async {
+  Future<void> _updateUnreadFromSnapshot(QuerySnapshot snapshot) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final lastSeen = prefs.getInt('last_seen_notifications') ?? 0;
-      final snap = await FirebaseFirestore.instance
-          .collection('sections')
-          .doc(widget.division)
-          .collection('notifications')
-          .get();
-
       int count = 0;
-      for (final doc in snap.docs) {
-        final ts = doc.data()['createdAt'];
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>?;
+        final ts = data?['createdAt'];
         if (ts != null && (ts as Timestamp).millisecondsSinceEpoch > lastSeen) {
           count++;
         }
@@ -156,16 +150,29 @@ class _HomePageState extends State<HomePage>
 
   @override
   Widget build(BuildContext context) {
-    final pages = [
-      DashboardPage(division: widget.division),
-      WeeklyTimetablePage(division: widget.division),
-      AttendancePage(division: widget.division),
+    final hasRolePanel = AppSettings.currentRole == UserRole.cr ||
+        AppSettings.currentRole == UserRole.sr;
+    final updatesTabIndex = hasRolePanel ? 4 : 3;
+    final profileTabIndex = hasRolePanel ? 5 : 4;
 
-      if (AppSettings.currentRole == UserRole.cr ||
-          AppSettings.currentRole == UserRole.sr)
-        const CRPanelPage(),
-      const UpdatesPage(),
-      ProfilePage(division: widget.division),
+    final pages = <Widget>[
+      DashboardPage(division: widget.division),
+      _activatedTabs.contains(1)
+          ? WeeklyTimetablePage(division: widget.division)
+          : const SizedBox.shrink(),
+      _activatedTabs.contains(2)
+          ? AttendancePage(division: widget.division)
+          : const SizedBox.shrink(),
+      if (hasRolePanel)
+        _activatedTabs.contains(3)
+            ? const CRPanelPage()
+            : const SizedBox.shrink(),
+      _activatedTabs.contains(updatesTabIndex)
+          ? const UpdatesPage()
+          : const SizedBox.shrink(),
+      _activatedTabs.contains(profileTabIndex)
+          ? ProfilePage(division: widget.division)
+          : const SizedBox.shrink(),
     ];
 
     return Scaffold(
@@ -174,7 +181,8 @@ class _HomePageState extends State<HomePage>
         selectedIndex: _currentIndex,
         unreadCount: _unreadCount,
         onTap: (index) async {
-          if (pages[index] is UpdatesPage) await _markNotificationsRead();
+          _activatedTabs.add(index);
+          if (index == updatesTabIndex) await _markNotificationsRead();
           setState(() => _currentIndex = index);
           TutorialController.instance.completeStep();
         },

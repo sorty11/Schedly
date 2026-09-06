@@ -50,6 +50,7 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
 
   late String selectedDay;
   late int selectedIndex;
+  late Stream<QuerySnapshot> _timetableStream;
 
   @override
   void initState() {
@@ -57,6 +58,25 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
     final todayIndex = (DateTime.now().weekday - 1).clamp(0, 5);
     selectedIndex = todayIndex;
     selectedDay = _days[todayIndex];
+    _updateTimetableStream();
+  }
+
+  void _updateTimetableStream() {
+    _timetableStream = FirebaseFirestore.instance
+        .collection('timetables')
+        .doc(widget.division)
+        .collection(selectedDay)
+        .snapshots();
+  }
+
+  void _onDayIndexChanged(int index) {
+    if (selectedIndex == index) return;
+    HapticFeedback.selectionClick();
+    setState(() {
+      selectedIndex = index;
+      selectedDay = _days[index];
+      _updateTimetableStream();
+    });
   }
 
   String _getTargetDateStr(String dayName) {
@@ -400,18 +420,10 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                 if (details.primaryVelocity == null) return;
                 if (details.primaryVelocity! < -200 &&
                     selectedIndex < _days.length - 1) {
-                  HapticFeedback.selectionClick();
-                  setState(() {
-                    selectedIndex++;
-                    selectedDay = _days[selectedIndex];
-                  });
+                  _onDayIndexChanged(selectedIndex + 1);
                 } else if (details.primaryVelocity! > 200 &&
                     selectedIndex > 0) {
-                  HapticFeedback.selectionClick();
-                  setState(() {
-                    selectedIndex--;
-                    selectedDay = _days[selectedIndex];
-                  });
+                  _onDayIndexChanged(selectedIndex - 1);
                 }
               },
               behavior: HitTestBehavior.opaque,
@@ -442,13 +454,7 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                         days: _dayShort,
                         selectedIndex: selectedIndex,
                         todayIndex: todayIndex,
-                        onDaySelected: (index) {
-                          HapticFeedback.selectionClick();
-                          setState(() {
-                            selectedIndex = index;
-                            selectedDay = _days[index];
-                          });
-                        },
+                        onDaySelected: _onDayIndexChanged,
                       ),
                     ),
                   ),
@@ -458,11 +464,7 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
 
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('timetables')
-                    .doc(widget.division)
-                    .collection(selectedDay)
-                    .snapshots(),
+                stream: _timetableStream,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting &&
                       !snapshot.hasData) {

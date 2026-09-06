@@ -296,6 +296,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final semanticColors = Theme.of(context).extension<AppSemanticColors>()!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isCR = AppSettings.currentRole == UserRole.cr;
     final isSR = AppSettings.currentRole == UserRole.sr;
     final name = AppSettings.studentName ?? 'Student';
@@ -329,21 +330,115 @@ class _ProfilePageState extends State<ProfilePage> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(AppRadius.xl),
                     border: Border.all(
-                      color: semanticColors.borderSubtle,
-                      width: 1,
+                      color: themeController.visualTheme == SchedlyVisualTheme.champion
+                          ? (isDark
+                              ? const Color(0xFFFFD700).withValues(alpha: 0.50)
+                              : const Color(0xFFB4831B).withValues(alpha: 0.45))
+                          : semanticColors.borderSubtle,
+                      width: themeController.visualTheme == SchedlyVisualTheme.champion ? 1.4 : 1.0,
                     ),
+                    boxShadow: themeController.visualTheme == SchedlyVisualTheme.champion
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFFFFE57F).withValues(
+                                alpha: isDark ? 0.25 : 0.12,
+                              ),
+                              blurRadius: 1,
+                              offset: const Offset(0, -1),
+                            ),
+                            BoxShadow(
+                              color: const Color(0xFFFFD700).withValues(
+                                alpha: isDark ? 0.12 : 0.06,
+                              ),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
+                            ),
+                          ]
+                        : null,
                   ),
                   padding: EdgeInsets.all(AppSpacing.x2l),
                   child: Column(
                     children: [
                       // Profile Photo Avatar
-                      ProfileAvatar(
-                        initial: initial,
-                        size: 80,
-                        onPhotoChanged: () {
-                          if (mounted) setState(() {});
-                        },
-                      ),
+                      if (themeController.visualTheme == SchedlyVisualTheme.champion)
+                        Stack(
+                          alignment: Alignment.center,
+                          clipBehavior: Clip.none,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: const Color(0xFFFFD700),
+                                  width: 2.0,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFFFD700).withValues(alpha: 0.35),
+                                    blurRadius: 16,
+                                  ),
+                                ],
+                              ),
+                              child: ProfileAvatar(
+                                initial: initial,
+                                size: 80,
+                                onPhotoChanged: () {
+                                  if (mounted) setState(() {});
+                                },
+                              ),
+                            ),
+                            Positioned(
+                              top: -12,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0C0A10),
+                                  borderRadius: BorderRadius.circular(AppRadius.full),
+                                  border: Border.all(
+                                    color: const Color(0xFFFFD700),
+                                    width: 1.2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFFFD700).withValues(alpha: 0.4),
+                                      blurRadius: 8,
+                                    ),
+                                  ],
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.workspace_premium_rounded,
+                                      size: 13,
+                                      color: Color(0xFFFFD700),
+                                    ),
+                                    SizedBox(width: 3),
+                                    Text(
+                                      'CHAMPION',
+                                      style: TextStyle(
+                                        fontFamily: 'Outfit',
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.8,
+                                        color: Color(0xFFFFD700),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        ProfileAvatar(
+                          initial: initial,
+                          size: 80,
+                          onPhotoChanged: () {
+                            if (mounted) setState(() {});
+                          },
+                        ),
                       const SizedBox(height: AppSpacing.lg),
 
                       // Name
@@ -502,36 +597,53 @@ class _ProfilePageState extends State<ProfilePage> {
                             padding: const EdgeInsets.only(top: AppSpacing.sm),
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md,
-                                vertical: AppSpacing.xs,
+                                horizontal: AppSpacing.md + 2,
+                                vertical: AppSpacing.xs + 2,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFE5A93C).withValues(
-                                  alpha: 0.12,
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFF261E0E),
+                                    Color(0xFF141018),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
                                 borderRadius: BorderRadius.circular(
                                   AppRadius.full,
                                 ),
                                 border: Border.all(
-                                  color: const Color(0xFFE5A93C).withValues(
-                                    alpha: 0.4,
+                                  color: const Color(0xFFFFD700).withValues(
+                                    alpha: 0.75,
                                   ),
+                                  width: 1.2,
                                 ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFFFD700).withValues(
+                                      alpha: 0.22,
+                                    ),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Text(
-                                    '🔥 ',
-                                    style: TextStyle(fontSize: 12),
+                                  const Icon(
+                                    Icons.workspace_premium_rounded,
+                                    size: 14,
+                                    color: Color(0xFFFFD700),
                                   ),
+                                  const SizedBox(width: 5),
                                   Text(
-                                    'SCHEDLY CHAMPION • Theme Unlocked',
+                                    'REIGNING CHAMPION • THEME UNLOCKED',
                                     style: GoogleFonts.outfit(
-                                      fontSize: 11,
+                                      fontSize: 10.5,
                                       fontWeight: FontWeight.w800,
-                                      color: const Color(0xFFE5A93C),
-                                      letterSpacing: 0.5,
+                                      color: const Color(0xFFFFD700),
+                                      letterSpacing: 0.8,
                                     ),
                                   ),
                                 ],

@@ -196,11 +196,37 @@ class _StartupRouterState extends State<StartupRouter> {
       return;
     }
 
-    // Force reload to get the latest emailVerified status
-    try {
-      await user.reload();
-    } catch (e) {
-      debugPrint('Failed to reload user, proceeding with cached session: $e');
+    // Fast path: if user is verified and has cached session, navigate immediately
+    // without blocking the first frame on network user.reload()
+    if (user.emailVerified &&
+        (AppSettings.studentName != null || AppSettings.facultyName != null)) {
+      final role = AppSettings.facultyName != null ? 'Faculty' : 'Student';
+
+      if (role == 'Faculty') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const FacultyHomePage()),
+        );
+      } else {
+        final div = AppSettings.sectionId ?? '';
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => HomePage(division: div)),
+        );
+      }
+
+      // Sync session in the background without blocking first usable frame
+      _syncSessionInBackground(user);
+      return;
+    }
+
+    // Only reload over network if not emailVerified to check if user verified in browser
+    if (!user.emailVerified) {
+      try {
+        await user.reload();
+      } catch (e) {
+        debugPrint('Failed to reload user, proceeding with cached session: $e');
+      }
     }
     final updatedUser = FirebaseAuth.instance.currentUser;
 
@@ -213,7 +239,7 @@ class _StartupRouterState extends State<StartupRouter> {
     }
 
     if (AppSettings.studentName != null || AppSettings.facultyName != null) {
-      // Fast path: use cached session
+      // Fast path: use cached session (after email verification)
       final role = AppSettings.facultyName != null ? 'Faculty' : 'Student';
 
       if (role == 'Faculty') {

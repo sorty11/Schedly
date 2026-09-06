@@ -22,6 +22,7 @@ class FacultyHomePage extends StatefulWidget {
 
 class _FacultyHomePageState extends State<FacultyHomePage> {
   int _currentIndex = 0;
+  final Set<int> _activatedTabs = {0};
 
   @override
   void initState() {
@@ -39,18 +40,27 @@ class _FacultyHomePageState extends State<FacultyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final pages = [
+    final pages = <Widget>[
       const FacultyDashboardPage(),
-      const FacultyTimetablePage(),
-      const FacultyPanelPage(),
-      const FacultyProfilePage(),
+      _activatedTabs.contains(1)
+          ? const FacultyTimetablePage()
+          : const SizedBox.shrink(),
+      _activatedTabs.contains(2)
+          ? const FacultyPanelPage()
+          : const SizedBox.shrink(),
+      _activatedTabs.contains(3)
+          ? const FacultyProfilePage()
+          : const SizedBox.shrink(),
     ];
 
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: pages),
       bottomNavigationBar: _FacultyNavBar(
         selectedIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+        onTap: (index) {
+          _activatedTabs.add(index);
+          setState(() => _currentIndex = index);
+        },
       ),
     );
   }
