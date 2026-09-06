@@ -44,7 +44,7 @@ const feedback_service_1 = require("../services/feedback.service");
 const router = (0, express_1.Router)();
 router.post('/create-section', rateLimiter_middleware_1.sectionCreateRateLimiter, auth_middleware_1.verifyIdToken, async (req, res) => {
     const { masterPassword, sectionId, sectionData, crPassword, srPassword } = req.body;
-    if (masterPassword !== env_config_1.AppConfig.MASTER_SETUP_PASSWORD) {
+    if (!env_config_1.AppConfig.MASTER_SETUP_PASSWORD || masterPassword !== env_config_1.AppConfig.MASTER_SETUP_PASSWORD) {
         logger_1.logger.warn('Failed section creation: Invalid master password', { uid: req.user?.uid, sectionId });
         return res.status(403).json({ error: 'Incorrect Master Password' });
     }

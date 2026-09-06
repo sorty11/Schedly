@@ -36,9 +36,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const admin = __importStar(require("firebase-admin"));
 const logger_1 = require("../utils/logger");
+const rateLimiter_middleware_1 = require("../middleware/rateLimiter.middleware");
 const feedback_service_1 = require("../services/feedback.service");
 const router = (0, express_1.Router)();
-router.post('/email', async (req, res) => {
+router.post('/email', rateLimiter_middleware_1.feedbackRateLimiter, async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -48,7 +49,11 @@ router.post('/email', async (req, res) => {
         const idToken = authHeader.split('Bearer ')[1];
         // Verify token
         try {
-            await admin.auth().verifyIdToken(idToken);
+            const decoded = await admin.auth().verifyIdToken(idToken);
+            if (decoded.firebase?.sign_in_provider === 'anonymous') {
+                res.status(403).json({ error: 'Forbidden: Anonymous users cannot send feedback emails' });
+                return;
+            }
         }
         catch (e) {
             logger_1.logger.error(`Invalid Firebase token: ${e}`);
@@ -56,14 +61,22 @@ router.post('/email', async (req, res) => {
             return;
         }
         const { type, reportId, data } = req.body;
-        if (!reportId) {
-            res.status(400).json({ error: 'Bad Request: Missing reportId' });
+        if (!reportId || typeof reportId !== 'string' || reportId.length > 128) {
+            res.status(400).json({ error: 'Bad Request: Missing or invalid reportId' });
             return;
+        }
+        // Input sanitization and bounds
+        const sanitizedData = { ...(data || {}) };
+        if (typeof sanitizedData.title === 'string' && sanitizedData.title.length > 200) {
+            sanitizedData.title = sanitizedData.title.substring(0, 200);
+        }
+        if (typeof sanitizedData.description === 'string' && sanitizedData.description.length > 5000) {
+            sanitizedData.description = sanitizedData.description.substring(0, 5000);
         }
         // Dispatch email through FeedbackEmailService (atomic claim prevents duplicate emails)
         const result = await feedback_service_1.FeedbackEmailService.dispatchFeedbackEmail(reportId, {
-            ...(data || {}),
-            type: type || data?.type || 'other',
+            ...sanitizedData,
+            type: type || sanitizedData.type || 'other',
         });
         if (result.skipped) {
             res.status(200).json({ success: true, message: 'Email already sent or currently processing' });
@@ -92,10 +105,23 @@ router.get('/diag', async (req, res) => {
             return;
         }
         const idToken = authHeader.split('Bearer ')[1];
-        await admin.auth().verifyIdToken(idToken);
+        const decoded = await admin.auth().verifyIdToken(idToken);
+        if (decoded.firebase?.sign_in_provider === 'anonymous') {
+            res.status(403).json({ error: 'Forbidden: Anonymous accounts cannot access diagnostics' });
+            return;
+        }
         const hasResend = Boolean(process.env.RESEND_API_KEY);
         const hasUser = Boolean(process.env.SMTP_USER);
         const hasPass = Boolean(process.env.SMTP_PASS);
+        // In production, return minimal non-sensitive configuration status
+        if (process.env.NODE_ENV === 'production') {
+            res.status(200).json({
+                configured: hasResend || (hasUser && hasPass),
+                provider: hasResend ? 'resend_https' : (hasUser && hasPass ? 'smtp' : 'none'),
+                status: (hasResend || (hasUser && hasPass)) ? 'ready' : 'unconfigured',
+            });
+            return;
+        }
         const host = process.env.SMTP_HOST || 'smtp.gmail.com';
         const port = parseInt(process.env.SMTP_PORT || '587', 10);
         let verifyStatus = 'untested';

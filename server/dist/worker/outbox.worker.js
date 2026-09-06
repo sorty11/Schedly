@@ -244,6 +244,7 @@ class OutboxWorker {
         try {
             let authorized = false;
             let role = 'unknown';
+            let userDoc = null;
             logger_1.logger.info(`[ROUTER] Validating authorization for uid: ${uid}`);
             logger_1.logger.info(`[AUTH] uid=${uid}`);
             // Backend-generated jobs do not require client authorization
@@ -253,7 +254,7 @@ class OutboxWorker {
                 logger_1.logger.info(`[AUTH] Bypassing auth check for internal backend job: ${type}`);
             }
             else if (uid) {
-                let userDoc = await db.collection('users').doc(uid).get();
+                userDoc = await db.collection('users').doc(uid).get();
                 if (!userDoc.exists) {
                     // Faculty profiles are stored in a separate collection
                     userDoc = await db.collection('faculty_profiles').doc(uid).get();
@@ -299,15 +300,31 @@ class OutboxWorker {
                 return;
             }
             await (0, notification_service_1.dispatchNotification)(data);
-            // Award gamification points to verified CR or SR for legitimate timetable contribution
-            if (authorized && uid && (role.toUpperCase() === 'CR' || role.toUpperCase() === 'SR')) {
+            // Award gamification points to verified CR or SR strictly for legitimate timetable modifications in their division
+            const isTimetableAction = ['cancel', 'cancellation', 'reschedule', 'edit', 'time_change', 'room_change', 'add'].includes(type);
+            let divisionAuthorized = false;
+            if (userDoc && userDoc.exists) {
+                const uDiv = userDoc.data()?.division;
+                if (uDiv === division) {
+                    divisionAuthorized = true;
+                }
+                else {
+                    // Check section_memberships
+                    const memberSnap = await db.collection('section_memberships').doc(`${division}_${uid}`).get();
+                    divisionAuthorized = memberSnap.exists && memberSnap.data()?.status === 'active';
+                }
+            }
+            if (authorized && uid && divisionAuthorized && isTimetableAction && (role.toUpperCase() === 'CR' || role.toUpperCase() === 'SR')) {
                 await gamification_service_1.GamificationService.awardTimetableContribution(db, uid, role, doc.id);
+            }
+            else if (authorized && (role.toUpperCase() === 'CR' || role.toUpperCase() === 'SR') && !isTimetableAction) {
+                logger_1.logger.info(`[GAMIFICATION] Notification ${doc.id} type '${type}' is not a timetable modification. Skipping reward.`);
             }
             const processingTime = Date.now() - startTime;
             await doc.ref.update({
                 processed: true,
                 status: 'SUCCESS',
-                gamificationAwarded: true,
+                gamificationAwarded: isTimetableAction && divisionAuthorized,
                 attempts: attemptNum,
                 processedAt: admin.firestore.FieldValue.serverTimestamp(),
                 lastAttempt: admin.firestore.FieldValue.serverTimestamp()
