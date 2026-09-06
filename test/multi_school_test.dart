@@ -62,6 +62,54 @@ void main() {
       );
       expect(solIdShortSem, equals('SOL_1stYear_BBALLB_SemI_B'));
     });
+
+    test('SOL section ID generation handles all combinations of optional semester and division', () {
+      // 1. SOL + program + year + semester + division
+      final fullId = NMIMSStructure.generateSectionId(
+        school: 'SOL',
+        year: '3rd Year',
+        branchOrProgram: 'B.A. LL.B. (Hons.)',
+        semester: 'Semester V',
+        division: 'A',
+      );
+      expect(fullId, equals('SOL_3rdYear_BALLB_SemV_A'));
+
+      // 2. SOL + program + year + semester (division omitted or null)
+      final semOnlyId = NMIMSStructure.generateSectionId(
+        school: 'SOL',
+        year: '3rd Year',
+        branchOrProgram: 'B.A. LL.B. (Hons.)',
+        semester: 'Semester V',
+      );
+      expect(semOnlyId, equals('SOL_3rdYear_BALLB_SemV'));
+
+      // 3. SOL + program + year + division (semester omitted or null)
+      final divOnlyId = NMIMSStructure.generateSectionId(
+        school: 'SOL',
+        year: '3rd Year',
+        branchOrProgram: 'B.A. LL.B. (Hons.)',
+        division: 'A',
+      );
+      expect(divOnlyId, equals('SOL_3rdYear_BALLB_A'));
+
+      // 4. SOL + program + year (both omitted or null)
+      final progYearId = NMIMSStructure.generateSectionId(
+        school: 'SOL',
+        year: '3rd Year',
+        branchOrProgram: 'B.A. LL.B. (Hons.)',
+      );
+      expect(progYearId, equals('SOL_3rdYear_BALLB'));
+
+      // 5. Empty strings for division and semester never produce trailing underscores or _Div
+      final emptyStringsId = NMIMSStructure.generateSectionId(
+        school: 'SOL',
+        year: '3rd Year',
+        branchOrProgram: 'B.A. LL.B. (Hons.)',
+        semester: '',
+        division: '',
+      );
+      expect(emptyStringsId, equals('SOL_3rdYear_BALLB'));
+    });
   });
 
   group('SectionConfig Multi-School Serialization Tests', () {
