@@ -49,6 +49,110 @@ router.post('/create-section', sectionCreateRateLimiter, verifyIdToken, async (r
   }
 });
 
+router.post('/delete-section', verifyIdToken, async (req: any, res: any) => {
+  const { masterPassword, sectionId } = req.body;
+  const uid = req.user?.uid;
+
+  if (!AppConfig.MASTER_SETUP_PASSWORD || masterPassword !== AppConfig.MASTER_SETUP_PASSWORD) {
+    logger.warn('Failed section deletion: Invalid master password', { uid, sectionId });
+    return res.status(403).json({ success: false, error: 'Incorrect Master Password' });
+  }
+
+  if (!sectionId || typeof sectionId !== 'string') {
+    return res.status(400).json({ success: false, error: 'Missing or invalid sectionId' });
+  }
+
+  try {
+    const db = admin.firestore();
+    const sectionRef = db.collection('sections').doc(sectionId);
+    const sectionSnap = await sectionRef.get();
+
+    if (!sectionSnap.exists) {
+      logger.warn('Failed section deletion: Section does not exist', { uid, sectionId });
+      return res.status(404).json({ success: false, error: 'Section not found' });
+    }
+
+    logger.info('Starting section deletion workflow', { uid, sectionId });
+    const stepLog: string[] = [];
+
+    // 1. Delete direct section subcollections safely
+    stepLog.push('delete_subcollections');
+    const subcollectionNames = [
+      'sr_assignments',
+      'notifications',
+      'faculty_requests',
+      'students',
+      'announcements',
+      'history',
+      'analytics',
+      'conduct_logs',
+      'conduct_adjustments',
+      'subjects',
+      'subject_metadata',
+    ];
+
+    for (const sub of subcollectionNames) {
+      const snap = await sectionRef.collection(sub).get();
+      if (!snap.empty) {
+        const batch = db.batch();
+        snap.docs.forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+      }
+    }
+
+    // 2. Delete associated timetable
+    stepLog.push('delete_timetable');
+    const timetableRef = db.collection('timetables').doc(sectionId);
+    const timetableSnap = await timetableRef.get();
+    if (timetableSnap.exists) {
+      try {
+        await db.recursiveDelete(timetableRef);
+      } catch (e) {
+        await timetableRef.delete();
+      }
+    }
+
+    // 3. Delete section memberships specifically tied to this section
+    stepLog.push('delete_memberships');
+    const membershipsSnap = await db
+      .collection('section_memberships')
+      .where('sectionId', '==', sectionId)
+      .get();
+    if (!membershipsSnap.empty) {
+      const batch = db.batch();
+      membershipsSnap.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    }
+
+    // 4. Delete the section document itself
+    stepLog.push('delete_section_doc');
+    await sectionRef.delete();
+
+    // 5. Record admin audit action
+    stepLog.push('record_audit');
+    await db.collection('admin_actions').doc(`${uid}_${sectionId}_delete`).set({
+      masterHash: '652f3d7b860776a2537a2c3a3b42702aed372a2b49c802b077470ad3efdf3f4d',
+      action: 'deleteSection',
+      deletedSectionId: sectionId,
+      deletedByUid: uid,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    logger.info('Section deletion completed successfully', { uid, sectionId, stepsCompleted: stepLog });
+    return res.status(200).json({
+      success: true,
+      message: `Section ${sectionId} deleted successfully`,
+      stepsCompleted: stepLog,
+    });
+  } catch (error: any) {
+    logger.error('Section deletion failed', { uid, sectionId, error: error.message });
+    return res.status(500).json({
+      success: false,
+      error: `Failed to delete section: ${error.message}`,
+    });
+  }
+});
+
 router.post('/delete-account', verifyIdToken, async (req: any, res: any) => {
   const uid = req.user?.uid;
   if (!uid) {
