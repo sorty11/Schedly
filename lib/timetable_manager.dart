@@ -234,7 +234,7 @@ class TimetableManager {
   static Future<List<String>> getUniqueSubjects({
     required String division,
   }) async {
-    final days = [
+    const days = [
       'Monday',
       'Tuesday',
       'Wednesday',
@@ -242,9 +242,11 @@ class TimetableManager {
       'Friday',
       'Saturday',
     ];
+    final allEntries = await Future.wait(
+      days.map((day) => getEntriesForDay(division: division, day: day)),
+    );
     final unique = <String>{};
-    for (final day in days) {
-      final entries = await getEntriesForDay(division: division, day: day);
+    for (final entries in allEntries) {
       for (final e in entries) {
         if (e.category == EventCategory.academic) {
           unique.add(e.subjectCode);
@@ -258,7 +260,7 @@ class TimetableManager {
     required String division,
     required String subject,
   }) async {
-    final days = [
+    const days = [
       'Monday',
       'Tuesday',
       'Wednesday',
@@ -266,9 +268,11 @@ class TimetableManager {
       'Friday',
       'Saturday',
     ];
+    final allEntries = await Future.wait(
+      days.map((day) => getEntriesForDay(division: division, day: day)),
+    );
     int maxDuration = 60; // default 1 hour
-    for (final day in days) {
-      final entries = await getEntriesForDay(division: division, day: day);
+    for (final entries in allEntries) {
       for (final e in entries) {
         if ((e.subjectCode == subject ||
                 e.subject == subject ||
@@ -284,7 +288,7 @@ class TimetableManager {
   static Future<List<SrIdentity>> getUniqueSrIdentities({
     required String division,
   }) async {
-    final days = [
+    const days = [
       'Monday',
       'Tuesday',
       'Wednesday',
@@ -292,9 +296,11 @@ class TimetableManager {
       'Friday',
       'Saturday',
     ];
+    final allEntries = await Future.wait(
+      days.map((day) => getEntriesForDay(division: division, day: day)),
+    );
     final Map<String, SrIdentity> uniqueMap = {};
-    for (final day in days) {
-      final entries = await getEntriesForDay(division: division, day: day);
+    for (final entries in allEntries) {
       for (final e in entries) {
         if (e.category == EventCategory.academic) {
           final id = '${e.subject}_${e.component}_${e.batch}';

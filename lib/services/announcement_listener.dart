@@ -3,57 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'local_notification_service.dart';
 
 class AnnouncementListener {
-  static bool _isFirstAnnouncementSnapshot = true;
-  static bool _isFirstNotificationSnapshot = true;
-
-  /// Call this from HomePage.initState() where [division] is always known.
+  /// Deprecated: Realtime notification banners are now handled directly by
+  /// the FCM foreground listener in [NotificationService].
+  /// Kept as a lightweight no-op for backward compatibility.
   static void start(String division) {
-    // Listen to Announcements
-    FirebaseFirestore.instance
-        .collection('sections')
-        .doc(division)
-        .collection('announcements')
-        .snapshots()
-        .listen((snapshot) {
-          if (_isFirstAnnouncementSnapshot) {
-            _isFirstAnnouncementSnapshot = false;
-            return; // Ignore existing documents on startup
-          }
-
-          if (snapshot.docs.isEmpty) return;
-
-          for (final change in snapshot.docChanges) {
-            if (change.type == DocumentChangeType.added) {
-              final data = change.doc.data();
-              if (data == null) continue;
-
-              // Notification banner now handled by FCM foreground listener
-            }
-          }
-        });
-
-    // Listen to Timetable Notifications
-    FirebaseFirestore.instance
-        .collection('sections')
-        .doc(division)
-        .collection('notifications')
-        .snapshots()
-        .listen((snapshot) {
-          if (_isFirstNotificationSnapshot) {
-            _isFirstNotificationSnapshot = false;
-            return; // Ignore existing documents on startup
-          }
-
-          if (snapshot.docs.isEmpty) return;
-
-          for (final change in snapshot.docChanges) {
-            if (change.type == DocumentChangeType.added) {
-              final data = change.doc.data();
-              if (data == null) continue;
-
-              // Notification banner now handled by FCM foreground listener
-            }
-          }
-        });
+    // No-op: FCM foreground listener handles incoming notifications.
+    // Redundant Firestore socket listeners removed to save bandwidth and startup latency.
   }
 }

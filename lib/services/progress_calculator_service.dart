@@ -25,9 +25,31 @@ class ProgressCalculatorService {
 
   static Future<ProgressCalculatorService?> build(String division) async {
     final db = FirebaseFirestore.instance;
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+    // Parallelize all independent queries: section metadata, 5-day timetables, and course metadata
+    final results = await Future.wait([
+      db.collection('sections').doc(division).get(),
+      Future.wait(
+        days.map(
+          (day) => db
+              .collection('timetables')
+              .doc(division)
+              .collection(day)
+              .where('isActive', isEqualTo: true)
+              .get(),
+        ),
+      ),
+      CourseConfigurationService.getMetadata(division).catchError((e) {
+        debugPrint(
+          'ProgressCalculatorService: Error fetching from CourseConfigurationService: $e',
+        );
+        return <CourseComponent>[];
+      }),
+    ]);
 
     // 1. Get semester start date
-    final sectionDoc = await db.collection('sections').doc(division).get();
+    final sectionDoc = results[0] as DocumentSnapshot<Map<String, dynamic>>;
     DateTime semesterStartDate = DateTime(2026, 7, 13); // Fallback date
 
     if (sectionDoc.exists) {
@@ -38,17 +60,11 @@ class ProgressCalculatorService {
       }
     }
 
-    // 2. Fetch weekly timetable
+    // 2. Build weekly timetable from parallel day snapshots
     final weeklyTimetable = <int, List<TimetableEntry>>{};
-    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-    for (int i = 0; i < days.length; i++) {
-      final snap = await db
-          .collection('timetables')
-          .doc(division)
-          .collection(days[i])
-          .where('isActive', isEqualTo: true)
-          .get();
-      weeklyTimetable[i + 1] = snap.docs
+    final daySnaps = results[1] as List<QuerySnapshot<Map<String, dynamic>>>;
+    for (int i = 0; i < daySnaps.length; i++) {
+      weeklyTimetable[i + 1] = daySnaps[i].docs
           .map((d) => TimetableEntry.fromFirestore(d))
           .where((e) {
             if (AppSettings.currentRole == UserRole.student) {
@@ -59,15 +75,8 @@ class ProgressCalculatorService {
           .toList();
     }
 
-    // 3. Fetch course components (subject config from Course Details)
-    List<CourseComponent> courseComponents = [];
-    try {
-      courseComponents = await CourseConfigurationService.getMetadata(division);
-    } catch (e) {
-      debugPrint(
-        'ProgressCalculatorService: Error fetching from CourseConfigurationService: $e',
-      );
-    }
+    // 3. Course components (subject config from Course Details)
+    List<CourseComponent> courseComponents = results[2] as List<CourseComponent>;
 
     if (courseComponents.isEmpty) {
       try {
