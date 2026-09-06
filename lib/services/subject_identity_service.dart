@@ -83,12 +83,12 @@ class SubjectNormalizer {
   static final _batchRegex = RegExp(r'\b([A-Z][1-9])\b', caseSensitive: false);
 
   static final _semesterRegex = RegExp(
-    r'\bSem(?:ester)?\s*(I{1,3}|IV|V|VI|VII|VIII|IX|X|\d+)\b',
+    r'\bSem(?:ester)?\s*(I{1,3}|IV|V|VI|VII|VIII|IX|X|\d+)(?:\s+[-_]?\s*[A-Z])?\b',
     caseSensitive: false,
   );
 
   static final _branchRegex = RegExp(
-    r'\b(CE|CS|CSDS|IT|DS|AIDS|AIML|EXTC|ME)\b',
+    r'\b(CE|CS|CSDS|IT|DS|AIDS|AIML|EXTC|ME|BALLB|BBALLB|LLB|SOL)\b',
     caseSensitive: false,
   );
 
@@ -191,6 +191,9 @@ class SubjectIdentityService {
 
   /// Clean subject code helper from CourseComponent.
   static String cleanSubjectCode(CourseComponent comp) {
+    if (comp.sectionId.startsWith('SOL_') && comp.courseName.isNotEmpty) {
+      return comp.courseName;
+    }
     if (comp.courseCode.isNotEmpty) return comp.courseCode;
     return comp.componentId
         .replaceAll(
@@ -225,6 +228,11 @@ class SubjectIdentityService {
 
     final upperQuery = query.toUpperCase();
     final normalizedQuery = SubjectNormalizer.normalize(query);
+
+    final bool isSol = configuredCourses.any((c) => c.sectionId.startsWith('SOL_')) ||
+        upperQuery.contains('LAW') ||
+        upperQuery.contains('BALLB') ||
+        upperQuery.contains('BBALLB');
 
     // --- STEP 1: Context-Aware Special Handling for PEC (Electives) ---
     if (upperQuery == 'PEC' ||
@@ -264,10 +272,21 @@ class SubjectIdentityService {
             (cCode.isNotEmpty && upperQuery == cCode) ||
             upperQuery == cName ||
             upperQuery == cId) {
-          final known = _knownIdentities[upperQuery] ?? _knownIdentities[cName] ?? _knownIdentities[cCode];
-          final canon = known?.$1 ?? (comp.courseName.isNotEmpty ? comp.courseName : cleanSubjectCode(comp));
-          final display = known?.$2 ?? (comp.courseName.isNotEmpty ? comp.courseName : canon);
-          final short = known?.$3 ?? (comp.courseCode.isNotEmpty ? comp.courseCode : null);
+          final isCompSol = comp.sectionId.startsWith('SOL_') || isSol;
+          final known = isCompSol
+              ? null
+              : (_knownIdentities[upperQuery] ??
+                  _knownIdentities[cName] ??
+                  _knownIdentities[cCode]);
+          final canon = isCompSol
+              ? (comp.courseName.isNotEmpty ? comp.courseName : cleanSubjectCode(comp))
+              : (known?.$1 ?? (comp.courseName.isNotEmpty ? comp.courseName : cleanSubjectCode(comp)));
+          final display = isCompSol
+              ? (comp.courseName.isNotEmpty ? comp.courseName : canon)
+              : (known?.$2 ?? (comp.courseName.isNotEmpty ? comp.courseName : canon));
+          final short = isCompSol
+              ? null
+              : (known?.$3 ?? (comp.courseCode.isNotEmpty ? comp.courseCode : null));
 
           return SubjectIdentity(
             canonicalKey: canon,
@@ -281,8 +300,8 @@ class SubjectIdentityService {
       }
     }
 
-    // --- STEP 4: Priority 2 — Exact Known High-Confidence Deterministic Alias ---
-    if (_knownIdentities.containsKey(upperQuery)) {
+    // --- STEP 4: Priority 2 — Exact Known High-Confidence Deterministic Alias (STME only) ---
+    if (!isSol && _knownIdentities.containsKey(upperQuery)) {
       final (canon, display, short) = _knownIdentities[upperQuery]!;
       // Link to configured component if available
       final matched = _findComponentMatchingKey(canon, configuredCourses);
@@ -308,11 +327,20 @@ class SubjectIdentityService {
       }
 
       if (bestComp != null) {
-        final known = _knownIdentities[bestComp.courseName.toUpperCase()] ??
-            _knownIdentities[bestComp.courseCode.toUpperCase()];
-        final canon = known?.$1 ?? bestComp.courseName;
-        final display = known?.$2 ?? bestComp.courseName;
-        final short = known?.$3 ?? (bestComp.courseCode.isNotEmpty ? bestComp.courseCode : null);
+        final isCompSol = bestComp.sectionId.startsWith('SOL_') || isSol;
+        final known = isCompSol
+            ? null
+            : (_knownIdentities[bestComp.courseName.toUpperCase()] ??
+                _knownIdentities[bestComp.courseCode.toUpperCase()]);
+        final canon = isCompSol
+            ? bestComp.courseName
+            : (known?.$1 ?? bestComp.courseName);
+        final display = isCompSol
+            ? bestComp.courseName
+            : (known?.$2 ?? bestComp.courseName);
+        final short = isCompSol
+            ? null
+            : (known?.$3 ?? (bestComp.courseCode.isNotEmpty ? bestComp.courseCode : null));
 
         return SubjectIdentity(
           canonicalKey: canon,
@@ -325,42 +353,46 @@ class SubjectIdentityService {
       }
     }
 
-    // --- STEP 6: Priority 4 — Normalized match against Known Deterministic Identities ---
-    for (final entry in _knownIdentities.entries) {
-      final normKey = SubjectNormalizer.normalize(entry.key);
-      if (normKey.isNotEmpty && normKey == normalizedQuery) {
-        final (canon, display, short) = entry.value;
-        final matched = _findComponentMatchingKey(canon, configuredCourses);
-        return SubjectIdentity(
-          canonicalKey: canon,
-          displayName: display,
-          shortCode: short,
-          confidence: MatchConfidence.normalized,
-          isResolved: true,
-          matchedComponent: matched,
-        );
+    // --- STEP 6: Priority 4 — Normalized match against Known Deterministic Identities (STME only) ---
+    if (!isSol) {
+      for (final entry in _knownIdentities.entries) {
+        final normKey = SubjectNormalizer.normalize(entry.key);
+        if (normKey.isNotEmpty && normKey == normalizedQuery) {
+          final (canon, display, short) = entry.value;
+          final matched = _findComponentMatchingKey(canon, configuredCourses);
+          return SubjectIdentity(
+            canonicalKey: canon,
+            displayName: display,
+            shortCode: short,
+            confidence: MatchConfidence.normalized,
+            isResolved: true,
+            matchedComponent: matched,
+          );
+        }
       }
     }
 
-    // --- STEP 7: Priority 5 — Fallback to courseAliases dictionary ---
-    for (final entry in courseAliases.entries) {
-      if (upperQuery == entry.key.toUpperCase() ||
-          upperQuery.contains(entry.value.toUpperCase()) ||
-          (rawText != null && rawText.toUpperCase().contains(entry.value.toUpperCase()))) {
-        final known = _knownIdentities[entry.key.toUpperCase()];
-        final canon = known?.$1 ?? entry.key;
-        final display = known?.$2 ?? entry.value;
-        final short = known?.$3 ?? entry.key;
-        final matched = _findComponentMatchingKey(canon, configuredCourses);
+    // --- STEP 7: Priority 5 — Fallback to courseAliases dictionary (STME only) ---
+    if (!isSol) {
+      for (final entry in courseAliases.entries) {
+        if (upperQuery == entry.key.toUpperCase() ||
+            upperQuery.contains(entry.value.toUpperCase()) ||
+            (rawText != null && rawText.toUpperCase().contains(entry.value.toUpperCase()))) {
+          final known = _knownIdentities[entry.key.toUpperCase()];
+          final canon = known?.$1 ?? entry.key;
+          final display = known?.$2 ?? entry.value;
+          final short = known?.$3 ?? entry.key;
+          final matched = _findComponentMatchingKey(canon, configuredCourses);
 
-        return SubjectIdentity(
-          canonicalKey: canon,
-          displayName: display,
-          shortCode: short,
-          confidence: MatchConfidence.alias,
-          isResolved: true,
-          matchedComponent: matched,
-        );
+          return SubjectIdentity(
+            canonicalKey: canon,
+            displayName: display,
+            shortCode: short,
+            confidence: MatchConfidence.alias,
+            isResolved: true,
+            matchedComponent: matched,
+          );
+        }
       }
     }
 

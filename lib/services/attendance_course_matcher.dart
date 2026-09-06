@@ -80,17 +80,27 @@ class AttendanceCourseMatcher {
     String componentType,
     String rawCourseName,
   ) {
-    final aliasResult = _matchViaAlias(courseName, componentType);
-    if (aliasResult != null) return aliasResult;
+    final upperRaw = rawCourseName.toUpperCase();
+    final isSol = upperRaw.contains('BALLB') ||
+        upperRaw.contains('BBALLB') ||
+        upperRaw.contains('LLB') ||
+        upperRaw.contains(' LAW') ||
+        upperRaw.startsWith('LAW') ||
+        upperRaw.contains('SOL');
 
-    // Try matching alias against raw text when normalization stripped info.
-    for (final entry in courseAliases.entries) {
-      if (rawCourseName.toUpperCase().contains(entry.value.toUpperCase())) {
-        return CourseMatchResult(
-          subjectCode: entry.key,
-          component: componentType,
-          confidence: MatchConfidence.alias,
-        );
+    if (!isSol) {
+      final aliasResult = _matchViaAlias(courseName, componentType);
+      if (aliasResult != null) return aliasResult;
+
+      // Try matching alias against raw text when normalization stripped info.
+      for (final entry in courseAliases.entries) {
+        if (rawCourseName.toUpperCase().contains(entry.value.toUpperCase())) {
+          return CourseMatchResult(
+            subjectCode: entry.key,
+            component: componentType,
+            confidence: MatchConfidence.alias,
+          );
+        }
       }
     }
 
@@ -103,6 +113,10 @@ class AttendanceCourseMatcher {
   }
 
   static String _cleanSubjectCode(CourseComponent comp) {
+    // In SOL, full subject names must be preserved everywhere (never shorten or alias).
+    if (comp.sectionId.startsWith('SOL_')) {
+      if (comp.courseName.isNotEmpty) return comp.courseName;
+    }
     if (comp.courseCode.isNotEmpty) return comp.courseCode;
     return comp.componentId
         .replaceAll(
@@ -130,6 +144,11 @@ class AttendanceCourseMatcher {
   }
 
   CourseMatchResult? _matchViaAlias(String courseName, String componentType) {
+    // SOL sections must NEVER be intercepted by STME courseAliases!
+    if (configuredCourses.any((c) => c.sectionId.startsWith('SOL_'))) {
+      return null;
+    }
+
     final upper = courseName.toUpperCase();
     for (final entry in courseAliases.entries) {
       if (upper.contains(entry.value.toUpperCase()) ||

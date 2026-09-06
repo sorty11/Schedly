@@ -10,7 +10,12 @@ class AttendanceCourseNormalizer {
   static final _batchRegex = RegExp(r'\b([A-Z][1-9])\b', caseSensitive: false);
 
   static final _semesterRegex = RegExp(
-    r'\bSem(?:ester)?\s*(I{1,3}|IV|V|VI|VII|VIII|IX|X|\d+)\b',
+    r'\bSem(?:ester)?\s*(I{1,3}|IV|V|VI|VII|VIII|IX|X|\d+)(?:\s+[-_]?\s*[A-Z])?\b',
+    caseSensitive: false,
+  );
+
+  static final _branchRegex = RegExp(
+    r'\b(CE|CS|CSDS|IT|DS|AIDS|AIML|EXTC|ME|BALLB|BBALLB|LLB|SOL)\b',
     caseSensitive: false,
   );
 
@@ -22,10 +27,13 @@ class AttendanceCourseNormalizer {
 
     final match = _componentSuffixRegex.firstMatch(raw);
     if (match == null) {
+      // Check for explicit SOL Theory/Tutorial notations: (U), [U], (T), [T], Tutorial, Theory
+      final explicit = _extractExplicitComponent(raw);
       return NormalizedCourseInfo(
-        courseName: raw,
-        componentType: _inferComponentFromKeywords(raw),
-        parsed: false,
+        courseName: explicit.name,
+        componentType: explicit.component,
+        componentCode: explicit.code,
+        parsed: explicit.parsed,
       );
     }
 
@@ -34,10 +42,12 @@ class AttendanceCourseNormalizer {
     final trailing = (match.group(3) ?? '').trim();
 
     if (courseName.isEmpty) {
+      final explicit = _extractExplicitComponent(raw);
       return NormalizedCourseInfo(
-        courseName: raw,
-        componentType: _inferComponentFromKeywords(raw),
-        parsed: false,
+        courseName: explicit.name,
+        componentType: explicit.component,
+        componentCode: explicit.code,
+        parsed: explicit.parsed,
       );
     }
 
@@ -77,6 +87,61 @@ class AttendanceCourseNormalizer {
     );
   }
 
+  static ({String name, String component, String? code, bool parsed})
+      _extractExplicitComponent(String raw) {
+    var cleaned = raw.trim();
+    final upper = cleaned.toUpperCase();
+
+    if (upper.contains('(U)') ||
+        upper.contains('[U]') ||
+        upper.contains('(TUTORIAL)') ||
+        upper.contains('(TUT)') ||
+        upper.endsWith(' U') ||
+        upper.endsWith(' - U')) {
+      cleaned = cleaned
+          .replaceAll(RegExp(r'\([Uu]\)'), '')
+          .replaceAll(RegExp(r'\[[Uu]\]'), '')
+          .replaceAll(RegExp(r'\([Tt]utorial\)', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\([Tt]ut\)', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\s+-\s+[Uu]$'), '')
+          .replaceAll(RegExp(r'\s+[Uu]$'), '')
+          .replaceAll(RegExp(r'[\s\-_\/–—]+$'), '')
+          .trim();
+      return (
+        name: cleaned.isEmpty ? raw : cleaned,
+        component: 'Tutorial',
+        code: 'U',
+        parsed: true,
+      );
+    } else if (upper.contains('(T)') ||
+        upper.contains('[T]') ||
+        upper.contains('(THEORY)') ||
+        upper.endsWith(' T') ||
+        upper.endsWith(' - T')) {
+      cleaned = cleaned
+          .replaceAll(RegExp(r'\([Tt]\)'), '')
+          .replaceAll(RegExp(r'\[[Tt]\]'), '')
+          .replaceAll(RegExp(r'\([Tt]heory\)', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\s+-\s+[Tt]$'), '')
+          .replaceAll(RegExp(r'\s+[Tt]$'), '')
+          .replaceAll(RegExp(r'[\s\-_\/–—]+$'), '')
+          .trim();
+      return (
+        name: cleaned.isEmpty ? raw : cleaned,
+        component: 'Theory',
+        code: 'T',
+        parsed: true,
+      );
+    }
+
+    return (
+      name: raw,
+      component: _inferComponentFromKeywords(raw),
+      code: null,
+      parsed: false,
+    );
+  }
+
   static String _componentTypeFromCode(String code) {
     final prefix = code.toUpperCase().substring(0, 1);
     switch (prefix) {
@@ -94,7 +159,14 @@ class AttendanceCourseNormalizer {
   static String _inferComponentFromKeywords(String raw) {
     final upper = raw.toUpperCase();
     if (upper.contains('LAB') || upper.contains('PRACTICAL')) return 'Lab';
-    if (upper.contains('TUTORIAL')) return 'Tutorial';
+    if (upper.contains('TUTORIAL') ||
+        upper.contains('(U)') ||
+        upper.contains('[U]') ||
+        upper.contains('(TUT)') ||
+        upper.endsWith(' U') ||
+        upper.endsWith(' - U')) {
+      return 'Tutorial';
+    }
     return 'Theory';
   }
 
@@ -106,12 +178,11 @@ class AttendanceCourseNormalizer {
   /// Removes semester/branch noise for fuzzy matching comparisons.
   static String normalizeForMatching(String name) {
     var normalized = name.toUpperCase();
+    normalized = normalized.replaceAll(RegExp(r'(?<=[A-Z0-9])([TPUL][1-9])\b'), '');
+    normalized = normalized.replaceAll(RegExp(r'\b([TPUL][1-9])\b'), '');
     normalized = normalized.replaceAll(_semesterRegex, '');
     normalized = normalized.replaceAll(_batchRegex, '');
-    normalized = normalized.replaceAll(
-      RegExp(r'\b(CE|CS|CSDS|IT|DS|AIDS|AIML|EXTC|ME)\b'),
-      '',
-    );
+    normalized = normalized.replaceAll(_branchRegex, '');
     normalized = normalized.replaceAll(RegExp(r'[^A-Z0-9\s&]'), ' ');
     normalized = normalized.replaceAll(RegExp(r'\s+'), ' ').trim();
     return normalized;
