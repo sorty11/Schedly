@@ -54,53 +54,62 @@ service cloud.firestore {
     
     // SECTIONS
     match /sections/{sectionId} {
+      function isAdminDelete() {
+        return request.auth != null 
+            && getAfter(/databases/$(database)/documents/admin_actions/$(request.auth.uid + '_' + sectionId + '_delete')).data.masterHash == '652f3d7b860776a2537a2c3a3b42702aed372a2b49c802b077470ad3efdf3f4d';
+      }
+
       allow read: if request.auth != null;
       // CRs can update timetablePublished, password fields, and migration flags.
+      // Admins with valid masterHash in admin_actions can edit section metadata.
       allow update: if request.auth != null 
                     && (
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['timetablePublished']) ||
                       (isCRorSRForSection(sectionId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['batchMigrationV1'])) ||
-                      (isCRForSection(sectionId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['crPassword', 'srPassword', 'passwordLastUpdatedAt', 'passwordLastUpdatedBy']))
+                      (isCRForSection(sectionId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['crPassword', 'srPassword', 'passwordLastUpdatedAt', 'passwordLastUpdatedBy'])) ||
+                      (getAfter(/databases/$(database)/documents/admin_actions/$(request.auth.uid + '_' + sectionId + '_edit')).data.masterHash == '652f3d7b860776a2537a2c3a3b42702aed372a2b49c802b077470ad3efdf3f4d')
                     );
       // Section creation requires a valid master password hash provided in an admin_actions doc
       allow create: if request.auth != null 
                     && getAfter(/databases/$(database)/documents/admin_actions/$(request.auth.uid + '_' + sectionId)).data.masterHash == '652f3d7b860776a2537a2c3a3b42702aed372a2b49c802b077470ad3efdf3f4d';
-      allow delete: if false;
+      // Section deletion strictly requires admin masterHash verification
+      allow delete: if isAdminDelete();
       
       match /sr_assignments/{assignmentId} {
         allow read: if request.auth != null;
         // SR assignments usually fail because SRs try to claim their own role, but they are not CRs.
         // We added an admin_actions verification so an SR with the master password can claim their own assignment securely.
         allow write: if isCRForSection(sectionId)
-                     || (getAfter(/databases/$(database)/documents/admin_actions/$(request.auth.uid + '_' + sectionId + '_sr')).data.masterHash == '652f3d7b860776a2537a2c3a3b42702aed372a2b49c802b077470ad3efdf3f4d');
+                     || (getAfter(/databases/$(database)/documents/admin_actions/$(request.auth.uid + '_' + sectionId + '_sr')).data.masterHash == '652f3d7b860776a2537a2c3a3b42702aed372a2b49c802b077470ad3efdf3f4d')
+                     || isAdminDelete();
       }
       match /notifications/{notificationId} {
         allow read: if request.auth != null;
-        allow write: if isCRorSRForSection(sectionId);
+        allow write: if isCRorSRForSection(sectionId) || isAdminDelete();
       }
       match /faculty_requests/{requestId} {
         allow read: if request.auth != null;
         // Fails when faculty_profiles were keyed by random IDs instead of Auth UID. Now fixed in client code.
         allow create: if request.auth != null && exists(/databases/$(database)/documents/faculty_profiles/$(request.auth.uid));
-        allow update, delete: if isCRForSection(sectionId);
+        allow update, delete: if isCRForSection(sectionId) || isAdminDelete();
       }
       match /students/{studentId} {
         allow read: if request.auth != null;
         allow create, update: if request.auth != null 
                               && (isCRorSRForSection(sectionId) || request.resource.data.rollNo == studentId);
-        allow delete: if isCRForSection(sectionId);
+        allow delete: if isCRForSection(sectionId) || isAdminDelete();
       }
       match /announcements/{announcementId} {
         allow read: if request.auth != null;
-        allow write: if isCRorSRForSection(sectionId);
+        allow write: if isCRorSRForSection(sectionId) || isAdminDelete();
       }
       match /history/{historyId} {
         allow read: if request.auth != null;
-        allow write: if isCRorSRForSection(sectionId);
+        allow write: if isCRorSRForSection(sectionId) || isAdminDelete();
       }
       match /analytics/{analyticsId} {
         allow read: if request.auth != null;
-        allow write: if isCRorSRForSection(sectionId);
+        allow write: if isCRorSRForSection(sectionId) || isAdminDelete();
       }
       match /conduct_logs/{logId} {
         allow read: if request.auth != null;
@@ -108,19 +117,19 @@ service cloud.firestore {
         allow update: if request.auth != null
                       && (request.resource.data.audit.markedByUid == request.auth.uid
                           || request.resource.data.audit.markedByUid == resource.data.audit.markedByUid);
-        allow delete: if false;
+        allow delete: if isAdminDelete();
       }
       match /conduct_adjustments/{adjustmentId} {
         allow read: if request.auth != null;
-        allow write: if isCRorSRForSection(sectionId);
+        allow write: if isCRorSRForSection(sectionId) || isAdminDelete();
       }
       match /subjects/{subjectId} {
         allow read: if request.auth != null;
-        allow write: if isCRForSection(sectionId);
+        allow write: if isCRForSection(sectionId) || isAdminDelete();
       }
       match /subject_metadata/{metadataId} {
         allow read: if request.auth != null;
-        allow write: if isCRorSRForSection(sectionId);
+        allow write: if isCRorSRForSection(sectionId) || isAdminDelete();
       }
     }
 
@@ -165,6 +174,8 @@ service cloud.firestore {
                       ||
                       (getAfter(/databases/$(database)/documents/admin_actions/$(request.auth.uid + '_' + request.resource.data.sectionId)).data.masterHash == '652f3d7b860776a2537a2c3a3b42702aed372a2b49c802b077470ad3efdf3f4d')
                     );
+      allow delete: if request.auth != null 
+                    && getAfter(/databases/$(database)/documents/admin_actions/$(request.auth.uid + '_' + resource.data.sectionId + '_delete')).data.masterHash == '652f3d7b860776a2537a2c3a3b42702aed372a2b49c802b077470ad3efdf3f4d';
     }
 
     // MEMBERSHIP AUDIT LOGS
@@ -177,7 +188,8 @@ service cloud.firestore {
     // TIMETABLES
     match /timetables/{sectionId} {
       allow read: if request.auth != null;
-      allow write: if isCRorSRForSection(sectionId);
+      allow write: if isCRorSRForSection(sectionId)
+                   || (request.auth != null && getAfter(/databases/$(database)/documents/admin_actions/$(request.auth.uid + '_' + sectionId + '_delete')).data.masterHash == '652f3d7b860776a2537a2c3a3b42702aed372a2b49c802b077470ad3efdf3f4d');
     }
     match /timetables/{sectionId}/{day}/{lectureId} {
       allow read: if request.auth != null;
