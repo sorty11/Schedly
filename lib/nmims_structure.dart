@@ -125,10 +125,10 @@ class NMIMSStructure {
     required String year,
     required String branchOrProgram,
     String? semester,
-    required String division,
+    String? division,
   }) {
     final cleanYear = year.trim().replaceAll(' ', '');
-    final cleanDiv = division.trim();
+    final cleanDiv = (division ?? '').trim();
     final effectiveSchool = (school == null || school.trim().isEmpty) ? 'STME' : school.trim().toUpperCase();
 
     if (effectiveSchool == 'STME') {
@@ -137,11 +137,17 @@ class NMIMSStructure {
     }
 
     final cleanProg = _sanitizeProgramCode(branchOrProgram);
-    if (semester != null && semester.trim().isNotEmpty) {
-      final cleanSem = _sanitizeSemesterCode(semester);
-      return '${effectiveSchool}_${cleanYear}_${cleanProg}_${cleanSem}_$cleanDiv';
+    final hasSem = semester != null && semester.trim().isNotEmpty;
+    final hasDiv = cleanDiv.isNotEmpty;
+
+    final parts = <String>[effectiveSchool, cleanYear, cleanProg];
+    if (hasSem) {
+      parts.add(_sanitizeSemesterCode(semester));
     }
-    return '${effectiveSchool}_${cleanYear}_${cleanProg}_$cleanDiv';
+    if (hasDiv) {
+      parts.add(cleanDiv);
+    }
+    return parts.join('_');
   }
 
   static String _sanitizeSemesterCode(String semester) {
