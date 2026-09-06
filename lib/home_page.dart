@@ -22,6 +22,7 @@ import 'onboarding/widgets/tutorial_target.dart';
 import 'onboarding/services/tutorial_controller.dart';
 import 'cr_panel_page.dart';
 import 'attendance_page.dart';
+import 'services/gamification_service.dart';
 
 class HomePage extends StatefulWidget {
   final String division;
@@ -58,11 +59,14 @@ class _HomePageState extends State<HomePage>
     _runMigrationIfNeeded();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint('[GAMIFICATION] Home initialized');
       OnboardingService.instance.initializeAndCheckFirstLaunch(
         context,
         AppSettings.currentRole,
       );
       FeatureDiscoveryService.checkNewFeatures(context);
+      GamificationService.instance.checkAndClaimDailyExp();
+      GamificationService.instance.showAutoLeaderboardPopupIfEligible(context);
     });
   }
 

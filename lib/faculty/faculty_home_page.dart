@@ -11,6 +11,7 @@ import 'faculty_dashboard_page.dart';
 import 'faculty_timetable_page.dart';
 import 'faculty_panel_page.dart';
 import 'faculty_profile_page.dart';
+import '../services/gamification_service.dart';
 
 class FacultyHomePage extends StatefulWidget {
   const FacultyHomePage({super.key});
@@ -31,6 +32,8 @@ class _FacultyHomePageState extends State<FacultyHomePage> {
         UserRole.faculty,
       );
       FeatureDiscoveryService.checkNewFeatures(context);
+      GamificationService.instance.checkAndClaimDailyExp();
+      GamificationService.instance.showAutoLeaderboardPopupIfEligible(context);
     });
   }
 

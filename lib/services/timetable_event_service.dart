@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../app_settings.dart';
 import '../user_roles.dart';
@@ -7,6 +8,7 @@ import 'package:schedly/models/timetable_entry.dart';
 import 'package:schedly/services/app_notification_service.dart';
 import 'package:schedly/services/local_notification_service.dart';
 import 'package:schedly/timetable_manager.dart';
+import 'package:schedly/services/gamification_service.dart';
 
 class TimetableEventService {
   static Future<void> handleModification({
@@ -239,6 +241,9 @@ class TimetableEventService {
             ? 'High'
             : 'Normal',
       );
+
+      // Gamification: record qualifying timetable contribution points for CR/SR
+      unawaited(GamificationService.instance.recordTimetableAction(division: division));
 
       // Resolve correct UID for outbox
       String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
