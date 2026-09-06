@@ -102,6 +102,14 @@ class TimetableEntry {
     } else {
       parsedCategory = EventCategoryExtension.inferFromSubject(rawSubject);
     }
+    // "Sports Law" is an academic law course, not a physical sports activity
+    final lower = rawSubject.toLowerCase();
+    if (parsedCategory == EventCategory.sports &&
+        (lower.contains('sports law') ||
+         lower.contains('sport law') ||
+         (lower.contains('sport') && (lower.contains('law') || lower.contains('llb'))))) {
+      parsedCategory = EventCategory.academic;
+    }
 
     // 3. Parse Time
     int parsedStart = 0;
