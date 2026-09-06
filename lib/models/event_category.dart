@@ -72,7 +72,9 @@ extension EventCategoryExtension on EventCategory {
     if (l.contains('free slot') || l.contains('freeslot'))
       return EventCategory.freeSlot;
     if (l.contains('break')) return EventCategory.breakTime;
-    if (l.contains('mentor')) return EventCategory.mentoring;
+    if (l.contains('sport') && (l.contains('law') || l.contains('llb'))) {
+      return EventCategory.academic;
+    }
     if (l.contains('sport')) return EventCategory.sports;
     if (l.contains('library')) return EventCategory.library;
     if (l.contains('activity') || l.contains('club'))
