@@ -101,46 +101,65 @@ class LawTimetableParser {
             lower.contains('b.a.ll.b') ||
             lower.contains('bba ll.b') ||
             lower.contains('bba.ll.b') ||
+            lower.contains('ballb') ||
+            lower.contains('bballb') ||
             lower.contains('ll. b') ||
             lower.contains('ll.b')) &&
-        (lower.contains('time-table') || lower.contains('time table'));
+        (lower.contains('time-table') ||
+            lower.contains('time table') ||
+            lower.contains('timetable'));
   }
 
   /// Extracts header metadata from the PDF text.
   static LawTimetableMetadata extractMetadata(String text) {
     String program = 'B.A. LL.B. (Hons.)';
-    if (RegExp(r'B\.?B\.?A\.?\s*LL\.?\s*B', caseSensitive: false).hasMatch(text)) {
+    if (RegExp(r'B\.?B\.?A\.?\s*(?:LL\.?\s*B|\.?\s*L\.?L\.?B)', caseSensitive: false).hasMatch(text)) {
       program = 'B.B.A. LL.B. (Hons.)';
-    } else if (RegExp(r'B\.?A\.?\s*LL\.?\s*B', caseSensitive: false).hasMatch(text)) {
+    } else if (RegExp(r'B\.?A\.?\s*(?:LL\.?\s*B|\.?\s*L\.?L\.?B)', caseSensitive: false).hasMatch(text)) {
       program = 'B.A. LL.B. (Hons.)';
     }
 
     String year = 'Third Year';
-    final yearMatch = RegExp(r'\((FIRST|SECOND|THIRD|FOURTH|FIFTH|\d+(?:st|nd|rd|th)?)\s*YEAR\)', caseSensitive: false).firstMatch(text);
+    final yearMatch = RegExp(
+      r'(?:^|[(\s])(FIRST|SECOND|THIRD|FOURTH|FIFTH|\d+(?:st|nd|rd|th)?)\s*YEAR',
+      caseSensitive: false,
+    ).firstMatch(text);
     if (yearMatch != null) {
       year = _normalizeYear(yearMatch.group(1)!);
     }
 
     String semester = 'Semester V';
-    final semMatch = RegExp(r'SEMESTER[-\s]*([IVXLCDM0-9]+)', caseSensitive: false).firstMatch(text);
+    final semMatch = RegExp(
+      r'(?:SEMESTER|SEM)[-\s.:]*([IVXLCDM0-9]+)',
+      caseSensitive: false,
+    ).firstMatch(text);
     if (semMatch != null) {
       semester = 'Semester ${semMatch.group(1)!.toUpperCase()}';
     }
 
     String batch = '2024-29';
-    final batchMatch = RegExp(r'BATCH[-\s]*(\d{4}[-\s]*\d{2,4})', caseSensitive: false).firstMatch(text);
+    final batchMatch = RegExp(
+      r'BATCH[-\s.:]*(\d{4}[-\s/]*\d{2,4})',
+      caseSensitive: false,
+    ).firstMatch(text);
     if (batchMatch != null) {
-      batch = batchMatch.group(1)!.replaceAll(' ', '');
+      batch = batchMatch.group(1)!.replaceAll(RegExp(r'[\s/]'), '-');
     }
 
     String academicYear = '2026-27';
-    final ayMatch = RegExp(r'ACADEMIC\s*YEAR\s*(\d{4}[-\s]*\d{2,4})', caseSensitive: false).firstMatch(text);
+    final ayMatch = RegExp(
+      r'ACADEMIC\s*YEAR[-\s.:]*(\d{4}[-\s/]*\d{2,4})',
+      caseSensitive: false,
+    ).firstMatch(text);
     if (ayMatch != null) {
-      academicYear = ayMatch.group(1)!.replaceAll(' ', '');
+      academicYear = ayMatch.group(1)!.replaceAll(RegExp(r'[\s/]'), '-');
     }
 
     String wef = '';
-    final wefMatch = RegExp(r'W\.?E\.?F\.?[:\s]*([\d\.\-\/]+)', caseSensitive: false).firstMatch(text);
+    final wefMatch = RegExp(
+      r'W\.?E\.?F\.?[:\s]*([\d.\-/]+)',
+      caseSensitive: false,
+    ).firstMatch(text);
     if (wefMatch != null) {
       wef = wefMatch.group(1)!;
     }
@@ -186,22 +205,35 @@ class LawTimetableParser {
     // 1. Identify Day Labels and Row Bounds (Y-coordinates)
     final dayMap = {
       'MON': 'Monday',
+      'MONDAY': 'Monday',
       'TUES': 'Tuesday',
       'TUE': 'Tuesday',
+      'TUESDAY': 'Tuesday',
       'WED': 'Wednesday',
+      'WEDNESDAY': 'Wednesday',
       'THUR': 'Thursday',
       'THU': 'Thursday',
+      'THURS': 'Thursday',
+      'THURSDAY': 'Thursday',
       'FRI': 'Friday',
+      'FRIDAY': 'Friday',
       'SAT': 'Saturday',
+      'SATURDAY': 'Saturday',
     };
 
     final dayWordPositions = <String, double>{};
+    final dayWordRightBounds = <double>[];
+
     for (final w in words) {
+      // Day label must be on the left side of the page (dx < 200)
+      if (w.bounds.center.dx > 200) continue;
+
       final t = w.text.toUpperCase().replaceAll(RegExp(r'[^A-Z]'), '');
       if (dayMap.containsKey(t)) {
         final dName = dayMap[t]!;
         if (!dayWordPositions.containsKey(dName)) {
           dayWordPositions[dName] = w.bounds.center.dy;
+          dayWordRightBounds.add(w.bounds.right);
         }
       }
     }
@@ -234,32 +266,36 @@ class LawTimetableParser {
     }
 
     // 2. Identify Period Columns (X-coordinates)
-    // Find time header row containing "9.10" or "9:10"
+    // Find time header row containing SOL period times (strictly above day rows)
+    final minDayY = dayWordPositions.values.isEmpty
+        ? 500.0
+        : dayWordPositions.values.reduce((a, b) => a < b ? a : b);
+
+    final timeHeaderRegex = RegExp(
+      r'(?:0?9[:.]10|10[:.]11|11[:.]12|12[:.]13|0?1[:.]13|0?2[:.]00|2\s*-\s*3|0?3[:.]01|0?4[:.]02|0?5[:.]03|LUNCH)',
+      caseSensitive: false,
+    );
+
     final timeHeaderWords = words.where((w) {
-      final t = w.text;
-      return t.contains('9.10') ||
-          t.contains('9:10') ||
-          t.contains('10.11') ||
-          t.contains('10:11') ||
-          t.contains('11.12') ||
-          t.contains('12.13') ||
-          t.toUpperCase().contains('LUNCH') ||
-          t.contains('2-3') ||
-          t.contains('3.01') ||
-          t.contains('4.02') ||
-          t.contains('5.03');
+      if (w.bounds.center.dy >= minDayY - 8) return false;
+      return timeHeaderRegex.hasMatch(w.text.toUpperCase());
     }).toList();
 
-    // Group time header words into 9 column centers
+    // Group time header words into column clusters based on X proximity
     timeHeaderWords.sort((a, b) => a.bounds.center.dx.compareTo(b.bounds.center.dx));
 
-    final colCenters = <double>[];
+    final clusters = <List<double>>[];
     for (final w in timeHeaderWords) {
       final x = w.bounds.center.dx;
-      if (colCenters.isEmpty || (x - colCenters.last).abs() > 30) {
-        colCenters.add(x);
+      if (clusters.isEmpty || (x - clusters.last.last).abs() > 40) {
+        clusters.add([x]);
+      } else {
+        clusters.last.add(x);
       }
     }
+    final colCenters = clusters
+        .map((c) => c.reduce((a, b) => a + b) / c.length)
+        .toList();
 
     final columns = <_LawColumn>[];
     if (colCenters.length >= 8) {
@@ -299,10 +335,11 @@ class LawTimetableParser {
         );
       }
     } else {
-      // Fallback to proportional grid layout if headers are partially obscured
-      // Table left typically at ~45, right ~765, total ~720 across 10 cols
-      const left = 95.0; // after Day col
-      const right = 765.0;
+      // Dynamic fallback based on day column boundary and table width
+      final left = dayWordRightBounds.isNotEmpty
+          ? (dayWordRightBounds.reduce((a, b) => a > b ? a : b) + 12.0)
+          : 95.0;
+      final right = left + 670.0;
       final slotWidth = (right - left) / 9.0;
       for (int i = 0; i < standardSlots.length; i++) {
         final slotConfig = standardSlots[i];
@@ -356,14 +393,6 @@ class LawTimetableParser {
         }).toList();
 
         if (cellWords.isNotEmpty) {
-          cellWords.sort((a, b) {
-            if ((a.bounds.center.dy - b.bounds.center.dy).abs() > 3) {
-              return a.bounds.center.dy.compareTo(b.bounds.center.dy);
-            }
-            return a.bounds.center.dx.compareTo(b.bounds.center.dx);
-          });
-
-          // Join lines based on vertical gaps
           final cellText = _reconstructCellText(cellWords);
 
           final entry = parseCellContent(
@@ -387,30 +416,50 @@ class LawTimetableParser {
 
   static String _reconstructCellText(List<TextWord> words) {
     if (words.isEmpty) return '';
-    final lines = <List<String>>[];
-    double? lastY;
 
-    for (final w in words) {
+    // Sort words top-to-bottom
+    final sorted = List<TextWord>.from(words)
+      ..sort((a, b) => a.bounds.center.dy.compareTo(b.bounds.center.dy));
+
+    // Cluster into lines based on Y proximity
+    final lineGroups = <List<TextWord>>[];
+    for (final w in sorted) {
       final t = w.text.trim();
       if (t.isEmpty) continue;
-      final y = w.bounds.center.dy;
-      if (lastY == null || (y - lastY).abs() > 4) {
-        lines.add([t]);
-        lastY = y;
+
+      if (lineGroups.isEmpty) {
+        lineGroups.add([w]);
       } else {
-        lines.last.add(t);
+        final lineAvgY = lineGroups.last.map((e) => e.bounds.center.dy).reduce((a, b) => a + b) /
+            lineGroups.last.length;
+        if ((w.bounds.center.dy - lineAvgY).abs() <= 4.0) {
+          lineGroups.last.add(w);
+        } else {
+          lineGroups.add([w]);
+        }
       }
     }
 
-    return lines.map((l) => l.join(' ')).join('\n');
+    // Sort words within each line from left to right, then join
+    final lines = <String>[];
+    for (final group in lineGroups) {
+      group.sort((a, b) => a.bounds.left.compareTo(b.bounds.left));
+      final lineStr = group.map((w) => w.text.trim()).where((t) => t.isNotEmpty).join(' ');
+      if (lineStr.isNotEmpty) {
+        lines.add(lineStr);
+      }
+    }
+
+    return lines.join('\n');
   }
 
   /// Parses a cell's text into a schema-compliant [TimetableEntry].
   ///
   /// - Unmarked academic cell -> 'Theory'
-  /// - `(U)` suffix -> 'Tutorial'
-  /// - Strips `(U)` and `(T)` from subject string
-  /// - Strips trailing faculty lines (starts with Prof., Dr., etc.)
+  /// - `(U)` / `[U]` / `Tutorial` notation -> 'Tutorial'
+  /// - Strips component notations from subject string
+  /// - Strips faculty lines and prefixes
+  /// - Filters out empty slots, dashes, and lunch break markers
   /// - Defaults batch to 'Whole Class'
   static TimetableEntry? parseCellContent({
     required String cellText,
@@ -421,7 +470,18 @@ class LawTimetableParser {
     String defaultRoom = 'SOL',
   }) {
     final cleaned = cellText.trim();
-    if (cleaned.isEmpty || cleaned.toLowerCase() == 'free slot' || cleaned == '-') {
+    if (cleaned.isEmpty) return null;
+
+    final lower = cleaned.toLowerCase();
+    if (lower == 'free slot' ||
+        lower == 'free' ||
+        lower == 'nil' ||
+        lower == 'na' ||
+        lower == 'n/a' ||
+        lower == 'none' ||
+        lower == 'lunch' ||
+        lower == 'lunch break' ||
+        RegExp(r'^[\s\-_–—]+$').hasMatch(cleaned)) {
       return null;
     }
 
@@ -431,21 +491,26 @@ class LawTimetableParser {
         .where((l) => l.isNotEmpty)
         .toList();
 
-    // Faculty regex (e.g. Prof. Anurag, Dr. Nishit)
+    if (lines.isEmpty) return null;
+
+    // Faculty prefix detection
     final facultyRegex = RegExp(
-      r'^(Prof\.?|Dr\.?|Mr\.?|Ms\.?|Mrs\.?|Adv\.?)\s+',
+      r'^(Prof\.?|Dr\.?|Mr\.?|Ms\.?|Mrs\.?|Adv\.?|Advocate|Faculty|Teacher)\b',
       caseSensitive: false,
     );
 
+    // In NMIMS timetable cells, subjects appear at the top, followed by faculty.
+    // Once a faculty indicator is encountered, all subsequent lines belong to faculty.
     final subjectParts = <String>[];
     for (final line in lines) {
-      if (!facultyRegex.hasMatch(line)) {
-        subjectParts.add(line);
+      if (facultyRegex.hasMatch(line)) {
+        break; // Stop at first faculty line
       }
+      subjectParts.add(line);
     }
 
     String rawSubject = subjectParts.join(' ').trim();
-    if (rawSubject.isEmpty && lines.isNotEmpty) {
+    if (rawSubject.isEmpty) {
       rawSubject = lines.first;
     }
 
@@ -453,15 +518,44 @@ class LawTimetableParser {
 
     // Determine Component: (U) -> Tutorial, (T) or unmarked -> Theory
     String component = 'Theory';
-    if (rawSubject.contains('(U)') || rawSubject.endsWith(' (U)')) {
+    final upper = rawSubject.toUpperCase();
+
+    if (upper.contains('(U)') ||
+        upper.contains('[U]') ||
+        upper.contains('(TUTORIAL)') ||
+        upper.contains('(TUT)') ||
+        upper.endsWith(' U') ||
+        upper.endsWith(' - U')) {
       component = 'Tutorial';
-      rawSubject = rawSubject.replaceAll('(U)', '').trim();
-    } else if (rawSubject.contains('(T)') || rawSubject.endsWith(' (T)')) {
+      rawSubject = rawSubject
+          .replaceAll(RegExp(r'\([Uu]\)'), '')
+          .replaceAll(RegExp(r'\[[Uu]\]'), '')
+          .replaceAll(RegExp(r'\([Tt]utorial\)', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\([Tt]ut\)', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\s+-\s+[Uu]$'), '')
+          .replaceAll(RegExp(r'\s+[Uu]$'), '')
+          .trim();
+    } else if (upper.contains('(T)') ||
+        upper.contains('[T]') ||
+        upper.contains('(THEORY)') ||
+        upper.endsWith(' T') ||
+        upper.endsWith(' - T')) {
       component = 'Theory';
-      rawSubject = rawSubject.replaceAll('(T)', '').trim();
+      rawSubject = rawSubject
+          .replaceAll(RegExp(r'\([Tt]\)'), '')
+          .replaceAll(RegExp(r'\[[Tt]\]'), '')
+          .replaceAll(RegExp(r'\([Tt]heory\)', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\s+-\s+[Tt]$'), '')
+          .replaceAll(RegExp(r'\s+[Tt]$'), '')
+          .trim();
     }
 
-    rawSubject = rawSubject.replaceAll(RegExp(r'[\s\-_\/]+$'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
+    rawSubject = rawSubject
+        .replaceAll(RegExp(r'[\s\-_\/–—]+$'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+
+    if (rawSubject.isEmpty || rawSubject == '-') return null;
 
     return TimetableEntry(
       id: _generateEntryId(day, slotIndex),
