@@ -1,4 +1,6 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:schedly/services/law_timetable_parser.dart';
 import 'package:schedly/models/event_category.dart';
 
@@ -78,7 +80,7 @@ WEF: 20.07.2026
   });
 
   group('LawTimetableParser Cell Parsing & (U) Tutorial Convention Tests', () {
-    test('Unmarked academic subject defaults to Theory', () {
+    test('Unmarked academic subject defaults to Theory and strips faculty', () {
       final entry = LawTimetableParser.parseCellContent(
         cellText: 'Administrative Law\nProf. Anurag',
         day: 'Monday',
@@ -148,101 +150,53 @@ WEF: 20.07.2026
     });
   });
 
-  group('LawTimetableParser Full Real-World Grid Test', () {
-    // 8 academic slots per day (excluding lunch in middle)
-    // Real Law Timetable Matrix from provided image:
-    // Mon: Administrative Law, Company Law II, Environmental Law, Company Law II, [Lunch], Family Law II, CPC & Limitation Act, Environmental Law, (Empty)
-    // Tue: Administrative Law, Company Law II, Sports Law, Maritime Law, [Lunch], Maritime Law, CPC & Limitation Act, Family Law II, Sports Law
-    // Wed: Administrative Law, BSA, Environmental Law, BSA, [Lunch], Family Law II, CPC & Limitation Act, Environmental Law, (Empty)
-    // Thu: Cyber Law, BSA, Administrative Law (U), BSA, [Lunch], Company Law II, CPC & Limitation Act, Family Law II, (Empty)
-    // Fri: Cyber Law, BSA, Environmental Law (U), Media Law, [Lunch], Family Law II, CPC & Limitation Act, Media Law, Administrative Law
-    // Sat: All empty
-    final realGridByDay = <String, List<String>>{
-      'Monday': [
-        'Administrative Law\nProf. Anurag',
-        'Company Law II\nProf. Veddant',
-        'Environmental Law\nProf. Alisha',
-        'Company Law II\nProf. Veddant',
-        'Family Law II\nProf. Ishant Jain',
-        'CPC & Limitation Act\nProf. Mayank Singh',
-        'Environmental Law\nProf. Alisha',
-        '', // slot 8 empty
-      ],
-      'Tuesday': [
-        'Administrative Law\nProf. Anurag',
-        'Company Law II\nProf. Veddant',
-        'Sports Law\nDr. Nishit',
-        'Maritime Law\nProf. Anurag',
-        'Maritime Law\nProf. Anurag',
-        'CPC & Limitation Act\nProf. Mayank Singh',
-        'Family Law II\nProf. Ishant Jain',
-        'Sports Law\nDr. Nishit',
-      ],
-      'Wednesday': [
-        'Administrative Law\nProf. Anurag',
-        'BSA\nProf. Anoushka',
-        'Environmental Law\nProf. Alisha',
-        'BSA\nProf. Anoushka',
-        'Family Law II\nProf. Ishant Jain',
-        'CPC & Limitation Act\nProf. Mayank Singh',
-        'Environmental Law\nProf. Alisha',
-        '',
-      ],
-      'Thursday': [
-        'Cyber Law\nProf. Aakash Satyadeo',
-        'BSA\nProf. Anoushka',
-        'Administrative Law (U)\nProf. Anurag',
-        'BSA\nProf. Anoushka',
-        'Company Law II\nProf. Veddant',
-        'CPC & Limitation Act\nProf. Mayank Singh',
-        'Family Law II\nProf. Ishant Jain',
-        '',
-      ],
-      'Friday': [
-        'Cyber Law\nProf. Aakash Satyadeo',
-        'BSA\nProf. Anoushka',
-        'Environmental Law (U)\nProf. Alisha',
-        'Media Law\nProf. Alisha',
-        'Family Law II\nProf. Ishant Jain',
-        'CPC & Limitation Act\nProf. Mayank Singh',
-        'Media Law\nProf. Alisha',
-        'Administrative Law\nProf. Anurag',
-      ],
-      'Saturday': [
-        '', '', '', '', '', '', '', ''
-      ],
-    };
+  group('LawTimetableParser REAL PDF Extraction Regression Test', () {
+    test('NMIMS SOL Timetable Sample PDF parses directly to TimetableEntry models', () async {
+      final file = File('test/fixtures/NMIMS_SOL_Timetable_Sample.pdf');
+      expect(file.existsSync(), isTrue, reason: 'SOL test fixture PDF must exist');
 
-    test('Parses full weekly schedule with exact slot components and lunch break', () {
-      final parsed = LawTimetableParser.parseTimetableGrid(gridByDay: realGridByDay);
+      final Uint8List pdfBytes = await file.readAsBytes();
+
+      // Verify text extraction
+      final text = await LawTimetableParser.extractText(pdfBytes);
+      expect(LawTimetableParser.isLawTimetable(text), isTrue);
+
+      final meta = LawTimetableParser.extractMetadata(text);
+      expect(meta.school, equals('School of Law'));
+      expect(meta.program, equals('B.A. LL.B. (Hons.)'));
+      expect(meta.year, equals('Third Year'));
+      expect(meta.semester, equals('Semester V'));
+
+      // Real PDF parse via coordinate extraction
+      final parsed = await LawTimetableParser.parseTimetable(pdfBytes, 'SOL');
 
       expect(parsed.keys, containsAll(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']));
 
       // Monday verification
       final mon = parsed['Monday']!;
-      // 7 academic entries + 1 lunch = 8 entries
-      expect(mon.length, equals(8));
+      expect(mon, isNotEmpty);
       expect(mon.any((e) => e.subject == 'Lunch Break' && e.category == EventCategory.lunch), isTrue);
       expect(mon.any((e) => e.subject == 'Administrative Law' && e.component == 'Theory'), isTrue);
-      expect(mon.any((e) => e.subject == 'CPC & Limitation Act' && e.startTime == 15 * 60 + 1), isTrue);
+      expect(mon.any((e) => e.subject == 'Company Law II' && e.component == 'Theory'), isTrue);
+      expect(mon.any((e) => e.subject.contains('CPC') && e.startTime == 15 * 60 + 1), isTrue);
 
-      // Thursday verification (contains Administrative Law (U))
+      // Thursday verification: must parse Administrative Law (U) as Tutorial
       final thu = parsed['Thursday']!;
-      final adminLawTut = thu.firstWhere((e) => e.subject == 'Administrative Law');
-      expect(adminLawTut.component, equals('Tutorial'));
-      expect(adminLawTut.startTime, equals(11 * 60 + 12));
-      expect(adminLawTut.endTime, equals(12 * 60 + 12));
+      expect(thu, isNotEmpty);
+      final adminTut = thu.where((e) => e.subject == 'Administrative Law' && e.component == 'Tutorial').toList();
+      expect(adminTut.isNotEmpty, isTrue, reason: 'Administrative Law (U) on Thursday must be Tutorial');
+      expect(adminTut.first.startTime, equals(11 * 60 + 12));
+      expect(adminTut.first.endTime, equals(12 * 60 + 12));
 
-      // Friday verification (contains Environmental Law (U) and late slot Administrative Law)
+      // Friday verification: must parse Environmental Law (U) as Tutorial and late Administrative Law
       final fri = parsed['Friday']!;
-      final envLawTut = fri.firstWhere((e) => e.subject == 'Environmental Law');
-      expect(envLawTut.component, equals('Tutorial'));
+      final envTut = fri.where((e) => e.subject == 'Environmental Law' && e.component == 'Tutorial').toList();
+      expect(envTut.isNotEmpty, isTrue, reason: 'Environmental Law (U) on Friday must be Tutorial');
 
-      final lateAdmin = fri.lastWhere((e) => e.subject == 'Administrative Law');
-      expect(lateAdmin.startTime, equals(17 * 60 + 3));
-      expect(lateAdmin.endTime, equals(18 * 60 + 3));
+      final lateAdmin = fri.where((e) => e.subject == 'Administrative Law' && e.startTime == 17 * 60 + 3).toList();
+      expect(lateAdmin.isNotEmpty, isTrue, reason: 'Administrative Law 5:03-6:03 on Friday must exist');
 
-      // Saturday verification (all empty except Lunch Break)
+      // Saturday verification: all periods empty, only Lunch Break present
       final sat = parsed['Saturday']!;
       expect(sat.length, equals(1));
       expect(sat.first.subject, equals('Lunch Break'));

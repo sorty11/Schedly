@@ -1,4 +1,4 @@
-﻿{
+{
   "$schema": "../schema.json",
   "task_id": "PHASE2_SOL_TIMETABLE",
   "title": "Phase 2 SOL Timetable Support & Parser Dispatch",
@@ -79,6 +79,6 @@
   },
   "review": {
     "verdict": "AWAITING_REVIEW",
-    "notes": "Implementation & automated tests complete. Ready for ChatGPT / Human review. (Antigravity never sets done)."
+    "notes": "Real PDF coordinate extraction implemented using syncfusion_flutter_pdf. 8 time slots, lunch, day rows (MON-SAT), (U) tutorial convention, and clean faculty stripping verified against vector PDF fixture. All tests pass with 0 analyze warnings. Ready for review."
   }
 }

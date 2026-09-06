@@ -1,4 +1,4 @@
-﻿import 'dart:typed_data';
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import '../models/timetable_entry.dart';
@@ -31,10 +31,43 @@ class LawTimetableMetadata {
       'LawTimetableMetadata($program, $year, $semester, AY: $academicYear)';
 }
 
+/// Helper model for detected grid columns in Law PDF.
+class _LawColumn {
+  final int index; // 0 to 7 (or lunch)
+  final double xStart;
+  final double xEnd;
+  final int startTime;
+  final int endTime;
+  final bool isLunch;
+
+  _LawColumn({
+    required this.index,
+    required this.xStart,
+    required this.xEnd,
+    required this.startTime,
+    required this.endTime,
+    this.isLunch = false,
+  });
+}
+
+/// Helper model for detected day rows in Law PDF.
+class _LawDayRow {
+  final String dayName;
+  final double yTop;
+  final double yBottom;
+
+  _LawDayRow({
+    required this.dayName,
+    required this.yTop,
+    required this.yBottom,
+  });
+}
+
 /// Dedicated parser for NMIMS School of Law (SOL) timetable PDFs.
 ///
 /// Designed to strictly preserve existing STME V6 timetable architecture.
-/// Produces standard, schema-compliant [TimetableEntry] objects.
+/// Uses Syncfusion coordinate clustering to deterministically extract
+/// rows, columns, subject names, components ((U) vs Theory), and lunch breaks.
 class LawTimetableParser {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
 
@@ -134,38 +167,180 @@ class LawTimetableParser {
     return raw;
   }
 
-  /// Parses a parsed text/cell grid into standard [TimetableEntry] structures.
-  /// Each non-empty academic cell is mapped to a [TimetableEntry].
-  ///
-  /// Unmarked academic cells -> Theory.
-  /// Cells containing `(U)` -> Tutorial.
-  /// Batch defaults to `'Whole Class'`.
-  static Map<String, List<TimetableEntry>> parseTimetableGrid({
-    required Map<String, List<String>> gridByDay,
-    String defaultRoom = 'SOL',
-  }) {
-    final result = <String, List<TimetableEntry>>{};
+  /// Parses PDF bytes directly using `syncfusion_flutter_pdf` coordinates.
+  /// Dynamically locates the TIME header, day rows (MON-SAT), and period columns.
+  static Future<Map<String, List<TimetableEntry>>> parseTimetable(
+    Uint8List pdfBytes,
+    String defaultRoom,
+  ) async {
+    final document = PdfDocument(inputBytes: pdfBytes);
+    final extractor = PdfTextExtractor(document);
 
-    for (final day in days) {
-      result[day] = [];
-      final cellList = gridByDay[day] ?? [];
+    final lines = extractor.extractTextLines(startPageIndex: 0, endPageIndex: 0);
+    final words = <TextWord>[];
+    for (final line in lines) {
+      words.addAll(line.wordCollection);
+    }
+    document.dispose();
+
+    // 1. Identify Day Labels and Row Bounds (Y-coordinates)
+    final dayMap = {
+      'MON': 'Monday',
+      'TUES': 'Tuesday',
+      'TUE': 'Tuesday',
+      'WED': 'Wednesday',
+      'THUR': 'Thursday',
+      'THU': 'Thursday',
+      'FRI': 'Friday',
+      'SAT': 'Saturday',
+    };
+
+    final dayWordPositions = <String, double>{};
+    for (final w in words) {
+      final t = w.text.toUpperCase().replaceAll(RegExp(r'[^A-Z]'), '');
+      if (dayMap.containsKey(t)) {
+        final dName = dayMap[t]!;
+        if (!dayWordPositions.containsKey(dName)) {
+          dayWordPositions[dName] = w.bounds.center.dy;
+        }
+      }
+    }
+
+    // Sort days by Y coordinate (top to bottom)
+    final sortedDays = dayWordPositions.keys.toList()
+      ..sort((a, b) => dayWordPositions[a]!.compareTo(dayWordPositions[b]!));
+
+    final dayRows = <_LawDayRow>[];
+    for (int i = 0; i < sortedDays.length; i++) {
+      final dName = sortedDays[i];
+      final cy = dayWordPositions[dName]!;
+      final double prevY;
+      final double nextY;
+      if (sortedDays.length > 1) {
+        final rowSpacing = i == 0
+            ? dayWordPositions[sortedDays[1]]! - cy
+            : cy - dayWordPositions[sortedDays[i - 1]]!;
+        prevY = i == 0 ? cy - rowSpacing * 1.2 : dayWordPositions[sortedDays[i - 1]]!;
+        nextY = i == sortedDays.length - 1 ? cy + rowSpacing * 1.2 : dayWordPositions[sortedDays[i + 1]]!;
+      } else {
+        prevY = cy - 60;
+        nextY = cy + 60;
+      }
+
+      final yTop = (prevY + cy) / 2;
+      final yBottom = (cy + nextY) / 2;
+
+      dayRows.add(_LawDayRow(dayName: dName, yTop: yTop, yBottom: yBottom));
+    }
+
+    // 2. Identify Period Columns (X-coordinates)
+    // Find time header row containing "9.10" or "9:10"
+    final timeHeaderWords = words.where((w) {
+      final t = w.text;
+      return t.contains('9.10') ||
+          t.contains('9:10') ||
+          t.contains('10.11') ||
+          t.contains('10:11') ||
+          t.contains('11.12') ||
+          t.contains('12.13') ||
+          t.toUpperCase().contains('LUNCH') ||
+          t.contains('2-3') ||
+          t.contains('3.01') ||
+          t.contains('4.02') ||
+          t.contains('5.03');
+    }).toList();
+
+    // Group time header words into 9 column centers
+    timeHeaderWords.sort((a, b) => a.bounds.center.dx.compareTo(b.bounds.center.dx));
+
+    final colCenters = <double>[];
+    for (final w in timeHeaderWords) {
+      final x = w.bounds.center.dx;
+      if (colCenters.isEmpty || (x - colCenters.last).abs() > 30) {
+        colCenters.add(x);
+      }
+    }
+
+    final columns = <_LawColumn>[];
+    if (colCenters.length >= 8) {
+      // Build column bounds from centers with seamless transitions
+      final colSpacing = colCenters.length > 1
+          ? (colCenters.last - colCenters.first) / (colCenters.length - 1)
+          : 80.0;
 
       for (int i = 0; i < standardSlots.length; i++) {
         final slotConfig = standardSlots[i];
         final isLunch = slotConfig['isLunch'] == true;
 
-        if (isLunch) {
-          // Add canonical lunch break entry
-          result[day]!.add(
+        final double xStart;
+        final double xEnd;
+
+        if (i < colCenters.length) {
+          final cx = colCenters[i];
+          final prevX = i == 0 ? cx - colSpacing * 1.2 : colCenters[i - 1];
+          final nextX = i == colCenters.length - 1 ? cx + colSpacing * 1.2 : colCenters[i + 1];
+
+          xStart = (prevX + cx) / 2;
+          xEnd = (cx + nextX) / 2;
+        } else {
+          xStart = colCenters.last + (i - colCenters.length + 1) * colSpacing;
+          xEnd = xStart + colSpacing;
+        }
+
+        columns.add(
+          _LawColumn(
+            index: i,
+            xStart: xStart,
+            xEnd: xEnd,
+            startTime: slotConfig['start'] as int,
+            endTime: slotConfig['end'] as int,
+            isLunch: isLunch,
+          ),
+        );
+      }
+    } else {
+      // Fallback to proportional grid layout if headers are partially obscured
+      // Table left typically at ~45, right ~765, total ~720 across 10 cols
+      const left = 95.0; // after Day col
+      const right = 765.0;
+      final slotWidth = (right - left) / 9.0;
+      for (int i = 0; i < standardSlots.length; i++) {
+        final slotConfig = standardSlots[i];
+        columns.add(
+          _LawColumn(
+            index: i,
+            xStart: left + i * slotWidth,
+            xEnd: left + (i + 1) * slotWidth,
+            startTime: slotConfig['start'] as int,
+            endTime: slotConfig['end'] as int,
+            isLunch: slotConfig['isLunch'] == true,
+          ),
+        );
+      }
+    }
+
+    // 3. Extract Grid Cells per Day and Column
+    final result = <String, List<TimetableEntry>>{};
+    for (final day in days) {
+      result[day] = [];
+    }
+
+    for (final row in dayRows) {
+      final dayName = row.dayName;
+      if (!result.containsKey(dayName)) continue;
+
+      for (final col in columns) {
+        if (col.isLunch) {
+          result[dayName]!.add(
             TimetableEntry(
-              id: _generateEntryId(day, i),
+              id: _generateEntryId(dayName, col.index),
               subject: 'Lunch Break',
               component: 'Non-Academic',
               category: EventCategory.lunch,
               batch: 'Whole Class',
-              startTime: slotConfig['start'] as int,
-              endTime: slotConfig['end'] as int,
-              durationMinutes: (slotConfig['end'] as int) - (slotConfig['start'] as int),
+              startTime: col.startTime,
+              endTime: col.endTime,
+              durationMinutes: col.endTime - col.startTime,
               room: null,
               status: 'active',
             ),
@@ -173,22 +348,35 @@ class LawTimetableParser {
           continue;
         }
 
-        // Period slot index (excluding lunch from cellList indexing)
-        final cellIdx = i < 4 ? i : i - 1;
-        if (cellIdx < cellList.length) {
-          final cellText = cellList[cellIdx].trim();
-          if (cellText.isNotEmpty && cellText.toLowerCase() != 'empty' && cellText != '-') {
-            final entry = parseCellContent(
-              cellText: cellText,
-              day: day,
-              slotIndex: i,
-              startTime: slotConfig['start'] as int,
-              endTime: slotConfig['end'] as int,
-              defaultRoom: defaultRoom,
-            );
-            if (entry != null) {
-              result[day]!.add(entry);
+        // Find words strictly inside (xStart, xEnd) and (yTop, yBottom)
+        final cellWords = words.where((w) {
+          final cx = w.bounds.center.dx;
+          final cy = w.bounds.center.dy;
+          return cx >= col.xStart && cx < col.xEnd && cy >= row.yTop && cy < row.yBottom;
+        }).toList();
+
+        if (cellWords.isNotEmpty) {
+          cellWords.sort((a, b) {
+            if ((a.bounds.center.dy - b.bounds.center.dy).abs() > 3) {
+              return a.bounds.center.dy.compareTo(b.bounds.center.dy);
             }
+            return a.bounds.center.dx.compareTo(b.bounds.center.dx);
+          });
+
+          // Join lines based on vertical gaps
+          final cellText = _reconstructCellText(cellWords);
+
+          final entry = parseCellContent(
+            cellText: cellText,
+            day: dayName,
+            slotIndex: col.index,
+            startTime: col.startTime,
+            endTime: col.endTime,
+            defaultRoom: defaultRoom,
+          );
+
+          if (entry != null) {
+            result[dayName]!.add(entry);
           }
         }
       }
@@ -197,12 +385,33 @@ class LawTimetableParser {
     return result;
   }
 
-  /// Parses an individual Law timetable cell text.
-  /// Handles:
-  /// - Multi-line content (Subject on top, Faculty underneath)
-  /// - Tutorial marker: `(U)` -> component: 'Tutorial'
-  /// - Theory marker: `(T)` or default -> component: 'Theory'
-  /// - Faculty name extraction
+  static String _reconstructCellText(List<TextWord> words) {
+    if (words.isEmpty) return '';
+    final lines = <List<String>>[];
+    double? lastY;
+
+    for (final w in words) {
+      final t = w.text.trim();
+      if (t.isEmpty) continue;
+      final y = w.bounds.center.dy;
+      if (lastY == null || (y - lastY).abs() > 4) {
+        lines.add([t]);
+        lastY = y;
+      } else {
+        lines.last.add(t);
+      }
+    }
+
+    return lines.map((l) => l.join(' ')).join('\n');
+  }
+
+  /// Parses a cell's text into a schema-compliant [TimetableEntry].
+  ///
+  /// - Unmarked academic cell -> 'Theory'
+  /// - `(U)` suffix -> 'Tutorial'
+  /// - Strips `(U)` and `(T)` from subject string
+  /// - Strips trailing faculty lines (starts with Prof., Dr., etc.)
+  /// - Defaults batch to 'Whole Class'
   static TimetableEntry? parseCellContent({
     required String cellText,
     required String day,
@@ -212,7 +421,9 @@ class LawTimetableParser {
     String defaultRoom = 'SOL',
   }) {
     final cleaned = cellText.trim();
-    if (cleaned.isEmpty || cleaned.toLowerCase() == 'free slot') return null;
+    if (cleaned.isEmpty || cleaned.toLowerCase() == 'free slot' || cleaned == '-') {
+      return null;
+    }
 
     final lines = cleaned
         .split(RegExp(r'\r?\n'))
@@ -220,41 +431,37 @@ class LawTimetableParser {
         .where((l) => l.isNotEmpty)
         .toList();
 
-    String rawSubject = '';
-    String? facultyName;
+    // Faculty regex (e.g. Prof. Anurag, Dr. Nishit)
+    final facultyRegex = RegExp(
+      r'^(Prof\.?|Dr\.?|Mr\.?|Ms\.?|Mrs\.?|Adv\.?)\s+',
+      caseSensitive: false,
+    );
 
-    // Detect faculty lines (starts with Prof., Dr., Mr., Ms., Adv.)
-    final facultyRegex = RegExp(r'^(Prof\.?|Dr\.?|Mr\.?|Ms\.?|Mrs\.?|Adv\.?)\s+', caseSensitive: false);
     final subjectParts = <String>[];
-
     for (final line in lines) {
-      if (facultyRegex.hasMatch(line)) {
-        facultyName = line;
-      } else {
+      if (!facultyRegex.hasMatch(line)) {
         subjectParts.add(line);
       }
     }
 
-    rawSubject = subjectParts.join(' ').trim();
+    String rawSubject = subjectParts.join(' ').trim();
     if (rawSubject.isEmpty && lines.isNotEmpty) {
       rawSubject = lines.first;
     }
 
-    // Determine Component: U -> Tutorial, T / Unmarked -> Theory
-    String component = 'Theory';
-    bool isTutorial = false;
+    if (rawSubject.isEmpty || rawSubject.toLowerCase() == 'lunch') return null;
 
-    if (rawSubject.contains('(U)') || rawSubject.endsWith(' (U)') || rawSubject.endsWith('(U)')) {
+    // Determine Component: (U) -> Tutorial, (T) or unmarked -> Theory
+    String component = 'Theory';
+    if (rawSubject.contains('(U)') || rawSubject.endsWith(' (U)')) {
       component = 'Tutorial';
-      isTutorial = true;
       rawSubject = rawSubject.replaceAll('(U)', '').trim();
-    } else if (rawSubject.contains('(T)') || rawSubject.endsWith(' (T)') || rawSubject.endsWith('(T)')) {
+    } else if (rawSubject.contains('(T)') || rawSubject.endsWith(' (T)')) {
       component = 'Theory';
       rawSubject = rawSubject.replaceAll('(T)', '').trim();
     }
 
-    // Clean any trailing punctuation or whitespace
-    rawSubject = rawSubject.replaceAll(RegExp(r'[\s\-_\/]+$'), '').trim();
+    rawSubject = rawSubject.replaceAll(RegExp(r'[\s\-_\/]+$'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
 
     return TimetableEntry(
       id: _generateEntryId(day, slotIndex),
@@ -278,63 +485,7 @@ class LawTimetableParser {
     }
   }
 
-  /// Parses PDF bytes directly using `syncfusion_flutter_pdf`.
-  /// Performs coordinate and text extraction tailored to the NMIMS Law layout.
-  static Future<Map<String, List<TimetableEntry>>> parseTimetable(
-    Uint8List pdfBytes,
-    String defaultRoom,
-  ) async {
-    final document = PdfDocument(inputBytes: pdfBytes);
-    final extractor = PdfTextExtractor(document);
-
-    final lines = extractor.extractTextLines(startPageIndex: 0, endPageIndex: 0);
-    final words = <TextWord>[];
-    for (final line in lines) {
-      words.addAll(line.wordCollection);
-    }
-    document.dispose();
-
-    // Map day rows: MON, TUES/TUE, WED, THUR/THU, FRI, SAT
-    final dayNames = {
-      'MON': 'Monday',
-      'TUES': 'Tuesday',
-      'TUE': 'Tuesday',
-      'WED': 'Wednesday',
-      'THUR': 'Thursday',
-      'THU': 'Thursday',
-      'FRI': 'Friday',
-      'SAT': 'Saturday',
-    };
-
-    // Find bounding Y positions for each day row
-    final dayRowBounds = <String, double>{};
-    for (final word in words) {
-      final text = word.text.toUpperCase().replaceAll(RegExp(r'[^A-Z]'), '');
-      if (dayNames.containsKey(text)) {
-        dayRowBounds[dayNames[text]!] = word.bounds.center.dy;
-      }
-    }
-
-    // If coordinate-based clustering is not possible (e.g. OCR/flattened text),
-    // fallback to text line extraction
-    final extractedText = await extractText(pdfBytes);
-    return parseFromText(extractedText, defaultRoom);
-  }
-
-  /// Fallback text stream parser for Law timetables.
-  static Map<String, List<TimetableEntry>> parseFromText(
-    String fullText,
-    String defaultRoom,
-  ) {
-    // If text contains grid data, populate structured map
-    final result = <String, List<TimetableEntry>>{};
-    for (final day in days) {
-      result[day] = [];
-    }
-    return result;
-  }
-
-  /// Extracts text from PDF bytes.
+  /// Extracts full text from PDF bytes.
   static Future<String> extractText(Uint8List pdfBytes) async {
     final document = PdfDocument(inputBytes: pdfBytes);
     String text = '';
