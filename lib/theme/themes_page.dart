@@ -83,8 +83,9 @@ class _ThemesPageState extends State<ThemesPage> {
                 TutorialTarget(
                   id: 'theme_skin_gallery',
                   child: ValueListenableBuilder<bool>(
-                    valueListenable: GamificationService.instance.isChampionNotifier,
-                    builder: (context, isChampion, _) {
+                    valueListenable:
+                        GamificationService.instance.championThemeUnlockedNotifier,
+                    builder: (context, hasThemeAccess, _) {
                       return Column(
                         children: [
                           for (final theme in SchedlyVisualTheme.values) ...[
@@ -92,11 +93,12 @@ class _ThemesPageState extends State<ThemesPage> {
                               theme: theme,
                               isSelected: activeTheme == theme,
                               isDark: isDark,
-                              isChampion: isChampion,
+                              isChampion: hasThemeAccess,
                               colorScheme: colorScheme,
                               sem: sem,
                               onTap: () {
-                                if (theme == SchedlyVisualTheme.champion && !isChampion) {
+                                if (theme == SchedlyVisualTheme.champion &&
+                                    !hasThemeAccess) {
                                   AppDialogs.showWarning(
                                     context: context,
                                     title: 'Champion Theme Locked',
@@ -295,11 +297,23 @@ class _ThemeCard extends StatelessWidget {
                           vertical: AppSpacing.xs,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.8),
+                          color: const Color(0xFF0C0A10).withValues(alpha: 0.9),
                           borderRadius: BorderRadius.circular(AppRadius.full),
                           border: Border.all(
-                            color: const Color(0xFFE5A93C).withValues(alpha: 0.6),
+                            color: const Color(0xFFFFD700).withValues(
+                              alpha: isChampion ? 0.85 : 0.5,
+                            ),
+                            width: 1.2,
                           ),
+                          boxShadow: isChampion
+                              ? [
+                                  BoxShadow(
+                                    color: const Color(0xFFFFD700)
+                                        .withValues(alpha: 0.25),
+                                    blurRadius: 8,
+                                  ),
+                                ]
+                              : null,
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -309,16 +323,16 @@ class _ThemeCard extends StatelessWidget {
                                   ? Icons.workspace_premium_rounded
                                   : Icons.lock_rounded,
                               size: 11,
-                              color: const Color(0xFFE5A93C),
+                              color: const Color(0xFFFFD700),
                             ),
                             const SizedBox(width: 4),
                             Text(
                               isChampion ? 'CHAMPION UNLOCKED' : 'CHAMPION ONLY',
-                              style: GoogleFonts.inter(
-                                fontSize: 9,
+                              style: GoogleFonts.outfit(
+                                fontSize: 9.5,
                                 fontWeight: FontWeight.w800,
-                                color: const Color(0xFFE5A93C),
-                                letterSpacing: 0.5,
+                                color: const Color(0xFFFFD700),
+                                letterSpacing: 0.6,
                               ),
                             ),
                           ],

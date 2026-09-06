@@ -225,18 +225,550 @@ class DefaultSkin extends VisualSkin {
   }
 }
 
-class ChampionSkin extends DefaultSkin {
-  const ChampionSkin({required super.isDark});
+// ═════════════════════════════════════════════════════════════════════════════
+// 1.B CHAMPION SKIN — ROYAL OBSIDIAN & 24K METALLIC GOLD (COMPETITIVE REWARD)
+// ═════════════════════════════════════════════════════════════════════════════
+
+class ChampionSkin extends VisualSkin {
+  const ChampionSkin({required super.isDark})
+    : super(visualTheme: SchedlyVisualTheme.champion);
 
   @override
-  SchedlyVisualTheme get visualTheme => SchedlyVisualTheme.champion;
+  Color get primaryAccent =>
+      isDark ? const Color(0xFFFFD700) : const Color(0xFFD97706);
 
   @override
-  Color get primaryAccent => const Color(0xFFE5A93C);
+  Color get surfaceBase =>
+      isDark ? const Color(0xFF08070B) : const Color(0xFFFAF7F2);
+
+  @override
+  Color get surfaceElevated =>
+      isDark ? const Color(0xFF131118) : const Color(0xFFF3ECE0);
+
+  @override
+  Color get textPrimary =>
+      isDark ? const Color(0xFFFFFDF5) : const Color(0xFF1E170A);
+
+  @override
+  Color get textMuted =>
+      isDark ? const Color(0xFFC7B696) : const Color(0xFF7A6B52);
 
   @override
   Color get borderLine =>
-      isDark ? const Color(0x33E5A93C) : const Color(0x33B4831B);
+      isDark ? const Color(0x40FFD700) : const Color(0x40B4831B);
+
+  @override
+  SkinCardRecipe get cardRecipe => _ChampionCardRecipe(isDark: isDark);
+
+  @override
+  SkinBadgeRecipe get badgeRecipe => _ChampionBadgeRecipe(isDark: isDark);
+
+  @override
+  SkinIconContainerRecipe get iconRecipe => _ChampionIconRecipe(isDark: isDark);
+
+  @override
+  SkinDaySelectorRecipe get daySelectorRecipe =>
+      _ChampionDaySelectorRecipe(isDark: isDark);
+
+  @override
+  SkinNavigationRecipe get navigationRecipe =>
+      _ChampionNavigationRecipe(isDark: isDark);
+
+  @override
+  SkinHeaderRecipe get headerRecipe => _ChampionHeaderRecipe(isDark: isDark);
+
+  @override
+  IconData getSubjectIcon(String subject, {String? component}) {
+    final s = subject.toLowerCase();
+    if (s.contains('dsa') ||
+        s.contains('algorithm') ||
+        s.contains('data struct') ||
+        s.contains('code') ||
+        s.contains('program')) {
+      return Icons.military_tech_rounded;
+    }
+    if (s.contains('physics') || s.contains('chem') || s.contains('lab')) {
+      return Icons.biotech_rounded;
+    }
+    if (s.contains('math') || s.contains('stats') || s.contains('calc')) {
+      return Icons.auto_awesome_rounded;
+    }
+    if (s.contains('lunch') || s.contains('break')) {
+      return Icons.local_cafe_rounded;
+    }
+    return Icons.workspace_premium_rounded;
+  }
+}
+
+class _ChampionCardRecipe extends SkinCardRecipe {
+  final bool isDark;
+  _ChampionCardRecipe({required this.isDark});
+
+  @override
+  BorderRadius get borderRadius => BorderRadius.circular(16.0);
+
+  @override
+  double get leftRailWidth => 4.5;
+
+  @override
+  EdgeInsets get padding => const EdgeInsets.fromLTRB(16, 14, 16, 14);
+
+  @override
+  BoxDecoration decoration({
+    required BuildContext context,
+    required Color leftRailColor,
+    bool isCancelled = false,
+    bool isHighlighted = false,
+  }) {
+    final sem = Theme.of(context).extension<AppSemanticColors>();
+    final cancelledColor = sem?.cancelled ?? const Color(0xFFEF4444);
+
+    // 100% solid imperial obsidian background guaranteeing zero transparency & peak legibility
+    final solidBg = isCancelled
+        ? cancelledColor.withValues(alpha: 0.08)
+        : (isDark ? const Color(0xFF131118) : Colors.white);
+
+    // Metallic gold border with bevel luster
+    final borderColor = isCancelled
+        ? cancelledColor.withValues(alpha: 0.6)
+        : (isHighlighted
+            ? const Color(0xFFFFD700)
+            : (isDark ? const Color(0x47FFD700) : const Color(0x3DB4831B)));
+
+    return BoxDecoration(
+      color: solidBg,
+      borderRadius: borderRadius,
+      border: Border.all(
+        color: borderColor,
+        width: isHighlighted ? 1.6 : 1.0,
+      ),
+      boxShadow: [
+        // Specular gold ambient bloom on active card, calm metallic depth on standard card
+        BoxShadow(
+          color: (isDark ? const Color(0xFFFFD700) : const Color(0xFFD97706))
+              .withValues(alpha: isHighlighted ? 0.24 : (isDark ? 0.07 : 0.03)),
+          blurRadius: isHighlighted ? 22 : 12,
+          offset: const Offset(0, 3),
+        ),
+        // Directional metallic specular highlight on the top edge
+        BoxShadow(
+          color: const Color(0xFFFFE57F).withValues(
+            alpha: isHighlighted ? (isDark ? 0.35 : 0.20) : (isDark ? 0.10 : 0.05),
+          ),
+          blurRadius: 1,
+          offset: const Offset(0, -1),
+        ),
+        // Heavy obsidian drop shadow for tactical separation from animated canvas
+        BoxShadow(
+          color: Colors.black.withValues(alpha: isDark ? 0.60 : 0.08),
+          blurRadius: 10,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    );
+  }
+}
+
+class _ChampionBadgeRecipe extends SkinBadgeRecipe {
+  final bool isDark;
+  _ChampionBadgeRecipe({required this.isDark});
+
+  @override
+  Widget buildBadge(
+    BuildContext context, {
+    required String label,
+    required Color color,
+    bool isCancelled = false,
+  }) {
+    if (isCancelled) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: color.withValues(alpha: 0.7), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.2),
+              blurRadius: 6,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.warning_amber_rounded, size: 10, color: color),
+            const SizedBox(width: 3),
+            Text(
+              'CANCELLED',
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 9,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.8,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (label.isEmpty) return const SizedBox.shrink();
+
+    final goldColor = isDark ? const Color(0xFFFFD700) : const Color(0xFFB4831B);
+    final badgeBg = isDark ? const Color(0xFF1B1722) : const Color(0xFFF7EEDD);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: badgeBg,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: goldColor.withValues(alpha: isDark ? 0.45 : 0.35),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: goldColor.withValues(alpha: isDark ? 0.12 : 0.06),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 3.5,
+            height: 3.5,
+            decoration: BoxDecoration(
+              color: goldColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 4.5),
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.8,
+              color: goldColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChampionIconRecipe extends SkinIconContainerRecipe {
+  final bool isDark;
+  _ChampionIconRecipe({required this.isDark});
+
+  @override
+  Widget buildContainer(
+    BuildContext context, {
+    required IconData icon,
+    required Color color,
+    bool isCancelled = false,
+    double size = 50,
+  }) {
+    final goldBorder = (isDark ? const Color(0xFFFFD700) : const Color(0xFFB4831B))
+        .withValues(alpha: isDark ? 0.45 : 0.35);
+    final iconColor = isCancelled
+        ? color
+        : (isDark ? const Color(0xFFFFD700) : const Color(0xFFD97706));
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? const [Color(0xFF231C2D), Color(0xFF14101A)]
+              : const [Color(0xFFFAF3E6), Color(0xFFEFE2CB)],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: goldBorder, width: 1.2),
+        boxShadow: [
+          // Top edge specular glint
+          BoxShadow(
+            color: const Color(0xFFFFE57F).withValues(alpha: isDark ? 0.22 : 0.12),
+            blurRadius: 1,
+            offset: const Offset(0, -1),
+          ),
+          BoxShadow(
+            color: (isDark ? const Color(0xFFFFD700) : const Color(0xFFB4831B))
+                .withValues(alpha: isDark ? 0.16 : 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.40 : 0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Icon(icon, color: iconColor, size: size * 0.48),
+      ),
+    );
+  }
+}
+
+class _ChampionDaySelectorRecipe extends SkinDaySelectorRecipe {
+  final bool isDark;
+  _ChampionDaySelectorRecipe({required this.isDark});
+
+  @override
+  Widget buildDayPill(
+    BuildContext context, {
+    required String dayName,
+    required bool isSelected,
+    required bool isToday,
+    required VoidCallback onTap,
+  }) {
+    final goldColor = isDark ? const Color(0xFFFFD700) : const Color(0xFFD97706);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDark
+                      ? const [Color(0xFF2E2412), Color(0xFF181308)]
+                      : const [Color(0xFFFDF6E2), Color(0xFFF5E8C8)],
+                )
+              : null,
+          color: isSelected
+              ? null
+              : (isDark ? const Color(0xFF120F16) : const Color(0xFFF3ECE0)),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? goldColor
+                : (isToday
+                    ? goldColor.withValues(alpha: 0.55)
+                    : (isDark ? const Color(0x33FFD700) : const Color(0x30B4831B))),
+            width: isSelected ? 1.5 : 1.0,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFFFFE57F).withValues(alpha: isDark ? 0.30 : 0.18),
+                    blurRadius: 1,
+                    offset: const Offset(0, -1),
+                  ),
+                  BoxShadow(
+                    color: goldColor.withValues(alpha: isDark ? 0.28 : 0.20),
+                    blurRadius: 12,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              dayName,
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected
+                    ? goldColor
+                    : (isDark ? const Color(0xFFC7B696) : const Color(0xFF7A6B52)),
+                letterSpacing: 0.6,
+              ),
+            ),
+            if (isToday) ...[
+              const SizedBox(height: 3),
+              Transform.rotate(
+                angle: 0.785398, // 45 degrees in radians
+                child: Container(
+                  width: 4,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: goldColor,
+                    borderRadius: BorderRadius.circular(0.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: goldColor.withValues(alpha: 0.8),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChampionNavigationRecipe extends SkinNavigationRecipe {
+  final bool isDark;
+  _ChampionNavigationRecipe({required this.isDark});
+
+  @override
+  BoxDecoration decoration(BuildContext context) {
+    return BoxDecoration(
+      color: isDark ? const Color(0xFF0B0910) : const Color(0xFFFAF7F2),
+      border: Border(
+        top: BorderSide(
+          color: (isDark ? const Color(0xFFFFD700) : const Color(0xFFB4831B))
+              .withValues(alpha: isDark ? 0.40 : 0.30),
+          width: 1.0,
+        ),
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: isDark ? 0.6 : 0.08),
+          blurRadius: 14,
+          offset: const Offset(0, -3),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Color get activeItemColor =>
+      isDark ? const Color(0xFFFFD700) : const Color(0xFFD97706);
+
+  @override
+  Color get inactiveItemColor =>
+      isDark ? const Color(0xFF9E8F76) : const Color(0xFF8C7D64);
+
+  @override
+  Widget buildNavIndicator({required bool isSelected, required Widget child}) {
+    if (!isSelected) return child;
+    final goldColor = isDark ? const Color(0xFFFFD700) : const Color(0xFFD97706);
+    return Stack(
+      alignment: Alignment.topCenter,
+      children: [
+        Positioned(
+          top: 0,
+          child: Container(
+            width: 26,
+            height: 2.5,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  goldColor.withValues(alpha: 0.2),
+                  goldColor,
+                  goldColor.withValues(alpha: 0.2),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(2),
+              boxShadow: [
+                BoxShadow(
+                  color: goldColor.withValues(alpha: 0.85),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+          ),
+        ),
+        child,
+      ],
+    );
+  }
+}
+
+class _ChampionHeaderRecipe extends SkinHeaderRecipe {
+  final bool isDark;
+  _ChampionHeaderRecipe({required this.isDark});
+
+  @override
+  TextStyle get titleStyle => TextStyle(
+    fontFamily: 'Outfit',
+    fontSize: 22,
+    fontWeight: FontWeight.w800,
+    color: isDark ? const Color(0xFFFFFDF5) : const Color(0xFF1E170A),
+    letterSpacing: 0.4,
+  );
+
+  @override
+  TextStyle get subtitleStyle => TextStyle(
+    fontFamily: 'Inter',
+    fontSize: 13,
+    fontWeight: FontWeight.w500,
+    color: isDark ? const Color(0xFFC7B696) : const Color(0xFF7A6B52),
+  );
+
+  @override
+  Widget buildActionPill(
+    BuildContext context, {
+    required String label,
+    IconData? icon,
+    required VoidCallback? onTap,
+  }) {
+    final goldColor = isDark ? const Color(0xFFFFD700) : const Color(0xFFB4831B);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6.5),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark
+                ? const [Color(0xFF221C2B), Color(0xFF15111B)]
+                : const [Color(0xFFFAF2E3), Color(0xFFEFE1C9)],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: goldColor.withValues(alpha: isDark ? 0.50 : 0.40),
+            width: 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: goldColor.withValues(alpha: isDark ? 0.16 : 0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 13, color: goldColor),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.4,
+                color: isDark ? const Color(0xFFFFFDF5) : const Color(0xFF1E170A),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color goldBorderColor(Color base) => base.withValues(alpha: 0.45);
 }
 
 class _DefaultCardRecipe extends SkinCardRecipe {
