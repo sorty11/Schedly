@@ -3,6 +3,8 @@ import 'period_config.dart';
 
 class SectionConfig {
   final String id;
+  final String school;
+  final String? program;
   final String academicYear;
   final String branch;
   final String division;
@@ -16,6 +18,8 @@ class SectionConfig {
 
   SectionConfig({
     required this.id,
+    this.school = 'STME',
+    this.program,
     required this.academicYear,
     required this.branch,
     required this.division,
@@ -41,10 +45,16 @@ class SectionConfig {
       }
     }
 
+    final branch = json['branch'] as String? ?? '';
+    final program = json['program'] as String? ?? (branch.isNotEmpty ? branch : null);
+    final school = json['school'] as String? ?? 'STME';
+
     return SectionConfig(
       id: id,
+      school: school,
+      program: program,
       academicYear: json['academicYear'] as String? ?? '',
-      branch: json['branch'] as String? ?? '',
+      branch: branch,
       division: json['division'] as String? ?? '',
       semester: json['semester'] as String?,
       active: json['active'] as bool? ?? true,
@@ -74,6 +84,8 @@ class SectionConfig {
 
   Map<String, dynamic> toJson() {
     return {
+      'school': school,
+      if (program != null) 'program': program,
       'academicYear': academicYear,
       'branch': branch,
       'division': division,

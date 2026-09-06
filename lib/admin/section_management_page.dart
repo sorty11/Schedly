@@ -265,6 +265,7 @@ class _CreateSectionSheet extends StatefulWidget {
 }
 
 class _CreateSectionSheetState extends State<_CreateSectionSheet> {
+  String _selectedSchool = 'STME';
   final _yearCtrl = TextEditingController();
   final _branchCtrl = TextEditingController();
   final _divCtrl = TextEditingController();
@@ -276,6 +277,7 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
   void initState() {
     super.initState();
     if (widget.cloneFromData != null) {
+      _selectedSchool = widget.cloneFromData!['school'] as String? ?? 'STME';
       _yearCtrl.text = widget.cloneFromData!['academicYear'] ?? '';
       _branchCtrl.text = widget.cloneFromData!['branch'] ?? '';
       _divCtrl.text = widget.cloneFromData!['division'] ?? '';
@@ -344,8 +346,13 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
 
     setState(() => _loading = true);
     try {
-      final sectionId =
-          '${year.replaceAll(' ', '')}_${branch.replaceAll(' ', '')}_$div';
+      final sectionId = NMIMSStructure.generateSectionId(
+        school: _selectedSchool,
+        year: year,
+        branchOrProgram: branch,
+        semester: sem.isNotEmpty ? sem : null,
+        division: div,
+      );
 
       final doc = await FirebaseFirestore.instance
           .collection('sections')
@@ -367,6 +374,8 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
 
       if (widget.cloneFromData != null) {
         dataToSave = Map<String, dynamic>.from(widget.cloneFromData!);
+        dataToSave['school'] = _selectedSchool;
+        dataToSave['program'] = branch;
         dataToSave['academicYear'] = year;
         dataToSave['branch'] = branch;
         dataToSave['division'] = div;
@@ -442,6 +451,8 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
 
         final config = SectionConfig(
           id: sectionId,
+          school: _selectedSchool,
+          program: branch,
           academicYear: year,
           branch: branch,
           division: div,
@@ -502,12 +513,21 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
   }
 
   String get _generatedId {
-    final year = _yearCtrl.text.trim().replaceAll(' ', '');
-    final branch = _branchCtrl.text.trim().replaceAll(' ', '');
+    final year = _yearCtrl.text.trim();
+    final branch = _branchCtrl.text.trim();
     final div = _divCtrl.text.trim();
-    if (year.isEmpty && branch.isEmpty && div.isEmpty)
+    if (year.isEmpty && branch.isEmpty && div.isEmpty) {
       return 'Section ID Preview';
-    return '${year.isEmpty ? 'Year' : year}_${branch.isEmpty ? 'Branch' : branch}_${div.isEmpty ? 'Div' : div}';
+    }
+    return NMIMSStructure.generateSectionId(
+      school: _selectedSchool,
+      year: year.isEmpty ? 'Year' : year,
+      branchOrProgram: branch.isEmpty ? 'Branch' : branch,
+      semester: _semesterCtrl.text.trim().isNotEmpty
+          ? _semesterCtrl.text.trim()
+          : null,
+      division: div.isEmpty ? 'Div' : div,
+    );
   }
 
   @override
@@ -545,6 +565,35 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
                   const SizedBox(height: AppSpacing.md),
 
                   DropdownButtonFormField<String>(
+                    value: _selectedSchool,
+                    decoration: InputDecoration(
+                      labelText: 'School',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    items: NMIMSStructure.schools
+                        .map((s) => DropdownMenuItem(
+                              value: s.id,
+                              child: Text('${s.id} (${s.name})'),
+                            ))
+                        .toList(),
+                    onChanged: (val) {
+                      if (val != null && val != _selectedSchool) {
+                        setState(() {
+                          _selectedSchool = val;
+                          _yearCtrl.text = '';
+                          _branchCtrl.text = '';
+                          _divCtrl.text = '';
+                          _semesterCtrl.text = '';
+                          _existingDivisions = [];
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  DropdownButtonFormField<String>(
                     value: _yearCtrl.text.isEmpty ? null : _yearCtrl.text,
                     decoration: InputDecoration(
                       labelText: 'Academic Year',
@@ -552,7 +601,9 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    items: NMIMSStructure.academicYears
+                    items: (_selectedSchool == 'SOL'
+                            ? NMIMSStructure.solYears
+                            : NMIMSStructure.getSchool(_selectedSchool).academicYears)
                         .map((y) => DropdownMenuItem(value: y, child: Text(y)))
                         .toList(),
                     onChanged: (val) {
@@ -564,12 +615,21 @@ class _CreateSectionSheetState extends State<_CreateSectionSheet> {
                   DropdownButtonFormField<String>(
                     value: _branchCtrl.text.isEmpty ? null : _branchCtrl.text,
                     decoration: InputDecoration(
-                      labelText: 'Department/Branch',
+                      labelText: _selectedSchool == 'SOL'
+                          ? 'Program'
+                          : 'Department/Branch',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    items: NMIMSStructure.branches
+                    items: (_selectedSchool == 'SOL'
+                            ? ['B.A. LL.B. (Hons.)', 'B.B.A. LL.B. (Hons.)']
+                            : (_selectedSchool == 'STME'
+                                ? NMIMSStructure.branches
+                                : NMIMSStructure.getSchool(_selectedSchool)
+                                    .programs
+                                    .map((p) => p.name)
+                                    .toList()))
                         .map((b) => DropdownMenuItem(value: b, child: Text(b)))
                         .toList(),
                     onChanged: (val) {

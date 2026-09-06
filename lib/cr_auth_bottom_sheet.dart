@@ -27,6 +27,7 @@ class CRAuthBottomSheet extends StatefulWidget {
 }
 
 class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
+  String? _selectedSchool = 'STME';
   String? _selectedYear;
   String? _selectedBranch;
   String? _selectedDivision;
@@ -68,17 +69,34 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
   }
 
   void _checkSectionStatus() {
-    if (_selectedYear == null ||
-        _selectedBranch == null ||
-        _selectedDivision == null)
-      return;
+    if (_selectedDivision == null) return;
 
-    _sectionId =
-        '${_selectedYear!.replaceAll(' ', '')}_${_selectedBranch!.replaceAll(' ', '')}_$_selectedDivision';
+    final matchingDocs = _activeSections.where((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      final school = (data['school'] as String?) ?? 'STME';
+      final prog = (data['program'] as String?) ?? (data['branch'] as String?) ?? '';
+      final year = (data['academicYear'] as String?) ?? '';
+      final div = (data['division'] as String?) ?? '';
+      return school == (_selectedSchool ?? 'STME') &&
+          prog == _selectedBranch &&
+          year == _selectedYear &&
+          div == _selectedDivision;
+    }).toList();
 
-    setState(() {
-      _sectionExists = _activeSections.any((doc) => doc.id == _sectionId);
-    });
+    if (matchingDocs.isNotEmpty) {
+      _sectionId = matchingDocs.first.id;
+      _sectionExists = true;
+    } else {
+      _sectionId = NMIMSStructure.generateSectionId(
+        school: _selectedSchool,
+        year: _selectedYear ?? '',
+        branchOrProgram: _selectedBranch ?? '',
+        division: _selectedDivision ?? '',
+      );
+      _sectionExists = false;
+    }
+
+    setState(() {});
   }
 
   Future<void> _authenticate() async {
@@ -165,6 +183,8 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
           br: _selectedBranch!,
           div: _selectedDivision!,
           secId: _sectionId!,
+          schoolName: _selectedSchool,
+          programName: _selectedBranch,
         );
 
         // Update notification & topic subscriptions after role is saved
@@ -196,6 +216,7 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
           context,
           MaterialPageRoute(
             builder: (_) => CRSetupWizard(
+              initialSchool: _selectedSchool,
               initialYear: _selectedYear,
               initialBranch: _selectedBranch,
               initialDivision: _selectedDivision,
@@ -265,44 +286,76 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final activeYears =
-        _activeSections.map((d) => d['academicYear'] as String).toSet().toList()
-          ..sort();
-    if (_selectedYear != null && !activeYears.contains(_selectedYear)) {
-      _selectedYear = null;
+    String getDocSchool(DocumentSnapshot d) {
+      final data = d.data() as Map<String, dynamic>;
+      final s = data['school'] as String?;
+      return (s != null && s.isNotEmpty) ? s : 'STME';
+    }
+
+    String getDocProgram(DocumentSnapshot d) {
+      final data = d.data() as Map<String, dynamic>;
+      return (data['program'] as String?) ?? (data['branch'] as String?) ?? '';
+    }
+
+    final activeSchools = _activeSections.map(getDocSchool).toSet().toList()..sort();
+    if (_selectedSchool == null) {
+      if (activeSchools.contains('STME')) {
+        _selectedSchool = 'STME';
+      } else if (activeSchools.isNotEmpty) {
+        _selectedSchool = activeSchools.first;
+      }
+    } else if (activeSchools.isNotEmpty && !activeSchools.contains(_selectedSchool)) {
+      _selectedSchool = activeSchools.first;
       _selectedBranch = null;
+      _selectedYear = null;
       _selectedDivision = null;
     }
 
-    List<String> activeBranches = [];
-    if (_selectedYear != null) {
-      activeBranches =
-          _activeSections
-              .where((d) => d['academicYear'] == _selectedYear)
-              .map((d) => d['branch'] as String)
-              .toSet()
-              .toList()
-            ..sort();
-      if (_selectedBranch != null &&
-          !activeBranches.contains(_selectedBranch)) {
+    List<String> activePrograms = [];
+    if (_selectedSchool != null) {
+      activePrograms = _activeSections
+          .where((d) => getDocSchool(d) == _selectedSchool)
+          .map(getDocProgram)
+          .where((p) => p.isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+      if (_selectedBranch != null && !activePrograms.contains(_selectedBranch)) {
         _selectedBranch = null;
+        _selectedYear = null;
+        _selectedDivision = null;
+      }
+    }
+
+    List<String> activeYears = [];
+    if (_selectedSchool != null && _selectedBranch != null) {
+      activeYears = _activeSections
+          .where((d) =>
+              getDocSchool(d) == _selectedSchool &&
+              getDocProgram(d) == _selectedBranch)
+          .map((d) => (d.data() as Map<String, dynamic>)['academicYear'] as String? ?? '')
+          .where((y) => y.isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+      if (_selectedYear != null && !activeYears.contains(_selectedYear)) {
+        _selectedYear = null;
         _selectedDivision = null;
       }
     }
 
     List<String> activeDivisions = [];
-    if (_selectedYear != null && _selectedBranch != null) {
-      activeDivisions =
-          _activeSections
-              .where(
-                (d) =>
-                    d['academicYear'] == _selectedYear &&
-                    d['branch'] == _selectedBranch,
-              )
-              .map((d) => d['division'] as String)
-              .toSet()
-              .toList()
-            ..sort();
+    if (_selectedSchool != null && _selectedBranch != null && _selectedYear != null) {
+      activeDivisions = _activeSections
+          .where((d) =>
+              getDocSchool(d) == _selectedSchool &&
+              getDocProgram(d) == _selectedBranch &&
+              (d.data() as Map<String, dynamic>)['academicYear'] == _selectedYear)
+          .map((d) => (d.data() as Map<String, dynamic>)['division'] as String? ?? '')
+          .where((div) => div.isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
       if (_selectedDivision != null &&
           !activeDivisions.contains(_selectedDivision)) {
         _selectedDivision = null;
@@ -365,41 +418,24 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
-                  DropdownButtonFormField<String>(
-                    value: _selectedYear,
-                    decoration: _compactDecoration(
-                      'Academic Year',
-                      Icons.school_rounded,
-                    ),
-                    items: activeYears
-                        .map((y) => DropdownMenuItem(value: y, child: Text(y)))
-                        .toList(),
-                    onChanged: (val) {
-                      setState(() {
-                        _selectedYear = val;
-                        _selectedBranch = null;
-                        _selectedDivision = null;
-                        _sectionExists = false;
-                        _passwordController.clear();
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  if (_selectedYear != null) ...[
+                  if (activeSchools.length > 1) ...[
                     DropdownButtonFormField<String>(
-                      value: _selectedBranch,
+                      value: _selectedSchool,
                       decoration: _compactDecoration(
-                        'Branch',
-                        Icons.account_tree_rounded,
+                        'School',
+                        Icons.account_balance_rounded,
                       ),
-                      items: activeBranches
-                          .map(
-                            (b) => DropdownMenuItem(value: b, child: Text(b)),
-                          )
+                      items: activeSchools
+                          .map((s) => DropdownMenuItem(
+                                value: s,
+                                child: Text(s),
+                              ))
                           .toList(),
                       onChanged: (val) {
                         setState(() {
-                          _selectedBranch = val;
+                          _selectedSchool = val;
+                          _selectedBranch = null;
+                          _selectedYear = null;
                           _selectedDivision = null;
                           _sectionExists = false;
                           _passwordController.clear();
@@ -408,7 +444,48 @@ class _CRAuthBottomSheetState extends State<CRAuthBottomSheet> {
                     ),
                     const SizedBox(height: 12),
                   ],
+                  DropdownButtonFormField<String>(
+                    value: _selectedBranch,
+                    decoration: _compactDecoration(
+                      'Program / Branch',
+                      Icons.account_tree_rounded,
+                    ),
+                    items: activePrograms
+                        .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                        .toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedBranch = val;
+                        _selectedYear = null;
+                        _selectedDivision = null;
+                        _sectionExists = false;
+                        _passwordController.clear();
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
                   if (_selectedBranch != null) ...[
+                    DropdownButtonFormField<String>(
+                      value: _selectedYear,
+                      decoration: _compactDecoration(
+                        'Academic Year',
+                        Icons.school_rounded,
+                      ),
+                      items: activeYears
+                          .map((y) => DropdownMenuItem(value: y, child: Text(y)))
+                          .toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedYear = val;
+                          _selectedDivision = null;
+                          _sectionExists = false;
+                          _passwordController.clear();
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (_selectedYear != null) ...[
                     if (activeDivisions.isEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),

@@ -24,6 +24,9 @@ class AppSettings {
   static String? branch;
   static String? division;
   static String? sectionId;
+  static String? school;
+  static String? program;
+  static String? semester;
 
   // Faculty fields
   static String? facultyId;
@@ -88,6 +91,10 @@ class AppSettings {
     branch = prefs.getString('branch');
     division = prefs.getString('division');
     sectionId = prefs.getString('section_id');
+
+    school = prefs.getString('school') ?? 'STME';
+    program = prefs.getString('program') ?? branch;
+    semester = prefs.getString('semester');
   }
 
   static Future<void> loadFacultyDetails() async {
@@ -179,6 +186,9 @@ class AppSettings {
     required String br,
     required String div,
     required String secId,
+    String? schoolName,
+    String? programName,
+    String? sem,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     studentName = name;
@@ -188,6 +198,9 @@ class AppSettings {
     branch = br;
     division = div;
     sectionId = secId;
+    school = schoolName ?? 'STME';
+    program = programName ?? br;
+    semester = sem;
 
     await prefs.setString('student_name', name);
     await prefs.setString('student_roll_no', rollNo);
@@ -200,6 +213,20 @@ class AppSettings {
     await prefs.setString('branch', br);
     await prefs.setString('division', div);
     await prefs.setString('section_id', secId);
+
+    if (schoolName != null) {
+      await prefs.setString('school', schoolName);
+    } else {
+      await prefs.setString('school', 'STME');
+    }
+    if (programName != null) {
+      await prefs.setString('program', programName);
+    }
+    if (sem != null) {
+      await prefs.setString('semester', sem);
+    } else {
+      await prefs.remove('semester');
+    }
   }
 
   static Future<void> saveStudentBatch(String batch) async {

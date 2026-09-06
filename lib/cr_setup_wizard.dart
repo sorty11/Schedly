@@ -20,12 +20,14 @@ import 'widgets/schedly_text_field.dart';
 import 'utils/responsive_utils.dart';
 
 class CRSetupWizard extends StatefulWidget {
+  final String? initialSchool;
   final String? initialYear;
   final String? initialBranch;
   final String? initialDivision;
 
   const CRSetupWizard({
     super.key,
+    this.initialSchool,
     this.initialYear,
     this.initialBranch,
     this.initialDivision,
@@ -43,8 +45,10 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
   final _formKey1 = GlobalKey<FormState>();
   final _formKey2 = GlobalKey<FormState>();
 
+  String _selectedSchool = 'STME';
   String? _selectedYear;
   String? _selectedBranch;
+  String? _selectedSemester;
 
   final _divisionController = TextEditingController();
   final _masterPasswordController = TextEditingController();
@@ -56,6 +60,7 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
   @override
   void initState() {
     super.initState();
+    _selectedSchool = widget.initialSchool ?? 'STME';
     _selectedYear = widget.initialYear;
     _selectedBranch = widget.initialBranch;
     if (widget.initialDivision != null) {
@@ -132,8 +137,13 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
         throw Exception('Year, Branch, and Division are required');
       }
 
-      final sectionId =
-          '${_selectedYear!.replaceAll(' ', '')}_${_selectedBranch!.replaceAll(' ', '')}_$div';
+      final sectionId = NMIMSStructure.generateSectionId(
+        school: _selectedSchool,
+        year: _selectedYear!,
+        branchOrProgram: _selectedBranch!,
+        semester: _selectedSemester,
+        division: div,
+      );
 
       final doc = await FirebaseFirestore.instance
           .collection('sections')
@@ -153,9 +163,12 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
 
       final config = SectionConfig(
         id: sectionId,
+        school: _selectedSchool,
+        program: _selectedBranch!,
         academicYear: _selectedYear!,
         branch: _selectedBranch!,
         division: div,
+        semester: _selectedSemester,
         workingDays: [],
         batches: [],
         periods: [],
@@ -224,6 +237,9 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
         br: _selectedBranch!,
         div: _divisionController.text,
         secId: sectionId,
+        schoolName: _selectedSchool,
+        programName: _selectedBranch,
+        sem: _selectedSemester,
       );
 
       if (!mounted) return;
@@ -444,9 +460,29 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildDropdown(
+                    'School',
+                    _selectedSchool,
+                    NMIMSStructure.schools.map((s) => s.id).toList(),
+                    (val) {
+                      if (val != null && val != _selectedSchool) {
+                        setState(() {
+                          _selectedSchool = val;
+                          _selectedYear = null;
+                          _selectedBranch = null;
+                          _selectedSemester = null;
+                          _existingDivisions = [];
+                        });
+                      }
+                    },
+                    Icons.account_balance_rounded,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  _buildDropdown(
                     'Academic Year',
                     _selectedYear,
-                    NMIMSStructure.academicYears,
+                    _selectedSchool == 'SOL'
+                        ? NMIMSStructure.solYears
+                        : NMIMSStructure.getSchool(_selectedSchool).academicYears,
                     (val) {
                       setState(() {
                         _selectedYear = val;
@@ -457,9 +493,16 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   _buildDropdown(
-                    'Branch',
+                    _selectedSchool == 'SOL' ? 'Program' : 'Branch',
                     _selectedBranch,
-                    NMIMSStructure.branches,
+                    _selectedSchool == 'SOL'
+                        ? ['B.A. LL.B. (Hons.)', 'B.B.A. LL.B. (Hons.)']
+                        : (_selectedSchool == 'STME'
+                            ? NMIMSStructure.branches
+                            : NMIMSStructure.getSchool(_selectedSchool)
+                                .programs
+                                .map((p) => p.name)
+                                .toList()),
                     (val) {
                       setState(() {
                         _selectedBranch = val;
@@ -468,6 +511,32 @@ class _CRSetupWizardState extends State<CRSetupWizard> {
                     },
                     Icons.account_tree_rounded,
                   ),
+                  if (_selectedSchool == 'SOL' && _selectedYear != null) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    _buildDropdown(
+                      'Semester',
+                      _selectedSemester,
+                      NMIMSStructure.solSemestersByYear[_selectedYear] ??
+                          [
+                            'Semester I',
+                            'Semester II',
+                            'Semester III',
+                            'Semester IV',
+                            'Semester V',
+                            'Semester VI',
+                            'Semester VII',
+                            'Semester VIII',
+                            'Semester IX',
+                            'Semester X'
+                          ],
+                      (val) {
+                        setState(() {
+                          _selectedSemester = val;
+                        });
+                      },
+                      Icons.layers_rounded,
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.lg),
                   if (_existingDivisions.isNotEmpty)
                     Padding(

@@ -48,9 +48,12 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
   final _masterPasswordController = TextEditingController();
 
   // Section Selection (Student)
-  String? _selectedYear;
+  String? _selectedSchool;
   String? _selectedBranch;
+  String? _selectedYear;
+  String? _selectedSemester;
   String? _selectedDivision;
+  String? _selectedSectionId;
 
   final _profileFormKey = GlobalKey<FormState>();
   final _verifyFormKey = GlobalKey<FormState>();
@@ -174,7 +177,7 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
 
     setState(() => _loading = true);
     try {
-      final sectionId =
+      final sectionId = _selectedSectionId ??
           '${_selectedYear!.replaceAll(' ', '')}_${_selectedBranch!.replaceAll(' ', '')}_$_selectedDivision';
 
       await DivisionMembershipService.joinDivision(
@@ -193,6 +196,9 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
         br: _selectedBranch!,
         div: _selectedDivision!,
         secId: sectionId,
+        schoolName: _selectedSchool ?? 'STME',
+        programName: _selectedBranch,
+        sem: _selectedSemester,
       );
 
       await _firestore.collection('users').doc(user!.uid).set({
@@ -200,6 +206,9 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
         'profileCompleted': true,
         'profileVersion': 1,
         'division': sectionId,
+        'school': _selectedSchool ?? 'STME',
+        'program': _selectedBranch,
+        if (_selectedSemester != null) 'semester': _selectedSemester,
       }, SetOptions(merge: true));
 
       _routeToDashboard('Student');
@@ -419,97 +428,270 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
 
           final docs = snapshot.data!.docs;
 
-          final activeYears =
-              docs.map((d) => d['academicYear'] as String).toSet().toList()
-                ..sort();
-          if (_selectedYear != null && !activeYears.contains(_selectedYear)) {
-            _selectedYear = null;
-            _selectedBranch = null;
-            _selectedDivision = null;
+          String getDocSchool(DocumentSnapshot d) {
+            final data = d.data() as Map<String, dynamic>;
+            final s = data['school'] as String?;
+            return (s != null && s.trim().isNotEmpty) ? s.trim() : 'STME';
           }
 
-          List<String> activeBranches = [];
-          if (_selectedYear != null) {
-            activeBranches =
-                docs
-                    .where((d) => d['academicYear'] == _selectedYear)
-                    .map((d) => d['branch'] as String)
-                    .toSet()
-                    .toList()
-                  ..sort();
-            if (_selectedBranch != null &&
-                !activeBranches.contains(_selectedBranch)) {
+          String getDocProgram(DocumentSnapshot d) {
+            final data = d.data() as Map<String, dynamic>;
+            final p = data['program'] as String?;
+            if (p != null && p.trim().isNotEmpty) return p.trim();
+            final b = data['branch'] as String?;
+            return (b != null && b.trim().isNotEmpty) ? b.trim() : '';
+          }
+
+          String getDocYear(DocumentSnapshot d) {
+            final data = d.data() as Map<String, dynamic>;
+            return (data['academicYear'] as String?)?.trim() ?? '';
+          }
+
+          String? getDocSemester(DocumentSnapshot d) {
+            final data = d.data() as Map<String, dynamic>;
+            final sem = data['semester'] as String?;
+            return (sem != null && sem.trim().isNotEmpty) ? sem.trim() : null;
+          }
+
+          String getDocDivision(DocumentSnapshot d) {
+            final data = d.data() as Map<String, dynamic>;
+            return (data['division'] as String?)?.trim() ?? '';
+          }
+
+          // 1. Available Schools
+          final activeSchools = docs.map(getDocSchool).toSet().toList()..sort();
+          if (_selectedSchool == null) {
+            if (activeSchools.contains('STME')) {
+              _selectedSchool = 'STME';
+            } else if (activeSchools.isNotEmpty) {
+              _selectedSchool = activeSchools.first;
+            }
+          } else if (!activeSchools.contains(_selectedSchool)) {
+            _selectedSchool = activeSchools.isNotEmpty ? activeSchools.first : null;
+            _selectedBranch = null;
+            _selectedYear = null;
+            _selectedSemester = null;
+            _selectedDivision = null;
+            _selectedSectionId = null;
+          }
+
+          // 2. Available Programs/Branches for selected school
+          List<String> activePrograms = [];
+          if (_selectedSchool != null) {
+            activePrograms = docs
+                .where((d) => getDocSchool(d) == _selectedSchool)
+                .map(getDocProgram)
+                .where((p) => p.isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort();
+            if (_selectedBranch != null && !activePrograms.contains(_selectedBranch)) {
               _selectedBranch = null;
+              _selectedYear = null;
+              _selectedSemester = null;
               _selectedDivision = null;
+              _selectedSectionId = null;
             }
           }
 
-          List<String> activeDivisions = [];
-          if (_selectedYear != null && _selectedBranch != null) {
-            activeDivisions =
-                docs
-                    .where(
-                      (d) =>
-                          d['academicYear'] == _selectedYear &&
-                          d['branch'] == _selectedBranch,
-                    )
-                    .map((d) => d['division'] as String)
-                    .toSet()
-                    .toList()
-                  ..sort();
-            if (_selectedDivision != null &&
-                !activeDivisions.contains(_selectedDivision))
+          // 3. Available Academic Years for selected school + program
+          List<String> activeYears = [];
+          if (_selectedSchool != null && _selectedBranch != null) {
+            activeYears = docs
+                .where((d) =>
+                    getDocSchool(d) == _selectedSchool &&
+                    getDocProgram(d) == _selectedBranch)
+                .map(getDocYear)
+                .where((y) => y.isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort();
+            if (_selectedYear != null && !activeYears.contains(_selectedYear)) {
+              _selectedYear = null;
+              _selectedSemester = null;
               _selectedDivision = null;
+              _selectedSectionId = null;
+            }
           }
+
+          // 4. Available Semesters (if applicable) for selected school + program + year
+          List<String> activeSemesters = [];
+          bool hasSemesters = false;
+          if (_selectedSchool != null && _selectedBranch != null && _selectedYear != null) {
+            final yearDocs = docs.where((d) =>
+                getDocSchool(d) == _selectedSchool &&
+                getDocProgram(d) == _selectedBranch &&
+                getDocYear(d) == _selectedYear);
+            activeSemesters = yearDocs
+                .map(getDocSemester)
+                .whereType<String>()
+                .toSet()
+                .toList()
+              ..sort();
+            hasSemesters = activeSemesters.isNotEmpty;
+            if (hasSemesters) {
+              if (_selectedSemester != null && !activeSemesters.contains(_selectedSemester)) {
+                _selectedSemester = null;
+                _selectedDivision = null;
+                _selectedSectionId = null;
+              }
+            } else {
+              _selectedSemester = null;
+            }
+          }
+
+          // 5. Available Divisions
+          List<String> activeDivisions = [];
+          if (_selectedSchool != null &&
+              _selectedBranch != null &&
+              _selectedYear != null &&
+              (!hasSemesters || _selectedSemester != null)) {
+            final matchingDocs = docs.where((d) =>
+                getDocSchool(d) == _selectedSchool &&
+                getDocProgram(d) == _selectedBranch &&
+                getDocYear(d) == _selectedYear &&
+                (!hasSemesters || getDocSemester(d) == _selectedSemester));
+            activeDivisions = matchingDocs
+                .map(getDocDivision)
+                .where((div) => div.isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort();
+            if (_selectedDivision != null && !activeDivisions.contains(_selectedDivision)) {
+              _selectedDivision = null;
+              _selectedSectionId = null;
+            }
+          }
+
+          // Resolve matching section doc id
+          if (_selectedDivision != null) {
+            final matched = docs.where((d) =>
+                getDocSchool(d) == _selectedSchool &&
+                getDocProgram(d) == _selectedBranch &&
+                getDocYear(d) == _selectedYear &&
+                (!hasSemesters || getDocSemester(d) == _selectedSemester) &&
+                getDocDivision(d) == _selectedDivision);
+            if (matched.isNotEmpty) {
+              _selectedSectionId = matched.first.id;
+            }
+          }
+
+          final bool canProceed = !_loading &&
+              _selectedSchool != null &&
+              _selectedBranch != null &&
+              _selectedYear != null &&
+              (!hasSemesters || _selectedSemester != null) &&
+              _selectedDivision != null;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // School Selection
               DropdownButtonFormField<String>(
-                value: _selectedYear,
+                value: _selectedSchool,
                 decoration: InputDecoration(
-                  labelText: 'Academic Year',
+                  labelText: 'School',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                items: activeYears
-                    .map((y) => DropdownMenuItem(value: y, child: Text(y)))
+                items: activeSchools
+                    .map((s) => DropdownMenuItem(
+                          value: s,
+                          child: Text(NMIMSStructure.getSchool(s).name.isNotEmpty
+                              ? '$s (${NMIMSStructure.getSchool(s).name})'
+                              : s),
+                        ))
                     .toList(),
                 onChanged: (val) => setState(() {
-                  _selectedYear = val;
+                  _selectedSchool = val;
                   _selectedBranch = null;
+                  _selectedYear = null;
+                  _selectedSemester = null;
                   _selectedDivision = null;
+                  _selectedSectionId = null;
                 }),
               ),
               const SizedBox(height: AppSpacing.lg),
-              if (_selectedYear != null) ...[
+
+              // Program / Branch Selection
+              if (_selectedSchool != null) ...[
                 DropdownButtonFormField<String>(
                   value: _selectedBranch,
                   decoration: InputDecoration(
-                    labelText: 'Branch',
+                    labelText: 'Program / Branch',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  items: activeBranches
-                      .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                  items: activePrograms
+                      .map((p) => DropdownMenuItem(value: p, child: Text(p)))
                       .toList(),
                   onChanged: (val) => setState(() {
                     _selectedBranch = val;
+                    _selectedYear = null;
+                    _selectedSemester = null;
                     _selectedDivision = null;
+                    _selectedSectionId = null;
                   }),
                 ),
                 const SizedBox(height: AppSpacing.lg),
               ],
+
+              // Academic Year Selection
               if (_selectedBranch != null) ...[
+                DropdownButtonFormField<String>(
+                  value: _selectedYear,
+                  decoration: InputDecoration(
+                    labelText: 'Academic Year',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  items: activeYears
+                      .map((y) => DropdownMenuItem(value: y, child: Text(y)))
+                      .toList(),
+                  onChanged: (val) => setState(() {
+                    _selectedYear = val;
+                    _selectedSemester = null;
+                    _selectedDivision = null;
+                    _selectedSectionId = null;
+                  }),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+              ],
+
+              // Semester Selection (only when applicable)
+              if (hasSemesters && _selectedYear != null) ...[
+                DropdownButtonFormField<String>(
+                  value: _selectedSemester,
+                  decoration: InputDecoration(
+                    labelText: 'Semester',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  items: activeSemesters
+                      .map((sem) => DropdownMenuItem(value: sem, child: Text(sem)))
+                      .toList(),
+                  onChanged: (val) => setState(() {
+                    _selectedSemester = val;
+                    _selectedDivision = null;
+                    _selectedSectionId = null;
+                  }),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+              ],
+
+              // Division Selection
+              if (_selectedYear != null && (!hasSemesters || _selectedSemester != null)) ...[
                 if (activeDivisions.isEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       vertical: AppSpacing.md,
                     ),
                     child: Text(
-                      'No sections available for this Year and Branch.',
+                      'No sections available for this selection.',
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -527,18 +709,15 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
                     items: activeDivisions
                         .map((d) => DropdownMenuItem(value: d, child: Text(d)))
                         .toList(),
-                    onChanged: (val) => setState(() => _selectedDivision = val),
+                    onChanged: (val) => setState(() {
+                      _selectedDivision = val;
+                    }),
                   ),
                 const SizedBox(height: AppSpacing.x3l),
               ],
+
               AnimatedButton(
-                onPressed:
-                    (_loading ||
-                        _selectedYear == null ||
-                        _selectedBranch == null ||
-                        _selectedDivision == null)
-                    ? null
-                    : _completeStudentOnboarding,
+                onPressed: canProceed ? _completeStudentOnboarding : null,
                 isLoading: _loading,
                 child: const Text('Complete Setup'),
               ),
