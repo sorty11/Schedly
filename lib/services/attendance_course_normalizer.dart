@@ -97,7 +97,9 @@ class AttendanceCourseNormalizer {
         upper.contains('(TUTORIAL)') ||
         upper.contains('(TUT)') ||
         upper.endsWith(' U') ||
-        upper.endsWith(' - U')) {
+        upper.endsWith(' - U') ||
+        RegExp(r'\bU\b').hasMatch(upper) ||
+        upper.endsWith('U')) {
       cleaned = cleaned
           .replaceAll(RegExp(r'\([Uu]\)'), '')
           .replaceAll(RegExp(r'\[[Uu]\]'), '')
@@ -105,8 +107,13 @@ class AttendanceCourseNormalizer {
           .replaceAll(RegExp(r'\([Tt]ut\)', caseSensitive: false), '')
           .replaceAll(RegExp(r'\s+-\s+[Uu]$'), '')
           .replaceAll(RegExp(r'\s+[Uu]$'), '')
+          .replaceAll(RegExp(r'(?<=[a-z])[Uu]$'), '')
           .replaceAll(RegExp(r'[\s\-_\/–—]+$'), '')
           .trim();
+      cleaned = cleaned.replaceAll(_semesterRegex, ' ');
+      cleaned = cleaned.replaceAll(_batchRegex, ' ');
+      cleaned = cleaned.replaceAll(_branchRegex, ' ');
+      cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
       return (
         name: cleaned.isEmpty ? raw : cleaned,
         component: 'Tutorial',
@@ -117,28 +124,71 @@ class AttendanceCourseNormalizer {
         upper.contains('[T]') ||
         upper.contains('(THEORY)') ||
         upper.endsWith(' T') ||
-        upper.endsWith(' - T')) {
+        upper.endsWith(' - T') ||
+        RegExp(r'\bT\b').hasMatch(upper) ||
+        upper.endsWith('T')) {
       cleaned = cleaned
           .replaceAll(RegExp(r'\([Tt]\)'), '')
           .replaceAll(RegExp(r'\[[Tt]\]'), '')
           .replaceAll(RegExp(r'\([Tt]heory\)', caseSensitive: false), '')
           .replaceAll(RegExp(r'\s+-\s+[Tt]$'), '')
           .replaceAll(RegExp(r'\s+[Tt]$'), '')
+          .replaceAll(RegExp(r'(?<=[a-z])[Tt]$'), '')
           .replaceAll(RegExp(r'[\s\-_\/–—]+$'), '')
           .trim();
+      // Clean any trailing branch/semester noise
+      cleaned = cleaned.replaceAll(_semesterRegex, ' ');
+      cleaned = cleaned.replaceAll(_batchRegex, ' ');
+      cleaned = cleaned.replaceAll(_branchRegex, ' ');
+      cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
       return (
         name: cleaned.isEmpty ? raw : cleaned,
         component: 'Theory',
         code: 'T',
         parsed: true,
       );
+    } else if (upper.contains('(P)') ||
+        upper.contains('[P]') ||
+        upper.contains('(LAB)') ||
+        upper.contains('(PRACTICAL)') ||
+        upper.endsWith(' LAB') ||
+        upper.endsWith(' PRACTICAL') ||
+        upper.endsWith(' P') ||
+        upper.endsWith(' - P')) {
+      cleaned = cleaned
+          .replaceAll(RegExp(r'\([Pp]\)'), '')
+          .replaceAll(RegExp(r'\[[Pp]\]'), '')
+          .replaceAll(RegExp(r'\([Ll]ab\)', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\([Pp]ractical\)', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\s+-\s+[Pp]$'), '')
+          .replaceAll(RegExp(r'\s+[Pp]$'), '')
+          .replaceAll(RegExp(r'\s+LAB$', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\s+PRACTICAL$', caseSensitive: false), '')
+          .replaceAll(RegExp(r'[\s\-_\/–—]+$'), '')
+          .trim();
+      cleaned = cleaned.replaceAll(_semesterRegex, ' ');
+      cleaned = cleaned.replaceAll(_batchRegex, ' ');
+      cleaned = cleaned.replaceAll(_branchRegex, ' ');
+      cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
+      return (
+        name: cleaned.isEmpty ? raw : cleaned,
+        component: 'Lab',
+        code: 'P',
+        parsed: true,
+      );
     }
 
+    // Strip branch, semester, and batch noise from unmarked subject
+    cleaned = cleaned.replaceAll(_semesterRegex, ' ');
+    cleaned = cleaned.replaceAll(_batchRegex, ' ');
+    cleaned = cleaned.replaceAll(_branchRegex, ' ');
+    cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
+
     return (
-      name: raw,
+      name: cleaned.isEmpty ? raw : cleaned,
       component: _inferComponentFromKeywords(raw),
       code: null,
-      parsed: false,
+      parsed: cleaned != raw,
     );
   }
 
@@ -178,12 +228,13 @@ class AttendanceCourseNormalizer {
   /// Removes semester/branch noise for fuzzy matching comparisons.
   static String normalizeForMatching(String name) {
     var normalized = name.toUpperCase();
+    normalized = normalized.replaceAll('&', ' AND ');
     normalized = normalized.replaceAll(RegExp(r'(?<=[A-Z0-9])([TPUL][1-9])\b'), '');
     normalized = normalized.replaceAll(RegExp(r'\b([TPUL][1-9])\b'), '');
     normalized = normalized.replaceAll(_semesterRegex, '');
     normalized = normalized.replaceAll(_batchRegex, '');
     normalized = normalized.replaceAll(_branchRegex, '');
-    normalized = normalized.replaceAll(RegExp(r'[^A-Z0-9\s&]'), ' ');
+    normalized = normalized.replaceAll(RegExp(r'[^A-Z0-9\s]'), ' ');
     normalized = normalized.replaceAll(RegExp(r'\s+'), ' ').trim();
     return normalized;
   }

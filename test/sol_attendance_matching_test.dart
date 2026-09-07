@@ -247,5 +247,70 @@ void main() {
       expect(dsaIdentity.canonicalKey, equals('DSA'));
       expect(dsaIdentity.shortCode, equals('DSA'));
     });
+
+    test('14. Program tokens (BALLB, BBALLB, LLB, LAW) are safely isolated and never corrupted', () {
+      final lawTokens = [
+        'Constitutional Law I BALLB Sem III',
+        'Jurisprudence BBALLB Sem V',
+        'Law of Crimes LLB Sem I',
+        'Property Law LAW Sem IV',
+      ];
+
+      for (final raw in lawTokens) {
+        final norm = AttendanceCourseNormalizer.normalize(raw);
+        expect(norm.courseName, isNot(contains('BALLB')));
+        expect(norm.courseName, isNot(contains('BBALLB')));
+        expect(norm.courseName, isNot(contains('LLB')));
+        expect(norm.componentType, equals('Theory'));
+      }
+    });
+
+    test('15. SOL component notations T/T1/(T)/unmarked = Theory and U/U1/(U)/Tutorial', () {
+      final theoryCases = [
+        'Administrative LawT',
+        'Administrative LawT1',
+        'Administrative Law (T)',
+        'Administrative Law - T',
+        'Administrative Law',
+      ];
+      for (final raw in theoryCases) {
+        final norm = AttendanceCourseNormalizer.normalize(raw);
+        expect(norm.courseName, equals('Administrative Law'));
+        expect(norm.componentType, equals('Theory'), reason: '$raw should be Theory');
+      }
+
+      final tutorialCases = [
+        'Administrative LawU',
+        'Administrative LawU1',
+        'Administrative Law (U)',
+        'Administrative Law - U',
+        'Administrative Law (Tutorial)',
+      ];
+      for (final raw in tutorialCases) {
+        final norm = AttendanceCourseNormalizer.normalize(raw);
+        expect(norm.courseName, equals('Administrative Law'));
+        expect(norm.componentType, equals('Tutorial'), reason: '$raw should be Tutorial');
+      }
+    });
+
+    test('16. SOL full subject names are preserved everywhere and never shortened to aliases', () {
+      final identity = SubjectIdentityService.resolve(
+        'Environmental Law',
+        configuredCourses: configuredSolCourses,
+      );
+      expect(identity.canonicalKey, equals('Environmental Law'));
+      expect(identity.displayName, equals('Environmental Law'));
+      expect(identity.shortCode, isNull);
+
+      final matcher = AttendanceCourseMatcher(configuredSolCourses);
+      final res = matcher.match(
+        courseName: 'Environmental Law',
+        componentType: 'Theory',
+        rawCourseName: 'Environmental LawT1 BALLB Sem V',
+      );
+      expect(res.subjectCode, equals('Environmental Law'));
+      expect(res.component, equals('Theory'));
+      expect(res.confidence, isNot(equals(MatchConfidence.alias)));
+    });
   });
 }

@@ -2,6 +2,8 @@ import '../models/attendance_record.dart';
 import '../models/attendance_log.dart';
 import '../models/timetable_entry.dart';
 import '../models/intelligence_models.dart';
+import 'attendance/academic_grouping_policy.dart';
+import 'subject_identity_service.dart';
 import 'dart:math';
 
 class AttendanceIntelligenceService {
@@ -196,12 +198,18 @@ class AttendanceIntelligenceService {
     }
 
     for (final entry in uniqueEntries.values) {
+      final entryNormComp = AcademicGroupingPolicy.normalizeComponent(entry.component);
       final record = records
-          .where(
-            (r) =>
-                r.subjectCode == entry.subject &&
-                r.component == entry.component,
-          )
+          .where((r) {
+            final isSubjMatch = SubjectIdentityService.isMatch(entry.subject, r.subjectCode);
+            if (!isSubjMatch) return false;
+            final rNormComp = AcademicGroupingPolicy.normalizeComponent(r.component);
+            // If the record is specifically Theory or Lab (like split DSA), it must match the entry component
+            if (rNormComp != 'Merged' && entryNormComp != 'Merged') {
+              return rNormComp == entryNormComp;
+            }
+            return true;
+          })
           .firstOrNull;
       if (record == null || record.total == 0) {
         recommendations.add(

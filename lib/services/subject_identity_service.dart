@@ -1,6 +1,7 @@
 import '../data/course_aliases.dart';
 import '../models/attendance_log.dart';
 import '../models/course_component.dart';
+import 'attendance/academic_grouping_policy.dart';
 import 'attendance_course_normalizer.dart';
 
 /// Encapsulates the resolved identity of a subject across Timetable, Attendance,
@@ -144,6 +145,11 @@ class SubjectIdentityService {
     'DSA': ('DSA', 'Data Structures and Algorithms', 'DSA'),
     'DATA STRUCTURES': ('DSA', 'Data Structures and Algorithms', 'DSA'),
     'DATA STRUCTURES AND ALGORITHMS': ('DSA', 'Data Structures and Algorithms', 'DSA'),
+    'DATA STRUCTURES & ALGORITHMS': ('DSA', 'Data Structures and Algorithms', 'DSA'),
+    'DSA LAB': ('DSA', 'Data Structures and Algorithms Lab', 'DSA'),
+    'DATA STRUCTURES LAB': ('DSA', 'Data Structures and Algorithms Lab', 'DSA'),
+    'DATA STRUCTURES AND ALGORITHMS LAB': ('DSA', 'Data Structures and Algorithms Lab', 'DSA'),
+    'DATA STRUCTURES & ALGORITHMS LAB': ('DSA', 'Data Structures and Algorithms Lab', 'DSA'),
 
     // Computer Organization and Architecture
     'COA': ('COA', 'Computer Organization and Architecture', 'COA'),
@@ -303,8 +309,9 @@ class SubjectIdentityService {
     // --- STEP 4: Priority 2 — Exact Known High-Confidence Deterministic Alias (STME only) ---
     if (!isSol && _knownIdentities.containsKey(upperQuery)) {
       final (canon, display, short) = _knownIdentities[upperQuery]!;
+      final effectiveComp = componentType ?? (upperQuery.contains('LAB') ? 'Lab' : null);
       // Link to configured component if available
-      final matched = _findComponentMatchingKey(canon, configuredCourses);
+      final matched = _findComponentMatchingKey(canon, configuredCourses, componentType: effectiveComp);
       return SubjectIdentity(
         canonicalKey: canon,
         displayName: display,
@@ -595,18 +602,32 @@ class SubjectIdentityService {
 
   static CourseComponent? _findComponentMatchingKey(
     String key,
-    List<CourseComponent> configuredCourses,
-  ) {
+    List<CourseComponent> configuredCourses, {
+    String? componentType,
+  }) {
     if (configuredCourses.isEmpty) return null;
     final upperKey = key.toUpperCase();
+    final normComp = componentType != null ? AcademicGroupingPolicy.normalizeComponent(componentType).toLowerCase() : null;
+
+    CourseComponent? fallback;
     for (final comp in configuredCourses) {
       if (comp.courseName.toUpperCase() == upperKey ||
           cleanSubjectCode(comp).toUpperCase() == upperKey ||
           comp.courseCode.toUpperCase() == upperKey) {
-        return comp;
+        if (normComp != null) {
+          final cType = comp.componentType.toLowerCase();
+          if (cType == normComp ||
+              (normComp == 'lab' && comp.isLab) ||
+              (normComp == 'theory' && (cType == 'theory' || cType == 'lecture'))) {
+            return comp;
+          }
+          fallback ??= comp;
+        } else {
+          return comp;
+        }
       }
     }
-    return null;
+    return fallback;
   }
 
   static CourseComponent? _findComponentMatchingKeywords(
