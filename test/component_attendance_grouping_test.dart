@@ -279,11 +279,17 @@ void main() {
           absent: 2,
         );
 
-        // Formula: (present / 0.80).floor() - total
+        // Formula at 80%: (present / 0.80).floor() - total
         // Theory: (18 / 0.80).floor() - 21 = 22 - 21 = 1 more allowed
         // Lab: (12 / 0.80).floor() - 14 = 15 - 14 = 1 more allowed
-        expect(theoryRecord.canMiss, equals(1));
-        expect(labRecord.canMiss, equals(1));
+        expect(theoryRecord.canMissFor(0.80), equals(1));
+        expect(labRecord.canMissFor(0.80), equals(1));
+
+        // Formula at 70% (Smart Attendance target):
+        // Theory: (18 / 0.70).floor() - 21 = 25 - 21 = 4 more allowed
+        // Lab: (12 / 0.70).floor() - 14 = 17 - 14 = 3 more allowed
+        expect(theoryRecord.canMiss, equals(4));
+        expect(labRecord.canMiss, equals(3));
       },
     );
 

@@ -131,7 +131,6 @@ class AttendanceService {
     return _logsCol()
         .orderBy('date', descending: true)
         .orderBy('startTime', descending: true)
-        .limit(200)
         .snapshots()
         .map(
           (snap) =>
@@ -143,7 +142,6 @@ class AttendanceService {
     final snap = await _logsCol()
         .orderBy('date', descending: true)
         .orderBy('startTime', descending: true)
-        .limit(200)
         .get(const GetOptions(source: Source.serverAndCache));
     return snap.docs.map((d) => AttendanceLog.fromFirestore(d)).toList();
   }

@@ -497,6 +497,11 @@ class _AttendancePageState extends State<AttendancePage> {
                       }
                     }
 
+                    final isSol = widget.division.toUpperCase().startsWith('SOL_');
+                    final solThreshold = 0.70;
+                    final stmeThreshold = 0.80;
+                    final effectiveThreshold = isSol ? solThreshold : stmeThreshold;
+
                     final subjects = records.entries.map((e) {
                       final key = e.key;
                       final r = e.value;
@@ -505,6 +510,7 @@ class _AttendancePageState extends State<AttendancePage> {
                         calculator: calculator,
                         rawRecords: rawGrouped[key] ?? [],
                         completedOccurrences: completedCounts[key],
+                        requiredAttendance: effectiveThreshold,
                       );
                     }).toList();
 
@@ -700,9 +706,16 @@ class SubjectAttendanceCard extends StatelessWidget {
 
   Color _color(BuildContext context, double pct) {
     final sem = Theme.of(context).extension<AppSemanticColors>()!;
-    if (pct >= 0.85) return sem.conducted; // Safe zone (Green)
-    if (pct >= 0.80) return sem.warning; // Close to the edge (Yellow)
-    return sem.cancelled; // Defaulter zone (Red)
+    final isSol = division.toUpperCase().startsWith('SOL_');
+    if (isSol) {
+      if (pct >= 0.80) return sem.conducted; // Safe (Green)
+      if (pct >= 0.70) return sem.warning; // Watch / Borderline (Amber)
+      return sem.cancelled; // Defaulter (Red)
+    } else {
+      if (pct >= 0.85) return sem.conducted; // Safe zone (Green)
+      if (pct >= 0.80) return sem.conducted; // STME minimum 80% (Green)
+      return sem.cancelled; // Defaulter zone (Red)
+    }
   }
 
   @override

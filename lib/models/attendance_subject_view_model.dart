@@ -68,6 +68,7 @@ class AttendanceSubjectViewModel {
     required ProgressCalculatorService calculator,
     List<AttendanceRecord> rawRecords = const [],
     int? completedOccurrences,
+    double requiredAttendance = 0.80,
   }) {
     final present = record.present;
     final absent = record.absent;
@@ -78,7 +79,7 @@ class AttendanceSubjectViewModel {
       record.subjectCode,
       record.component,
       absent,
-      requiredAttendance: 0.80,
+      requiredAttendance: requiredAttendance,
     );
 
     final assignedHours = calculator.getConfiguredCourseHours(

@@ -77,7 +77,7 @@ class SubjectNormalizer {
   };
 
   static final _componentSuffixRegex = RegExp(
-    r'^(.*?)(?:\s+|(?<=[a-zA-Z0-9]))([TPUL][1-9])(?:\s+(.*)|$)',
+    r'^(.*?)(?:\s+([TPUL][1-9]?)|(?<=[a-zA-Z0-9])([TPUL][1-9]))(?:\s+(.*)|$)',
     caseSensitive: false,
   );
 
@@ -97,8 +97,18 @@ class SubjectNormalizer {
   static String normalize(String input) {
     if (input.trim().isEmpty) return '';
 
-    // 1. First strip component codes like T4, P4, U4
     String stripped = input.trim();
+
+    // 0. Pre-clean recognized SOL attached metadata (e.g. T4BALLB, U4BALLB, TBALL, U4BALL, etc.)
+    final solAttachedMatch = RegExp(
+      r'^(.*?)[\s\-_]*([TU](?:[1-9])?)\s*(?:BA\s*LLB|BBALLB|BALLB|BALL|LLB)\s*$',
+      caseSensitive: false,
+    ).firstMatch(stripped);
+    if (solAttachedMatch != null) {
+      stripped = solAttachedMatch.group(1)!.trim();
+    }
+
+    // 1. First strip component codes like T4, P4, U4, T, U
     final match = _componentSuffixRegex.firstMatch(stripped);
     if (match != null) {
       final base = match.group(1)!.trim();
@@ -403,6 +413,21 @@ class SubjectIdentityService {
       }
     }
 
+    // --- STEP 7.5: Priority 6 — Known Deterministic Identities for SOL (Preserve Full Names) ---
+    if (isSol) {
+      final solCanonical = _resolveSolCanonicalName(query, normalizedQuery);
+      if (solCanonical != null) {
+        final matched = _findComponentMatchingKey(solCanonical, configuredCourses);
+        return SubjectIdentity(
+          canonicalKey: solCanonical,
+          displayName: solCanonical,
+          confidence: MatchConfidence.exact,
+          isResolved: true,
+          matchedComponent: matched,
+        );
+      }
+    }
+
     // --- STEP 8: Unresolved — Safe fallback, do NOT guess ---
     return SubjectIdentity(
       canonicalKey: query,
@@ -411,6 +436,44 @@ class SubjectIdentityService {
       isResolved: false,
       statusMessage: 'Subject matching needs review',
     );
+  }
+
+  static String? _resolveSolCanonicalName(String query, String normalized) {
+    final upper = query.toUpperCase();
+    final norm = normalized.toUpperCase();
+
+    if (upper.contains('COMPANY LAW II') || upper.contains('COMPANY LAWII') || norm.contains('COMPANY LAW II')) {
+      return 'Company Law II';
+    }
+    if (upper.contains('ENVIRONMENTAL LAW') || norm.contains('ENVIRONMENTAL LAW')) {
+      return 'Environmental Law';
+    }
+    if (upper.contains('CPC') || upper.contains('LIMITATION ACT') || norm.contains('CPC')) {
+      return 'CPC & Limitation Act';
+    }
+    if (upper.contains('FAMILY LAW') || norm.contains('FAMILY LAW') || upper.contains('SUCCES') || upper.contains('INHERI')) {
+      return 'Family Law II (Success and Inheritance Laws)';
+    }
+    if (upper.contains('ADMINISTRATIVE LAW') || norm.contains('ADMINISTRATIVE LAW')) {
+      return 'Administrative Law';
+    }
+    if (upper.contains('BHARTI') ||
+        upper.contains('BHARATIYA') ||
+        upper.contains('SAK ADHI') ||
+        upper.contains('SAKSHYA') ||
+        upper.contains('EVIDENCE') ||
+        norm.contains('BHARTI') ||
+        norm.contains('SAKSHYA') ||
+        norm.contains('EVIDENCE')) {
+      return 'The Bharatiya Sakshya Adhiniyam, 2023 (Law of Evidence)';
+    }
+    if (upper.contains('MARITIME LAW') || norm.contains('MARITIME LAW')) {
+      return 'Maritime Law';
+    }
+    if (upper.contains('CYBER LAW') || norm.contains('CYBER LAW')) {
+      return 'Cyber Law';
+    }
+    return null;
   }
 
   /// Disambiguates PEC / Electives using section context.

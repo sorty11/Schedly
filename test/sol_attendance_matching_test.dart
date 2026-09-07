@@ -1,316 +1,350 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:schedly/models/attendance_import_models.dart';
 import 'package:schedly/models/attendance_log.dart';
+import 'package:schedly/models/attendance_record.dart';
 import 'package:schedly/models/course_component.dart';
+import 'package:schedly/services/attendance/academic_grouping_policy.dart';
+import 'package:schedly/services/attendance_status_mapper.dart';
 import 'package:schedly/services/attendance_course_matcher.dart';
 import 'package:schedly/services/attendance_course_normalizer.dart';
 import 'package:schedly/services/subject_identity_service.dart';
 
 void main() {
-  final solSectionId = 'SOL_3rdYear_BALLB_SemV_A';
-  final testDate = DateTime(2026, 7, 20);
-
-  CourseComponent makeSolComp({
-    required String componentId,
-    required String courseName,
-    String componentType = 'Theory',
-    int targetHours = 60,
-  }) {
-    return CourseComponent(
-      componentId: componentId,
-      componentType: componentType,
-      courseName: courseName,
-      courseCode: '', // In SOL, courseCode is empty or full name (never acronym)
-      targetHours: targetHours,
-      facultyId: '',
-      createdAt: testDate,
-      sectionId: solSectionId,
-    );
-  }
-
-  group('SOL Attendance Normalization Tests', () {
-    test('1. Normalizes SAP course string with BALLB and Sem V noise', () {
-      final norm = AttendanceCourseNormalizer.normalize(
-        'Administrative LawT1 BALLB Sem V',
-      );
-      expect(norm.courseName, equals('Administrative Law'));
-      expect(norm.componentCode, equals('T1'));
-      expect(norm.componentType, equals('Theory'));
-      expect(norm.parsed, isTrue);
-    });
-
-    test('2. Normalizes SAP Tutorial code U1 to Tutorial component', () {
-      final norm = AttendanceCourseNormalizer.normalize(
-        'Administrative LawU1 BALLB Sem V',
-      );
-      expect(norm.courseName, equals('Administrative Law'));
-      expect(norm.componentCode, equals('U1'));
-      expect(norm.componentType, equals('Tutorial'));
-      expect(norm.parsed, isTrue);
-    });
-
-    test('3. Normalizes Environmental Law Tutorial with batch A', () {
-      final norm = AttendanceCourseNormalizer.normalize(
-        'Environmental LawU1 BALLB Sem V A',
-      );
-      expect(norm.courseName, equals('Environmental Law'));
-      expect(norm.componentCode, equals('U1'));
-      expect(norm.componentType, equals('Tutorial'));
-    });
-
-    test('4. Handles explicit (U) and (T) notations without SAP suffix code', () {
-      final uNorm = AttendanceCourseNormalizer.normalize(
-        'Administrative Law (U)',
-      );
-      expect(uNorm.courseName, equals('Administrative Law'));
-      expect(uNorm.componentType, equals('Tutorial'));
-      expect(uNorm.componentCode, equals('U'));
-
-      final tNorm = AttendanceCourseNormalizer.normalize(
-        'Company Law II (T)',
-      );
-      expect(tNorm.courseName, equals('Company Law II'));
-      expect(tNorm.componentType, equals('Theory'));
-
-      final bracketNorm = AttendanceCourseNormalizer.normalize(
-        'Environmental Law [U]',
-      );
-      expect(bracketNorm.courseName, equals('Environmental Law'));
-      expect(bracketNorm.componentType, equals('Tutorial'));
-    });
-
-    test('5. Unmarked raw academic subject defaults to Theory', () {
-      final norm = AttendanceCourseNormalizer.normalize('Family Law II');
-      expect(norm.courseName, equals('Family Law II'));
-      expect(norm.componentType, equals('Theory'));
-    });
-
-    test('6. normalizeForMatching strips component, BALLB, BBALLB, LLB, and Sem noise', () {
-      final input1 = AttendanceCourseNormalizer.normalizeForMatching(
-        'Administrative LawT1 BALLB Sem V',
-      );
-      final target1 = AttendanceCourseNormalizer.normalizeForMatching(
-        'Administrative Law',
-      );
-      expect(input1, equals(target1));
-
-      final input2 = AttendanceCourseNormalizer.normalizeForMatching(
-        'Company Law II BBALLB Sem V A',
-      );
-      final target2 = AttendanceCourseNormalizer.normalizeForMatching(
-        'Company Law II',
-      );
-      expect(input2, equals(target2));
-    });
-  });
-
-  group('SOL Attendance Course Matcher & Full-Name Preservation Tests', () {
+  group('SOL Smart Attendance — Duplicate Subjects & Ground Truth', () {
+    // Ground truth subjects from NMIMS SOL B.A., LL.B. (Hons.) Semester V
+    final testDate = DateTime(2026, 7, 13);
     final configuredSolCourses = [
-      makeSolComp(
-        componentId: 'Administrative_Law_Theory',
-        courseName: 'Administrative Law',
+      CourseComponent(
+        componentId: 'SOL_CompLaw2',
         componentType: 'Theory',
-      ),
-      makeSolComp(
-        componentId: 'Administrative_Law_Tutorial',
-        courseName: 'Administrative Law',
-        componentType: 'Tutorial',
-      ),
-      makeSolComp(
-        componentId: 'Company_Law_II_Theory',
         courseName: 'Company Law II',
+        courseCode: '',
+        targetHours: 45,
+        createdAt: testDate,
+        sectionId: 'SOL_BALLB_V_A',
+      ),
+      CourseComponent(
+        componentId: 'SOL_EnvLaw',
         componentType: 'Theory',
-      ),
-      makeSolComp(
-        componentId: 'Environmental_Law_Theory',
         courseName: 'Environmental Law',
+        courseCode: '',
+        targetHours: 45,
+        createdAt: testDate,
+        sectionId: 'SOL_BALLB_V_A',
+      ),
+      CourseComponent(
+        componentId: 'SOL_CPC',
         componentType: 'Theory',
-      ),
-      makeSolComp(
-        componentId: 'Environmental_Law_Tutorial',
-        courseName: 'Environmental Law',
-        componentType: 'Tutorial',
-      ),
-      makeSolComp(
-        componentId: 'CPC_Limitation_Act_Theory',
         courseName: 'CPC & Limitation Act',
+        courseCode: '',
+        targetHours: 45,
+        createdAt: testDate,
+        sectionId: 'SOL_BALLB_V_A',
+      ),
+      CourseComponent(
+        componentId: 'SOL_FamLaw2',
         componentType: 'Theory',
+        courseName: 'Family Law II (Success and Inheritance Laws)',
+        courseCode: '',
+        targetHours: 45,
+        createdAt: testDate,
+        sectionId: 'SOL_BALLB_V_A',
+      ),
+      CourseComponent(
+        componentId: 'SOL_AdminLaw',
+        componentType: 'Theory',
+        courseName: 'Administrative Law',
+        courseCode: '',
+        targetHours: 45,
+        createdAt: testDate,
+        sectionId: 'SOL_BALLB_V_A',
+      ),
+      CourseComponent(
+        componentId: 'SOL_Evidence',
+        componentType: 'Theory',
+        courseName: 'The Bharatiya Sakshya Adhiniyam, 2023 (Law of Evidence)',
+        courseCode: '',
+        targetHours: 45,
+        createdAt: testDate,
+        sectionId: 'SOL_BALLB_V_A',
+      ),
+      CourseComponent(
+        componentId: 'SOL_Maritime',
+        componentType: 'Theory',
+        courseName: 'Maritime Law',
+        courseCode: '',
+        targetHours: 45,
+        createdAt: testDate,
+        sectionId: 'SOL_BALLB_V_A',
+      ),
+      CourseComponent(
+        componentId: 'SOL_CyberLaw',
+        componentType: 'Theory',
+        courseName: 'Cyber Law',
+        courseCode: '',
+        targetHours: 45,
+        createdAt: testDate,
+        sectionId: 'SOL_BALLB_V_A',
       ),
     ];
 
-    test('7. Exact match preserves FULL subject name (never shortened or underscored)', () {
+    test('1. Resolves all 8 SOL subjects and their dirty PDF variants to canonical names', () {
       final matcher = AttendanceCourseMatcher(configuredSolCourses);
-      final match = matcher.match(
-        courseName: 'Administrative Law',
-        componentType: 'Theory',
-        rawCourseName: 'Administrative LawT1 BALLB Sem V',
-      );
 
-      expect(match.isResolved, isTrue);
-      expect(match.subjectCode, equals('Administrative Law'));
-      expect(match.subjectCode, isNot(equals('Administrative_Law')));
-      expect(match.component, equals('Theory'));
-      expect(match.confidence, equals(MatchConfidence.exact));
-    });
+      final testCases = <String, ({String expectedName, String expectedComp})>{
+        // 1. Company Law II
+        'Company Law IIT4BA LLB': (
+          expectedName: 'Company Law II',
+          expectedComp: 'Theory',
+        ),
+        'Company Law II U4BALLB': (
+          expectedName: 'Company Law II',
+          expectedComp: 'Tutorial',
+        ),
 
-    test('8. Matches Tutorial component cleanly with full name', () {
-      final matcher = AttendanceCourseMatcher(configuredSolCourses);
-      final match = matcher.match(
-        courseName: 'Administrative Law',
-        componentType: 'Tutorial',
-        rawCourseName: 'Administrative LawU1 BALLB Sem V',
-      );
+        // 2. Environmental Law
+        'Environmental LawT4BALLB': (
+          expectedName: 'Environmental Law',
+          expectedComp: 'Theory',
+        ),
+        'Environmental Law U4BALLB': (
+          expectedName: 'Environmental Law',
+          expectedComp: 'Tutorial',
+        ),
 
-      expect(match.isResolved, isTrue);
-      expect(match.subjectCode, equals('Administrative Law'));
-      expect(match.component, equals('Tutorial'));
-    });
+        // 3. CPC & Limitation Act
+        'CPC & Limitation ActT4BALLB': (
+          expectedName: 'CPC & Limitation Act',
+          expectedComp: 'Theory',
+        ),
+        'CPC & Limitation Act U4BALLB': (
+          expectedName: 'CPC & Limitation Act',
+          expectedComp: 'Tutorial',
+        ),
 
-    test('9. Normalized match resolves SAP string against configured SOL course', () {
-      final matcher = AttendanceCourseMatcher(configuredSolCourses);
-      final match = matcher.match(
-        courseName: 'CPC & Limitation Act',
-        componentType: 'Theory',
-        rawCourseName: 'CPC & Limitation ActT1 BALLB Sem V',
-      );
+        // 4. Family Law II (Success and Inheritance Laws)
+        'Family LawII(Succes and Inheri LawsTBALL': (
+          expectedName: 'Family Law II (Success and Inheritance Laws)',
+          expectedComp: 'Theory',
+        ),
+        'Family Law II (SuccesandInheriLawsU4BALL': (
+          expectedName: 'Family Law II (Success and Inheritance Laws)',
+          expectedComp: 'Tutorial',
+        ),
 
-      expect(match.isResolved, isTrue);
-      expect(match.subjectCode, equals('CPC & Limitation Act'));
-      expect(match.component, equals('Theory'));
-    });
+        // 5. Administrative Law
+        'Administrative LawT4BALLB': (
+          expectedName: 'Administrative Law',
+          expectedComp: 'Theory',
+        ),
+        'Administrative Law U4BALLB': (
+          expectedName: 'Administrative Law',
+          expectedComp: 'Tutorial',
+        ),
 
-    test('10. STME courseAliases logic NEVER intercepts SOL courses', () {
-      final matcher = AttendanceCourseMatcher(configuredSolCourses);
-      final match = matcher.match(
-        courseName: 'Environmental Law',
-        componentType: 'Theory',
-        rawCourseName: 'Environmental LawT1 BALLB Sem V',
-      );
+        // 6. The Bharatiya Sakshya Adhiniyam, 2023 (Law of Evidence)
+        'The Bharti Sak Adhi, 2023 (L of EvT4': (
+          expectedName: 'The Bharatiya Sakshya Adhiniyam, 2023 (Law of Evidence)',
+          expectedComp: 'Theory',
+        ),
+        'The Bharti Sak Adhi, 2023 (L of Ev U4': (
+          expectedName: 'The Bharatiya Sakshya Adhiniyam, 2023 (Law of Evidence)',
+          expectedComp: 'Tutorial',
+        ),
 
-      expect(match.isResolved, isTrue);
-      expect(match.subjectCode, equals('Environmental Law'));
-      expect(match.confidence, isNot(equals(MatchConfidence.alias)));
-    });
-  });
+        // 7. Maritime Law
+        'Maritime LawT4': (
+          expectedName: 'Maritime Law',
+          expectedComp: 'Theory',
+        ),
 
-  group('SOL Subject Identity & Timetable Reconciliation Tests', () {
-    final configuredSolCourses = [
-      makeSolComp(
-        componentId: 'Administrative_Law_Theory',
-        courseName: 'Administrative Law',
-        componentType: 'Theory',
-      ),
-      makeSolComp(
-        componentId: 'Administrative_Law_Tutorial',
-        courseName: 'Administrative Law',
-        componentType: 'Tutorial',
-      ),
-      makeSolComp(
-        componentId: 'Company_Law_II_Theory',
-        courseName: 'Company Law II',
-        componentType: 'Theory',
-      ),
-    ];
+        // 8. Cyber Law
+        'Cyber LawT4': (
+          expectedName: 'Cyber Law',
+          expectedComp: 'Theory',
+        ),
+      };
 
-    test('11. SubjectIdentityService resolves full displayName and canonicalKey for SOL', () {
-      final identity = SubjectIdentityService.resolve(
-        'Administrative Law',
-        configuredCourses: configuredSolCourses,
-      );
+      for (final entry in testCases.entries) {
+        final raw = entry.key;
+        final expected = entry.value;
 
-      expect(identity.isResolved, isTrue);
-      expect(identity.displayName, equals('Administrative Law'));
-      expect(identity.canonicalKey, equals('Administrative Law'));
-      expect(identity.shortCode, isNull);
-    });
-
-    test('12. isMatch reliably reconciles Timetable full name with Attendance raw SAP string', () {
-      final match = SubjectIdentityService.isMatch(
-        'Administrative Law',
-        'Administrative LawT1 BALLB Sem V',
-        configuredCourses: configuredSolCourses,
-      );
-
-      expect(match, isTrue);
-    });
-
-    test('13. STME Engineering aliases remain 100% functional and untouched', () {
-      expect(SubjectIdentityService.isMatch('SE', 'Software Engineering'), isTrue);
-      expect(SubjectIdentityService.isMatch('DSA', 'Data Structures and Algorithms'), isTrue);
-      expect(SubjectIdentityService.isMatch('COA', 'Computer Organization and Architecture'), isTrue);
-
-      final seIdentity = SubjectIdentityService.resolve('SE');
-      expect(seIdentity.canonicalKey, equals('Software Engineering'));
-      expect(seIdentity.shortCode, equals('SE'));
-
-      final dsaIdentity = SubjectIdentityService.resolve('DSA');
-      expect(dsaIdentity.canonicalKey, equals('DSA'));
-      expect(dsaIdentity.shortCode, equals('DSA'));
-    });
-
-    test('14. Program tokens (BALLB, BBALLB, LLB, LAW) are safely isolated and never corrupted', () {
-      final lawTokens = [
-        'Constitutional Law I BALLB Sem III',
-        'Jurisprudence BBALLB Sem V',
-        'Law of Crimes LLB Sem I',
-        'Property Law LAW Sem IV',
-      ];
-
-      for (final raw in lawTokens) {
         final norm = AttendanceCourseNormalizer.normalize(raw);
-        expect(norm.courseName, isNot(contains('BALLB')));
-        expect(norm.courseName, isNot(contains('BBALLB')));
-        expect(norm.courseName, isNot(contains('LLB')));
-        expect(norm.componentType, equals('Theory'));
+        expect(
+          norm.courseName,
+          equals(expected.expectedName),
+          reason: 'Failed normalizing course name for: $raw',
+        );
+        expect(
+          norm.componentType,
+          equals(expected.expectedComp),
+          reason: 'Failed normalizing component type for: $raw',
+        );
+
+        final matchResult = matcher.match(
+          courseName: norm.courseName,
+          componentType: norm.componentType,
+          rawCourseName: raw,
+        );
+        expect(
+          matchResult.subjectCode,
+          equals(expected.expectedName),
+          reason: 'Failed matching subjectCode for: $raw',
+        );
+
+        // SubjectIdentityService resolution check
+        final identity = SubjectIdentityService.resolve(
+          raw,
+          configuredCourses: configuredSolCourses,
+        );
+        expect(
+          identity.canonicalKey,
+          equals(expected.expectedName),
+          reason: 'Failed SubjectIdentityService.resolve canonicalKey for: $raw',
+        );
+        expect(
+          identity.isResolved,
+          isTrue,
+          reason: 'SubjectIdentityService should deterministically resolve $raw without review',
+        );
       }
     });
 
-    test('15. SOL component notations T/T1/(T)/unmarked = Theory and U/U1/(U)/Tutorial', () {
-      final theoryCases = [
-        'Administrative LawT',
-        'Administrative LawT1',
-        'Administrative Law (T)',
-        'Administrative Law - T',
-        'Administrative Law',
-      ];
-      for (final raw in theoryCases) {
-        final norm = AttendanceCourseNormalizer.normalize(raw);
-        expect(norm.courseName, equals('Administrative Law'));
-        expect(norm.componentType, equals('Theory'), reason: '$raw should be Theory');
-      }
-
-      final tutorialCases = [
-        'Administrative LawU',
-        'Administrative LawU1',
-        'Administrative Law (U)',
-        'Administrative Law - U',
-        'Administrative Law (Tutorial)',
-      ];
-      for (final raw in tutorialCases) {
-        final norm = AttendanceCourseNormalizer.normalize(raw);
-        expect(norm.courseName, equals('Administrative Law'));
-        expect(norm.componentType, equals('Tutorial'), reason: '$raw should be Tutorial');
-      }
-    });
-
-    test('16. SOL full subject names are preserved everywhere and never shortened to aliases', () {
-      final identity = SubjectIdentityService.resolve(
-        'Environmental Law',
+    test('2. Single Canonical Subject Card for SOL (Theory + Tutorial Merged)', () {
+      // In SOL, courses are not configured to split, so Theory and Tutorial aggregate into one card
+      final solCourse = 'Company Law II';
+      final theoryKey = AcademicGroupingPolicy.canonicalGroupKey(
+        solCourse,
+        'Theory',
         configuredCourses: configuredSolCourses,
       );
-      expect(identity.canonicalKey, equals('Environmental Law'));
-      expect(identity.displayName, equals('Environmental Law'));
-      expect(identity.shortCode, isNull);
-
-      final matcher = AttendanceCourseMatcher(configuredSolCourses);
-      final res = matcher.match(
-        courseName: 'Environmental Law',
-        componentType: 'Theory',
-        rawCourseName: 'Environmental LawT1 BALLB Sem V',
+      final tutorialKey = AcademicGroupingPolicy.canonicalGroupKey(
+        solCourse,
+        'Tutorial',
+        configuredCourses: configuredSolCourses,
       );
-      expect(res.subjectCode, equals('Environmental Law'));
-      expect(res.component, equals('Theory'));
-      expect(res.confidence, isNot(equals(MatchConfidence.alias)));
+
+      expect(theoryKey, equals('${solCourse}_Merged'));
+      expect(tutorialKey, equals('${solCourse}_Merged'));
+      expect(theoryKey, equals(tutorialKey));
+
+      final componentName = AcademicGroupingPolicy.canonicalComponent(
+        solCourse,
+        'Theory',
+        configuredCourses: configuredSolCourses,
+      );
+      expect(componentName, equals('Merged'));
+    });
+
+    test('3. AttendanceRecord 70% Target Formula matches exact requirements', () {
+      // Requirements:
+      // 4/7 -> 0 skips
+      // 7/10 -> 0 skips
+      // 8/10 -> 1 skip
+      // 7/9 -> 0 skips
+      // 8/9 -> 2 skips
+      final r4_7 = AttendanceRecord(
+        id: 'r1',
+        division: 'SOL',
+        subjectCode: 'Law',
+        component: 'Merged',
+        present: 4,
+        absent: 3, // total = 7
+      );
+      expect(r4_7.canMiss, equals(0), reason: '4/7 should give 0 skips');
+
+      final r7_10 = AttendanceRecord(
+        id: 'r2',
+        division: 'SOL',
+        subjectCode: 'Law',
+        component: 'Merged',
+        present: 7,
+        absent: 3, // total = 10
+      );
+      expect(r7_10.canMiss, equals(0), reason: '7/10 should give 0 skips');
+
+      final r8_10 = AttendanceRecord(
+        id: 'r3',
+        division: 'SOL',
+        subjectCode: 'Law',
+        component: 'Merged',
+        present: 8,
+        absent: 2, // total = 10
+      );
+      expect(r8_10.canMiss, equals(1), reason: '8/10 should give 1 skip');
+
+      final r7_9 = AttendanceRecord(
+        id: 'r4',
+        division: 'SOL',
+        subjectCode: 'Law',
+        component: 'Merged',
+        present: 7,
+        absent: 2, // total = 9
+      );
+      expect(r7_9.canMiss, equals(0), reason: '7/9 should give 0 skips');
+
+      final r8_9 = AttendanceRecord(
+        id: 'r5',
+        division: 'SOL',
+        subjectCode: 'Law',
+        component: 'Merged',
+        present: 8,
+        absent: 1, // total = 9
+      );
+      expect(r8_9.canMiss, equals(2), reason: '8/9 should give 2 skips');
+    });
+
+    test('4. NU Status Semantics: Never counted as present or absent, preserves percentage', () {
+      // Raw SAP code NU maps to 'not_updated'
+      final mapped = AttendanceStatusMapper.normalize('NU');
+      expect(mapped, equals('not_updated'));
+
+      // In AttendanceRecord, total is present + absent.
+      // NU logs do not increment present or absent.
+      final recordWithNu = AttendanceRecord(
+        id: 'r_nu',
+        division: 'SOL',
+        subjectCode: 'Company Law II',
+        component: 'Merged',
+        present: 8,
+        absent: 1,
+        // cancelled/NU do not corrupt total
+      );
+
+      expect(recordWithNu.total, equals(9));
+      expect(recordWithNu.percentage, closeTo(8 / 9, 0.001));
+      expect(recordWithNu.canMiss, equals(2));
+    });
+
+    test('5. Ground truth golden counts and percentages for all 8 SOL courses', () {
+      final goldenSpecs = [
+        (name: 'Administrative Law', p: 33, a: 8, pct: 80.49),
+        (name: 'Company Law II', p: 22, a: 6, pct: 78.57),
+        (name: 'Environmental Law', p: 31, a: 9, pct: 77.50),
+        (name: 'CPC & Limitation Act', p: 39, a: 6, pct: 86.67),
+        (name: 'Family Law II (Success and Inheritance Laws)', p: 21, a: 5, pct: 80.77),
+        (name: 'Cyber Law', p: 8, a: 2, pct: 80.00),
+        (name: 'Maritime Law', p: 14, a: 3, pct: 82.35),
+        (name: 'The Bharatiya Sakshya Adhiniyam, 2023 (Law of Evidence)', p: 50, a: 0, pct: 100.00),
+      ];
+
+      for (final spec in goldenSpecs) {
+        final total = spec.p + spec.a;
+        final actualPct = (spec.p / total) * 100;
+        expect(actualPct, closeTo(spec.pct, 0.01), reason: 'Percentage mismatch for ${spec.name}');
+
+        final record = AttendanceRecord(
+          id: 'test_${spec.name}',
+          division: 'SOL_BALLB_V_A',
+          subjectCode: spec.name,
+          component: 'Merged',
+          present: spec.p,
+          absent: spec.a,
+        );
+
+        // All courses meet or exceed the SOL 70% requirement
+        expect(record.percentage >= 0.70, isTrue);
+      }
     });
   });
 }

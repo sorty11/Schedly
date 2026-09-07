@@ -3,7 +3,7 @@ import '../models/attendance_import_models.dart';
 /// Separates logical course names from component codes and batch/section suffixes.
 class AttendanceCourseNormalizer {
   static final _componentSuffixRegex = RegExp(
-    r'^(.*?)(?:\s+|(?<=[a-zA-Z0-9]))([TPUL][1-9])(?:\s+(.*)|$)',
+    r'^(.*?)(?:\s+([TPUL][1-9]?)|(?<=[a-zA-Z0-9])([TPUL][1-9]))(?:\s+(.*)|$)',
     caseSensitive: false,
   );
 
@@ -20,17 +20,40 @@ class AttendanceCourseNormalizer {
   );
 
   static NormalizedCourseInfo normalize(String rawCourseName) {
-    final raw = rawCourseName.trim();
+    var raw = rawCourseName.trim();
     if (raw.isEmpty) {
       return const NormalizedCourseInfo(courseName: '', parsed: false);
+    }
+
+    // Pre-clean recognized SOL attached metadata (e.g. T4BALLB, U4BALLB, TBALL, U4BALL, etc.)
+    // Only strip when anchored at the end of the course string so course name words like 'LAW' are preserved.
+    final solAttachedMatch = RegExp(
+      r'^(.*?)[\s\-_]*([TU](?:[1-9])?)\s*(?:BA\s*LLB|BBALLB|BALLB|BALL|LLB)\s*$',
+      caseSensitive: false,
+    ).firstMatch(raw);
+
+    if (solAttachedMatch != null) {
+      raw = solAttachedMatch.group(1)!.trim();
+      final code = solAttachedMatch.group(2)!.toUpperCase();
+      final component = _componentTypeFromCode(code);
+      var courseName = _canonicalizeSolSubjectName(raw);
+      return NormalizedCourseInfo(
+        courseName: courseName,
+        componentType: component,
+        componentCode: code,
+        parsed: true,
+      );
     }
 
     final match = _componentSuffixRegex.firstMatch(raw);
     if (match == null) {
       // Check for explicit SOL Theory/Tutorial notations: (U), [U], (T), [T], Tutorial, Theory
       final explicit = _extractExplicitComponent(raw);
+      var courseName = explicit.name;
+      courseName = _canonicalizeSolSubjectName(courseName);
+
       return NormalizedCourseInfo(
-        courseName: explicit.name,
+        courseName: courseName,
         componentType: explicit.component,
         componentCode: explicit.code,
         parsed: explicit.parsed,
@@ -38,13 +61,15 @@ class AttendanceCourseNormalizer {
     }
 
     var courseName = match.group(1)!.trim();
-    final componentCode = match.group(2)!.toUpperCase();
-    final trailing = (match.group(3) ?? '').trim();
+    final rawCompCode = match.group(2) ?? match.group(3);
+    final componentCode = rawCompCode?.toUpperCase() ?? 'T';
+    final trailing = (match.group(4) ?? '').trim();
 
     if (courseName.isEmpty) {
       final explicit = _extractExplicitComponent(raw);
+      var name = _canonicalizeSolSubjectName(explicit.name);
       return NormalizedCourseInfo(
-        courseName: explicit.name,
+        courseName: name,
         componentType: explicit.component,
         componentCode: explicit.code,
         parsed: explicit.parsed,
@@ -67,14 +92,8 @@ class AttendanceCourseNormalizer {
       courseName = courseName.substring(0, courseName.length - 9).trim();
     }
 
-    // Normalize SAP-truncated course endings so sibling components share the same base name
-    final cleanedUpper = courseName.toUpperCase();
-    if (cleanedUpper.contains('DIGITAL CIRCUITS') &&
-        (cleanedUpper.endsWith('ARCH') ||
-            cleanedUpper.endsWith('ARCHI') ||
-            cleanedUpper.endsWith('ARCHITECTURE'))) {
-      courseName = 'Digital Circuits and Computer Architecture';
-    }
+    // Canonicalize well-known truncated course names
+    courseName = _canonicalizeSolSubjectName(courseName);
 
     final batch = _extractBatch(trailing.isNotEmpty ? trailing : raw);
 
@@ -225,12 +244,73 @@ class AttendanceCourseNormalizer {
     return match?.group(1)?.toUpperCase();
   }
 
+  static String _canonicalizeSolSubjectName(String name) {
+    var trimmed = name.replaceAll(RegExp(r'[\s.]+$'), '').trim();
+    final upper = trimmed.toUpperCase();
+
+    // DCCA normalization
+    if (upper.contains('DIGITAL CIRCUITS') &&
+        (upper.endsWith('ARCH') ||
+            upper.endsWith('ARCHI') ||
+            upper.endsWith('ARCHITECTURE'))) {
+      return 'Digital Circuits and Computer Architecture';
+    }
+
+    // Family Law II truncated variants:
+    // e.g. "Family LawII(Succes and Inheri Laws", "Family Law II (SuccesandInheriLaws"
+    if (upper.contains('FAMILY LAW') &&
+        (upper.contains('SUCCES') || upper.contains('INHERI'))) {
+      return 'Family Law II (Success and Inheritance Laws)';
+    }
+
+    // The Bharatiya Sakshya Adhiniyam, 2023 (Law of Evidence) truncated variants:
+    // e.g. "The Bharti Sak Adhi, 2023 (L of Ev", "The Bharti Sak Adhi, 2023 (Law of Evidence)"
+    if (upper.contains('BHARTI SAK') ||
+        upper.contains('BHARATIYA') ||
+        upper.contains('BHARTIYA SAKSHYA') ||
+        (upper.contains('SAK ADHI') && (upper.contains('EV') || upper.contains('EVIDENCE')))) {
+      return 'The Bharatiya Sakshya Adhiniyam, 2023 (Law of Evidence)';
+    }
+
+    // Company Law II
+    if (upper == 'COMPANY LAW II' || upper == 'COMPANY LAWII') {
+      return 'Company Law II';
+    }
+
+    // Environmental Law
+    if (upper == 'ENVIRONMENTAL LAW') {
+      return 'Environmental Law';
+    }
+
+    // CPC & Limitation Act
+    if (upper == 'CPC & LIMITATION ACT' || upper == 'CPC AND LIMITATION ACT') {
+      return 'CPC & Limitation Act';
+    }
+
+    // Administrative Law
+    if (upper == 'ADMINISTRATIVE LAW') {
+      return 'Administrative Law';
+    }
+
+    // Maritime Law
+    if (upper == 'MARITIME LAW') {
+      return 'Maritime Law';
+    }
+
+    // Cyber Law
+    if (upper == 'CYBER LAW') {
+      return 'Cyber Law';
+    }
+
+    return trimmed;
+  }
+
   /// Removes semester/branch noise for fuzzy matching comparisons.
   static String normalizeForMatching(String name) {
-    var normalized = name.toUpperCase();
+    var normalized = _canonicalizeSolSubjectName(name).toUpperCase();
     normalized = normalized.replaceAll('&', ' AND ');
-    normalized = normalized.replaceAll(RegExp(r'(?<=[A-Z0-9])([TPUL][1-9])\b'), '');
-    normalized = normalized.replaceAll(RegExp(r'\b([TPUL][1-9])\b'), '');
+    normalized = normalized.replaceAll(RegExp(r'(?<=[A-Z0-9])([TPUL][1-9]?)\b'), '');
+    normalized = normalized.replaceAll(RegExp(r'\b([TPUL][1-9]?)\b'), '');
     normalized = normalized.replaceAll(_semesterRegex, '');
     normalized = normalized.replaceAll(_batchRegex, '');
     normalized = normalized.replaceAll(_branchRegex, '');

@@ -27,20 +27,37 @@ class AttendanceRecord {
   int get total => present + absent; // cancelled doesn't count toward total
   double get percentage => total == 0 ? 0 : present / total;
 
-  // How many more lectures can be missed while staying ≥80%
-  int get canMiss {
-    if (percentage < 0.80) return 0;
-    // present / (total + x) >= 0.80  →  x <= (present/0.80) - total
-    final maxTotal = (present / 0.80).floor();
-    final canMissVal = maxTotal - total;
-    return canMissVal < 0 ? 0 : canMissVal;
+  // How many more lectures can be missed while staying >70% (strict, Smart Attendance target)
+  int get canMiss => canMissFor(0.70, strict: true);
+
+  // How many must be attended to recover to ≥70%
+  int get needToAttend => needToAttendFor(0.70);
+
+  /// Computes how many lectures can be missed while staying above [targetPct] (e.g. 0.70 or 0.80).
+  /// If [strict] is true, enforces strictly `>` (required by SOL 70% rules: 7/10 -> 0, 7/9 -> 0).
+  /// If [strict] is false, allows `present / (total + n) >= targetPct`.
+  int canMissFor(double targetPct, {bool strict = false}) {
+    if (total == 0 || (strict ? percentage <= targetPct : percentage < targetPct)) {
+      return 0;
+    }
+    int n = 0;
+    while (true) {
+      final nextTotal = total + n + 1;
+      final nextPct = present / nextTotal;
+      if (strict ? (nextPct > targetPct) : (nextPct >= targetPct - 1e-9)) {
+        n++;
+      } else {
+        break;
+      }
+    }
+    return n;
   }
 
-  // How many must be attended to recover to ≥80%
-  int get needToAttend {
-    if (percentage >= 0.80) return 0;
-    // (present + x) / (total + x) >= 0.80  →  x >= (0.80*total - present) / 0.20
-    final need = ((0.80 * total - present) / 0.20).ceil();
+  /// Computes how many lectures must be attended to recover to >= [targetPct] (e.g. 0.70)
+  int needToAttendFor(double targetPct) {
+    if (percentage >= targetPct) return 0;
+    // (present + x) / (total + x) >= targetPct  →  x >= (targetPct*total - present) / (1 - targetPct)
+    final need = ((targetPct * total - present) / (1.0 - targetPct)).ceil();
     return need < 0 ? 0 : need;
   }
 
