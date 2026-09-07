@@ -12,8 +12,8 @@ class TutorialStorageService {
 
   // Schedly V11 Constants
   static const int currentFrameworkVersion = 2;
-  static const int currentAppBuild = 11;
-  static const String currentAppVersion = '1.0.11';
+  static const int currentAppBuild = 12;
+  static const String currentAppVersion = '1.11.5';
 
   // ── Version & Migration Detection ──────────────────────────────────────────
 

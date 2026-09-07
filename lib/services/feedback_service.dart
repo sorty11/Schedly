@@ -35,7 +35,7 @@ class FeedbackService {
     }
 
     // Get App Version
-    String appVersion = '1.0.11';
+    String appVersion = '1.11.5';
     try {
       final packageInfo = await PackageInfo.fromPlatform();
       appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';

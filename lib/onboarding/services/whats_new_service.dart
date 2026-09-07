@@ -5,8 +5,8 @@ import '../widgets/whats_new_dialog.dart';
 import 'tutorial_storage_service.dart';
 
 class WhatsNewService {
-  static const int currentV11Build = 11;
-  static const String currentV11Version = '1.0.11';
+  static const int currentV11Build = 12;
+  static const String currentV11Version = '1.11.5';
 
   static final WhatsNewRelease v11Release = WhatsNewRelease(
     buildNumber: currentV11Build,
