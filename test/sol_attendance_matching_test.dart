@@ -346,5 +346,110 @@ void main() {
         expect(record.percentage >= 0.70, isTrue);
       }
     });
+
+    test('6. Bharatiya Sakshya duplicate variants merge to single canonical course', () {
+      final v1 = 'The Bharti Sak Adhi, 2023 (Law of Evidence)';
+      final v2 = 'The Bharatiya Sakshya Adhi...';
+      final v3 = 'The Bharatiya Sakshya Adhiniyam, 2023 (Law of Evidence)';
+      final v4 = 'The Bharti Sak Adhi, 2023 (L of EvT4';
+
+      final canonicalExpected = 'The Bharatiya Sakshya Adhiniyam, 2023 (Law of Evidence)';
+
+      final id1 = SubjectIdentityService.resolve(v1, configuredCourses: configuredSolCourses);
+      final id2 = SubjectIdentityService.resolve(v2, configuredCourses: configuredSolCourses);
+      final id3 = SubjectIdentityService.resolve(v3, configuredCourses: configuredSolCourses);
+      final id4 = SubjectIdentityService.resolve(v4, configuredCourses: configuredSolCourses);
+
+      expect(id1.canonicalKey, equals(canonicalExpected));
+      expect(id2.canonicalKey, equals(canonicalExpected));
+      expect(id3.canonicalKey, equals(canonicalExpected));
+      expect(id4.canonicalKey, equals(canonicalExpected));
+
+      expect(SubjectIdentityService.isMatch(v1, v2, configuredCourses: configuredSolCourses), isTrue);
+      expect(SubjectIdentityService.isMatch(v2, v3, configuredCourses: configuredSolCourses), isTrue);
+      expect(SubjectIdentityService.isMatch(v1, v3, configuredCourses: configuredSolCourses), isTrue);
+    });
+
+    test('7. Timetable ↔ Attendance Matching: Arabic/Roman numeral 2 (2 ↔ II) and component suffix', () {
+      // Company Law 2 Theory ↔ Company Law II
+      expect(
+        SubjectIdentityService.isMatch('Company Law 2 Theory', 'Company Law II', configuredCourses: configuredSolCourses),
+        isTrue,
+      );
+      expect(
+        SubjectIdentityService.getCanonicalKey('Company Law 2 Theory', configuredCourses: configuredSolCourses),
+        equals('Company Law II'),
+      );
+      expect(
+        SubjectIdentityService.resolve('Company Law 2 Theory', configuredCourses: configuredSolCourses).canonicalKey,
+        equals('Company Law II'),
+      );
+
+      // Family Law 2 Theory ↔ Family Law II
+      expect(
+        SubjectIdentityService.isMatch('Family Law 2 Theory', 'Family Law II (Success and Inheritance Laws)', configuredCourses: configuredSolCourses),
+        isTrue,
+      );
+      expect(
+        SubjectIdentityService.isMatch('Family Law 2 Theory', 'Family Law II', configuredCourses: configuredSolCourses),
+        isTrue,
+      );
+      expect(
+        SubjectIdentityService.getCanonicalKey('Family Law 2 Theory', configuredCourses: configuredSolCourses),
+        equals('Family Law II (Success and Inheritance Laws)'),
+      );
+
+      // Raw course normalizer also canonicalizes accurately
+      final normCompLaw2 = AttendanceCourseNormalizer.normalize('Company Law 2 Theory');
+      expect(normCompLaw2.courseName, equals('Company Law II'));
+
+      final normFamLaw2 = AttendanceCourseNormalizer.normalize('Family Law 2 Theory');
+      expect(normFamLaw2.courseName, equals('Family Law II (Success and Inheritance Laws)'));
+    });
+
+    test('8. STME behavior remains 100% untouched', () {
+      final configuredDsa = [
+        CourseComponent(
+          componentId: 'DSA_Theory',
+          componentType: 'Theory',
+          courseName: 'Data Structures and Algorithms',
+          courseCode: 'DSA',
+          targetHours: 45,
+          createdAt: testDate,
+          sectionId: 'CE_C',
+        ),
+        CourseComponent(
+          componentId: 'DSA_Lab',
+          componentType: 'Lab',
+          courseName: 'Data Structures and Algorithms',
+          courseCode: 'DSA',
+          targetHours: 30,
+          createdAt: testDate,
+          sectionId: 'CE_C',
+        ),
+      ];
+
+      // DSA Theory and Lab must NOT be merged when configured in STME
+      final dsaTheoryKey = AcademicGroupingPolicy.canonicalGroupKey(
+        'DSA',
+        'Theory',
+        configuredCourses: configuredDsa,
+        sectionSplitSubjects: {'DSA', 'DATA STRUCTURES AND ALGORITHMS'},
+      );
+      final dsaLabKey = AcademicGroupingPolicy.canonicalGroupKey(
+        'DSA',
+        'Lab',
+        configuredCourses: configuredDsa,
+        sectionSplitSubjects: {'DSA', 'DATA STRUCTURES AND ALGORITHMS'},
+      );
+      expect(dsaTheoryKey, equals('DSA_Theory'));
+      expect(dsaLabKey, equals('DSA_Lab'));
+      expect(dsaTheoryKey, isNot(equals(dsaLabKey)));
+
+      // STME short codes / aliases work as expected
+      expect(SubjectIdentityService.isMatch('SE', 'Software Engineering'), isTrue);
+      expect(SubjectIdentityService.isMatch('COA', 'Computer Organization and Architecture'), isTrue);
+      expect(SubjectIdentityService.isMatch('DSA T4', 'DATA STRUCTURES AND ALGORITHMS'), isTrue);
+    });
   });
 }

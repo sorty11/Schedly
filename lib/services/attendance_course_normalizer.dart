@@ -246,6 +246,11 @@ class AttendanceCourseNormalizer {
 
   static String _canonicalizeSolSubjectName(String name) {
     var trimmed = name.replaceAll(RegExp(r'[\s.]+$'), '').trim();
+    // Strip trailing component keywords if present on raw course name (e.g. "Theory", "Tutorial", "Lab")
+    trimmed = trimmed.replaceAll(
+      RegExp(r'\s+(Theory|Tutorial|Lab|Lecture|Practical|Tut|Lec|Prac)$', caseSensitive: false),
+      '',
+    ).trim();
     final upper = trimmed.toUpperCase();
 
     // DCCA normalization
@@ -256,49 +261,55 @@ class AttendanceCourseNormalizer {
       return 'Digital Circuits and Computer Architecture';
     }
 
-    // Family Law II truncated variants:
-    // e.g. "Family LawII(Succes and Inheri Laws", "Family Law II (SuccesandInheriLaws"
-    if (upper.contains('FAMILY LAW') &&
-        (upper.contains('SUCCES') || upper.contains('INHERI'))) {
+    // Family Law II (Success and Inheritance Laws) variants (including Family Law 2, Family Law II):
+    // e.g. "Family LawII(Succes and Inheri Laws", "Family Law II (SuccesandInheriLaws", "Family Law 2"
+    if (upper.contains('FAMILY LAW') ||
+        upper.contains('SUCCES') ||
+        upper.contains('INHERI')) {
       return 'Family Law II (Success and Inheritance Laws)';
     }
 
-    // The Bharatiya Sakshya Adhiniyam, 2023 (Law of Evidence) truncated variants:
-    // e.g. "The Bharti Sak Adhi, 2023 (L of Ev", "The Bharti Sak Adhi, 2023 (Law of Evidence)"
-    if (upper.contains('BHARTI SAK') ||
+    // The Bharatiya Sakshya Adhiniyam, 2023 (Law of Evidence) truncated & dirty variants:
+    // e.g. "The Bharti Sak Adhi, 2023 (L of Ev", "The Bharti Sak Adhi, 2023 (Law of Evidence)", "The Bharatiya Sakshya Adhi..."
+    if (upper.contains('BHARTI') ||
         upper.contains('BHARATIYA') ||
-        upper.contains('BHARTIYA SAKSHYA') ||
-        (upper.contains('SAK ADHI') && (upper.contains('EV') || upper.contains('EVIDENCE')))) {
+        upper.contains('SAK ADHI') ||
+        upper.contains('SAKSHYA') ||
+        upper.contains('EVIDENCE')) {
       return 'The Bharatiya Sakshya Adhiniyam, 2023 (Law of Evidence)';
     }
 
-    // Company Law II
-    if (upper == 'COMPANY LAW II' || upper == 'COMPANY LAWII') {
+    // Company Law II (handles 2 <-> II)
+    if (upper == 'COMPANY LAW II' ||
+        upper == 'COMPANY LAWII' ||
+        upper == 'COMPANY LAW 2' ||
+        upper == 'COMPANY LAW2' ||
+        upper.startsWith('COMPANY LAW')) {
       return 'Company Law II';
     }
 
     // Environmental Law
-    if (upper == 'ENVIRONMENTAL LAW') {
+    if (upper.startsWith('ENVIRONMENTAL LAW')) {
       return 'Environmental Law';
     }
 
     // CPC & Limitation Act
-    if (upper == 'CPC & LIMITATION ACT' || upper == 'CPC AND LIMITATION ACT') {
+    if (upper.startsWith('CPC') || upper.contains('LIMITATION ACT')) {
       return 'CPC & Limitation Act';
     }
 
     // Administrative Law
-    if (upper == 'ADMINISTRATIVE LAW') {
+    if (upper.startsWith('ADMINISTRATIVE LAW')) {
       return 'Administrative Law';
     }
 
     // Maritime Law
-    if (upper == 'MARITIME LAW') {
+    if (upper.startsWith('MARITIME LAW')) {
       return 'Maritime Law';
     }
 
     // Cyber Law
-    if (upper == 'CYBER LAW') {
+    if (upper.startsWith('CYBER LAW')) {
       return 'Cyber Law';
     }
 

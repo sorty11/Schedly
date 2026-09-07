@@ -248,7 +248,27 @@ class SubjectIdentityService {
     final bool isSol = configuredCourses.any((c) => c.sectionId.startsWith('SOL_')) ||
         upperQuery.contains('LAW') ||
         upperQuery.contains('BALLB') ||
-        upperQuery.contains('BBALLB');
+        upperQuery.contains('BBALLB') ||
+        upperQuery.contains('BHARTI') ||
+        upperQuery.contains('BHARATIYA') ||
+        upperQuery.contains('SAKSHYA') ||
+        upperQuery.contains('SAK ADHI') ||
+        upperQuery.contains('CPC');
+
+    // --- STEP 0: For SOL, check canonical identity early to guarantee exact canonicalKey ---
+    if (isSol) {
+      final solCanonical = _resolveSolCanonicalName(query, normalizedQuery);
+      if (solCanonical != null) {
+        final matched = _findComponentMatchingKey(solCanonical, configuredCourses);
+        return SubjectIdentity(
+          canonicalKey: solCanonical,
+          displayName: solCanonical,
+          confidence: MatchConfidence.exact,
+          isResolved: true,
+          matchedComponent: matched,
+        );
+      }
+    }
 
     // --- STEP 1: Context-Aware Special Handling for PEC (Electives) ---
     if (upperQuery == 'PEC' ||
@@ -294,11 +314,15 @@ class SubjectIdentityService {
               : (_knownIdentities[upperQuery] ??
                   _knownIdentities[cName] ??
                   _knownIdentities[cCode]);
+          final solCanon = isCompSol
+              ? (_resolveSolCanonicalName(comp.courseName, SubjectNormalizer.normalize(comp.courseName)) ??
+                 _resolveSolCanonicalName(query, normalizedQuery))
+              : null;
           final canon = isCompSol
-              ? (comp.courseName.isNotEmpty ? comp.courseName : cleanSubjectCode(comp))
+              ? (solCanon ?? (comp.courseName.isNotEmpty ? comp.courseName : cleanSubjectCode(comp)))
               : (known?.$1 ?? (comp.courseName.isNotEmpty ? comp.courseName : cleanSubjectCode(comp)));
           final display = isCompSol
-              ? (comp.courseName.isNotEmpty ? comp.courseName : canon)
+              ? (solCanon ?? (comp.courseName.isNotEmpty ? comp.courseName : canon))
               : (known?.$2 ?? (comp.courseName.isNotEmpty ? comp.courseName : canon));
           final short = isCompSol
               ? null
@@ -349,11 +373,15 @@ class SubjectIdentityService {
             ? null
             : (_knownIdentities[bestComp.courseName.toUpperCase()] ??
                 _knownIdentities[bestComp.courseCode.toUpperCase()]);
+        final solCanon = isCompSol
+            ? (_resolveSolCanonicalName(bestComp.courseName, SubjectNormalizer.normalize(bestComp.courseName)) ??
+               _resolveSolCanonicalName(query, normalizedQuery))
+            : null;
         final canon = isCompSol
-            ? bestComp.courseName
+            ? (solCanon ?? bestComp.courseName)
             : (known?.$1 ?? bestComp.courseName);
         final display = isCompSol
-            ? bestComp.courseName
+            ? (solCanon ?? bestComp.courseName)
             : (known?.$2 ?? bestComp.courseName);
         final short = isCompSol
             ? null
@@ -442,21 +470,7 @@ class SubjectIdentityService {
     final upper = query.toUpperCase();
     final norm = normalized.toUpperCase();
 
-    if (upper.contains('COMPANY LAW II') || upper.contains('COMPANY LAWII') || norm.contains('COMPANY LAW II')) {
-      return 'Company Law II';
-    }
-    if (upper.contains('ENVIRONMENTAL LAW') || norm.contains('ENVIRONMENTAL LAW')) {
-      return 'Environmental Law';
-    }
-    if (upper.contains('CPC') || upper.contains('LIMITATION ACT') || norm.contains('CPC')) {
-      return 'CPC & Limitation Act';
-    }
-    if (upper.contains('FAMILY LAW') || norm.contains('FAMILY LAW') || upper.contains('SUCCES') || upper.contains('INHERI')) {
-      return 'Family Law II (Success and Inheritance Laws)';
-    }
-    if (upper.contains('ADMINISTRATIVE LAW') || norm.contains('ADMINISTRATIVE LAW')) {
-      return 'Administrative Law';
-    }
+    // 1. The Bharatiya Sakshya Adhiniyam, 2023 (Law of Evidence)
     if (upper.contains('BHARTI') ||
         upper.contains('BHARATIYA') ||
         upper.contains('SAK ADHI') ||
@@ -464,15 +478,61 @@ class SubjectIdentityService {
         upper.contains('EVIDENCE') ||
         norm.contains('BHARTI') ||
         norm.contains('SAKSHYA') ||
-        norm.contains('EVIDENCE')) {
+        norm.contains('EVIDENCE') ||
+        norm.contains('SAK ADHI')) {
       return 'The Bharatiya Sakshya Adhiniyam, 2023 (Law of Evidence)';
     }
+
+    // 2. Company Law II (handles 2 <-> II and trailing Theory/Tutorial/Lab)
+    if (upper.contains('COMPANY LAW II') ||
+        upper.contains('COMPANY LAWII') ||
+        upper.contains('COMPANY LAW 2') ||
+        upper.contains('COMPANY LAW2') ||
+        norm.contains('COMPANY LAW II') ||
+        norm.contains('COMPANY LAW 2') ||
+        norm.contains('COMPANY LAW')) {
+      return 'Company Law II';
+    }
+
+    // 3. Environmental Law
+    if (upper.contains('ENVIRONMENTAL LAW') || norm.contains('ENVIRONMENTAL LAW')) {
+      return 'Environmental Law';
+    }
+
+    // 4. CPC & Limitation Act
+    if (upper.contains('CPC') || upper.contains('LIMITATION ACT') || norm.contains('CPC')) {
+      return 'CPC & Limitation Act';
+    }
+
+    // 5. Family Law II (Success and Inheritance Laws) (handles 2 <-> II)
+    if (upper.contains('FAMILY LAW II') ||
+        upper.contains('FAMILY LAWII') ||
+        upper.contains('FAMILY LAW 2') ||
+        upper.contains('FAMILY LAW2') ||
+        upper.contains('FAMILY LAW') ||
+        norm.contains('FAMILY LAW II') ||
+        norm.contains('FAMILY LAW 2') ||
+        norm.contains('FAMILY LAW') ||
+        upper.contains('SUCCES') ||
+        upper.contains('INHERI')) {
+      return 'Family Law II (Success and Inheritance Laws)';
+    }
+
+    // 6. Administrative Law
+    if (upper.contains('ADMINISTRATIVE LAW') || norm.contains('ADMINISTRATIVE LAW')) {
+      return 'Administrative Law';
+    }
+
+    // 7. Maritime Law
     if (upper.contains('MARITIME LAW') || norm.contains('MARITIME LAW')) {
       return 'Maritime Law';
     }
+
+    // 8. Cyber Law
     if (upper.contains('CYBER LAW') || norm.contains('CYBER LAW')) {
       return 'Cyber Law';
     }
+
     return null;
   }
 
