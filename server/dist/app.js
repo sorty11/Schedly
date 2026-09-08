@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.championWorker = exports.tokenWorker = exports.worker = void 0;
+exports.tokenWorker = exports.worker = void 0;
 const express_1 = __importDefault(require("express"));
 const helmet_1 = __importDefault(require("helmet"));
 const cors_1 = __importDefault(require("cors"));
@@ -17,8 +17,6 @@ const token_worker_1 = require("./worker/token.worker");
 const env_config_1 = require("./config/env.config");
 const api_v1_routes_1 = __importDefault(require("./routes/api.v1.routes"));
 const feedback_1 = __importDefault(require("./routes/feedback"));
-const gamification_routes_1 = __importDefault(require("./routes/gamification.routes"));
-const champion_worker_1 = require("./worker/champion.worker");
 if (typeof dns_1.default.setDefaultResultOrder === 'function') {
     dns_1.default.setDefaultResultOrder('ipv4first');
 }
@@ -32,7 +30,7 @@ app.use(express_1.default.json());
 app.use((0, morgan_1.default)('combined', { stream: { write: message => logger_1.logger.info(message.trim()) } }));
 exports.worker = new outbox_worker_1.OutboxWorker();
 exports.tokenWorker = new token_worker_1.TokenWorker();
-exports.championWorker = new champion_worker_1.ChampionWorker();
+// export const championWorker = new ChampionWorker(); // Gamification suppressed
 app.get('/', (req, res) => {
     res.json({
         service: "Schedly Notification API",
@@ -42,7 +40,10 @@ app.get('/', (req, res) => {
 });
 app.use('/api/v1', api_v1_routes_1.default);
 app.use('/api/feedback', feedback_1.default);
-app.use('/api/gamification', gamification_routes_1.default);
+// Gamification routes suppressed
+app.use('/api/gamification', (req, res) => {
+    res.json({ success: false, message: 'Gamification temporarily disabled' });
+});
 // Global Error Handler
 app.use((err, req, res, next) => {
     logger_1.logger.error(JSON.stringify({
@@ -55,7 +56,7 @@ app.use((err, req, res, next) => {
 });
 exports.worker.start();
 exports.tokenWorker.start();
-exports.championWorker.start();
+// championWorker.start(); // Gamification suppressed
 app.listen(env_config_1.AppConfig.PORT, () => {
     logger_1.logger.info(JSON.stringify({
         event: 'server_start',

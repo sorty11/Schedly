@@ -316,11 +316,14 @@ export class OutboxWorker {
         }
       }
 
+      // Gamification suppressed
+      /*
       if (authorized && uid && divisionAuthorized && isTimetableAction && (role.toUpperCase() === 'CR' || role.toUpperCase() === 'SR')) {
         await GamificationService.awardTimetableContribution(db, uid, role, doc.id);
       } else if (authorized && (role.toUpperCase() === 'CR' || role.toUpperCase() === 'SR') && !isTimetableAction) {
         logger.info(`[GAMIFICATION] Notification ${doc.id} type '${type}' is not a timetable modification. Skipping reward.`);
       }
+      */
 
       const processingTime = Date.now() - startTime;
       await doc.ref.update({

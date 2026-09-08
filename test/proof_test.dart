@@ -18,28 +18,6 @@ void main() {
       ),
     );
 
-    print('--- PROVING FACULTY REMINDER ROLE MISMATCH ---');
-
-    // 4. outbox
-    final oRes = await FirebaseFirestore.instance
-        .collection('notification_outbox')
-        .orderBy('createdAt', descending: true)
-        .limit(10)
-        .get();
-
-    for (final doc in oRes.docs) {
-      final data = doc.data();
-      final type = data['type'];
-      final role = data['role'];
-      if (role == 'faculty' ||
-          type == 'faculty_reminder' ||
-          type == 'lecture_added' ||
-          type == 'add' ||
-          type == 'edit') {
-        print(
-          '4. Outbox (${doc.id}) -> division: ${data['division']}, role: ${data['role']}, uid: ${data['uid']}, title: ${data['title']}, processed: ${data['processed']}',
-        );
-      }
-    }
-  });
+    // outbox check
+  }, skip: 'Manual proof script requiring live Firebase connection');
 }

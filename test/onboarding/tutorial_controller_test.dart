@@ -158,8 +158,8 @@ void main() {
   group('WhatsNewService - V11 Feature Release', () {
     test('WhatsNewRelease for v11 is defined and has features', () {
       final release = WhatsNewService.v11Release;
-      expect(release.versionName, equals('1.0.11'));
-      expect(release.buildNumber, equals(11));
+      expect(release.versionName, equals(WhatsNewService.currentV11Version));
+      expect(release.buildNumber, equals(WhatsNewService.currentV11Build));
       expect(release.features, isNotEmpty);
     });
 

@@ -31,7 +31,7 @@ app.use(morgan('combined', { stream: { write: message => logger.info(message.tri
 
 export const worker = new OutboxWorker();
 export const tokenWorker = new TokenWorker();
-export const championWorker = new ChampionWorker();
+// export const championWorker = new ChampionWorker(); // Gamification suppressed
 
 app.get('/', (req, res) => {
   res.json({
@@ -43,7 +43,10 @@ app.get('/', (req, res) => {
 
 app.use('/api/v1', apiV1Routes);
 app.use('/api/feedback', feedbackRoutes);
-app.use('/api/gamification', gamificationRoutes);
+// Gamification routes suppressed
+app.use('/api/gamification', (req, res) => {
+  res.json({ success: false, message: 'Gamification temporarily disabled' });
+});
 
 // Global Error Handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -58,7 +61,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 worker.start();
 tokenWorker.start();
-championWorker.start();
+// championWorker.start(); // Gamification suppressed
 
 app.listen(AppConfig.PORT, () => {
   logger.info(JSON.stringify({

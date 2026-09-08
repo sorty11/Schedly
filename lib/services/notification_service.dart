@@ -19,12 +19,6 @@ class NotificationService {
     _initialized = true;
 
     try {
-      // On web, ensure we have an anonymous Firebase Auth user so we can
-      // persist the FCM token under a stable UID.
-      if (kIsWeb) {
-        await _ensureAnonymousSignIn();
-      }
-
       NotificationSettings? settings;
       if (!kIsWeb) {
         settings = await messaging.requestPermission(
@@ -88,10 +82,6 @@ class NotificationService {
 
   static Future<void> reRegisterToken() async {
     try {
-      if (kIsWeb) {
-        await _ensureAnonymousSignIn();
-      }
-
       String? token;
       try {
         debugPrint('[TOKEN_SYNC] getToken() called');
@@ -163,7 +153,6 @@ class NotificationService {
   static Future<void> promptWebPermission() async {
     if (!kIsWeb) return;
     try {
-      await _ensureAnonymousSignIn();
       final settings = await messaging.requestPermission(
         alert: true,
         badge: true,
@@ -178,21 +167,6 @@ class NotificationService {
       }
     } catch (e) {
       debugPrint('NotificationService: promptWebPermission failed: $e');
-    }
-  }
-
-  /// Ensures there is a Firebase Auth user (anonymous) on web so we can
-  /// store the FCM token under a stable document ID.
-  static Future<void> _ensureAnonymousSignIn() async {
-    try {
-      if (FirebaseAuth.instance.currentUser == null) {
-        debugPrint(
-          'NotificationService: No auth user on web — signing in anonymously',
-        );
-        await FirebaseAuth.instance.signInAnonymously();
-      }
-    } catch (e) {
-      debugPrint('NotificationService: Anonymous sign-in failed: $e');
     }
   }
 
@@ -213,8 +187,8 @@ class NotificationService {
           AppSettings.studentBatch ?? prefs.getString('selected_batch') ?? '';
 
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        debugPrint('NotificationService: Registration delayed - No auth user');
+      if (user == null || user.isAnonymous) {
+        debugPrint('NotificationService: Registration delayed - No authenticated user');
         return;
       }
 

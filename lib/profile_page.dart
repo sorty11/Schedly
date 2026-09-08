@@ -32,7 +32,6 @@ import 'about_schedly_page.dart';
 import 'widgets/support/bug_report_sheet.dart';
 import 'widgets/support/feature_request_sheet.dart';
 import 'widgets/support/other_feedback_sheet.dart';
-import 'services/gamification_service.dart';
 import 'admin/admin_session.dart';
 import 'admin/admin_auth_sheet.dart';
 import 'admin/student_management_page.dart';
@@ -52,13 +51,12 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    GamificationService.instance.loadCurrentUserProfile();
+    // Gamification profile loading suppressed
   }
 
   Future<void> _refresh() async {
     await AppSettings.loadRole();
     await AppSettings.loadSRDetails();
-    await GamificationService.instance.loadCurrentUserProfile();
     if (mounted) setState(() {});
   }
 
@@ -529,130 +527,8 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                         ],
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      ValueListenableBuilder<int>(
-                        valueListenable:
-                            GamificationService.instance.currentExpNotifier,
-                        builder: (context, exp, _) {
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                              vertical: AppSpacing.sm,
-                            ),
-                            decoration: BoxDecoration(
-                              color: colorScheme.primary.withValues(
-                                alpha: 0.08,
-                              ),
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                              border: Border.all(
-                                color: colorScheme.primary.withValues(
-                                  alpha: 0.2,
-                                ),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.bolt_rounded,
-                                  size: 20,
-                                  color: colorScheme.primary,
-                                ),
-                                const SizedBox(width: AppSpacing.sm),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      '$exp XP',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w800,
-                                        color: colorScheme.primary,
-                                        letterSpacing: 0.3,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Total Experience',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w500,
-                                        color: semanticColors.onSurfaceMuted,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                      ValueListenableBuilder<bool>(
-                        valueListenable:
-                            GamificationService.instance.isChampionNotifier,
-                        builder: (context, isChampion, _) {
-                          if (!isChampion) return const SizedBox.shrink();
-                          return Padding(
-                            padding: const EdgeInsets.only(top: AppSpacing.sm),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md + 2,
-                                vertical: AppSpacing.xs + 2,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFF261E0E),
-                                    Color(0xFF141018),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(
-                                  AppRadius.full,
-                                ),
-                                border: Border.all(
-                                  color: const Color(0xFFFFD700).withValues(
-                                    alpha: 0.75,
-                                  ),
-                                  width: 1.2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFFFFD700).withValues(
-                                      alpha: 0.22,
-                                    ),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.workspace_premium_rounded,
-                                    size: 14,
-                                    color: Color(0xFFFFD700),
-                                  ),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    'REIGNING CHAMPION • THEME UNLOCKED',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w800,
-                                      color: const Color(0xFFFFD700),
-                                      letterSpacing: 0.8,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
+                      // Gamification/EXP UI temporarily suppressed
+                      const SizedBox(height: AppSpacing.sm),
 
                       // Edit Profile Button
                       OutlinedButton.icon(

@@ -9,8 +9,6 @@ import 'animated_theme_background.dart';
 import '../widgets/animations/animated_card.dart';
 import '../onboarding/widgets/tutorial_target.dart';
 import '../onboarding/services/feature_discovery_service.dart';
-import '../services/gamification_service.dart';
-import '../widgets/app_dialogs.dart';
 
 class ThemesPage extends StatefulWidget {
   const ThemesPage({super.key});
@@ -25,7 +23,6 @@ class _ThemesPageState extends State<ThemesPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FeatureDiscoveryService.checkThemesDiscovery(context);
-      GamificationService.instance.checkChampionStatus();
     });
   }
 
@@ -82,39 +79,23 @@ class _ThemesPageState extends State<ThemesPage> {
                 // Theme Cards
                 TutorialTarget(
                   id: 'theme_skin_gallery',
-                  child: ValueListenableBuilder<bool>(
-                    valueListenable:
-                        GamificationService.instance.championThemeUnlockedNotifier,
-                    builder: (context, hasThemeAccess, _) {
-                      return Column(
-                        children: [
-                          for (final theme in SchedlyVisualTheme.values) ...[
-                            _ThemeCard(
-                              theme: theme,
-                              isSelected: activeTheme == theme,
-                              isDark: isDark,
-                              isChampion: hasThemeAccess,
-                              colorScheme: colorScheme,
-                              sem: sem,
-                              onTap: () {
-                                if (theme == SchedlyVisualTheme.champion &&
-                                    !hasThemeAccess) {
-                                  AppDialogs.showWarning(
-                                    context: context,
-                                    title: 'Champion Theme Locked',
-                                    message:
-                                        'The Champion theme is exclusively unlocked for the weekly Schedly Champion. Earn the most weekly EXP to unlock it next week!',
-                                  );
-                                  return;
-                                }
-                                themeController.setVisualTheme(theme);
-                              },
-                            ),
-                            const SizedBox(height: AppSpacing.lg),
-                          ],
-                        ],
-                      );
-                    },
+                  child: Column(
+                    children: [
+                      for (final theme in SchedlyVisualTheme.values) ...[
+                        _ThemeCard(
+                          theme: theme,
+                          isSelected: activeTheme == theme,
+                          isDark: isDark,
+                          isChampion: true,
+                          colorScheme: colorScheme,
+                          sem: sem,
+                          onTap: () {
+                            themeController.setVisualTheme(theme);
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                      ],
+                    ],
                   ),
                 ),
               ],

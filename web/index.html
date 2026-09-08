@@ -136,46 +136,25 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <!-- Service Worker & Auto-Update Handler for Desktop / Web PWA -->
+  <!-- Service Worker Registration for Web Push & PWA Stability -->
   <script>
     if ('serviceWorker' in navigator) {
-      var refreshing = false;
+      // Guard against infinite reload loops: only reload if an existing controller was replaced
+      var hadInitialController = Boolean(navigator.serviceWorker.controller);
+      var lastReload = parseInt(sessionStorage.getItem('sw_last_reload') || '0', 10);
+      var now = Date.now();
+
       navigator.serviceWorker.addEventListener('controllerchange', function () {
-        if (!refreshing) {
-          refreshing = true;
+        if (hadInitialController && (now - lastReload > 15000)) {
+          sessionStorage.setItem('sw_last_reload', String(now));
           window.location.reload();
         }
       });
 
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('/firebase-messaging-sw.js').then(function (reg) {
-          // Immediately check for SW update on launch
-          reg.update();
-
-          // Listen for new updates found
-          reg.addEventListener('updatefound', function () {
-            var installingWorker = reg.installing;
-            if (installingWorker) {
-              installingWorker.addEventListener('statechange', function () {
-                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  // New version installed; tell it to activate immediately
-                  installingWorker.postMessage({ type: 'SKIP_WAITING' });
-                }
-              });
-            }
-          });
-        }).catch(function (err) {
+        navigator.serviceWorker.register('/firebase-messaging-sw.js').catch(function (err) {
           console.warn('[SW] Registration error:', err);
         });
-      });
-
-      // When app tab becomes visible again on desktop, check for latest update
-      document.addEventListener('visibilitychange', function () {
-        if (document.visibilityState === 'visible') {
-          navigator.serviceWorker.ready.then(function (reg) {
-            reg.update();
-          });
-        }
       });
     }
   </script>

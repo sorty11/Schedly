@@ -27,7 +27,7 @@ void main() {
     test('Already upgraded V11 user returns isV10Migrator == false', () async {
       SharedPreferences.setMockInitialValues({
         'has_completed_onboarding_wizard': true,
-        'last_seen_app_build': 11,
+        'last_seen_app_build': TutorialStorageService.currentAppBuild,
       });
       final isMigrator = await TutorialStorageService.isV10Migrator();
       expect(isMigrator, isFalse);

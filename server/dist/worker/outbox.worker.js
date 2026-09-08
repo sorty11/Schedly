@@ -39,7 +39,6 @@ const notification_service_1 = require("../notifications/notification.service");
 const logger_1 = require("../utils/logger");
 const env_config_1 = require("../config/env.config");
 const feedback_service_1 = require("../services/feedback.service");
-const gamification_service_1 = require("../services/gamification.service");
 class OutboxWorker {
     _isRunning = false;
     isProcessing = false;
@@ -314,12 +313,14 @@ class OutboxWorker {
                     divisionAuthorized = memberSnap.exists && memberSnap.data()?.status === 'active';
                 }
             }
+            // Gamification suppressed
+            /*
             if (authorized && uid && divisionAuthorized && isTimetableAction && (role.toUpperCase() === 'CR' || role.toUpperCase() === 'SR')) {
-                await gamification_service_1.GamificationService.awardTimetableContribution(db, uid, role, doc.id);
+              await GamificationService.awardTimetableContribution(db, uid, role, doc.id);
+            } else if (authorized && (role.toUpperCase() === 'CR' || role.toUpperCase() === 'SR') && !isTimetableAction) {
+              logger.info(`[GAMIFICATION] Notification ${doc.id} type '${type}' is not a timetable modification. Skipping reward.`);
             }
-            else if (authorized && (role.toUpperCase() === 'CR' || role.toUpperCase() === 'SR') && !isTimetableAction) {
-                logger_1.logger.info(`[GAMIFICATION] Notification ${doc.id} type '${type}' is not a timetable modification. Skipping reward.`);
-            }
+            */
             const processingTime = Date.now() - startTime;
             await doc.ref.update({
                 processed: true,

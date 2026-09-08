@@ -242,8 +242,8 @@ class TimetableEventService {
             : 'Normal',
       );
 
-      // Gamification: record qualifying timetable contribution points for CR/SR
-      unawaited(GamificationService.instance.recordTimetableAction(division: division));
+      // Gamification temporarily suppressed:
+      // unawaited(GamificationService.instance.recordTimetableAction(division: division));
 
       // Resolve correct UID for outbox
       String uid = FirebaseAuth.instance.currentUser?.uid ?? '';

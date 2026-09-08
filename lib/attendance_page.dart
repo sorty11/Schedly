@@ -47,7 +47,7 @@ class _AttendancePageState extends State<AttendancePage> {
     _calculatorFuture = ProgressCalculatorService.build(widget.division);
     _calculatorFuture.then((calculator) {
       if (mounted && calculator != null) {
-        GamificationService.instance.recordAttendanceView();
+        // Gamification suppressed: GamificationService.instance.recordAttendanceView();
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {

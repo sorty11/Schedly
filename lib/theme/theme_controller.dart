@@ -38,26 +38,11 @@ class ThemeController extends ChangeNotifier {
     final savedVisualTheme = prefs.getString(_visualThemePrefKey);
     _visualTheme = SchedlyVisualTheme.fromId(savedVisualTheme);
 
-    // Validate champion theme access if active
-    if (_visualTheme == SchedlyVisualTheme.champion) {
-      if (!ChampionThemeAccess.isPermanentlyUnlocked()) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          validateChampionAccess();
-        });
-      }
-    }
+    // Champion theme is universally unlocked for all users
   }
 
-  /// Automatically falls back to defaultTheme if user is neither weekly Champion nor permanently allowlisted
-  Future<void> validateChampionAccess() async {
-    if (_visualTheme == SchedlyVisualTheme.champion) {
-      final isChamp = await GamificationService.instance.checkChampionStatus();
-      final hasAccess = ChampionThemeAccess.hasAccess(isWeeklyChampion: isChamp);
-      if (!hasAccess) {
-        await setVisualTheme(SchedlyVisualTheme.defaultTheme);
-      }
-    }
-  }
+  /// Champion theme is universally available for all users without restrictions.
+  Future<void> validateChampionAccess() async {}
 
   Future<void> setThemeMode(ThemeMode mode) async {
     if (_themeMode == mode) return;

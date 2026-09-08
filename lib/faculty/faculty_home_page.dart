@@ -33,8 +33,9 @@ class _FacultyHomePageState extends State<FacultyHomePage> {
         UserRole.faculty,
       );
       FeatureDiscoveryService.checkNewFeatures(context);
-      GamificationService.instance.checkAndClaimDailyExp();
-      GamificationService.instance.showAutoLeaderboardPopupIfEligible(context);
+      // Gamification temporarily suppressed for architecture/stability focus
+      // GamificationService.instance.checkAndClaimDailyExp();
+      // GamificationService.instance.showAutoLeaderboardPopupIfEligible(context);
     });
   }
 
