@@ -15,6 +15,22 @@ class AcademicGroupingPolicy {
     if (canonicalSubject.trim().isEmpty) return false;
     final upperSubj = canonicalSubject.trim().toUpperCase();
 
+    // Dedicated STME DSA handling: DSA Theory and DSA Lab are SEPARATE courses.
+    // Never merge Theory + Lab. Never affects SOL or other subjects.
+    final bool isSol = configuredCourses.any((c) => c.sectionId.toUpperCase().startsWith('SOL_')) ||
+        (profile != null && (profile.profileId.contains('sol') || profile.profileId.contains('law'))) ||
+        upperSubj.contains('LAW') ||
+        upperSubj.contains('BALLB') ||
+        upperSubj.contains('BBALLB');
+    if (!isSol) {
+      if (upperSubj == 'DSA' ||
+          upperSubj == 'DSA_THEORY' ||
+          upperSubj == 'DSA_LAB' ||
+          upperSubj.contains('DATA STRUCTURE')) {
+        return true;
+      }
+    }
+
     // 1. Explicit section metadata split list (first priority)
     if (sectionSplitSubjects.isNotEmpty) {
       if (sectionSplitSubjects.any((s) => s.trim().toUpperCase() == upperSubj)) {

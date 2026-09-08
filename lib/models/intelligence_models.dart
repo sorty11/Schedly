@@ -62,6 +62,9 @@ class TodayRecommendation {
   final RecommendationLevel level;
   final String reason;
   final int priority; // Lower number = higher priority to attend
+  final int? remainingSkips; // "Can miss" recommendation count
+  final int? remainingLectures;
+  final int? assignedHours;
 
   TodayRecommendation({
     required this.subjectCode,
@@ -69,6 +72,9 @@ class TodayRecommendation {
     required this.level,
     required this.reason,
     required this.priority,
+    this.remainingSkips,
+    this.remainingLectures,
+    this.assignedHours,
   });
 }
 

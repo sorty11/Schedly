@@ -246,14 +246,7 @@ class SubjectIdentityService {
     final normalizedQuery = SubjectNormalizer.normalize(query);
 
     final bool isSol = configuredCourses.any((c) => c.sectionId.startsWith('SOL_')) ||
-        upperQuery.contains('LAW') ||
-        upperQuery.contains('BALLB') ||
-        upperQuery.contains('BBALLB') ||
-        upperQuery.contains('BHARTI') ||
-        upperQuery.contains('BHARATIYA') ||
-        upperQuery.contains('SAKSHYA') ||
-        upperQuery.contains('SAK ADHI') ||
-        upperQuery.contains('CPC');
+        isSolSubject(upperQuery);
 
     // --- STEP 0: For SOL, check canonical identity early to guarantee exact canonicalKey ---
     if (isSol) {
@@ -534,6 +527,21 @@ class SubjectIdentityService {
     }
 
     return null;
+  }
+ 
+  /// Checks if a query string belongs to School of Law (SOL).
+  static bool isSolSubject(String query) {
+    final upperQuery = query.toUpperCase();
+    return upperQuery.contains('LAW') ||
+        upperQuery.contains('BALLB') ||
+        upperQuery.contains('BBALLB') ||
+        upperQuery.contains('LLB') ||
+        upperQuery.contains('BHARTI') ||
+        upperQuery.contains('BHARATIYA') ||
+        upperQuery.contains('SAKSHYA') ||
+        upperQuery.contains('SAK ADHI') ||
+        upperQuery.contains('CPC') ||
+        upperQuery.contains('EVIDENCE');
   }
 
   /// Disambiguates PEC / Electives using section context.

@@ -118,6 +118,33 @@ class ProgressCalculatorService {
   /// Returns null if the course hours are not configured or <= 0.
   /// Does NOT estimate from weekly timetable.
   int? getConfiguredCourseHours(String subjectCode, String component) {
+    // Dedicated STME DSA handling:
+    // STME DSA Theory assigned hours = HARD-CODE 45 hrs.
+    // STME DSA Lab assigned hours = HARD-CODE 30 hrs.
+    // Use these only for STME DSA; do not affect SOL or other subjects.
+    final bool isSol = courseComponents.any((c) => c.sectionId.toUpperCase().startsWith('SOL_')) ||
+        subjectMetadata.values.any((c) => c.sectionId.toUpperCase().startsWith('SOL_')) ||
+        SubjectIdentityService.isSolSubject(subjectCode);
+
+    if (!isSol) {
+      final upperSubj = subjectCode.trim().toUpperCase();
+      final isDsa = upperSubj == 'DSA' ||
+          upperSubj == 'DSA_THEORY' ||
+          upperSubj == 'DSA_LAB' ||
+          upperSubj.contains('DATA STRUCTURE') ||
+          AttendanceLog.isDsa(subjectCode) ||
+          SubjectIdentityService.isMatch(subjectCode, 'DSA');
+
+      if (isDsa) {
+        final normComp = component.trim().toLowerCase();
+        final isLab = normComp.contains('lab') ||
+            normComp.contains('practical') ||
+            normComp == 'p4' ||
+            upperSubj.contains('LAB');
+        return isLab ? 30 : 45;
+      }
+    }
+
     if (courseComponents.isEmpty && subjectMetadata.isEmpty) {
       return null;
     }

@@ -3,6 +3,7 @@ import '../models/attendance_log.dart';
 import '../models/timetable_entry.dart';
 import '../models/intelligence_models.dart';
 import 'attendance/academic_grouping_policy.dart';
+import 'progress_calculator_service.dart';
 import 'subject_identity_service.dart';
 import 'dart:math';
 
@@ -185,8 +186,9 @@ class AttendanceIntelligenceService {
   /// Generates recommendations for today's lectures
   static List<TodayRecommendation> generateTodayRecommendations(
     List<TimetableEntry> entries,
-    List<AttendanceRecord> records,
-  ) {
+    List<AttendanceRecord> records, {
+    ProgressCalculatorService? calculator,
+  }) {
     final List<TodayRecommendation> recommendations = [];
 
     // Deduplicate entries by subject+component
@@ -198,19 +200,50 @@ class AttendanceIntelligenceService {
     }
 
     for (final entry in uniqueEntries.values) {
-      final entryNormComp = AcademicGroupingPolicy.normalizeComponent(entry.component);
-      final record = records
-          .where((r) {
-            final isSubjMatch = SubjectIdentityService.isMatch(entry.subject, r.subjectCode);
-            if (!isSubjMatch) return false;
-            final rNormComp = AcademicGroupingPolicy.normalizeComponent(r.component);
-            // If the record is specifically Theory or Lab (like split DSA), it must match the entry component
-            if (rNormComp != 'Merged' && entryNormComp != 'Merged') {
-              return rNormComp == entryNormComp;
-            }
-            return true;
-          })
-          .firstOrNull;
+      final rawSubj = entry.subject.trim();
+      final rawComp = entry.component.trim();
+      final entryNormComp = AcademicGroupingPolicy.normalizeComponent(rawComp);
+
+      // 1. Dedicated STME DSA handling: DSA Theory != DSA Lab
+      final bool isEntryDsa = rawSubj.toUpperCase() == 'DSA' ||
+          rawSubj.toUpperCase().contains('DATA STRUCTURE') ||
+          AttendanceLog.isDsa(rawSubj);
+
+      final AttendanceRecord? record;
+      if (isEntryDsa) {
+        final bool isLab = entryNormComp == 'Lab' ||
+            rawSubj.toUpperCase().contains('LAB') ||
+            rawComp.toUpperCase().contains('LAB') ||
+            rawComp.toUpperCase().contains('PRACTICAL') ||
+            rawComp.toUpperCase() == 'P4';
+
+        record = records.where((r) {
+          final rSubjUpper = r.subjectCode.trim().toUpperCase();
+          final isRDsa = rSubjUpper == 'DSA' ||
+              rSubjUpper.contains('DATA STRUCTURE') ||
+              AttendanceLog.isDsa(r.subjectCode);
+          if (!isRDsa) return false;
+
+          final rComp = AcademicGroupingPolicy.normalizeComponent(r.component);
+          if (isLab) {
+            return rComp == 'Lab' || rSubjUpper.contains('LAB');
+          } else {
+            return rComp == 'Theory' && !rSubjUpper.contains('LAB');
+          }
+        }).firstOrNull;
+      } else {
+        // 2. General matching (handles SOL Company Law 2 <-> II, Sakshya, etc.)
+        record = records.where((r) {
+          final isSubjMatch = SubjectIdentityService.isMatch(entry.subject, r.subjectCode);
+          if (!isSubjMatch) return false;
+          final rNormComp = AcademicGroupingPolicy.normalizeComponent(r.component);
+          if (rNormComp != 'Merged' && entryNormComp != 'Merged' && rawComp.isNotEmpty) {
+            return rNormComp == entryNormComp;
+          }
+          return true;
+        }).firstOrNull;
+      }
+
       if (record == null || record.total == 0) {
         recommendations.add(
           TodayRecommendation(
@@ -271,13 +304,45 @@ class AttendanceIntelligenceService {
         priority = 4;
       }
 
+      // Calculate course hours & skip budget if calculator is available
+      int? assignedHours;
+      int? remainingLectures;
+      int? skipsLeft;
+
+      if (calculator != null) {
+        assignedHours = calculator.getConfiguredCourseHours(record.subjectCode, record.component);
+        if (assignedHours != null && assignedHours > 0) {
+          remainingLectures = calculator.getRemainingLectures(record.subjectCode, record.component, record.total);
+          final isSol = record.division.toUpperCase().startsWith('SOL_');
+          final targetPct = isSol ? 0.70 : 0.80;
+          skipsLeft = calculator.getRemainingSkips(
+            record.subjectCode,
+            record.component,
+            record.absent,
+            requiredAttendance: targetPct,
+          );
+        }
+      }
+
+      String enrichedReason = reason;
+      if (assignedHours != null && assignedHours > 0) {
+        if (skipsLeft != null && skipsLeft > 0) {
+          enrichedReason += ' You can safely miss $skipsLeft lecture(s) ($remainingLectures remaining in semester).';
+        } else if (skipsLeft != null && skipsLeft == 0) {
+          enrichedReason += ' 0 skips remaining ($remainingLectures remaining in semester).';
+        }
+      }
+
       recommendations.add(
         TodayRecommendation(
           subjectCode: entry.subject,
           component: entry.component,
           level: level,
-          reason: reason,
+          reason: enrichedReason,
           priority: priority,
+          remainingSkips: skipsLeft,
+          remainingLectures: remainingLectures,
+          assignedHours: assignedHours,
         ),
       );
     }

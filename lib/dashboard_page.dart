@@ -28,6 +28,10 @@ import 'weekly_timetable_page.dart';
 import 'upload_timetable_pdf_page.dart';
 import 'services/history_service.dart';
 import 'services/timetable_event_service.dart';
+import 'services/progress_calculator_service.dart';
+import 'services/subject_identity_service.dart';
+import 'services/attendance/academic_grouping_policy.dart';
+import 'models/attendance_log.dart';
 
 class DashboardPage extends StatefulWidget {
   final String division;
@@ -46,6 +50,7 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _isLoadingTimetableCheck = true;
   bool _hasTimetable = true;
   late Stream<List<AttendanceRecord>> _recordsStream;
+  ProgressCalculatorService? _calculator;
 
   @override
   void initState() {
@@ -57,6 +62,11 @@ class _DashboardPageState extends State<DashboardPage> {
         .collection(currentDay)
         .snapshots();
     _recordsStream = AttendanceService.streamAll(widget.division);
+    ProgressCalculatorService.build(widget.division).then((calc) {
+      if (mounted && calc != null) {
+        setState(() => _calculator = calc);
+      }
+    }).catchError((_) {});
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkCROnboarding());
   }
 
@@ -780,6 +790,15 @@ class _DashboardPageState extends State<DashboardPage> {
               if (r.component == 'Merged') {
                 attendanceRecords['${subjectName}_Merged'] = r;
               }
+
+              final canon = SubjectIdentityService.getCanonicalKey(subjectName);
+              if (canon.isNotEmpty) {
+                attendanceRecords['${canon}_$normComponent'] = r;
+                attendanceRecords[canon] = r;
+                if (r.component == 'Merged') {
+                  attendanceRecords['${canon}_Merged'] = r;
+                }
+              }
             }
 
             return StreamBuilder<QuerySnapshot>(
@@ -1249,6 +1268,8 @@ class _DashboardPageState extends State<DashboardPage> {
                                 canEdit: _canEditLecture,
                                 onEdit: _editLecture,
                                 attendanceRecords: attendanceRecords,
+                                calculator: _calculator,
+                                division: widget.division,
                               ),
                             );
                           }, childCount: groupedLectures.length),
@@ -1277,6 +1298,8 @@ class _TimelineLectureItem extends StatelessWidget {
   final bool Function(TimetableEntry) canEdit;
   final void Function(TimetableEntry) onEdit;
   final Map<String, AttendanceRecord>? attendanceRecords;
+  final ProgressCalculatorService? calculator;
+  final String division;
 
   const _TimelineLectureItem({
     required this.entries,
@@ -1286,7 +1309,93 @@ class _TimelineLectureItem extends StatelessWidget {
     required this.canEdit,
     required this.onEdit,
     this.attendanceRecords,
+    this.calculator,
+    this.division = '',
   });
+
+  static AttendanceRecord? _findMatchingRecord(
+    TimetableEntry entry,
+    Map<String, AttendanceRecord>? recordsMap,
+  ) {
+    if (recordsMap == null || recordsMap.isEmpty) return null;
+
+    final String rawSubj = entry.subject.trim();
+    final String rawComp = entry.component.trim();
+    final String normComp = AcademicGroupingPolicy.normalizeComponent(rawComp);
+
+    // 1. Dedicated STME DSA handling: DSA Theory != DSA Lab
+    final bool isDsa = rawSubj.toUpperCase() == 'DSA' ||
+        rawSubj.toUpperCase().contains('DATA STRUCTURE') ||
+        AttendanceLog.isDsa(rawSubj);
+
+    if (isDsa) {
+      final bool isLab = normComp == 'Lab' ||
+          rawSubj.toUpperCase().contains('LAB') ||
+          rawComp.toUpperCase().contains('LAB') ||
+          rawComp.toUpperCase().contains('PRACTICAL') ||
+          rawComp.toUpperCase() == 'P4';
+      final targetComp = isLab ? 'Lab' : 'Theory';
+
+      for (final candidateKey in [
+        'DSA_$targetComp',
+        'DATA STRUCTURES AND ALGORITHMS_$targetComp',
+        'DATA STRUCTURES AND ALGORITHMS LAB_$targetComp',
+      ]) {
+        if (recordsMap.containsKey(candidateKey)) {
+          return recordsMap[candidateKey];
+        }
+      }
+
+      for (final r in recordsMap.values) {
+        final rSubjUpper = r.subjectCode.trim().toUpperCase();
+        final isRDsa = rSubjUpper == 'DSA' ||
+            rSubjUpper.contains('DATA STRUCTURE') ||
+            AttendanceLog.isDsa(r.subjectCode);
+        if (!isRDsa) continue;
+
+        final rComp = AcademicGroupingPolicy.normalizeComponent(r.component);
+        if (isLab) {
+          if (rComp == 'Lab' || rSubjUpper.contains('LAB')) {
+            return r;
+          }
+        } else {
+          if (rComp == 'Theory' && !rSubjUpper.contains('LAB')) {
+            return r;
+          }
+        }
+      }
+      return null;
+    }
+
+    // 2. Direct keys
+    final keyComp = '${rawSubj}_$normComp';
+    final keyMerged = '${rawSubj}_Merged';
+    if (recordsMap.containsKey(keyComp)) return recordsMap[keyComp];
+    if (recordsMap.containsKey(keyMerged)) return recordsMap[keyMerged];
+    if (recordsMap.containsKey(rawSubj)) return recordsMap[rawSubj];
+
+    // Canonical key lookup
+    final canon = SubjectIdentityService.getCanonicalKey(rawSubj);
+    if (canon.isNotEmpty) {
+      if (recordsMap.containsKey('${canon}_$normComp')) return recordsMap['${canon}_$normComp'];
+      if (recordsMap.containsKey('${canon}_Merged')) return recordsMap['${canon}_Merged'];
+      if (recordsMap.containsKey(canon)) return recordsMap[canon];
+    }
+
+    // 3. Robust SubjectIdentityService match across records
+    for (final r in recordsMap.values) {
+      if (SubjectIdentityService.isMatch(rawSubj, r.subjectCode)) {
+        final rComp = AcademicGroupingPolicy.normalizeComponent(r.component);
+        if (rComp != 'Merged' && normComp != 'Merged' && rawComp.isNotEmpty) {
+          if (rComp == normComp) return r;
+        } else {
+          return r;
+        }
+      }
+    }
+
+    return null;
+  }
 
   Color _subjectColor(
     String subject,
@@ -1493,84 +1602,101 @@ class _TimelineLectureItem extends StatelessWidget {
                                         ),
                                       ),
                                     ),
-                                  Builder(
-                                    builder: (context) {
-                                      if (attendanceRecords == null)
-                                        return const SizedBox.shrink();
+                                   Builder(
+                                     builder: (context) {
+                                       if (attendanceRecords == null || attendanceRecords!.isEmpty) {
+                                         return const SizedBox.shrink();
+                                       }
 
-                                      String subj = entry.subject;
-                                      String comp = entry.component;
-                                      if (subj.toUpperCase().contains(
-                                            'DATA STRUCTURES',
-                                          ) ||
-                                          subj.trim().toUpperCase() == 'DSA') {
-                                        subj = 'DSA';
-                                        if (comp.toUpperCase().contains(
-                                              'LAB',
-                                            ) ||
-                                            comp.toUpperCase().contains(
-                                              'PRACTICAL',
-                                            ))
-                                          comp = 'Lab';
-                                        else
-                                          comp = 'Theory';
-                                      }
+                                       final record = _findMatchingRecord(entry, attendanceRecords);
+                                       if (record == null) {
+                                         return const SizedBox.shrink();
+                                       }
 
-                                      final isDsa =
-                                          subj.toUpperCase() == 'DSA' ||
-                                          subj.toUpperCase().contains(
-                                            'DATA STRUCTURES',
-                                          );
-                                      final String key = isDsa
-                                          ? '${subj}_$comp'
-                                          : '${subj}_Merged';
+                                       final int p = record.present;
+                                       final int a = record.absent;
+                                       final double attendPct = (p + 1) / (p + a + 1) * 100;
+                                       final double skipPct = p / (p + a + 1) * 100;
 
-                                      final record =
-                                          attendanceRecords?[key] ??
-                                          attendanceRecords?['${subj}_$comp'] ??
-                                          attendanceRecords?[subj];
-                                      if (record == null)
-                                        return const SizedBox.shrink();
+                                       final isSol = (record.division.isNotEmpty ? record.division : division)
+                                           .toUpperCase()
+                                           .startsWith('SOL_');
+                                       final threshold = isSol ? 0.70 : 0.80;
 
-                                      int p = record.present;
-                                      int a = record.absent;
-                                      double attendPct =
-                                          (p + 1) / (p + a + 1) * 100;
-                                      double skipPct = p / (p + a + 1) * 100;
+                                       int? assignedHours;
+                                       int? remainingLectures;
+                                       int? skipsLeft;
 
-                                      return Padding(
-                                        padding: const EdgeInsets.only(
-                                          top: 8.0,
-                                        ),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: isDark
-                                                ? sem.surfaceElevated2
-                                                : sem.borderSubtle.withValues(
-                                                    alpha: 0.5,
-                                                  ),
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            '🟢 If attend: ${attendPct.toStringAsFixed(1)}%  |  🔴 If skip: ${skipPct.toStringAsFixed(1)}%',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
-                                              color: isDark
-                                                  ? Colors.white70
-                                                  : sem.onSurfaceMuted,
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
+                                       if (calculator != null) {
+                                         assignedHours = calculator!.getConfiguredCourseHours(
+                                           record.subjectCode,
+                                           record.component,
+                                         );
+                                         if (assignedHours != null && assignedHours > 0) {
+                                           remainingLectures = calculator!.getRemainingLectures(
+                                             record.subjectCode,
+                                             record.component,
+                                             record.total,
+                                           );
+                                           skipsLeft = calculator!.getRemainingSkips(
+                                             record.subjectCode,
+                                             record.component,
+                                             record.absent,
+                                             requiredAttendance: threshold,
+                                           );
+                                         }
+                                       }
+
+                                       return Padding(
+                                         padding: const EdgeInsets.only(top: 8.0),
+                                         child: Container(
+                                           padding: const EdgeInsets.symmetric(
+                                             horizontal: 8,
+                                             vertical: 6,
+                                           ),
+                                           decoration: BoxDecoration(
+                                             color: isDark
+                                                 ? sem.surfaceElevated2
+                                                 : sem.borderSubtle.withValues(alpha: 0.5),
+                                             borderRadius: BorderRadius.circular(AppRadius.sm),
+                                           ),
+                                           child: Column(
+                                             crossAxisAlignment: CrossAxisAlignment.start,
+                                             mainAxisSize: MainAxisSize.min,
+                                             children: [
+                                               Text(
+                                                 '🟢 If attend: ${attendPct.toStringAsFixed(1)}%  |  🔴 If skip: ${skipPct.toStringAsFixed(1)}%',
+                                                 style: GoogleFonts.inter(
+                                                   fontSize: 11,
+                                                   fontWeight: FontWeight.w600,
+                                                   color: isDark ? Colors.white70 : sem.onSurfaceMuted,
+                                                 ),
+                                               ),
+                                               const SizedBox(height: 2),
+                                               if (assignedHours != null && assignedHours > 0)
+                                                 Text(
+                                                   '🎯 Can miss: ${skipsLeft ?? 0} · ${remainingLectures ?? 0} remaining ($assignedHours hrs assigned)',
+                                                   style: GoogleFonts.inter(
+                                                     fontSize: 10,
+                                                     fontWeight: FontWeight.w500,
+                                                     color: (skipsLeft ?? 0) > 0 ? sem.conducted : sem.warning,
+                                                   ),
+                                                 )
+                                               else
+                                                 Text(
+                                                   'ℹ️ Hours not configured',
+                                                   style: GoogleFonts.inter(
+                                                     fontSize: 10,
+                                                     fontWeight: FontWeight.w500,
+                                                     color: sem.onSurfaceMuted.withValues(alpha: 0.7),
+                                                   ),
+                                                 ),
+                                             ],
+                                           ),
+                                         ),
+                                       );
+                                     },
+                                   ),
                                 ],
                               ),
                             ),
