@@ -52,6 +52,8 @@ class _HomePageState extends State<HomePage>
         .collection('sections')
         .doc(widget.division)
         .collection('notifications')
+        .orderBy('createdAt', descending: true)
+        .limit(30)
         .snapshots()
         .listen(_updateUnreadFromSnapshot);
 

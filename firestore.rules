@@ -18,7 +18,10 @@ service cloud.firestore {
     // FUNCTION: Check if user is CR or SR
     function isCRorSR() {
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      return exists(userPath) && get(userPath).data.role in ['CR', 'SR'];
+      return exists(userPath) && (
+        ('role' in get(userPath).data && get(userPath).data.role in ['CR', 'SR', 'cr', 'sr']) ||
+        ('userType' in get(userPath).data && get(userPath).data.userType in ['CR', 'SR', 'cr', 'sr'])
+      );
     }
 
     // FUNCTION: Check if user is an active CR for a specific section
@@ -26,12 +29,12 @@ service cloud.firestore {
       let membershipPath = /databases/$(database)/documents/section_memberships/$(sectionId + '_' + request.auth.uid);
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
       return (exists(membershipPath) 
-          && get(membershipPath).data.role == 'CR' 
-          && get(membershipPath).data.status == 'active')
+          && ('role' in get(membershipPath).data && get(membershipPath).data.role in ['CR', 'cr']) 
+          && (!('status' in get(membershipPath).data) || get(membershipPath).data.status == 'active'))
           ||
           (exists(userPath)
-          && get(userPath).data.role == 'CR'
-          && get(userPath).data.division == sectionId);
+          && (('role' in get(userPath).data && get(userPath).data.role in ['CR', 'cr']) || ('userType' in get(userPath).data && get(userPath).data.userType in ['CR', 'cr']))
+          && (('division' in get(userPath).data && get(userPath).data.division == sectionId) || ('sectionId' in get(userPath).data && get(userPath).data.sectionId == sectionId)));
     }
     
     // FUNCTION: Check if user is an active SR for a specific section
@@ -39,12 +42,12 @@ service cloud.firestore {
       let membershipPath = /databases/$(database)/documents/section_memberships/$(sectionId + '_' + request.auth.uid);
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
       return (exists(membershipPath) 
-          && get(membershipPath).data.role == 'SR' 
-          && get(membershipPath).data.status == 'active')
+          && ('role' in get(membershipPath).data && get(membershipPath).data.role in ['SR', 'sr']) 
+          && (!('status' in get(membershipPath).data) || get(membershipPath).data.status == 'active'))
           ||
           (exists(userPath)
-          && get(userPath).data.role == 'SR'
-          && get(userPath).data.division == sectionId);
+          && (('role' in get(userPath).data && get(userPath).data.role in ['SR', 'sr']) || ('userType' in get(userPath).data && get(userPath).data.userType in ['SR', 'sr']))
+          && (('division' in get(userPath).data && get(userPath).data.division == sectionId) || ('sectionId' in get(userPath).data && get(userPath).data.sectionId == sectionId)));
     }
 
     // FUNCTION: Check if user is CR or SR for section
@@ -118,13 +121,35 @@ service cloud.firestore {
         allow read: if request.auth != null;
         allow write: if isCRorSRForSection(sectionId);
       }
+      match /assignments/{assignmentId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null && (
+          isCRorSRForSection(sectionId) ||
+          isCRorSR() ||
+          (request.resource.data.createdBy == request.auth.uid && request.resource.data.creatorRole in ['CR', 'SR', 'cr', 'sr'])
+        );
+        allow update, delete: if request.auth != null && (
+          isCRorSRForSection(sectionId) ||
+          isCRorSR() ||
+          resource.data.createdBy == request.auth.uid
+        );
+        
+        match /submissions/{studentId} {
+          allow read: if request.auth != null && (request.auth.uid == studentId || isCRorSRForSection(sectionId) || isCRorSR());
+          allow write: if request.auth != null && request.auth.uid == studentId;
+        }
+      }
     }
 
     // OUTBOX FOR RENDER WORKER
     match /notification_outbox/{docId} {
-      allow read: if false; 
+      allow read: if request.auth != null; 
       allow create: if request.auth != null;
-      allow update, delete: if false; 
+      allow update, delete: if request.auth != null && (
+        isCRorSR() || 
+        ('createdBy' in resource.data && resource.data.createdBy == request.auth.uid) ||
+        ('uid' in resource.data && resource.data.uid == request.auth.uid)
+      ); 
     }
     match /faculty_reminders/{docId} {
       allow read: if request.auth != null;
@@ -235,6 +260,14 @@ service cloud.firestore {
       }
       
       match /attendance_logs/{logId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      match /assignment_submissions/{assignmentId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /assignment_preferences/{prefId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }

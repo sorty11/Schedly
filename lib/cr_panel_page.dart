@@ -33,6 +33,7 @@ import 'cr/cr_faculty_view_page.dart';
 import 'cr/sr_faculty_view_page.dart';
 import 'cr/cr_password_management_page.dart';
 import 'settings/batch_management_page.dart';
+import 'assignments/assignments_page.dart';
 
 class CRPanelPage extends StatefulWidget {
   const CRPanelPage({super.key});
@@ -689,6 +690,23 @@ class _CRPanelPageState extends State<CRPanelPage> {
                   );
                 },
               ),
+
+              _buildActionCard(
+                staggerIndex: 7,
+                targetId: 'manage_assignments_btn',
+                icon: Icons.assignment_outlined,
+                title: 'Assignments & Deadlines',
+                subtitle: 'Create, track, and manage student deadlines',
+                color: colorScheme.primary,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AssignmentsPage(division: sectionId),
+                    ),
+                  );
+                },
+              ),
             ],
 
             // ── Settings section (CR only) ─────────────────────────────
@@ -872,6 +890,25 @@ class _CRPanelPageState extends State<CRPanelPage> {
                     context,
                     MaterialPageRoute(
                       builder: (_) => CRFacultyRequestsPage(division: division),
+                    ),
+                  );
+                },
+              ),
+              _buildActionCard(
+                staggerIndex: 11,
+                icon: Icons.assignment_outlined,
+                title: 'Subject Assignments',
+                subtitle:
+                    'Manage assignments for ${AppSettings.srSubject ?? 'your subject'}',
+                color: colorScheme.secondary,
+                onTap: () {
+                  final division =
+                      AppSettings.sectionId ?? AppSettings.division;
+                  if (division == null) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AssignmentsPage(division: division),
                     ),
                   );
                 },

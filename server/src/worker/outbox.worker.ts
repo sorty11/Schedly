@@ -249,6 +249,9 @@ export class OutboxWorker {
         authorized = true;
         role = 'backend';
         logger.info(`[AUTH] Bypassing auth check for internal backend job: ${type}`);
+      } else if (type === 'assignment_reminder') {
+        await this.processAssignmentReminder(doc, workerLatency, startTime, attemptNum);
+        return;
       } else if (uid) {
         userDoc = await db.collection('users').doc(uid).get();
         if (!userDoc.exists) {
@@ -402,6 +405,187 @@ export class OutboxWorker {
         }));
       }
     }
+  }
+
+  private async processAssignmentReminder(
+    doc: admin.firestore.QueryDocumentSnapshot,
+    workerLatency: number,
+    startTime: number,
+    attemptNum: number
+  ) {
+    const data = doc.data();
+    const db = admin.firestore();
+    const assignmentId = data.assignmentId;
+    const division = data.division;
+    const window = data.window;
+    const targetBatch = data.batch;
+    const docDueAt = data.dueAt as admin.firestore.Timestamp | undefined;
+
+    logger.info(`[ASSIGNMENT_REMINDER] Processing reminder ${doc.id} for assignment ${assignmentId} in division ${division} (window: ${window})`);
+
+    // 1. Fetch assignment doc from sections/{division}/assignments/{assignmentId}
+    const assignmentRef = db.collection('sections').doc(division).collection('assignments').doc(assignmentId);
+    const assignmentSnap = await assignmentRef.get();
+
+    // If assignment does not exist or status is not active -> cancel reminder
+    if (!assignmentSnap.exists) {
+      logger.info(`[ASSIGNMENT_REMINDER] Assignment ${assignmentId} does not exist. Cancelling reminder ${doc.id}`);
+      await doc.ref.update({
+        processed: true,
+        status: 'CANCELLED',
+        reason: 'assignment_not_found',
+        processedAt: admin.firestore.FieldValue.serverTimestamp(),
+        lastAttempt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    const assignmentData = assignmentSnap.data()!;
+    if (assignmentData.status !== 'active') {
+      logger.info(`[ASSIGNMENT_REMINDER] Assignment ${assignmentId} status is '${assignmentData.status}'. Cancelling reminder ${doc.id}`);
+      await doc.ref.update({
+        processed: true,
+        status: 'CANCELLED',
+        reason: `assignment_${assignmentData.status}`,
+        processedAt: admin.firestore.FieldValue.serverTimestamp(),
+        lastAttempt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    // 2. Check if deadline was modified
+    const currentDueAt = assignmentData.dueAt as admin.firestore.Timestamp | undefined;
+    if (docDueAt && currentDueAt && docDueAt.toMillis() !== currentDueAt.toMillis()) {
+      logger.info(`[ASSIGNMENT_REMINDER] Assignment ${assignmentId} deadline changed from ${docDueAt.toDate().toISOString()} to ${currentDueAt.toDate().toISOString()}. Superseding reminder ${doc.id}`);
+      await doc.ref.update({
+        processed: true,
+        status: 'SUPERSEDED',
+        reason: 'deadline_modified',
+        processedAt: admin.firestore.FieldValue.serverTimestamp(),
+        lastAttempt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    // 3. Query all students in division
+    const usersSnap = await db.collection('users')
+      .where('division', '==', division)
+      .get();
+
+    // 4. For each student, check submission status and reminder preference
+    const eligibleTokens: string[] = [];
+
+    for (const userDoc of usersSnap.docs) {
+      const studentUid = userDoc.id;
+      const userData = userDoc.data();
+
+      // Check batch match if assignment is targeted to a specific batch
+      if (targetBatch && targetBatch !== 'Whole Class') {
+        const studentBatch = userData.batch;
+        if (studentBatch && studentBatch !== targetBatch) {
+          continue;
+        }
+      }
+
+      // Check reminder preference for this window (default: true)
+      const prefs = userData.assignmentReminderPreferences;
+      if (prefs && window && prefs[window] === false) {
+        logger.info(`[ASSIGNMENT_REMINDER] Student ${studentUid} opted out of ${window} reminder.`);
+        continue;
+      }
+
+      // Check if student already marked submitted:
+      const subDoc = await db.collection('users').doc(studentUid)
+        .collection('assignment_submissions').doc(assignmentId).get();
+      if (subDoc.exists && (subDoc.data()?.isSubmitted === true || subDoc.data()?.submitted === true)) {
+        logger.info(`[ASSIGNMENT_REMINDER] Student ${studentUid} already submitted assignment ${assignmentId}. Skipping.`);
+        continue;
+      }
+
+      // Collect active FCM tokens for this student
+      const tokensSnap = await db.collection('users').doc(studentUid)
+        .collection('fcm_tokens').get();
+      tokensSnap.docs.forEach(tDoc => {
+        const t = tDoc.data().token;
+        if (t && typeof t === 'string' && !eligibleTokens.includes(t)) {
+          eligibleTokens.push(t);
+        }
+      });
+    }
+
+    logger.info(`[ASSIGNMENT_REMINDER] Found ${eligibleTokens.length} tokens for eligible students`);
+
+    // 5. Send multicast if there are eligible tokens
+    if (eligibleTokens.length > 0) {
+      const title = data.title || `⏰ ${assignmentData.subject}: ${assignmentData.title}`;
+      const body = data.body || `Assignment "${assignmentData.title}" is due soon.`;
+      const deepLink = data.deepLink || `/assignment/${assignmentId}`;
+
+      const payload: admin.messaging.MulticastMessage = {
+        tokens: eligibleTokens,
+        notification: {
+          title,
+          body,
+        },
+        data: {
+          notificationId: doc.id,
+          type: 'assignment_reminder',
+          assignmentId: assignmentId,
+          division: division,
+          subject: assignmentData.subject || '',
+          deepLink: deepLink,
+        },
+        android: {
+          priority: 'high',
+          notification: {
+            title,
+            body,
+            clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+          },
+        },
+        apns: {
+          headers: { 'apns-priority': '10' },
+          payload: {
+            aps: {
+              alert: { title, body },
+              sound: 'default',
+            },
+          },
+        },
+        webpush: {
+          notification: {
+            title,
+            body,
+            icon: '/icons/Icon-192.png',
+            tag: doc.id,
+          },
+          fcmOptions: { link: deepLink },
+        },
+      };
+
+      try {
+        const response = await admin.messaging().sendEachForMulticast(payload);
+        logger.info(`[ASSIGNMENT_REMINDER] Sent ${response.successCount} successful notifications (${response.failureCount} failed).`);
+      } catch (err: any) {
+        logger.error(`[ASSIGNMENT_REMINDER] Error sending multicast: ${err.message}`);
+        throw err;
+      }
+    }
+
+    // 6. Mark outbox entry processed
+    const processingTime = Date.now() - startTime;
+    await doc.ref.update({
+      processed: true,
+      status: 'SUCCESS',
+      attempts: attemptNum,
+      deliveredCount: eligibleTokens.length,
+      processedAt: admin.firestore.FieldValue.serverTimestamp(),
+      lastAttempt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    this.stats.processedToday++;
+    this.stats.totalProcessingTime += processingTime;
+    logger.info(`[ASSIGNMENT_REMINDER] Successfully processed reminder ${doc.id}`);
   }
 
   private async cleanupOldRecords() {

@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'topic_subscription_service.dart';
 import 'local_notification_service.dart';
+import 'deep_link_router.dart';
 import '../app_settings.dart';
 
 class NotificationService {
@@ -64,6 +65,24 @@ class NotificationService {
             body: body,
             payload: link,
           );
+        }
+      });
+
+      // Handle notification opened app from background
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        final link = message.data['deepLink'];
+        if (link != null) {
+          DeepLinkRouter.handle(link);
+        }
+      });
+
+      // Check if app was opened directly from a terminated state notification
+      messaging.getInitialMessage().then((message) {
+        if (message != null) {
+          final link = message.data['deepLink'];
+          if (link != null) {
+            DeepLinkRouter.handle(link);
+          }
         }
       });
 

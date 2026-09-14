@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/faculty_lecture_context.dart';
 import '../app_settings.dart';
+import 'deep_link_router.dart';
 
 class LocalNotificationService {
   static final FlutterLocalNotificationsPlugin notifications =
@@ -21,9 +22,8 @@ class LocalNotificationService {
     await notifications.initialize(
       settings,
       onDidReceiveNotificationResponse: (response) {
-        if (response.payload == 'faculty_dashboard') {
-          // Since the app already handles default routing to the dashboard when
-          // a faculty opens it, this just serves as an explicit tap handling stub.
+        if (response.payload != null) {
+          DeepLinkRouter.handle(response.payload);
         }
       },
     );

@@ -6,6 +6,8 @@ class NotificationCountService {
         .collection('sections')
         .doc(division)
         .collection('notifications')
+        .orderBy('createdAt', descending: true)
+        .limit(30)
         .snapshots()
         .map((snapshot) => snapshot.docs.length);
   }

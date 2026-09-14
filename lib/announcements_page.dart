@@ -7,6 +7,10 @@ import 'widgets/skeleton_loader.dart';
 import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/staggered_list_item.dart';
 import 'widgets/animations/floating_empty_state.dart';
+import 'app_settings.dart';
+import 'user_roles.dart';
+import 'widgets/ads/schedly_banner_ad.dart';
+import 'services/ad_service.dart';
 
 /// Standalone announcements page (kept for backward compatibility).
 /// The primary entry point is now via UpdatesPage announcements tab.
@@ -67,6 +71,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                 .doc(division)
                 .collection('announcements')
                 .orderBy('createdAt', descending: true)
+                .limit(50)
                 .snapshots(),
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
@@ -90,6 +95,9 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                 );
               }
 
+              final shouldShowAd = AdService.shouldShowAdsForRole(AppSettings.currentRole);
+              final itemCount = docs.length + (shouldShowAd ? 1 : 0);
+
               return ListView.builder(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.fromLTRB(
@@ -98,8 +106,18 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                   AppSpacing.x2l,
                   AppSpacing.x6l,
                 ),
-                itemCount: docs.length,
+                itemCount: itemCount,
                 itemBuilder: (context, index) {
+                  if (index == docs.length) {
+                    return const Padding(
+                      padding: EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.md),
+                      child: SchedlyBannerAd(
+                        key: ValueKey('standalone_announcements_bottom_banner_ad'),
+                        margin: EdgeInsets.zero,
+                      ),
+                    );
+                  }
+
                   final data = docs[index].data() as Map<String, dynamic>;
                   final priority = data['priority']?.toString() ?? 'Normal';
                   final color = _priorityColor(priority, sem);

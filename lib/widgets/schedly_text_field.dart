@@ -21,6 +21,8 @@ class SchedlyTextField extends StatefulWidget {
   final void Function(String)? onFieldSubmitted;
   final int? maxLines;
   final int? minLines;
+  final bool? enabled;
+  final bool readOnly;
 
   const SchedlyTextField({
     super.key,
@@ -42,6 +44,8 @@ class SchedlyTextField extends StatefulWidget {
     this.onFieldSubmitted,
     this.maxLines = 1,
     this.minLines,
+    this.enabled,
+    this.readOnly = false,
   });
 
   @override
@@ -84,6 +88,8 @@ class _SchedlyTextFieldState extends State<SchedlyTextField> {
     return TextFormField(
       controller: widget.controller,
       focusNode: _internalFocusNode,
+      enabled: widget.enabled,
+      readOnly: widget.readOnly,
       obscureText: widget.obscureText,
       keyboardType: widget.keyboardType,
       validator: widget.validator,
