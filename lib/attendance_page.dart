@@ -9,7 +9,12 @@ import 'models/attendance_subject_view_model.dart';
 import 'services/attendance_service.dart';
 import 'timetable_manager.dart';
 import 'theme/theme.dart';
+import 'app_settings.dart';
+import 'user_roles.dart';
+import 'widgets/ads/schedly_banner_ad.dart';
+import 'services/ad_service.dart';
 import 'services/progress_calculator_service.dart';
+import 'services/attendance/attendance_aggregation_service.dart';
 import 'attendance_import_review_page.dart';
 import 'models/attendance_import_models.dart';
 import 'services/attendance_parser.dart';
@@ -270,237 +275,19 @@ class _AttendancePageState extends State<AttendancePage> {
                     final rawRecords = snapshot.data ?? <AttendanceRecord>[];
                     final logs = logsSnap.data ?? <AttendanceLog>[];
 
-                    final Map<String, AttendanceRecord> records = {};
-                    final Map<String, List<AttendanceRecord>> rawGrouped = {};
-                    final Map<String, int> completedCounts = {};
+                    final aggregated = AttendanceAggregationService.aggregate(
+                      rawRecords: rawRecords,
+                      logs: logs,
+                      division: widget.division,
+                    );
+                    final records = aggregated.records;
+                    final rawGrouped = aggregated.rawGrouped;
+                    final completedCounts = aggregated.completedCounts;
 
-                    // 1. If logs exist, they are the ground truth for imported lectures
-                    if (logs.isNotEmpty) {
-                      // Deduplicate logs by stable lecture identity:
-                      // For DSA: course + component + date + start/end
-                      // For merged courses: course + date + start/end
-                      final uniqueLogs = <String, AttendanceLog>{};
-                      for (final log in logs) {
-                        if (log.subjectCode.isEmpty) continue;
-                        final key = log.deduplicationKey;
-                        final existing = uniqueLogs[key];
-                        if (existing == null ||
-                            log.importedAt.isAfter(existing.importedAt)) {
-                          uniqueLogs[key] = log;
-                        }
-                      }
-                      final deduplicatedLogs = uniqueLogs.values.toList();
-
-                      // Aggregate logs: ONLY DSA splits Theory and Lab.
-                      // All other subjects merge into ONE card with component 'Merged'.
-                      final aggregatedLogs =
-                          <
-                            String,
-                            ({
-                              String subjectCode,
-                              String component,
-                              int present,
-                              int absent,
-                              int cancelled,
-                            })
-                          >{};
-
-                      for (final log in deduplicatedLogs) {
-                        final canonSubj = AttendanceLog.canonicalSubjectCode(
-                          log.subjectCode,
-                        );
-                        final displayComponent =
-                            AttendanceLog.canonicalComponent(
-                              canonSubj,
-                              log.component,
-                            );
-                        final groupKey = AttendanceLog.canonicalGroupKey(
-                          canonSubj,
-                          log.component,
-                        );
-
-                        final cur =
-                            aggregatedLogs[groupKey] ??
-                            (
-                              subjectCode: canonSubj,
-                              component: displayComponent,
-                              present: 0,
-                              absent: 0,
-                              cancelled: 0,
-                            );
-
-                        int p = cur.present;
-                        int a = cur.absent;
-                        if (log.status == 'present') {
-                          p++;
-                        } else if (log.status == 'absent') {
-                          a++;
-                        }
-
-                        aggregatedLogs[groupKey] = (
-                          subjectCode: canonSubj,
-                          component: displayComponent,
-                          present: p,
-                          absent: a,
-                          cancelled: cur.cancelled,
-                        );
-
-                        if (AttendanceStatusMapper.countsAsCompletedOccurrence(log.status)) {
-                          completedCounts[groupKey] = (completedCounts[groupKey] ?? 0) + 1;
-                        }
-                      }
-
-                      for (final entry in aggregatedLogs.entries) {
-                        final val = entry.value;
-                        final division = rawRecords.isNotEmpty
-                            ? rawRecords.first.division
-                            : widget.division;
-                        final rec = AttendanceRecord(
-                          id: '${division}_${val.subjectCode}_${val.component}',
-                          division: division,
-                          subjectCode: val.subjectCode,
-                          component: val.component,
-                          present: val.present,
-                          absent: val.absent,
-                          cancelled: val.cancelled,
-                        );
-                        records[entry.key] = rec;
-                        rawGrouped[entry.key] = [rec];
-                      }
-
-                      // Include any subject that exists in rawRecords but NOT in logs
-                      final subjectsInLogs = deduplicatedLogs
-                          .map(
-                            (l) => AttendanceLog.canonicalSubjectCode(
-                              l.subjectCode,
-                            ),
-                          )
-                          .toSet();
-
-                      for (final r in rawRecords) {
-                        final canonSubj = AttendanceLog.canonicalSubjectCode(
-                          r.subjectCode,
-                        );
-                        // If subject is already covered by ground-truth logs, NEVER add duplicate from rawRecords!
-                        if (subjectsInLogs.contains(canonSubj)) {
-                          continue;
-                        }
-
-                        final displayComponent =
-                            AttendanceLog.canonicalComponent(
-                              canonSubj,
-                              r.component,
-                            );
-                        final groupKey = AttendanceLog.canonicalGroupKey(
-                          canonSubj,
-                          r.component,
-                        );
-
-                        if (records.containsKey(groupKey)) {
-                          final existing = records[groupKey]!;
-                          if (r.total > existing.total) {
-                            records[groupKey] = AttendanceRecord(
-                              id: r.id,
-                              division: r.division,
-                              subjectCode: canonSubj,
-                              component: displayComponent,
-                              present: r.present,
-                              absent: r.absent,
-                              cancelled: r.cancelled,
-                            );
-                          }
-                        } else {
-                          records[groupKey] = AttendanceRecord(
-                            id: r.id,
-                            division: r.division,
-                            subjectCode: canonSubj,
-                            component: displayComponent,
-                            present: r.present,
-                            absent: r.absent,
-                            cancelled: r.cancelled,
-                          );
-                          rawGrouped.putIfAbsent(groupKey, () => []).add(r);
-                        }
-                      }
-                    } else {
-                      // Fallback when no logs exist: aggregate directly from rawRecords
-                      final recordsByGroup = <String, List<AttendanceRecord>>{};
-                      for (final r in rawRecords) {
-                        final canonSubj = AttendanceLog.canonicalSubjectCode(
-                          r.subjectCode,
-                        );
-                        final groupKey = AttendanceLog.canonicalGroupKey(
-                          canonSubj,
-                          r.component,
-                        );
-                        recordsByGroup.putIfAbsent(groupKey, () => []).add(r);
-                      }
-
-                      for (final entry in recordsByGroup.entries) {
-                        final groupKey = entry.key;
-                        final recList = entry.value;
-                        final first = recList.first;
-                        final canonSubj = AttendanceLog.canonicalSubjectCode(
-                          first.subjectCode,
-                        );
-                        final displayComponent =
-                            AttendanceLog.canonicalComponent(
-                              canonSubj,
-                              first.component,
-                            );
-
-                        final distinctComponents = recList
-                            .map(
-                              (r) =>
-                                  AttendanceLog.normalizeComponent(r.component),
-                            )
-                            .toSet();
-                        final hasMerged =
-                            distinctComponents.contains('Merged') ||
-                            recList.any((r) => r.component == 'Merged');
-
-                        int totalPresent = 0;
-                        int totalAbsent = 0;
-                        int totalCancelled = 0;
-
-                        if (hasMerged || distinctComponents.length == 1) {
-                          // Overlapping representations / snapshots of the same subject:
-                          // Deduplicate by picking the most complete/latest snapshot
-                          recList.sort((a, b) {
-                            final cmp = b.total.compareTo(a.total);
-                            if (cmp != 0) return cmp;
-                            return b.updatedAt.compareTo(a.updatedAt);
-                          });
-                          final best = recList.first;
-                          totalPresent = best.present;
-                          totalAbsent = best.absent;
-                          totalCancelled = best.cancelled;
-                        } else {
-                          // Genuinely distinct non-overlapping components (e.g. Theory + Lab for merged course):
-                          for (final r in recList) {
-                            totalPresent += r.present;
-                            totalAbsent += r.absent;
-                            totalCancelled += r.cancelled;
-                          }
-                        }
-
-                        records[groupKey] = AttendanceRecord(
-                          id: '${first.division}_${canonSubj}_$displayComponent',
-                          division: first.division,
-                          subjectCode: canonSubj,
-                          component: displayComponent,
-                          present: totalPresent,
-                          absent: totalAbsent,
-                          cancelled: totalCancelled,
-                        );
-                        rawGrouped[groupKey] = recList;
-                      }
-                    }
-
-                    final isSol = widget.division.toUpperCase().startsWith('SOL_');
-                    final solThreshold = 0.70;
-                    final stmeThreshold = 0.80;
-                    final effectiveThreshold = isSol ? solThreshold : stmeThreshold;
+                    final effectiveThreshold = calculator.getEffectiveThreshold(
+                      '',
+                      division: widget.division,
+                    );
 
                     final subjects = records.entries.map((e) {
                       final key = e.key;
@@ -510,6 +297,11 @@ class _AttendancePageState extends State<AttendancePage> {
                         calculator: calculator,
                         rawRecords: rawGrouped[key] ?? [],
                         completedOccurrences: completedCounts[key],
+                        conductedHours: aggregated.completedHours[key],
+                        presentHours: aggregated.presentHours[key],
+                        absentHours: aggregated.absentHours[key],
+                        typicalSessionDurationHours:
+                            aggregated.typicalSessionHours[key],
                         requiredAttendance: effectiveThreshold,
                       );
                     }).toList();
@@ -676,6 +468,14 @@ class _AttendancePageState extends State<AttendancePage> {
                             },
                           ),
                         ),
+
+                        if (AdService.shouldShowAdsForRole(AppSettings.currentRole))
+                          const SliverToBoxAdapter(
+                            child: SchedlyBannerAd(
+                              key: ValueKey('attendance_bottom_banner_ad'),
+                              margin: EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.sm),
+                            ),
+                          ),
 
                         const SliverToBoxAdapter(
                           child: SizedBox(height: AppSpacing.x6l),

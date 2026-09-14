@@ -4,6 +4,7 @@ import '../models/attendance_record.dart';
 import '../models/attendance_log.dart';
 import '../models/attendance_import_models.dart';
 import 'attendance/academic_grouping_policy.dart';
+import 'attendance/progressive_attendance_reconciler.dart';
 import 'package:schedly/exceptions.dart';
 
 class AttendanceService {
@@ -151,6 +152,7 @@ class AttendanceService {
   static Future<AttendanceImportResult> commitPdfImport({
     required String division,
     required List<AttendanceLog> logs,
+    DateTime? reportEndDate,
   }) async {
     if (logs.isEmpty) {
       return const AttendanceImportResult(imported: 0);
@@ -173,9 +175,13 @@ class AttendanceService {
       }
     }
 
-    var imported = 0;
-    var updated = 0;
-    var skippedDuplicates = 0;
+    // Authoritative progressive reconciliation: enforces commutativity and guarantees
+    // that definitive statuses (present/absent) are NEVER overwritten by older 'not_updated' (NU)
+    final reconciliation = ProgressiveAttendanceReconciler.reconcile(
+      incomingLogs: logs,
+      existingLogs: existingByKey.values.toList(),
+      incomingReportDate: reportEndDate,
+    );
 
     WriteBatch? currentBatch;
     var opCount = 0;
@@ -199,21 +205,15 @@ class AttendanceService {
     }
 
     final affectedComponents = <({String subjectCode, String component})>{};
-    final seenInThisImport = <String>{};
-    for (final log in logs) {
-      final key = log.deduplicationKey;
-      if (seenInThisImport.contains(key)) {
-        skippedDuplicates++;
-        continue;
-      }
-      seenInThisImport.add(key);
 
+    for (final log in reconciliation.reconciledLogs) {
+      final key = log.deduplicationKey;
       final existing = existingByKey[key];
 
+      // If already matches existing doc and not marked for stale cleanup, skip write
       if (existing != null &&
           existing.status == log.status &&
           !staleDocRefsToDelete.any((r) => r.id == existing.id)) {
-        skippedDuplicates++;
         continue;
       }
 
@@ -224,12 +224,6 @@ class AttendanceService {
           SetOptions(merge: true),
         );
       });
-
-      if (existing != null) {
-        updated++;
-      } else {
-        imported++;
-      }
 
       if (log.subjectCode.isNotEmpty) {
         final canon = AttendanceLog.canonicalSubjectCode(log.subjectCode);
@@ -243,9 +237,9 @@ class AttendanceService {
 
     if (batches.isEmpty) {
       return AttendanceImportResult(
-        imported: 0,
-        updated: 0,
-        skippedDuplicates: skippedDuplicates,
+        imported: reconciliation.newRecords,
+        updated: reconciliation.updatedRecords,
+        skippedDuplicates: reconciliation.duplicatesIgnored,
       );
     }
 
@@ -270,9 +264,9 @@ class AttendanceService {
     }
 
     return AttendanceImportResult(
-      imported: imported,
-      updated: updated,
-      skippedDuplicates: skippedDuplicates,
+      imported: reconciliation.newRecords,
+      updated: reconciliation.updatedRecords,
+      skippedDuplicates: reconciliation.duplicatesIgnored,
       aggregatesUpdated: aggregatesUpdated,
     );
   }

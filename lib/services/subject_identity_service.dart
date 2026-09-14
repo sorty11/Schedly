@@ -134,6 +134,35 @@ class SubjectNormalizer {
 
     return expandedTokens.join(' ').trim();
   }
+
+  /// Cleans component suffixes, batch codes, and semester markers while preserving original word casing.
+  static String cleanNoise(String input) {
+    if (input.trim().isEmpty) return '';
+    String stripped = input.trim();
+
+    final solAttachedMatch = RegExp(
+      r'^(.*?)[\s\-_]*([TU](?:[1-9])?)\s*(?:BA\s*LLB|BBALLB|BALLB|BALL|LLB)\s*$',
+      caseSensitive: false,
+    ).firstMatch(stripped);
+    if (solAttachedMatch != null) {
+      stripped = solAttachedMatch.group(1)!.trim();
+    }
+
+    final match = _componentSuffixRegex.firstMatch(stripped);
+    if (match != null) {
+      final base = match.group(1)!.trim();
+      if (base.isNotEmpty) {
+        stripped = base;
+      }
+    }
+
+    stripped = stripped.replaceAll(_semesterRegex, ' ');
+    stripped = stripped.replaceAll(_batchRegex, ' ');
+    stripped = stripped.replaceAll(_branchRegex, ' ');
+    stripped = stripped.replaceAll(RegExp(r'[\s\-_]+$'), '');
+    stripped = stripped.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return stripped;
+  }
 }
 
 /// Centralized identity and deterministic matching service for timetable entries,
@@ -190,6 +219,16 @@ class SubjectIdentityService {
     // Programming with Python
     'PYTHON': ('Python', 'Programming with Python', 'Python'),
     'PROGRAMMING WITH PYTHON': ('Python', 'Programming with Python', 'Python'),
+    'PYTHON PROGRAMMING': ('Python', 'Programming with Python', 'Python'),
+    'PROGRAMMING IN PYTHON': ('Python', 'Programming with Python', 'Python'),
+    'PYTHON LAB': ('Python', 'Programming with Python Lab', 'Python'),
+    'PYTHON THEORY': ('Python', 'Programming with Python', 'Python'),
+    'PYTHON PRACTICAL': ('Python', 'Programming with Python Lab', 'Python'),
+    'PROGRAMMING WITH PYTHON LAB': ('Python', 'Programming with Python Lab', 'Python'),
+    'PROGRAMMING WITH PYTHON THEORY': ('Python', 'Programming with Python', 'Python'),
+    'PROGRAMMING WITH PYTHON PRACTICAL': ('Python', 'Programming with Python Lab', 'Python'),
+    'PYTHON PROGRAMMING LAB': ('Python', 'Programming with Python Lab', 'Python'),
+    'PYTHON PROGRAMMING THEORY': ('Python', 'Programming with Python', 'Python'),
 
     // Digital Circuits and Computer Architecture
     'DCCA': ('Digital Circuits and Computer Architecture', 'Digital Circuits and Computer Architecture', 'DCCA'),
@@ -450,10 +489,12 @@ class SubjectIdentityService {
     }
 
     // --- STEP 8: Unresolved — Safe fallback, do NOT guess ---
+    final cleanFallback = SubjectNormalizer.cleanNoise(query);
+    final fallbackKey = cleanFallback.isNotEmpty ? cleanFallback : query;
     return SubjectIdentity(
-      canonicalKey: query,
-      displayName: query,
-      confidence: MatchConfidence.unknown,
+      canonicalKey: fallbackKey,
+      displayName: fallbackKey,
+      confidence: MatchConfidence.normalized,
       isResolved: false,
       statusMessage: 'Subject matching needs review',
     );

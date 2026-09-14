@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:schedly/exceptions.dart';
+import 'progress_calculator_service.dart';
 
 class AuthenticationService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -87,6 +88,7 @@ class AuthenticationService {
 
   /// Sign out
   static Future<void> signOut() async {
+    ProgressCalculatorService.invalidateCache();
     await _auth.signOut();
   }
 }

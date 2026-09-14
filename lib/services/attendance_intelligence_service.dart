@@ -310,18 +310,13 @@ class AttendanceIntelligenceService {
       int? skipsLeft;
 
       if (calculator != null) {
-        assignedHours = calculator.getConfiguredCourseHours(record.subjectCode, record.component);
-        if (assignedHours != null && assignedHours > 0) {
-          remainingLectures = calculator.getRemainingLectures(record.subjectCode, record.component, record.total);
-          final isSol = record.division.toUpperCase().startsWith('SOL_');
-          final targetPct = isSol ? 0.70 : 0.80;
-          skipsLeft = calculator.getRemainingSkips(
-            record.subjectCode,
-            record.component,
-            record.absent,
-            requiredAttendance: targetPct,
-          );
-        }
+        final smartRec = calculator.calculateSmartRecommendation(
+          record: record,
+          entry: entry,
+        );
+        assignedHours = smartRec.assignedHours;
+        remainingLectures = smartRec.remainingLectures;
+        skipsLeft = smartRec.skipsLeft;
       }
 
       String enrichedReason = reason;

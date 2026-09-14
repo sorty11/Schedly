@@ -7,6 +7,8 @@ import 'widgets/timetable_studio_sheet.dart';
 import 'app_settings.dart';
 import 'user_roles.dart';
 import 'theme/theme.dart';
+import 'widgets/ads/schedly_banner_ad.dart';
+import 'services/ad_service.dart';
 
 import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/staggered_list_item.dart';
@@ -607,6 +609,12 @@ class _WeeklyTimetablePageState extends State<WeeklyTimetablePage> {
                 },
               ),
             ),
+
+            if (!widget.isEditMode && AdService.shouldShowAdsForRole(AppSettings.currentRole))
+              const SchedlyBannerAd(
+                key: ValueKey('weekly_timetable_bottom_banner_ad'),
+                margin: EdgeInsets.only(bottom: AppSpacing.sm),
+              ),
           ],
         ),
       ),

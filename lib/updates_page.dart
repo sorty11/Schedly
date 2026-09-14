@@ -8,6 +8,11 @@ import 'widgets/animations/staggered_list_item.dart';
 import 'widgets/animations/animated_card.dart';
 import 'widgets/animations/floating_empty_state.dart';
 import 'widgets/animations/skeleton_components.dart';
+import 'assignments/assignments_page.dart';
+import 'app_settings.dart';
+import 'user_roles.dart';
+import 'widgets/ads/schedly_banner_ad.dart';
+import 'services/ad_service.dart';
 
 class UpdatesPage extends StatefulWidget {
   const UpdatesPage({super.key});
@@ -23,7 +28,7 @@ class _UpdatesPageState extends State<UpdatesPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -105,8 +110,9 @@ class _UpdatesPageState extends State<UpdatesPage>
                   ),
                   padding: EdgeInsets.all(AppSpacing.xs),
                   tabs: const [
-                    Tab(text: 'Timetable Changes'),
+                    Tab(text: 'Changes'),
                     Tab(text: 'Announcements'),
+                    Tab(text: 'Assignments'),
                   ],
                 ),
               ),
@@ -136,6 +142,7 @@ class _UpdatesPageState extends State<UpdatesPage>
                     children: [
                       _ChangesTab(division: division),
                       _AnnouncementsTab(division: division),
+                      AssignmentsPage(division: division, isEmbedded: true),
                     ],
                   );
                 },
@@ -169,6 +176,7 @@ class _ChangesTabState extends State<_ChangesTab> {
         .doc(widget.division)
         .collection('notifications')
         .orderBy('createdAt', descending: true)
+        .limit(50)
         .snapshots();
   }
 
@@ -368,6 +376,7 @@ class _AnnouncementsTabState extends State<_AnnouncementsTab> {
         .doc(widget.division)
         .collection('announcements')
         .orderBy('createdAt', descending: true)
+        .limit(50)
         .snapshots();
   }
 
@@ -416,14 +425,27 @@ class _AnnouncementsTabState extends State<_AnnouncementsTab> {
           );
         }
 
+        final shouldShowAd = AdService.shouldShowAdsForRole(AppSettings.currentRole);
+        final itemCount = docs.length + (shouldShowAd ? 1 : 0);
+
         return ListView.builder(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.symmetric(
             horizontal: AppSpacing.x2l,
             vertical: AppSpacing.sm,
           ),
-          itemCount: docs.length,
+          itemCount: itemCount,
           itemBuilder: (context, index) {
+            if (index == docs.length) {
+              return const Padding(
+                padding: EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.md),
+                child: SchedlyBannerAd(
+                  key: ValueKey('announcements_bottom_banner_ad'),
+                  margin: EdgeInsets.zero,
+                ),
+              );
+            }
+
             final data = docs[index].data() as Map<String, dynamic>;
             final priority = data['priority']?.toString() ?? 'Normal';
             final color = _priorityColor(priority, sem);

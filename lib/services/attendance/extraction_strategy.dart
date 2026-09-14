@@ -205,12 +205,39 @@ class DynamicCoordinateExtractionStrategy implements ExtractionStrategy {
         }
       }
 
-      final parsedSr = int.tryParse(srStr) ?? rowIndex;
+      final parsedSr = int.tryParse(srStr);
+      final parsedDate = AttendanceDateTimeParser.parseDate(dateStr);
+      final parsedNormStatus = profile.mapStatus(statusStr.toUpperCase());
+
+      // Reconstruct multi-line wrapped table cells: if this cluster has no Sr No, no date,
+      // and no status code, but has course text immediately following an anchor row, append it.
+      final bool isContinuation = rows.isNotEmpty &&
+          parsedSr == null &&
+          parsedDate == null &&
+          parsedNormStatus == null &&
+          courseStr.isNotEmpty;
+
+      if (isContinuation) {
+        final last = rows.removeLast();
+        rows.add(
+          RawAttendanceRow(
+            pageNumber: last.pageNumber,
+            sourceRowNumber: last.sourceRowNumber,
+            rawCourseName: '${last.rawCourseName} $courseStr'.trim(),
+            rawDate: last.rawDate,
+            rawStartTime: last.rawStartTime,
+            rawEndTime: last.rawEndTime,
+            rawStatus: last.rawStatus,
+            rawText: '${last.rawText}\n$fullLine',
+          ),
+        );
+        continue;
+      }
 
       rows.add(
         RawAttendanceRow(
           pageNumber: pageIndex + 1,
-          sourceRowNumber: parsedSr,
+          sourceRowNumber: parsedSr ?? rowIndex,
           rawCourseName: courseStr,
           rawDate: dateStr,
           rawStartTime: startStr.isNotEmpty ? startStr : null,

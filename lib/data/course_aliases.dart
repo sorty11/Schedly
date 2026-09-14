@@ -7,6 +7,8 @@ const Map<String, String> courseAliases = {
   "TC": "Technical Communication",
   "DM": "Discrete Mathematics",
   "Python": "PROGRAMMING WITH PYTHON",
+  "Python Programming": "PROGRAMMING WITH PYTHON",
+  "Programming in Python": "PROGRAMMING WITH PYTHON",
   "SE": "Software Engineering",
   "IPS": "Interpersonal Skills",
   "DCCA": "Digital Circuits and Computer Architecture",

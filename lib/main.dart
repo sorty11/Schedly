@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/notification_service.dart';
@@ -5,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'services/local_notification_service.dart';
+import 'services/ad_service.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -22,6 +24,7 @@ import 'email_verification_page.dart';
 import 'account_migration_page.dart';
 import 'onboarding_wizard_page.dart';
 import 'widgets/animations/skeleton_components.dart';
+import 'services/deep_link_router.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -81,21 +84,25 @@ Future<void> main() async {
   final prefs = await SharedPreferences.getInstance();
   themeController = ThemeController(prefs);
 
-  // Run these concurrently to speed up initialization
-  await Future.wait([
-    AppSettings.loadRole(),
-    AppSettings.loadSRDetails(),
-    AppSettings.loadStudentDetails(),
-    AppSettings.loadFacultyDetails(),
-    MigrationService.migrateFacultyIds(),
-  ]);
+  // Synchronous, zero-await initialization from memory/prefs
+  AppSettings.loadFromPrefs(prefs);
 
-  // Fire and forget non-critical initializations
-  NotificationService.initialize();
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  LocalNotificationService.initialize();
-
+  // Render UI as early as safely possible
   runApp(const SchedlyApp());
+
+  // Non-critical background services & migrations initialized asynchronously without blocking startup
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Background migration if needed
+    MigrationService.migrateFacultyIds();
+
+    // Background AdMob initialization
+    AdService.initialize();
+
+    // Background notification services
+    NotificationService.initialize();
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    LocalNotificationService.initialize();
+  });
 }
 
 class SchedlyApp extends StatelessWidget {
@@ -110,6 +117,7 @@ class SchedlyApp extends StatelessWidget {
             themeController.visualTheme != SchedlyVisualTheme.defaultTheme;
 
         return MaterialApp(
+          navigatorKey: DeepLinkRouter.navigatorKey,
           title: 'Schedly',
           debugShowCheckedModeBanner: false,
           scrollBehavior: const SchedlyScrollBehavior(),

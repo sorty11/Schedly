@@ -6,6 +6,8 @@ import 'package:schedly/services/attendance_service.dart';
 import 'package:schedly/models/attendance_record.dart';
 
 import 'widgets/beta_badge.dart';
+import 'widgets/ads/schedly_banner_ad.dart';
+import 'services/ad_service.dart';
 
 import 'widgets/timetable_studio_sheet.dart';
 import 'app_settings.dart';
@@ -31,7 +33,10 @@ import 'services/timetable_event_service.dart';
 import 'services/progress_calculator_service.dart';
 import 'services/subject_identity_service.dart';
 import 'services/attendance/academic_grouping_policy.dart';
+import 'services/attendance/attendance_aggregation_service.dart';
 import 'models/attendance_log.dart';
+import 'assignments/widgets/dashboard_assignments_preview.dart';
+import 'assignments/assignments_page.dart';
 
 class DashboardPage extends StatefulWidget {
   final String division;
@@ -50,6 +55,7 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _isLoadingTimetableCheck = true;
   bool _hasTimetable = true;
   late Stream<List<AttendanceRecord>> _recordsStream;
+  late Stream<List<AttendanceLog>> _logsStream;
   ProgressCalculatorService? _calculator;
 
   @override
@@ -62,6 +68,7 @@ class _DashboardPageState extends State<DashboardPage> {
         .collection(currentDay)
         .snapshots();
     _recordsStream = AttendanceService.streamAll(widget.division);
+    _logsStream = AttendanceService.streamLogs();
     ProgressCalculatorService.build(widget.division).then((calc) {
       if (mounted && calc != null) {
         setState(() => _calculator = calc);
@@ -78,6 +85,18 @@ class _DashboardPageState extends State<DashboardPage> {
     if (!mounted) return;
 
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final cacheKey = 'has_timetable_${widget.division}';
+      if (prefs.getBool(cacheKey) == true) {
+        if (mounted) {
+          setState(() {
+            _hasTimetable = true;
+            _isLoadingTimetableCheck = false;
+          });
+        }
+        return;
+      }
+
       final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
       final snaps = await Future.wait(
         days.map(
@@ -92,8 +111,9 @@ class _DashboardPageState extends State<DashboardPage> {
       final hasAny = snaps.any((snap) => snap.docs.isNotEmpty);
 
       if (mounted) {
-        if (!hasAny) {
-          final prefs = await SharedPreferences.getInstance();
+        if (hasAny) {
+          await prefs.setBool(cacheKey, true);
+        } else {
           if (prefs.getString('studio_draft_${widget.division}') != null) {
             _hasDraft = true;
           }
@@ -771,39 +791,27 @@ class _DashboardPageState extends State<DashboardPage> {
         child: StreamBuilder<List<AttendanceRecord>>(
           stream: _recordsStream,
           builder: (context, recordsSnap) {
-            final rawRecords = recordsSnap.data ?? [];
-            final Map<String, AttendanceRecord> attendanceRecords = {};
+            return StreamBuilder<List<AttendanceLog>>(
+              stream: _logsStream,
+              builder: (context, logsSnap) {
+                final rawRecords = recordsSnap.data ?? [];
+                final logs = logsSnap.data ?? [];
 
-            for (final r in rawRecords) {
-              String subjectName = r.subjectCode;
-              String componentName = r.component;
+                final aggregated = AttendanceAggregationService.aggregate(
+                  rawRecords: rawRecords,
+                  logs: logs,
+                  division: widget.division,
+                );
+                final attendanceRecords = aggregated.records;
+                final completedCounts = aggregated.completedCounts;
+                final completedHours = aggregated.completedHours;
+                final presentHours = aggregated.presentHours;
+                final absentHours = aggregated.absentHours;
+                final typicalSessionHours = aggregated.typicalSessionHours;
 
-              String normComponent = componentName;
-              if (normComponent.isEmpty || normComponent == 'Lecture') {
-                normComponent = 'Theory';
-              } else if (normComponent == 'Practical') {
-                normComponent = 'Lab';
-              }
-
-              attendanceRecords['${subjectName}_$normComponent'] = r;
-              attendanceRecords[subjectName] = r;
-              if (r.component == 'Merged') {
-                attendanceRecords['${subjectName}_Merged'] = r;
-              }
-
-              final canon = SubjectIdentityService.getCanonicalKey(subjectName);
-              if (canon.isNotEmpty) {
-                attendanceRecords['${canon}_$normComponent'] = r;
-                attendanceRecords[canon] = r;
-                if (r.component == 'Merged') {
-                  attendanceRecords['${canon}_Merged'] = r;
-                }
-              }
-            }
-
-            return StreamBuilder<QuerySnapshot>(
-              stream: _lecturesStream,
-              builder: (context, snapshot) {
+                return StreamBuilder<QuerySnapshot>(
+                  stream: _lecturesStream,
+                  builder: (context, snapshot) {
                 final isLoading =
                     snapshot.connectionState == ConnectionState.waiting &&
                     !snapshot.hasData;
@@ -842,6 +850,13 @@ class _DashboardPageState extends State<DashboardPage> {
                           ),
                         ),
                       ),
+                      if (AdService.shouldShowAdsForRole(AppSettings.currentRole))
+                        const SliverToBoxAdapter(
+                          child: SchedlyBannerAd(
+                            key: ValueKey('dashboard_holiday_banner_ad'),
+                            margin: EdgeInsets.only(top: AppSpacing.x2l, bottom: AppSpacing.x4l),
+                          ),
+                        ),
                     ],
                   );
                 }
@@ -931,7 +946,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             Row(
                               children: [
                                 if (AppSettings.currentRole == UserRole.cr ||
-                                    AppSettings.currentRole == UserRole.sr)
+                                    AppSettings.currentRole == UserRole.sr) ...[
                                   AnimatedButton(
                                     onPressed: () {
                                       Navigator.push(
@@ -973,6 +988,46 @@ class _DashboardPageState extends State<DashboardPage> {
                                       ],
                                     ),
                                   ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                ],
+                                AnimatedButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => AssignmentsPage(
+                                          division: widget.division,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  backgroundColor: colorScheme.primary
+                                      .withValues(alpha: 0.1),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.md,
+                                    vertical: AppSpacing.sm,
+                                  ),
+                                  borderRadius: AppRadius.sm,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.assignment_outlined,
+                                        size: 16,
+                                        color: colorScheme.primary,
+                                      ),
+                                      const SizedBox(width: AppSpacing.xs),
+                                      Text(
+                                        'Assignments',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: colorScheme.primary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
                           ],
@@ -1150,6 +1205,14 @@ class _DashboardPageState extends State<DashboardPage> {
                         ),
                       ),
 
+                    if (!isLoading)
+                      SliverToBoxAdapter(
+                        child: DashboardAssignmentsPreview(
+                          division: widget.division,
+                          studentBatch: AppSettings.studentBatch,
+                        ),
+                      ),
+
                     if (isLoading) ...[
                       const SliverToBoxAdapter(
                         child: Padding(
@@ -1227,13 +1290,15 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
 
                     if (!isLoading && groupedLectures.isEmpty)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: FloatingEmptyState(
-                          icon: Icons.event_available_rounded,
-                          title: 'No classes today',
-                          subtitle:
-                              'Enjoy your free time or catch up on studies',
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: AppSpacing.x6l),
+                          child: FloatingEmptyState(
+                            icon: Icons.event_available_rounded,
+                            title: 'No classes today',
+                            subtitle:
+                                'Enjoy your free time or catch up on studies',
+                          ),
                         ),
                       ),
 
@@ -1268,6 +1333,11 @@ class _DashboardPageState extends State<DashboardPage> {
                                 canEdit: _canEditLecture,
                                 onEdit: _editLecture,
                                 attendanceRecords: attendanceRecords,
+                                completedCounts: completedCounts,
+                                completedHours: completedHours,
+                                presentHours: presentHours,
+                                absentHours: absentHours,
+                                typicalSessionHours: typicalSessionHours,
                                 calculator: _calculator,
                                 division: widget.division,
                               ),
@@ -1276,11 +1346,21 @@ class _DashboardPageState extends State<DashboardPage> {
                         ),
                       ),
 
+                    if (AdService.shouldShowAdsForRole(AppSettings.currentRole))
+                      const SliverToBoxAdapter(
+                        child: SchedlyBannerAd(
+                          key: ValueKey('dashboard_bottom_banner_ad'),
+                          margin: EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.md),
+                        ),
+                      ),
+
                     const SliverToBoxAdapter(
                       child: SizedBox(height: AppSpacing.x6l),
                     ),
                   ],
                 );
+              },
+            );
               },
             );
           },
@@ -1298,6 +1378,11 @@ class _TimelineLectureItem extends StatelessWidget {
   final bool Function(TimetableEntry) canEdit;
   final void Function(TimetableEntry) onEdit;
   final Map<String, AttendanceRecord>? attendanceRecords;
+  final Map<String, int>? completedCounts;
+  final Map<String, int>? completedHours;
+  final Map<String, int>? presentHours;
+  final Map<String, int>? absentHours;
+  final Map<String, int>? typicalSessionHours;
   final ProgressCalculatorService? calculator;
   final String division;
 
@@ -1309,6 +1394,11 @@ class _TimelineLectureItem extends StatelessWidget {
     required this.canEdit,
     required this.onEdit,
     this.attendanceRecords,
+    this.completedCounts,
+    this.completedHours,
+    this.presentHours,
+    this.absentHours,
+    this.typicalSessionHours,
     this.calculator,
     this.division = '',
   });
@@ -1334,15 +1424,21 @@ class _TimelineLectureItem extends StatelessWidget {
           rawComp.toUpperCase().contains('LAB') ||
           rawComp.toUpperCase().contains('PRACTICAL') ||
           rawComp.toUpperCase() == 'P4';
-      final targetComp = isLab ? 'Lab' : 'Theory';
 
-      for (final candidateKey in [
-        'DSA_$targetComp',
-        'DATA STRUCTURES AND ALGORITHMS_$targetComp',
-        'DATA STRUCTURES AND ALGORITHMS LAB_$targetComp',
-      ]) {
-        if (recordsMap.containsKey(candidateKey)) {
-          return recordsMap[candidateKey];
+      final targetKey = isLab ? 'DSA_Lab' : 'DSA_Theory';
+      if (recordsMap.containsKey(targetKey)) {
+        return recordsMap[targetKey];
+      }
+
+      final keyExact = '${rawSubj}_$normComp';
+      if (recordsMap.containsKey(keyExact)) {
+        final r = recordsMap[keyExact]!;
+        final rComp = AcademicGroupingPolicy.normalizeComponent(r.component);
+        if (isLab && (rComp == 'Lab' || r.subjectCode.toUpperCase().contains('LAB'))) {
+          return r;
+        }
+        if (!isLab && rComp == 'Theory' && !r.subjectCode.toUpperCase().contains('LAB')) {
+          return r;
         }
       }
 
@@ -1602,101 +1698,124 @@ class _TimelineLectureItem extends StatelessWidget {
                                         ),
                                       ),
                                     ),
-                                   Builder(
-                                     builder: (context) {
-                                       if (attendanceRecords == null || attendanceRecords!.isEmpty) {
-                                         return const SizedBox.shrink();
-                                       }
+                                    Builder(
+                                      builder: (context) {
+                                        if (attendanceRecords == null || attendanceRecords!.isEmpty) {
+                                          return const SizedBox.shrink();
+                                        }
 
-                                       final record = _findMatchingRecord(entry, attendanceRecords);
-                                       if (record == null) {
-                                         return const SizedBox.shrink();
-                                       }
+                                        final record = _findMatchingRecord(entry, attendanceRecords);
+                                        if (record == null) {
+                                          return const SizedBox.shrink();
+                                        }
 
-                                       final int p = record.present;
-                                       final int a = record.absent;
-                                       final double attendPct = (p + 1) / (p + a + 1) * 100;
-                                       final double skipPct = p / (p + a + 1) * 100;
+                                        final groupKey = AttendanceLog.canonicalGroupKey(
+                                          record.subjectCode,
+                                          record.component,
+                                        );
+                                        final completed = completedCounts?[groupKey];
+                                        final compHours = completedHours?[groupKey];
+                                        final pHours = presentHours?[groupKey];
+                                        final aHours = absentHours?[groupKey];
+                                        final typDur = typicalSessionHours?[groupKey];
 
-                                       final isSol = (record.division.isNotEmpty ? record.division : division)
-                                           .toUpperCase()
-                                           .startsWith('SOL_');
-                                       final threshold = isSol ? 0.70 : 0.80;
+                                        final SmartAttendanceRecommendation rec;
+                                        if (calculator != null) {
+                                          rec = calculator!.calculateSmartRecommendation(
+                                            record: record,
+                                            entry: entry,
+                                            completedOccurrences: completed,
+                                            conductedHours: compHours,
+                                            presentHours: pHours,
+                                            absentHours: aHours,
+                                            typicalSessionDurationHours: typDur,
+                                          );
+                                        } else {
+                                          final durHours = (entry.durationMinutes > 0
+                                                  ? (entry.durationMinutes / 60).round()
+                                                  : ((entry.endTime - entry.startTime) / 60).round())
+                                              .clamp(1, 4);
+                                          final nextUnit = durHours;
+                                          final effP = pHours ?? (record.present * nextUnit);
+                                          final effA = aHours ?? (record.absent * nextUnit);
+                                          final totalH = effP + effA;
+                                          final ifAtt = totalH == 0
+                                              ? 100.0
+                                              : ((effP + nextUnit) / (totalH + nextUnit)) * 100.0;
+                                          final ifSk = totalH == 0
+                                              ? 0.0
+                                              : (effP / (totalH + nextUnit)) * 100.0;
+                                          final isSol = (record.division.isNotEmpty ? record.division : division)
+                                              .toUpperCase()
+                                              .startsWith('SOL_');
+                                          final thresh = isSol ? 0.70 : 0.80;
+                                          rec = SmartAttendanceRecommendation(
+                                            currentPct: totalH == 0 ? 0.0 : (effP / totalH) * 100.0,
+                                            ifAttendPct: ifAtt,
+                                            ifSkipPct: ifSk,
+                                            canSkipNext: ifSk >= (thresh * 100.0 - 1e-9),
+                                            skipsLeft: 0,
+                                            skipsLeftHours: 0,
+                                            remainingLectures: null,
+                                            remainingHours: null,
+                                            assignedHours: null,
+                                            lectureUnit: nextUnit,
+                                            requiredThreshold: thresh,
+                                          );
+                                        }
 
-                                       int? assignedHours;
-                                       int? remainingLectures;
-                                       int? skipsLeft;
-
-                                       if (calculator != null) {
-                                         assignedHours = calculator!.getConfiguredCourseHours(
-                                           record.subjectCode,
-                                           record.component,
-                                         );
-                                         if (assignedHours != null && assignedHours > 0) {
-                                           remainingLectures = calculator!.getRemainingLectures(
-                                             record.subjectCode,
-                                             record.component,
-                                             record.total,
-                                           );
-                                           skipsLeft = calculator!.getRemainingSkips(
-                                             record.subjectCode,
-                                             record.component,
-                                             record.absent,
-                                             requiredAttendance: threshold,
-                                           );
-                                         }
-                                       }
-
-                                       return Padding(
-                                         padding: const EdgeInsets.only(top: 8.0),
-                                         child: Container(
-                                           padding: const EdgeInsets.symmetric(
-                                             horizontal: 8,
-                                             vertical: 6,
-                                           ),
-                                           decoration: BoxDecoration(
-                                             color: isDark
-                                                 ? sem.surfaceElevated2
-                                                 : sem.borderSubtle.withValues(alpha: 0.5),
-                                             borderRadius: BorderRadius.circular(AppRadius.sm),
-                                           ),
-                                           child: Column(
-                                             crossAxisAlignment: CrossAxisAlignment.start,
-                                             mainAxisSize: MainAxisSize.min,
-                                             children: [
-                                               Text(
-                                                 '🟢 If attend: ${attendPct.toStringAsFixed(1)}%  |  🔴 If skip: ${skipPct.toStringAsFixed(1)}%',
-                                                 style: GoogleFonts.inter(
-                                                   fontSize: 11,
-                                                   fontWeight: FontWeight.w600,
-                                                   color: isDark ? Colors.white70 : sem.onSurfaceMuted,
-                                                 ),
-                                               ),
-                                               const SizedBox(height: 2),
-                                               if (assignedHours != null && assignedHours > 0)
-                                                 Text(
-                                                   '🎯 Can miss: ${skipsLeft ?? 0} · ${remainingLectures ?? 0} remaining ($assignedHours hrs assigned)',
-                                                   style: GoogleFonts.inter(
-                                                     fontSize: 10,
-                                                     fontWeight: FontWeight.w500,
-                                                     color: (skipsLeft ?? 0) > 0 ? sem.conducted : sem.warning,
-                                                   ),
-                                                 )
-                                               else
-                                                 Text(
-                                                   'ℹ️ Hours not configured',
-                                                   style: GoogleFonts.inter(
-                                                     fontSize: 10,
-                                                     fontWeight: FontWeight.w500,
-                                                     color: sem.onSurfaceMuted.withValues(alpha: 0.7),
-                                                   ),
-                                                 ),
-                                             ],
-                                           ),
-                                         ),
-                                       );
-                                     },
-                                   ),
+                                        return Padding(
+                                          padding: const EdgeInsets.only(top: 8.0),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 6,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: isDark
+                                                  ? sem.surfaceElevated2
+                                                  : sem.borderSubtle.withValues(alpha: 0.5),
+                                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  '🟢 If attend: ${rec.ifAttendPct.toStringAsFixed(1)}%  |  🔴 If skip: ${rec.ifSkipPct.toStringAsFixed(1)}%',
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: isDark ? Colors.white70 : sem.onSurfaceMuted,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                if (rec.assignedHours != null && rec.assignedHours! > 0)
+                                                  Text(
+                                                    '🎯 Can miss: ${rec.skipsLeft} · ${rec.remainingLectures ?? 0} remaining (${rec.assignedHours} hrs assigned)',
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.w500,
+                                                      color: (rec.skipsLeft > 0 && rec.canSkipNext)
+                                                          ? sem.conducted
+                                                          : sem.warning,
+                                                    ),
+                                                  )
+                                                else
+                                                  Text(
+                                                    'ℹ️ Hours not configured',
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.w500,
+                                                      color: sem.onSurfaceMuted.withValues(alpha: 0.7),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
                                 ],
                               ),
                             ),

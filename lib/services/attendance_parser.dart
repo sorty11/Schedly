@@ -89,6 +89,7 @@ class AttendanceParserService {
       return await AttendanceService.commitPdfImport(
         division: division,
         logs: preview.logs,
+        reportEndDate: preview.metadata.reportEndDate,
       );
     } on Exception catch (e) {
       debugPrint('PDF IMPORT COMMIT ERROR: $e');

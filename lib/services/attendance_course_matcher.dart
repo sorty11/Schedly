@@ -3,6 +3,7 @@ import '../models/attendance_import_models.dart';
 import '../models/attendance_log.dart';
 import '../models/course_component.dart';
 import 'attendance_course_normalizer.dart';
+import 'subject_identity_service.dart';
 
 /// Maps parsed PDF course names to configured Schedly course components.
 class AttendanceCourseMatcher {
@@ -30,17 +31,34 @@ class AttendanceCourseMatcher {
       }
     }
 
-    // Priority 2: Normalized course-name match.
+    // Priority 2: Canonical identity & Normalized course-name match.
     final normalizedInput = AttendanceCourseNormalizer.normalizeForMatching(
       courseName,
     );
     CourseComponent? bestNormalized;
     for (final comp in configuredCourses) {
+      if (!_componentTypesCompatible(comp.componentType, componentType)) {
+        continue;
+      }
       final normalizedCourse = AttendanceCourseNormalizer.normalizeForMatching(
         comp.courseName,
       );
-      if (normalizedInput == normalizedCourse &&
-          _componentTypesCompatible(comp.componentType, componentType)) {
+      if (normalizedInput == normalizedCourse ||
+          SubjectIdentityService.isMatch(
+            comp.courseName,
+            courseName,
+            configuredCourses: configuredCourses,
+          ) ||
+          SubjectIdentityService.isMatch(
+            _cleanSubjectCode(comp),
+            courseName,
+            configuredCourses: configuredCourses,
+          ) ||
+          SubjectIdentityService.isMatch(
+            comp.componentId,
+            courseName,
+            configuredCourses: configuredCourses,
+          )) {
         bestNormalized = comp;
         break;
       }
@@ -94,7 +112,9 @@ class AttendanceCourseMatcher {
 
       // Try matching alias against raw text when normalization stripped info.
       for (final entry in courseAliases.entries) {
-        if (rawCourseName.toUpperCase().contains(entry.value.toUpperCase())) {
+        if (rawCourseName.toUpperCase().contains(entry.value.toUpperCase()) ||
+            SubjectIdentityService.isMatch(rawCourseName, entry.value) ||
+            SubjectIdentityService.isMatch(rawCourseName, entry.key)) {
           return CourseMatchResult(
             subjectCode: entry.key,
             component: componentType,
@@ -151,16 +171,25 @@ class AttendanceCourseMatcher {
 
     final upper = courseName.toUpperCase();
     for (final entry in courseAliases.entries) {
-      if (upper.contains(entry.value.toUpperCase()) ||
-          upper == entry.key.toUpperCase()) {
+      final aliasValUpper = entry.value.toUpperCase();
+      final aliasKeyUpper = entry.key.toUpperCase();
+      final matchesAlias = upper.contains(aliasValUpper) ||
+          upper == aliasKeyUpper ||
+          SubjectIdentityService.isMatch(courseName, entry.value, configuredCourses: configuredCourses) ||
+          SubjectIdentityService.isMatch(courseName, entry.key, configuredCourses: configuredCourses);
+
+      if (matchesAlias) {
         if (configuredCourses.isNotEmpty) {
           final exists = configuredCourses.any((c) {
             final cleanId = _cleanSubjectCode(c).toUpperCase();
             final cName = c.courseName.toUpperCase();
             final cCode = c.courseCode.toUpperCase();
-            return cleanId == entry.key.toUpperCase() ||
-                cName.contains(entry.value.toUpperCase()) ||
-                (cCode.isNotEmpty && cCode == entry.key.toUpperCase());
+            return cleanId == aliasKeyUpper ||
+                cName.contains(aliasValUpper) ||
+                (cCode.isNotEmpty && cCode == aliasKeyUpper) ||
+                SubjectIdentityService.isMatch(c.courseName, entry.value, configuredCourses: configuredCourses) ||
+                SubjectIdentityService.isMatch(c.courseName, entry.key, configuredCourses: configuredCourses) ||
+                SubjectIdentityService.isMatch(_cleanSubjectCode(c), entry.key, configuredCourses: configuredCourses);
           });
           if (!exists) continue;
         }

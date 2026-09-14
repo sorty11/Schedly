@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'user_roles.dart';
 import 'services/topic_subscription_service.dart';
 import 'services/notification_service.dart';
+import 'services/progress_calculator_service.dart';
 
 class AppSettings {
   static UserRole currentRole = UserRole.student;
@@ -42,6 +43,60 @@ class AppSettings {
   static List<String>? facultyAssignedDivisions;
   // To avoid complexity, we can store simple strings or retrieve them dynamically from Firestore.
   // We'll store basic identifiers.
+
+  /// Loads all user settings synchronously from an already-instantiated [SharedPreferences]
+  /// to eliminate redundant disk/async calls during app startup.
+  static void loadFromPrefs(SharedPreferences prefs) {
+    final role = prefs.getString('user_role');
+    switch (role) {
+      case 'cr':
+        currentRole = UserRole.cr;
+        break;
+      case 'sr':
+        currentRole = UserRole.sr;
+        break;
+      case 'faculty':
+        currentRole = UserRole.faculty;
+        break;
+      default:
+        currentRole = UserRole.student;
+    }
+
+    srDivision = prefs.getString('sr_division');
+    srSubject = prefs.getString('sr_subject');
+    srComponent = prefs.getString('sr_component');
+    srSectionId = prefs.getString('sr_section_id');
+    srBatch = prefs.getString('sr_batch');
+
+    studentName = prefs.getString('student_name');
+    studentRollNo = prefs.getString('student_roll_no');
+    studentBatch = prefs.getString('student_batch');
+    profilePhotoUrl = prefs.getString('profile_photo_url');
+
+    academicYear = prefs.getString('academic_year');
+    branch = prefs.getString('branch');
+    division = prefs.getString('division');
+    sectionId = prefs.getString('section_id');
+
+    school = prefs.getString('school') ?? 'STME';
+    program = prefs.getString('program') ?? branch;
+    semester = prefs.getString('semester');
+
+    facultyId = prefs.getString('faculty_id');
+    facultySapId = prefs.getString('faculty_sap_id') ?? facultyId;
+    facultyIdMigrationVersion =
+        prefs.getInt('faculty_id_migration_version') ?? 0;
+    facultyName = prefs.getString('faculty_name');
+    facultyEmail = prefs.getString('faculty_email');
+    facultyDepartment = prefs.getString('faculty_department');
+    facultyDesignation = prefs.getString('faculty_designation');
+    facultyCabin = prefs.getString('faculty_cabin');
+    facultySetupCompleted = prefs.getBool('faculty_setup_completed') ?? false;
+    facultyReminderTime = prefs.getInt('faculty_reminder_time') ?? 5;
+    facultyAssignedDivisions = prefs.getStringList(
+      'faculty_assigned_divisions',
+    );
+  }
 
   static Future<void> loadRole() async {
     final prefs = await SharedPreferences.getInstance();
@@ -227,12 +282,14 @@ class AppSettings {
     } else {
       await prefs.remove('semester');
     }
+    ProgressCalculatorService.invalidateCache(div);
   }
 
   static Future<void> saveStudentBatch(String batch) async {
     final prefs = await SharedPreferences.getInstance();
     studentBatch = batch;
     await prefs.setString('student_batch', batch);
+    ProgressCalculatorService.invalidateCache();
   }
 
   static Future<void> updateStudentProfileNameAndRoll({

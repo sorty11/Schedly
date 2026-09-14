@@ -46,6 +46,9 @@ class AttendanceSubjectViewModel {
   /// Non-blocking message or note when needsReview is true.
   final String? reviewMessage;
 
+  /// Authoritative Smart Attendance Recommendation.
+  final SmartAttendanceRecommendation? recommendation;
+
   const AttendanceSubjectViewModel({
     required this.subjectCode,
     required this.component,
@@ -59,6 +62,7 @@ class AttendanceSubjectViewModel {
     this.rawRecords = const [],
     this.needsReview = false,
     this.reviewMessage,
+    this.recommendation,
   });
 
   /// Factory constructor to build an [AttendanceSubjectViewModel] from an
@@ -68,31 +72,20 @@ class AttendanceSubjectViewModel {
     required ProgressCalculatorService calculator,
     List<AttendanceRecord> rawRecords = const [],
     int? completedOccurrences,
-    double requiredAttendance = 0.80,
+    int? conductedHours,
+    int? presentHours,
+    int? absentHours,
+    int? typicalSessionDurationHours,
+    double? requiredAttendance,
   }) {
-    final present = record.present;
-    final absent = record.absent;
-    final total = present + absent;
-    final pct = total == 0 ? 0.0 : present / total;
-
-    final skipsLeft = calculator.getRemainingSkips(
-      record.subjectCode,
-      record.component,
-      absent,
+    final rec = calculator.calculateSmartRecommendation(
+      record: record,
+      completedOccurrences: completedOccurrences,
+      conductedHours: conductedHours,
+      presentHours: presentHours,
+      absentHours: absentHours,
+      typicalSessionDurationHours: typicalSessionDurationHours,
       requiredAttendance: requiredAttendance,
-    );
-
-    final assignedHours = calculator.getConfiguredCourseHours(
-      record.subjectCode,
-      record.component,
-    );
-
-    final actualCompleted = completedOccurrences ?? total;
-
-    final remainingLectures = calculator.getRemainingLectures(
-      record.subjectCode,
-      record.component,
-      actualCompleted,
     );
 
     final identity = SubjectIdentityService.resolve(
@@ -108,16 +101,17 @@ class AttendanceSubjectViewModel {
     return AttendanceSubjectViewModel(
       subjectCode: record.subjectCode,
       component: record.component,
-      present: present,
-      absent: absent,
-      total: total,
-      percentage: pct,
-      skipsLeft: skipsLeft,
-      assignedHours: assignedHours,
-      remainingLectures: remainingLectures,
+      present: record.present,
+      absent: record.absent,
+      total: record.present + record.absent,
+      percentage: rec.currentPct / 100.0,
+      skipsLeft: rec.skipsLeft,
+      assignedHours: rec.assignedHours,
+      remainingLectures: rec.remainingLectures,
       rawRecords: rawRecords,
       needsReview: needsReview,
       reviewMessage: reviewMessage,
+      recommendation: rec,
     );
   }
 
