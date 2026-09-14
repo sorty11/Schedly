@@ -155,10 +155,11 @@ void main() {
 
       expect(vmLab.assignedHours, equals(30));
       expect(vmLab.assignedHoursLabel, equals('30 hrs assigned'));
-      // Skips: floor(30 * 0.20) - 2 = 6 - 2 = 4
-      expect(vmLab.skipsLeft, equals(4));
-      expect(vmLab.remainingLectures, equals(16));
-      expect(vmLab.remainingLecturesLabel, equals('16 lectures remaining'));
+      // 30h course, 2h lab blocks: 14 sessions (28h) conducted -> 2h remaining = 1 lecture remaining.
+      // Absence: 2 sessions (4h) missed out of 6h budget -> 2h remaining = 1 skip left.
+      expect(vmLab.skipsLeft, equals(1));
+      expect(vmLab.remainingLectures, equals(1));
+      expect(vmLab.remainingLecturesLabel, equals('1 lecture remaining'));
     });
   });
 

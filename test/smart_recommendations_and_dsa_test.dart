@@ -1,4 +1,4 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:schedly/models/attendance_log.dart';
 import 'package:schedly/models/attendance_record.dart';
 import 'package:schedly/models/course_component.dart';
@@ -161,19 +161,19 @@ void main() {
 
       expect(recs.length, equals(3));
 
-      // DSA Theory recommendation
+      // DSA Theory recommendation (2h block)
       final dsaThRec = recs.firstWhere((r) => r.component == 'Theory' && r.subjectCode.contains('DATA STRUCTURES'));
       expect(dsaThRec.assignedHours, equals(45));
-      expect(dsaThRec.remainingLectures, equals(23)); // 45 - 22 = 23
-      expect(dsaThRec.remainingSkips, equals(7)); // 9 - 2 = 7
-      expect(dsaThRec.reason, contains('safely miss 7'));
+      expect(dsaThRec.remainingLectures, equals(1)); // (45h - 44h) / 2 = 1 session
+      expect(dsaThRec.remainingSkips, equals(2)); // (9h - 4h) / 2 = 2 sessions
+      expect(dsaThRec.reason, contains('safely miss 2'));
 
-      // DSA Lab recommendation
+      // DSA Lab recommendation (2h block)
       final dsaLabRec = recs.firstWhere((r) => r.component == 'Lab');
       expect(dsaLabRec.assignedHours, equals(30));
-      expect(dsaLabRec.remainingLectures, equals(19)); // 30 - 11 = 19
-      expect(dsaLabRec.remainingSkips, equals(5)); // 6 - 1 = 5
-      expect(dsaLabRec.reason, contains('safely miss 5'));
+      expect(dsaLabRec.remainingLectures, equals(4)); // (30h - 22h) / 2 = 4 sessions
+      expect(dsaLabRec.remainingSkips, equals(2)); // (6h - 2h) / 2 = 2 sessions
+      expect(dsaLabRec.reason, contains('safely miss 2'));
 
       // SE recommendation (matched via SubjectIdentityService alias 'SE' <-> 'Software Engineering')
       final seRec = recs.firstWhere((r) => r.subjectCode == 'SE');
@@ -270,12 +270,12 @@ void main() {
 
       expect(recs.length, equals(3));
 
-      // Company Law 2 matches Company Law II
+      // Company Law 2 matches Company Law II (2h block)
       final compLawRec = recs.firstWhere((r) => r.subjectCode.contains('Company Law'));
       expect(compLawRec.assignedHours, equals(60));
-      expect(compLawRec.remainingLectures, equals(40)); // 60 - 20 = 40
-      // SOL 70% threshold: 60 * 0.30 = 18 allowed absences. With 2 absent -> 16 skips left
-      expect(compLawRec.remainingSkips, equals(16));
+      expect(compLawRec.remainingLectures, equals(10)); // (60h - 40h) / 2 = 10 sessions
+      // SOL 70% threshold: 60 * 0.30 = 18 allowed absence hours. With 4 absent hours -> (18 - 4) / 2 = 7 skips left
+      expect(compLawRec.remainingSkips, equals(7));
 
       // Family Law 2 matches Family Law II
       final famLawRec = recs.firstWhere((r) => r.subjectCode.contains('Family Law'));
