@@ -898,16 +898,41 @@ class _TimelineLogCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  log.component == 'Theory'
-                      ? log.subjectCode
-                      : '${log.subjectCode} ${log.component}',
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Builder(
+                  builder: (context) {
+                    final rawCode = log.subjectCode.trim();
+                    final isCombined = rawCode.isEmpty ||
+                        rawCode.toLowerCase() == 'combined' ||
+                        rawCode == '❔';
+                    final normSubj = log.normalizedSubject?.trim() ?? '';
+                    final rawSubj = log.rawSubjectText.trim();
+                    final subjectTitle = !isCombined
+                        ? rawCode
+                        : (normSubj.isNotEmpty
+                            ? normSubj
+                            : (rawSubj.isNotEmpty
+                                ? rawSubj
+                                : 'Class'));
+
+                    final comp = log.component.trim();
+                    final showComponent = comp.isNotEmpty &&
+                        comp.toLowerCase() != 'theory' &&
+                        comp.toLowerCase() != 'combined';
+
+                    final String fullTitle = showComponent
+                        ? '$subjectTitle $comp'
+                        : subjectTitle;
+
+                    return Text(
+                      fullTitle,
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    );
+                  },
                 ),
                 Text(
                   log.startTime != null && log.endTime != null

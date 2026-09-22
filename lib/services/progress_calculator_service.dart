@@ -7,6 +7,7 @@ import '../models/attendance_log.dart';
 import '../models/attendance_record.dart';
 import 'course_configuration_service.dart';
 import 'subject_identity_service.dart';
+import 'attendance/academic_grouping_policy.dart';
 
 import '../app_settings.dart';
 import '../user_roles.dart';
@@ -234,6 +235,11 @@ class ProgressCalculatorService {
               SubjectIdentityService.isMatch(c.courseCode, subjectCode, configuredCourses: courseComponents));
     }
 
+    final isSplit = AcademicGroupingPolicy.isSplitCourse(
+      subjectCode,
+      configuredCourses: courseComponents,
+    );
+
     // 1. Specific component lookup (e.g. Theory or Lab for split courses like DSA)
     if (normComp != 'merged' && normComp != 'all' && normComp.isNotEmpty) {
       for (final comp in courseComponents) {
@@ -243,7 +249,8 @@ class ProgressCalculatorService {
               type == normComp ||
               (normComp.contains('lab') && comp.isLab) ||
               (normComp.contains('theory') &&
-                  (type == 'theory' || type == 'lecture'));
+                  (type == 'theory' || type == 'lecture')) ||
+              (normComp.contains('tutorial') && type.contains('tut'));
           if (matchesType && comp.targetHours > 0) {
             return comp.targetHours;
           }
@@ -252,10 +259,14 @@ class ProgressCalculatorService {
     }
 
     // 2. Merged or course-level lookup: Sum all components of this course
-    final matchingComps = courseComponents.where(matchCourseName).toList();
-    if (matchingComps.isNotEmpty) {
-      final sum = matchingComps.fold<int>(0, (acc, c) => acc + c.targetHours);
-      if (sum > 0) return sum;
+    // CRITICAL: A split course component (like DSA Theory or DSA Lab) must NEVER
+    // inherit the sum of all components (e.g. 75h)!
+    if (!isSplit || normComp == 'merged' || normComp == 'all' || normComp.isEmpty) {
+      final matchingComps = courseComponents.where(matchCourseName).toList();
+      if (matchingComps.isNotEmpty) {
+        final sum = matchingComps.fold<int>(0, (acc, c) => acc + c.targetHours);
+        if (sum > 0) return sum;
+      }
     }
 
     // 3. Fallback to direct key lookup in subjectMetadata
@@ -265,11 +276,12 @@ class ProgressCalculatorService {
         subjectMetadata['$subjectCode $component'] ??
         subjectMetadata['${canonSubj}_$component'];
     if (direct != null && direct.targetHours > 0) {
-      return direct.targetHours;
+      if (!isSplit || direct.componentType.toLowerCase() == normComp) {
+        return direct.targetHours;
+      }
     }
 
-    // 4. Dedicated STME DSA fallback ONLY when unconfigured in Course Details:
-    // STME DSA Theory = 45 hrs, STME DSA Lab = 30 hrs.
+    // 4. Dedicated STME catalog fallbacks ONLY when unconfigured in Course Details:
     if (!isSol) {
       final upperSubj = subjectCode.trim().toUpperCase();
       final isDsa = upperSubj == 'DSA' ||
@@ -285,6 +297,41 @@ class ProgressCalculatorService {
             normComp == 'p4' ||
             upperSubj.contains('LAB');
         return isLab ? 30 : 45;
+      }
+
+      // Discrete Mathematics: 60h (45h Th + 15h Tut)
+      if (upperSubj == 'DM' || upperSubj.contains('DISCRETE MATHEMATICS')) {
+        return 60;
+      }
+
+      // Signals and Systems: 75h (45h Th + 30h Lab)
+      if (upperSubj == 'SNS' || upperSubj.contains('SIGNALS AND SYSTEMS')) {
+        return 75;
+      }
+
+      // Probability and Statistics: 75h (45h Th + 30h Lab)
+      if (upperSubj == 'PNS' || upperSubj.contains('PROBABILITY AND STATISTICS')) {
+        return 75;
+      }
+
+      // Programming with Python: 60h (30h Th + 30h Lab)
+      if (upperSubj == 'PYTHON' || upperSubj.contains('PROGRAMMING WITH PYTHON')) {
+        return 60;
+      }
+
+      // Technical Communication: 30h
+      if (upperSubj == 'TC' || upperSubj.contains('TECHNICAL COMMUNICATION')) {
+        return 30;
+      }
+
+      // Principles of Economics and Management: 45h
+      if (upperSubj == 'PEM' || upperSubj.contains('PRINCIPLES OF ECONOMICS')) {
+        return 45;
+      }
+
+      // Computer Organization and Architecture: 45h
+      if (upperSubj == 'COA' || upperSubj.contains('COMPUTER ORGANIZATION')) {
+        return 45;
       }
     }
 

@@ -74,29 +74,42 @@ class _HomePageState extends State<HomePage>
   Future<void> _runMigrationIfNeeded() async {
     final prefs = await SharedPreferences.getInstance();
     final v2Key = 'migration_v2_${widget.division}';
-    if (!(prefs.getBool(v2Key) ?? false)) {
-      try {
-        await MigrationService.upgradeToV2(widget.division);
-        await prefs.setBool(v2Key, true);
-      } catch (e) {
-        debugPrint('Migration failed: $e');
-      }
-    }
+    // Upgrade to V2 and sanitize subjects are administrative operations;
+    // only attempt them if current role is CR/SR, and prevent loops if permission is denied.
+    final isAdmin = AppSettings.currentRole == UserRole.cr ||
+        AppSettings.currentRole == UserRole.sr;
 
-    final sanitizeKey = 'migration_sanitize_subjects_${widget.division}';
-    if (!(prefs.getBool(sanitizeKey) ?? false)) {
-      try {
-        await MigrationService.sanitizeSubjectNames(widget.division);
-        await prefs.setBool(sanitizeKey, true);
-        debugPrint('Subject sanitization completed for ${widget.division}');
-      } catch (e) {
-        debugPrint('Subject sanitization failed: $e');
+    if (isAdmin) {
+      if (!(prefs.getBool(v2Key) ?? false)) {
+        try {
+          await MigrationService.upgradeToV2(widget.division);
+          await prefs.setBool(v2Key, true);
+        } catch (e) {
+          debugPrint('Migration failed: $e');
+          // If permission is denied or fails, do not repeat on every foreground
+          if (e.toString().contains('permission-denied') ||
+              e.toString().contains('PERMISSION_DENIED')) {
+            await prefs.setBool(v2Key, true);
+          }
+        }
       }
-    }
 
-    // Run Batch Migration only for CRs/SRs using a centralized flag
-    if (AppSettings.currentRole == UserRole.cr ||
-        AppSettings.currentRole == UserRole.sr) {
+      final sanitizeKey = 'migration_sanitize_subjects_${widget.division}';
+      if (!(prefs.getBool(sanitizeKey) ?? false)) {
+        try {
+          await MigrationService.sanitizeSubjectNames(widget.division);
+          await prefs.setBool(sanitizeKey, true);
+          debugPrint('Subject sanitization completed for ${widget.division}');
+        } catch (e) {
+          debugPrint('Subject sanitization failed: $e');
+          if (e.toString().contains('permission-denied') ||
+              e.toString().contains('PERMISSION_DENIED')) {
+            await prefs.setBool(sanitizeKey, true);
+          }
+        }
+      }
+
+      // Run Batch Migration only for CRs/SRs using a centralized flag
       try {
         final sectionRef = FirebaseFirestore.instance
             .collection('sections')
