@@ -55,6 +55,9 @@ class _AttendancePageState extends State<AttendancePage> {
         // Gamification suppressed: GamificationService.instance.recordAttendanceView();
       }
     });
+    AttendanceService.recomputeAllAggregates(widget.division).catchError((e) {
+      debugPrint('AttendancePage: background recomputeAllAggregates error: $e');
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FeatureDiscoveryService.checkAttendanceDiscovery(context);
     });
@@ -272,6 +275,12 @@ class _AttendancePageState extends State<AttendancePage> {
                 return StreamBuilder<List<AttendanceLog>>(
                   stream: _logsStream,
                   builder: (context, logsSnap) {
+                    if (logsSnap.hasError) {
+                      debugPrint('AttendancePage: logsStream error: ${logsSnap.error}');
+                    }
+                    if (snapshot.hasError) {
+                      debugPrint('AttendancePage: recordsStream error: ${snapshot.error}');
+                    }
                     final rawRecords = snapshot.data ?? <AttendanceRecord>[];
                     final logs = logsSnap.data ?? <AttendanceLog>[];
 

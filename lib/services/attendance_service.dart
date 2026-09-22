@@ -129,22 +129,26 @@ class AttendanceService {
   }
 
   static Stream<List<AttendanceLog>> streamLogs() {
-    return _logsCol()
-        .orderBy('date', descending: true)
-        .orderBy('startTime', descending: true)
-        .snapshots()
-        .map(
-          (snap) =>
-              snap.docs.map((d) => AttendanceLog.fromFirestore(d)).toList(),
-        );
+    return _logsCol().snapshots().map((snap) {
+      final list = snap.docs.map((d) => AttendanceLog.fromFirestore(d)).toList();
+      list.sort((a, b) {
+        final cmp = b.date.compareTo(a.date);
+        if (cmp != 0) return cmp;
+        return (b.startTime ?? 0).compareTo(a.startTime ?? 0);
+      });
+      return list;
+    });
   }
 
   static Future<List<AttendanceLog>> getLogs() async {
-    final snap = await _logsCol()
-        .orderBy('date', descending: true)
-        .orderBy('startTime', descending: true)
-        .get(const GetOptions(source: Source.serverAndCache));
-    return snap.docs.map((d) => AttendanceLog.fromFirestore(d)).toList();
+    final snap = await _logsCol().get(const GetOptions(source: Source.serverAndCache));
+    final list = snap.docs.map((d) => AttendanceLog.fromFirestore(d)).toList();
+    list.sort((a, b) {
+      final cmp = b.date.compareTo(a.date);
+      if (cmp != 0) return cmp;
+      return (b.startTime ?? 0).compareTo(a.startTime ?? 0);
+    });
+    return list;
   }
 
   /// Safely commits PDF-imported logs with upsert + aggregate recomputation.
@@ -236,6 +240,7 @@ class AttendanceService {
     }
 
     if (batches.isEmpty) {
+      await recomputeAllAggregates(division);
       return AttendanceImportResult(
         imported: reconciliation.newRecords,
         updated: reconciliation.updatedRecords,
@@ -253,21 +258,13 @@ class AttendanceService {
       );
     }
 
-    var aggregatesUpdated = 0;
-    for (final item in affectedComponents) {
-      await recomputeAggregateForSubject(
-        division: division,
-        subjectCode: item.subjectCode,
-        component: item.component,
-      );
-      aggregatesUpdated++;
-    }
+    await recomputeAllAggregates(division);
 
     return AttendanceImportResult(
       imported: reconciliation.newRecords,
       updated: reconciliation.updatedRecords,
       skippedDuplicates: reconciliation.duplicatesIgnored,
-      aggregatesUpdated: aggregatesUpdated,
+      aggregatesUpdated: affectedComponents.length,
     );
   }
 
