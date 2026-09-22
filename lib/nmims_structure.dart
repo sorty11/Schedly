@@ -167,5 +167,45 @@ class NMIMSStructure {
     final cleaned = name.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
     return cleaned.isNotEmpty ? cleaned : 'PROG';
   }
+
+  /// Parses a sectionId into component fields: school, year, branch, semester, division.
+  static Map<String, String> parseSectionId(String sectionId) {
+    final result = <String, String>{
+      'school': 'STME',
+      'year': '',
+      'branch': '',
+      'division': '',
+      'semester': '',
+    };
+    if (sectionId.trim().isEmpty) return result;
+
+    final parts = sectionId.split('_');
+    if (parts.isEmpty) return result;
+
+    // Check if first token is a known school or SOL/SPTM/SBM/SOC
+    final first = parts[0].toUpperCase();
+    if (first == 'SOL' || first == 'SPTM' || first == 'SBM' || first == 'SOC') {
+      result['school'] = first;
+      if (parts.length > 1) result['year'] = parts[1];
+      if (parts.length > 2) result['branch'] = parts[2];
+      if (parts.length > 3) {
+        if (parts[3].startsWith('Sem')) {
+          result['semester'] = parts[3];
+          if (parts.length > 4) result['division'] = parts[4];
+        } else {
+          result['division'] = parts[3];
+        }
+      }
+      return result;
+    }
+
+    // Default legacy STME format: {Year}_{Branch}_{Division}
+    // e.g. SecondYear_CSDS_B
+    result['school'] = 'STME';
+    if (parts.isNotEmpty) result['year'] = parts[0];
+    if (parts.length > 1) result['branch'] = parts[1];
+    if (parts.length > 2) result['division'] = parts[2];
+    return result;
+  }
 }
 

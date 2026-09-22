@@ -407,12 +407,19 @@ class AppSettings {
     await prefs.remove('student_roll_no');
     await prefs.remove('student_batch');
     await prefs.remove('academic_year');
+    await prefs.remove('branch');
+    await prefs.remove('division');
+    await prefs.remove('section_id');
+    await prefs.remove('school');
+    await prefs.remove('program');
+    await prefs.remove('semester');
     await prefs.remove('sr_division');
     await prefs.remove('sr_subject');
     await prefs.remove('sr_component');
     await prefs.remove('sr_section_id');
     await prefs.remove('sr_batch');
     await prefs.remove('faculty_id');
+    await prefs.remove('faculty_sap_id');
     await prefs.remove('faculty_id_migration_version');
     await prefs.remove('faculty_name');
     await prefs.remove('faculty_email');
@@ -426,11 +433,26 @@ class AppSettings {
 
     currentRole = UserRole.student;
 
+    studentName = null;
+    studentRollNo = null;
+    studentBatch = null;
+    academicYear = null;
+    branch = null;
+    division = null;
+    sectionId = null;
+    school = null;
+    program = null;
+    semester = null;
+
     srDivision = null;
     srSubject = null;
     srComponent = null;
     srSectionId = null;
+    srBatch = null;
 
+    facultyId = null;
+    facultySapId = null;
+    facultyIdMigrationVersion = 0;
     facultyName = null;
     facultyEmail = null;
     facultyDepartment = null;

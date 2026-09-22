@@ -880,8 +880,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         final prefs = await SharedPreferences.getInstance();
                         await prefs.clear();
                         await AppSettings.resetRole();
-                        AppSettings.studentName = null;
-                        AppSettings.studentRollNo = null;
+                        await FirebaseAuth.instance.signOut();
 
                         if (!context.mounted) return;
 
