@@ -244,6 +244,41 @@ class AttendanceCourseNormalizer {
     return match?.group(1)?.toUpperCase();
   }
 
+  static String canonicalizeCourseName(String name) {
+    var trimmed = name.replaceAll(RegExp(r'[\s.]+$'), '').trim();
+    // Strip trailing component keywords if present on raw course name (e.g. "Theory", "Tutorial", "Lab")
+    trimmed = trimmed.replaceAll(
+      RegExp(r'\s+(Theory|Tutorial|Lab|Lecture|Practical|Tut|Lec|Prac)$', caseSensitive: false),
+      '',
+    ).trim();
+    final upper = trimmed.toUpperCase();
+
+    // Basic Electrical and Electronics Engineering variants:
+    // e.g. "Basic Electrical and Electr Eng", "Basic Electrical and Electr Engg", "Basic Electrical and Electronics Engineering"
+    if (upper.contains('BASIC ELECTRICAL') &&
+        (upper.contains('ELECTR') || upper.contains('ELECTRONICS')) &&
+        (upper.endsWith('ENG') || upper.endsWith('ENGG') || upper.endsWith('ENGINEERING'))) {
+      return 'Basic Electrical and Electronics Engineering';
+    }
+
+    // Computer Organization and Architecture variants:
+    // e.g. "Computer Organization and Architectur", "Computer Organization and Architecture"
+    if (upper.contains('COMPUTER ORGANIZATION') &&
+        (upper.endsWith('ARCHITECTUR') || upper.endsWith('ARCHITECTURE'))) {
+      return 'Computer Organization and Architecture';
+    }
+
+    // Linear Algebra & Differential Equations variants:
+    // e.g. "Linear Algebra & Differ. Equat", "Linear Algebra & Differ. Equat.", "Linear Algebra & Differential Equations"
+    if (upper.contains('LINEAR ALGEBRA') &&
+        (upper.contains('DIFFER') || upper.contains('DIFFERENTIAL')) &&
+        (upper.contains('EQUAT') || upper.contains('EQUATIONS'))) {
+      return 'Linear Algebra & Differential Equations';
+    }
+
+    return _canonicalizeSolSubjectName(trimmed);
+  }
+
   static String _canonicalizeSolSubjectName(String name) {
     var trimmed = name.replaceAll(RegExp(r'[\s.]+$'), '').trim();
     // Strip trailing component keywords if present on raw course name (e.g. "Theory", "Tutorial", "Lab")
@@ -318,7 +353,7 @@ class AttendanceCourseNormalizer {
 
   /// Removes semester/branch noise for fuzzy matching comparisons.
   static String normalizeForMatching(String name) {
-    var normalized = _canonicalizeSolSubjectName(name).toUpperCase();
+    var normalized = canonicalizeCourseName(name).toUpperCase();
     normalized = normalized.replaceAll('&', ' AND ');
     normalized = normalized.replaceAll(RegExp(r'(?<=[A-Z0-9])([TPUL][1-9]?)\b'), '');
     normalized = normalized.replaceAll(RegExp(r'\b([TPUL][1-9]?)\b'), '');

@@ -13,4 +13,5 @@ const Map<String, String> courseAliases = {
   "IPS": "Interpersonal Skills",
   "DCCA": "Digital Circuits and Computer Architecture",
   "WDD": "Website Designing and Development",
+  "BEE": "Basic Electrical and Electronics Engineering",
 };

@@ -242,6 +242,23 @@ class SubjectIdentityService {
     // Website Designing and Development
     'WDD': ('Website Designing and Development', 'Website Designing and Development', 'WDD'),
     'WEBSITE DESIGNING AND DEVELOPMENT': ('Website Designing and Development', 'Website Designing and Development', 'WDD'),
+
+    // Basic Electrical and Electronics Engineering
+    'BEE': ('BEE', 'Basic Electrical and Electronics Engineering', 'BEE'),
+    'BASIC ELECTRICAL AND ELECTRONICS ENGINEERING': ('BEE', 'Basic Electrical and Electronics Engineering', 'BEE'),
+    'BASIC ELECTRICAL AND ELECTR ENG': ('BEE', 'Basic Electrical and Electronics Engineering', 'BEE'),
+    'BASIC ELECTRICAL AND ELECTR ENGG': ('BEE', 'Basic Electrical and Electronics Engineering', 'BEE'),
+    'BASIC ELECTRICAL & ELECTRONICS ENGINEERING': ('BEE', 'Basic Electrical and Electronics Engineering', 'BEE'),
+    'BASIC ELECTRICAL & ELECTR ENG': ('BEE', 'Basic Electrical and Electronics Engineering', 'BEE'),
+    'BASIC ELECTRICAL & ELECTR ENGG': ('BEE', 'Basic Electrical and Electronics Engineering', 'BEE'),
+
+    // Linear Algebra & Differential Equations
+    'LADE': ('Linear Algebra & Differential Equations', 'Linear Algebra & Differential Equations', 'LADE'),
+    'LINEAR ALGEBRA & DIFFERENTIAL EQUATIONS': ('Linear Algebra & Differential Equations', 'Linear Algebra & Differential Equations', 'LADE'),
+    'LINEAR ALGEBRA AND DIFFERENTIAL EQUATIONS': ('Linear Algebra & Differential Equations', 'Linear Algebra & Differential Equations', 'LADE'),
+    'LINEAR ALGEBRA & DIFFER. EQUAT': ('Linear Algebra & Differential Equations', 'Linear Algebra & Differential Equations', 'LADE'),
+    'LINEAR ALGEBRA & DIFFER. EQUAT.': ('Linear Algebra & Differential Equations', 'Linear Algebra & Differential Equations', 'LADE'),
+    'LINEAR ALGEBRA & DIFFER EQUAT': ('Linear Algebra & Differential Equations', 'Linear Algebra & Differential Equations', 'LADE'),
   };
 
   /// Clean subject code helper from CourseComponent.
@@ -490,7 +507,11 @@ class SubjectIdentityService {
 
     // --- STEP 8: Unresolved — Safe fallback, do NOT guess ---
     final cleanFallback = SubjectNormalizer.cleanNoise(query);
-    final fallbackKey = cleanFallback.isNotEmpty ? cleanFallback : query;
+    final canonicalFallback =
+        AttendanceCourseNormalizer.canonicalizeCourseName(cleanFallback);
+    final fallbackKey = canonicalFallback.isNotEmpty
+        ? canonicalFallback
+        : (cleanFallback.isNotEmpty ? cleanFallback : query);
     return SubjectIdentity(
       canonicalKey: fallbackKey,
       displayName: fallbackKey,
