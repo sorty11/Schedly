@@ -34,6 +34,8 @@ class DivisionMembershipService {
     final userData = <String, dynamic>{
       'role': role,
       'division': sectionId,
+      'onboardingCompleted': true,
+      'profileCompleted': true,
       'updatedAt': FieldValue.serverTimestamp(),
     };
     if (name != null) userData['name'] = name;

@@ -151,6 +151,8 @@ class FacultyAuthService {
       batch.set(userRef, {
         'role': 'Faculty',
         'facultyProfileId': uidToUse,
+        'onboardingCompleted': true,
+        'profileCompleted': true,
       }, SetOptions(merge: true));
 
       await batch.commit();

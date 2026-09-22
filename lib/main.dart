@@ -25,6 +25,7 @@ import 'account_migration_page.dart';
 import 'onboarding_wizard_page.dart';
 import 'widgets/animations/skeleton_components.dart';
 import 'services/deep_link_router.dart';
+import 'nmims_structure.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -275,36 +276,111 @@ class _StartupRouterState extends State<StartupRouter> {
           .get();
       if (userDoc.exists) {
         final data = userDoc.data()!;
-        if (data['onboardingCompleted'] == true) {
-          final role = data['role'];
+        final role = (data['role'] ?? data['userType']) as String?;
+        final divisionVal = data['division'] as String?;
+        final isExistingUser = data['onboardingCompleted'] == true ||
+            data['profileCompleted'] == true ||
+            role != null ||
+            (divisionVal != null && divisionVal.isNotEmpty);
+
+        if (isExistingUser) {
           if (role == 'Faculty') {
+            await AppSettings.saveRole(UserRole.faculty);
+            final facId = data['facultyProfileId'] ?? updatedUser.uid;
+            final facDoc = await FirebaseFirestore.instance
+                .collection('faculty_profiles')
+                .doc(facId)
+                .get();
+            if (facDoc.exists) {
+              final fData = facDoc.data()!;
+              await AppSettings.saveFacultyDetails(
+                name: fData['name'] ?? '',
+                email: fData['email'] ?? '',
+                department: fData['department'] ?? '',
+                designation: fData['designation'] ?? '',
+                cabin: fData['cabin'] ?? '',
+                assignedDivisions: List<String>.from(
+                  fData['assignedDivisions'] ?? [],
+                ),
+                id: facDoc.id,
+              );
+              if (fData['setupComplete'] == true) {
+                await AppSettings.completeFacultySetup();
+              }
+            } else {
+              await AppSettings.saveFacultyDetails(
+                name: data['name'] ?? 'Faculty',
+                email: data['email'] ?? updatedUser.email ?? '',
+                department: data['department'] ?? '',
+                designation: data['designation'] ?? '',
+                cabin: data['cabin'] ?? '',
+                id: facId,
+              );
+            }
+
+            await prefs.setBool('has_logged_in', true);
+
+            if (data['onboardingCompleted'] != true ||
+                data['profileCompleted'] != true) {
+              FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(updatedUser.uid)
+                  .set({
+                'onboardingCompleted': true,
+                'profileCompleted': true,
+              }, SetOptions(merge: true)).catchError((e) {
+                debugPrint('Failed to update onboarding completed: $e');
+              });
+            }
+
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => const FacultyHomePage()),
             );
           } else {
-            // Student
-            final div = AppSettings.sectionId ?? data['division'] ?? '';
+            // Student / CR / SR
+            final div = (data['sectionId'] ??
+                    AppSettings.sectionId ??
+                    divisionVal ??
+                    '')
+                .toString();
+            final parts = NMIMSStructure.parseSectionId(div);
 
-            // Re-populate AppSettings from Firestore on re-login
-            if (AppSettings.studentName == null) {
-              await AppSettings.saveStudentDetails(
-                name: data['name'] ?? 'Student',
-                rollNo: data['rollNo'] ?? 'Unknown',
-                acYear: '', // Handled elsewhere or not needed for core function
-                br: '',
-                div: '',
-                secId: div,
-              );
+            await AppSettings.saveStudentDetails(
+              name: data['name'] ?? AppSettings.studentName ?? 'Student',
+              rollNo: data['rollNo'] ?? AppSettings.studentRollNo ?? 'Unknown',
+              batch: data['studentBatch'] ?? data['batch'] ?? AppSettings.studentBatch,
+              acYear: data['academicYear'] ?? parts['year'] ?? '',
+              br: data['branch'] ?? data['program'] ?? parts['branch'] ?? '',
+              div: data['divisionName'] ?? parts['division'] ?? div,
+              secId: data['sectionId'] ?? div,
+              schoolName: data['school'] ?? parts['school'] ?? 'STME',
+              programName: data['program'] ?? parts['branch'],
+              sem: data['semester'] ?? parts['semester'],
+            );
 
-              final roleStr = data['role'] as String?;
-              if (roleStr == 'CR') {
-                await AppSettings.saveRole(UserRole.cr);
-              } else if (roleStr == 'SR') {
-                await AppSettings.saveRole(UserRole.sr);
-              } else {
-                await AppSettings.saveRole(UserRole.student);
-              }
+            final roleStr = role;
+            if (roleStr == 'CR') {
+              await AppSettings.saveRole(UserRole.cr);
+            } else if (roleStr == 'SR') {
+              await AppSettings.saveRole(UserRole.sr);
+            } else {
+              await AppSettings.saveRole(UserRole.student);
+            }
+
+            await prefs.setBool('has_logged_in', true);
+
+            if (data['onboardingCompleted'] != true ||
+                data['profileCompleted'] != true) {
+              FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(updatedUser.uid)
+                  .set({
+                'onboardingCompleted': true,
+                'profileCompleted': true,
+              }, SetOptions(merge: true)).catchError((e) {
+                debugPrint('Failed to update onboarding completed: $e');
+              });
             }
 
             Navigator.pushReplacement(
@@ -400,13 +476,18 @@ class _StartupRouterState extends State<StartupRouter> {
           }
 
           if (div != null && div.isNotEmpty) {
+            final parts = NMIMSStructure.parseSectionId(secId.isNotEmpty ? secId : div);
             await AppSettings.saveStudentDetails(
               name: data['name'] ?? AppSettings.studentName ?? 'Student',
               rollNo: data['rollNo'] ?? AppSettings.studentRollNo ?? 'Unknown',
-              acYear: '',
-              br: '',
-              div: div,
-              secId: secId,
+              batch: data['studentBatch'] ?? data['batch'] ?? AppSettings.studentBatch,
+              acYear: data['academicYear'] ?? parts['year'] ?? AppSettings.academicYear ?? '',
+              br: data['branch'] ?? data['program'] ?? parts['branch'] ?? AppSettings.branch ?? '',
+              div: data['divisionName'] ?? parts['division'] ?? AppSettings.division ?? div,
+              secId: secId.isNotEmpty ? secId : div,
+              schoolName: data['school'] ?? parts['school'] ?? AppSettings.school ?? 'STME',
+              programName: data['program'] ?? parts['branch'] ?? AppSettings.program,
+              sem: data['semester'] ?? parts['semester'] ?? AppSettings.semester,
             );
           }
         }

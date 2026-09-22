@@ -82,8 +82,57 @@ class _OnboardingWizardPageState extends State<OnboardingWizardPage> {
       final doc = await _firestore.collection('users').doc(user!.uid).get();
       if (doc.exists) {
         final data = doc.data()!;
-        if (data['profileCompleted'] == true) {
-          _routeToDashboard(data['role']);
+        if (data['profileCompleted'] == true ||
+            data['onboardingCompleted'] == true) {
+          final role = data['role'] as String?;
+          if (role == 'Faculty') {
+            await AppSettings.saveRole(UserRole.faculty);
+            final facId = data['facultyProfileId'] ?? user!.uid;
+            final facDoc = await _firestore
+                .collection('faculty_profiles')
+                .doc(facId)
+                .get();
+            if (facDoc.exists) {
+              final fData = facDoc.data()!;
+              await AppSettings.saveFacultyDetails(
+                name: fData['name'] ?? '',
+                email: fData['email'] ?? '',
+                department: fData['department'] ?? '',
+                designation: fData['designation'] ?? '',
+                cabin: fData['cabin'] ?? '',
+                assignedDivisions: List<String>.from(
+                  fData['assignedDivisions'] ?? [],
+                ),
+                id: facDoc.id,
+              );
+            }
+          } else {
+            final roleStr = role;
+            if (roleStr == 'CR') {
+              await AppSettings.saveRole(UserRole.cr);
+            } else if (roleStr == 'SR') {
+              await AppSettings.saveRole(UserRole.sr);
+            } else {
+              await AppSettings.saveRole(UserRole.student);
+            }
+            final div = (data['division'] ?? data['sectionId'] ?? '').toString();
+            final parts = NMIMSStructure.parseSectionId(div);
+            await AppSettings.saveStudentDetails(
+              name: data['name'] ?? 'Student',
+              rollNo: data['rollNo'] ?? 'Unknown',
+              batch: data['studentBatch'] ?? data['batch'],
+              acYear: data['academicYear'] ?? parts['year'] ?? '',
+              br: data['branch'] ?? data['program'] ?? parts['branch'] ?? '',
+              div: data['divisionName'] ?? parts['division'] ?? div,
+              secId: data['sectionId'] ?? div,
+              schoolName: data['school'] ?? parts['school'] ?? 'STME',
+              programName: data['program'] ?? parts['branch'],
+              sem: data['semester'] ?? parts['semester'],
+            );
+          }
+          if (mounted) {
+            _routeToDashboard(role);
+          }
           return;
         }
 
