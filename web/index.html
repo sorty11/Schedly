@@ -143,6 +143,23 @@
   <!-- Service Worker Registration for Web Push & PWA Stability -->
   <script>
     if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function (registrations) {
+        for (var i = 0; i < registrations.length; i++) {
+          if (registrations[i].active && registrations[i].active.scriptURL.indexOf('flutter_service_worker') !== -1) {
+            registrations[i].unregister();
+          }
+        }
+      });
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          for (var i = 0; i < names.length; i++) {
+            if (names[i].indexOf('flutter') !== -1) {
+              caches.delete(names[i]);
+            }
+          }
+        });
+      }
+
       // Guard against infinite reload loops: only reload if an existing controller was replaced
       var hadInitialController = Boolean(navigator.serviceWorker.controller);
       var lastReload = parseInt(sessionStorage.getItem('sw_last_reload') || '0', 10);

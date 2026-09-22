@@ -228,6 +228,38 @@ class _AttendancePageState extends State<AttendancePage> {
     }
   }
 
+  Future<void> _syncAttendance() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (c) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      await AttendanceService.recomputeAllAggregates(widget.division);
+      if (mounted) {
+        Navigator.pop(context);
+        setState(() {
+          _recordsStream = AttendanceService.streamAll(widget.division);
+          _logsStream = AttendanceService.streamLogs();
+        });
+        AppDialogs.showSnackBar(
+          context: context,
+          message: 'Attendance recalculated and synced with logs!',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        AppDialogs.showError(
+          context: context,
+          title: 'Sync Error',
+          message: 'Could not sync attendance: $e',
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -336,6 +368,11 @@ class _AttendancePageState extends State<AttendancePage> {
                             ),
                           ),
                           actions: [
+                            IconButton(
+                              icon: const Icon(Icons.refresh_rounded),
+                              tooltip: 'Recalculate & Sync Attendance',
+                              onPressed: _syncAttendance,
+                            ),
                             IconButton(
                               icon: const Icon(Icons.public_rounded),
                               tooltip: 'Open SVKM Portal',
